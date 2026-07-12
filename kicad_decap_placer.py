@@ -318,11 +318,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("config")
     ap.add_argument("--dry-run", action="store_true", help="только посчитать и напечатать, не двигать")
+    ap.add_argument("--timeout-ms", type=int, default=20000,
+                     help="таймаут ожидания ответа от KiCad, мс (по умолчанию kipy — всего 2000, "
+                          "этого мало для большого коммита; см. падение begin_commit с ConnectionError: Timed out)")
+    ap.add_argument("--batch-size", type=int, default=10,
+                     help="сколько конденсаторов/виа применять за один commit (меньше батч — меньше риск "
+                          "потерять всё разом при таймауте/сбое)")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
 
-    kicad = kipy.KiCad()
+    kicad = kipy.KiCad(timeout_ms=args.timeout_ms)
     board = kicad.get_board()
 
     footprints = list(board.get_footprints())
@@ -408,28 +414,62 @@ def main():
         print("[dry-run] изменения не применены")
         return
 
-    commit = board.begin_commit()
-    try:
-        for cap, dest, angle in planned_caps:
-            cap.position = dest
-            cap.orientation = angle
-            if cap.layer != layer:
-                cap.layer = layer  # см. предупреждение из прошлой сессии: сверить визуально с Flip footprint
-        if planned_caps:
-            board.update_items([c for c, _, _ in planned_caps])
+    def commit_batch(description, work_fn):
+        """Оборачивает work_fn в отдельный begin_commit/push_commit.
+        При ошибке — drop_commit и False, не поднимая исключение дальше:
+        так один неудачный батч не рушит уже применённые предыдущие."""
+        commit = board.begin_commit()
+        try:
+            work_fn()
+            board.push_commit(commit, description)
+            return True
+        except Exception as e:
+            print(f"[ошибка] {description}: {type(e).__name__}: {e}", file=sys.stderr)
+            try:
+                board.drop_commit(commit)
+            except Exception:
+                pass
+            return False
 
-        new_vias = [
-            make_via(pos, net, drill_mm, diameter_mm)
-            for pos, drill_mm, diameter_mm, net, _owner in planned_vias
-        ]
-        if new_vias:
+    batch_size = args.batch_size
+    failed_caps, failed_vias = [], []
+
+    cap_batches = [planned_caps[i:i + batch_size] for i in range(0, len(planned_caps), batch_size)]
+    for idx, batch in enumerate(cap_batches, 1):
+        def work(batch=batch):
+            for cap, dest, angle in batch:
+                cap.position = dest
+                cap.orientation = angle
+                if cap.layer != layer:
+                    cap.layer = layer  # см. предупреждение из прошлой сессии: сверить визуально с Flip footprint
+            board.update_items([c for c, _, _ in batch])
+
+        desc = f"KiCadDecapPlacer: конденсаторы, батч {idx}/{len(cap_batches)}"
+        ok = commit_batch(desc, work)
+        print(f"  батч конденсаторов {idx}/{len(cap_batches)} ({len(batch)} шт.): {'OK' if ok else 'ОШИБКА — пропущен'}")
+        if not ok:
+            failed_caps.extend(c.reference_field.text.value for c, _, _ in batch)
+
+    via_batches = [planned_vias[i:i + batch_size] for i in range(0, len(planned_vias), batch_size)]
+    for idx, batch in enumerate(via_batches, 1):
+        def work(batch=batch):
+            new_vias = [make_via(pos, net, drill_mm, diameter_mm) for pos, drill_mm, diameter_mm, net, _owner in batch]
             board.create_items(new_vias)
 
-        board.push_commit(commit, "KiCadDecapPlacer: расстановка развязки + stitching/термо-виа")
-        print("Готово, коммит применён.")
-    except Exception:
-        board.drop_commit(commit)
-        raise
+        desc = f"KiCadDecapPlacer: виа, батч {idx}/{len(via_batches)}"
+        ok = commit_batch(desc, work)
+        print(f"  батч виа {idx}/{len(via_batches)} ({len(batch)} шт.): {'OK' if ok else 'ОШИБКА — пропущен'}")
+        if not ok:
+            failed_vias.extend(owner for _, _, _, _, owner in batch)
+
+    total_batches = len(cap_batches) + len(via_batches)
+    print(f"\nГотово: {total_batches} батчей обработано.")
+    if failed_caps:
+        print(f"[warn] не применены перемещения конденсаторов: {sorted(set(failed_caps))}", file=sys.stderr)
+    if failed_vias:
+        print(f"[warn] не применены виа рядом с: {sorted(set(failed_vias))}", file=sys.stderr)
+    if not failed_caps and not failed_vias:
+        print("Все батчи применены без ошибок.")
 
 
 if __name__ == "__main__":

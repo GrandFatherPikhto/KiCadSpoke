@@ -2,8 +2,8 @@ import sexpdata
 from sexpdata import Symbol
 import math
 
-NET_PATH = "/mnt/user-data/uploads/10CL006YE144C8G.net"
-PCB_PATH = "/home/claude/KiCadDecapPlacer_repo/test_boards/10CL006YE144C8G/10CL006YE144C8G.kicad_pcb"
+NET_PATH = "test_boards/10CL006YE144C8G/10CL006YE144C8G.net"
+PCB_PATH = "test_boards/10CL006YE144C8G/10CL006YE144C8G.kicad_pcb"
 
 def tag(item):
     return str(item[0]) if isinstance(item, list) and item and isinstance(item[0], Symbol) else None
