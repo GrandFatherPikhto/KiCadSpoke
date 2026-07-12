@@ -8,11 +8,9 @@ target_ref: "IC1"             # refdes микросхемы (FPGA), вокруг
 
 # Зона-ограничитель (Rule Area) — используется и как граница
 # "изнутри/снаружи", и как опорная линия для placement: boundary.
-# ВАЖНО: на этой тестовой плате такой зоны пока нет — её нужно один раз
-# нарисовать руками в PCB-редакторе вокруг IC1 (см. предыдущее обсуждение:
-# проще нарисовать простой прямоугольник вокруг курьярда, чем парсить
-# сложную геометрию F.CrtYd через API). Пока зоны нет — секция rules ниже
-# не сработает, а thermal_via_array сработает независимо от неё.
+# На актуальной плате (test_boards/10CL006YE144C8G) она уже нарисована
+# вручную вокруг IC1 — прямоугольник (с одной доп. точкой на верхней грани),
+# is_rule_area=True, слои F.Cu+B.Cu.
 boundary_zone: "RA_DECAP_ZONE"
 
 side: "back"                  # сторона размещения конденсаторов: front | back
@@ -51,69 +49,241 @@ thermal_via_array:
 
 rules:
   # ВНИМАНИЕ: refdes конденсаторов, номера площадок IC1 и точная привязка
-  # net<->pad ниже — ПРИМЕР для иллюстрации формата. Перед реальным
-  # прогоном на 10CL006 сверьте реальные номера площадок с точным
-  # netlist/схемой (например, через netclass_audit.py или
-  # kicad_simplifyer.py из соседнего проекта) — площадки TQFP144
-  # нумеруются простыми числами 1-144 (плюс 145 у термопада), а не
-  # буквенно-цифровыми BGA-координатами.
+
+# --- rules сгенерированы generate_rules.py из реального netlist (2026-07-12) ---
+# Источники: 10CL006YE144C8G.net (актуальный, C27 исправлен на 100nF) +
+# 10CL006YE144C8G.kicad_pcb (актуальный борт с уже нарисованной RA_DECAP_ZONE).
+# Логика: 100nF -> placement: inside (внутри зоны, ближе к выводу — обратная
+# сторона под соответствующим выводом); 4.7uF -> placement: outside
+# (снаружи зоны, тем же выводом контакт "смотрит" на площадку). Вывод IC1
+# для каждого конденсатора выбран round-robin по выводам той же цепи,
+# отсортированным по углу вокруг центра IC1 (соседние физически выводы
+# идут подряд). Там, где конденсаторов больше, чем выводов на цепи
+# (+1V2_VCCINT: 9 конденсаторов 100nF на 8 выводов), один вывод получает
+# два конденсатора (C19 и C27 -> pad 5) — это нормально для round-robin,
+# но при желании можно вручную развести их на two соседних вывода.
+# C46-C49 (старые "выходные конденсаторы П-фильтров") НЕ включены — по
+# факту актуальные "не трогаем" сейчас C47/C48/C49/C50 (сдвинулись из-за
+# правки C27), их вообще нет в rules ниже.
+rules:
   - net: "+3V3_VCCIO"
     assignments:
-      # "boundary": ставим прямо на линию зоны — компромисс между близостью
-      # к площадке и удобством дальнейшей трассировки снаружи.
-      - ref: "C101"
-        pad: "22"
-        placement: "boundary"
-        offset_mm: 0.0
+      - ref: "C5"
+        pad: "17"
+        placement: "inside"
+        offset_mm: 0.5
         via: true
-
-      # "outside": классика для периметрийного корпуса — за пределами
-      # зоны с отступом наружу. Для TQFP это основной режим (см.
-      # примечание в конце файла про inside/BGA).
-      - ref: "C102"
-        pad: "23"
+      - ref: "C6"
+        pad: "139"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C7"
+        pad: "130"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C8"
+        pad: "122"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C9"
+        pad: "117"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C10"
+        pad: "93"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C11"
+        pad: "81"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C12"
+        pad: "62"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C13"
+        pad: "56"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C14"
+        pad: "47"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C30"
+        pad: "17"
         placement: "outside"
-        offset_mm: 1.2
-        via: false            # у этого конденсатора виа не нужна (например,
-                               # рядом уже есть стежка от соседнего C101)
+        offset_mm: 1.5
+        via: true
+      - ref: "C31"
+        pad: "139"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C32"
+        pad: "130"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C33"
+        pad: "122"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C34"
+        pad: "117"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C35"
+        pad: "93"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C36"
+        pad: "81"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C37"
+        pad: "62"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
 
   - net: "+1V2_VCCINT"
     assignments:
-      - ref: "C201"
-        pad: "3"
+      - ref: "C19"
+        pad: "5"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C20"
+        pad: "134"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C21"
+        pad: "116"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C22"
+        pad: "102"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C23"
+        pad: "78"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C24"
+        pad: "61"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C25"
+        pad: "45"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C26"
+        pad: "29"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C27"
+        pad: "5"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C40"
+        pad: "5"
         placement: "outside"
-        offset_mm: 1.0
-        via:
-          enabled: true        # per-assignment можно переопределить не только
-          count: 2              # включение, но и любой параметр из via: выше
-          diameter_mm: 0.5
-
-      - ref: "C202"
-        pad: "107"
-        placement: "boundary"
-        offset_mm: 0.0
+        offset_mm: 1.5
+        via: true
+      - ref: "C41"
+        pad: "134"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C42"
+        pad: "116"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C43"
+        pad: "102"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C44"
+        pad: "78"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C45"
+        pad: "61"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C46"
+        pad: "45"
+        placement: "outside"
+        offset_mm: 1.5
         via: true
 
-# Примечания:
-# - placement трактуется относительно границы boundary_zone вдоль луча
-#   "центр компонента (U1) -> площадка":
-#     outside  = точка пересечения луча с границей + offset_mm НАРУЖУ
-#     inside   = точка на площадке минус offset_mm В СТОРОНУ ГРАНИЦЫ
-#                (т.е. между площадкой и границей, ближе к площадке)
-#     boundary = точка пересечения луча с границей, offset_mm — небольшая
-#                правка вдоль того же луча (можно оставить 0.0)
-# - via: true эквивалентно via: {enabled: true} — берутся остальные
-#   параметры из глобального блока via: наверху.
-# - via: false отключает виа для конкретного конденсатора независимо от
-#   глобальной настройки.
-# - via.count: 2 — пара виа симметрична ОТНОСИТЕЛЬНО САМОГО КОНДЕНСАТОРА,
-#   разнесена перпендикулярно лучу центр(U1)->площадка. via.direction в
-#   этом случае игнорируется (у симметричной пары нет одного "направления").
-#   direction применяется только при count: 1.
-# - Секции rules/boundary_zone опциональны: если конфиг нужен только для
-#   thermal_via_array (например, разово досыпать термопереходов на плате
-#   без конденсаторов), rules можно не указывать вовсе.
-# - Для периметрийных корпусов (TQFP, QFP — как 10CL006YE144C8G, TQFP144)
-#   используйте placement: outside/boundary — там нет площадок "под
-#   корпусом", только выводы по периметру. placement: inside имеет смысл
-#   только для BGA/LGA с матрицей шариков/площадок под корпусом.
+  - net: "+2V5_VCCA"
+    assignments:
+      - ref: "C28"
+        pad: "107"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C29"
+        pad: "96"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C51"
+        pad: "107"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C52"
+        pad: "96"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+
+  - net: "+1V2_VCCD_PLL"
+    assignments:
+      - ref: "C38"
+        pad: "109"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C39"
+        pad: "37"
+        placement: "inside"
+        offset_mm: 0.5
+        via: true
+      - ref: "C53"
+        pad: "109"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
+      - ref: "C54"
+        pad: "37"
+        placement: "outside"
+        offset_mm: 1.5
+        via: true
