@@ -2133,3 +2133,943 @@ AttributeError: 'FootprintInstance' object has no attribute 'bbox'
 2026-07-12 17:26:27,984 - decap_placer.placement.executor - INFO -   батч виа 6 выполнен (8 шт.)
 2026-07-12 17:26:27,984 - __main__ - INFO - ✅ Все операции выполнены успешно
 2026-07-12 17:26:27,985 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-12 17:37:53,954 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-12 17:37:53,955 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-12 17:37:53,965 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4
+2026-07-12 17:37:53,965 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-12 17:37:53,965 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-12 17:37:53,996 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-12 17:37:53,997 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-12 17:37:53,998 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-12 17:37:53,998 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-12 17:37:53,998 - __main__ - INFO - Планирование расстановки...
+2026-07-12 17:37:53,998 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-12 17:37:54,007 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:37:54,007 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-12 17:37:54,007 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-12 17:37:54,007 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-12 17:37:54,008 - decap_placer.placement.planner - INFO - Начало планирования по правилам
+2026-07-12 17:37:54,008 - decap_placer.placement.planner - DEBUG - Обработка цепи +3V3_VCCIO (1/4)
+2026-07-12 17:37:54,008 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-12 17:37:54,008 - root - ERROR - Неожиданная ошибка
+Traceback (most recent call last):
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 162, in main
+    cmd_apply(args)
+    ~~~~~~~~~^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 66, in cmd_apply
+    moves, vias = planner.plan()
+                  ~~~~~~~~~~~~^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\placement\planner.py", line 175, in plan
+    dest, direction = self._strategy.compute_position(
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._center,
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        fixed_angle_deg=self.cfg.fixed_angle_deg
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\strategies.py", line 64, in compute_position
+    point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'closest_point_on_polygon' is not defined
+2026-07-12 17:37:54,009 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-12 17:39:40,493 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-12 17:39:40,494 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-12 17:39:40,503 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4
+2026-07-12 17:39:40,503 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-12 17:39:40,504 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-12 17:39:40,533 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-12 17:39:40,535 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-12 17:39:40,535 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-12 17:39:40,535 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-12 17:39:40,536 - __main__ - INFO - Планирование расстановки...
+2026-07-12 17:39:40,536 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-12 17:39:40,543 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:39:40,544 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-12 17:39:40,544 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-12 17:39:40,544 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-12 17:39:40,544 - decap_placer.placement.planner - INFO - Начало планирования по правилам
+2026-07-12 17:39:40,544 - decap_placer.placement.planner - DEBUG - Обработка цепи +3V3_VCCIO (1/4)
+2026-07-12 17:39:40,544 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-12 17:39:40,545 - root - ERROR - Неожиданная ошибка
+Traceback (most recent call last):
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 162, in main
+    cmd_apply(args)
+    ~~~~~~~~~^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 66, in cmd_apply
+    moves, vias = planner.plan()
+                  ~~~~~~~~~~~~^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\placement\planner.py", line 175, in plan
+    dest, direction = self._strategy.compute_position(
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._center,
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        fixed_angle_deg=self.cfg.fixed_angle_deg
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\strategies.py", line 56, in compute_position
+    point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
+                                ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\boundary.py", line 62, in closest_point_on_polygon
+    seg_len_sq = seg_vec.length_squared()
+                 ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Vector2' object has no attribute 'length_squared'
+2026-07-12 17:39:40,546 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-12 17:41:11,605 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-12 17:41:11,605 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-12 17:41:11,614 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4
+2026-07-12 17:41:11,615 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-12 17:41:11,615 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-12 17:41:11,677 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-12 17:41:11,679 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-12 17:41:11,679 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-12 17:41:11,680 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-12 17:41:11,680 - __main__ - INFO - Планирование расстановки...
+2026-07-12 17:41:11,680 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-12 17:41:11,687 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:41:11,688 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-12 17:41:11,688 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-12 17:41:11,688 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-12 17:41:11,688 - decap_placer.placement.planner - INFO - Начало планирования по правилам
+2026-07-12 17:41:11,688 - decap_placer.placement.planner - DEBUG - Обработка цепи +3V3_VCCIO (1/4)
+2026-07-12 17:41:11,689 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-12 17:41:11,689 - root - ERROR - Неожиданная ошибка
+Traceback (most recent call last):
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 162, in main
+    cmd_apply(args)
+    ~~~~~~~~~^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 66, in cmd_apply
+    moves, vias = planner.plan()
+                  ~~~~~~~~~~~~^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\placement\planner.py", line 175, in plan
+    dest, direction = self._strategy.compute_position(
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._center,
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        fixed_angle_deg=self.cfg.fixed_angle_deg
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\strategies.py", line 64, in compute_position
+    point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
+                                ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\boundary.py", line 62, in closest_point_on_polygon
+    seg_len_sq = seg_vec.length_squared()
+                 ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Vector2' object has no attribute 'length_squared'
+2026-07-12 17:41:11,690 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-12 17:43:10,277 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-12 17:43:10,277 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-12 17:43:10,287 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4
+2026-07-12 17:43:10,287 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-12 17:43:10,287 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-12 17:43:10,319 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-12 17:43:10,321 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-12 17:43:10,322 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-12 17:43:10,322 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-12 17:43:10,322 - __main__ - INFO - Планирование расстановки...
+2026-07-12 17:43:10,322 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-12 17:43:10,330 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:43:10,330 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-12 17:43:10,331 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-12 17:43:10,331 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-12 17:43:10,331 - decap_placer.placement.planner - INFO - Начало планирования по правилам
+2026-07-12 17:43:10,331 - decap_placer.placement.planner - DEBUG - Обработка цепи +3V3_VCCIO (1/4)
+2026-07-12 17:43:10,331 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-12 17:43:10,331 - root - ERROR - Неожиданная ошибка
+Traceback (most recent call last):
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 162, in main
+    cmd_apply(args)
+    ~~~~~~~~~^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 66, in cmd_apply
+    moves, vias = planner.plan()
+                  ~~~~~~~~~~~~^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\placement\planner.py", line 175, in plan
+    dest, direction = self._strategy.compute_position(
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._center,
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        fixed_angle_deg=self.cfg.fixed_angle_deg
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\strategies.py", line 64, in compute_position
+    point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
+                                ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\boundary.py", line 56, in closest_point_on_polygon
+    seg_len_sq = seg_vec.dot(seg_vec)  # <- заменили
+                 ^^^^^^^^^^^
+AttributeError: 'Vector2' object has no attribute 'dot'
+2026-07-12 17:43:10,334 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-12 17:43:31,502 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-12 17:43:31,502 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-12 17:43:31,511 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4
+2026-07-12 17:43:31,512 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-12 17:43:31,512 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-12 17:43:31,535 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-12 17:43:31,536 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-12 17:43:31,536 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-12 17:43:31,537 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-12 17:43:31,537 - __main__ - INFO - Планирование расстановки...
+2026-07-12 17:43:31,537 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-12 17:43:31,545 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:43:31,545 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-12 17:43:31,545 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-12 17:43:31,545 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-12 17:43:31,545 - decap_placer.placement.planner - INFO - Начало планирования по правилам
+2026-07-12 17:43:31,546 - decap_placer.placement.planner - DEBUG - Обработка цепи +3V3_VCCIO (1/4)
+2026-07-12 17:43:31,546 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-12 17:43:31,546 - root - ERROR - Неожиданная ошибка
+Traceback (most recent call last):
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 162, in main
+    cmd_apply(args)
+    ~~~~~~~~~^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 66, in cmd_apply
+    moves, vias = planner.plan()
+                  ~~~~~~~~~~~~^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\placement\planner.py", line 175, in plan
+    dest, direction = self._strategy.compute_position(
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._center,
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        fixed_angle_deg=self.cfg.fixed_angle_deg
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\strategies.py", line 64, in compute_position
+    point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
+                                ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\boundary.py", line 65, in closest_point_on_polygon
+    seg_len_sq = seg_vec.dot(seg_vec)
+                 ^^^^^^^^^^^
+AttributeError: 'Vector2' object has no attribute 'dot'
+2026-07-12 17:43:31,548 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-12 17:44:28,057 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-12 17:44:28,057 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-12 17:44:28,067 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4
+2026-07-12 17:44:28,067 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-12 17:44:28,067 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-12 17:44:28,094 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-12 17:44:28,096 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-12 17:44:28,096 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-12 17:44:28,096 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-12 17:44:28,096 - __main__ - INFO - Планирование расстановки...
+2026-07-12 17:44:28,096 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-12 17:44:28,104 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:44:28,105 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-12 17:44:28,105 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-12 17:44:28,105 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-12 17:44:28,105 - decap_placer.placement.planner - INFO - Начало планирования по правилам
+2026-07-12 17:44:28,105 - decap_placer.placement.planner - DEBUG - Обработка цепи +3V3_VCCIO (1/4)
+2026-07-12 17:44:28,106 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-12 17:44:28,106 - root - ERROR - Неожиданная ошибка
+Traceback (most recent call last):
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 162, in main
+    cmd_apply(args)
+    ~~~~~~~~~^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 66, in cmd_apply
+    moves, vias = planner.plan()
+                  ~~~~~~~~~~~~^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\placement\planner.py", line 175, in plan
+    dest, direction = self._strategy.compute_position(
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._center,
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        fixed_angle_deg=self.cfg.fixed_angle_deg
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\strategies.py", line 64, in compute_position
+    point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
+                                ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\boundary.py", line 65, in closest_point_on_polygon
+    seg_len_sq = seg_vec.dot(seg_vec)
+                 ^^^^^^^^^^^
+AttributeError: 'Vector2' object has no attribute 'dot'
+2026-07-12 17:44:28,107 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-12 17:45:09,401 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-12 17:45:09,402 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-12 17:45:09,412 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4
+2026-07-12 17:45:09,412 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-12 17:45:09,412 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-12 17:45:09,441 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-12 17:45:09,443 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-12 17:45:09,443 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-12 17:45:09,443 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-12 17:45:09,443 - __main__ - INFO - Планирование расстановки...
+2026-07-12 17:45:09,443 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-12 17:45:09,451 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:45:09,452 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-12 17:45:09,452 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-12 17:45:09,452 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-12 17:45:09,452 - decap_placer.placement.planner - INFO - Начало планирования по правилам
+2026-07-12 17:45:09,452 - decap_placer.placement.planner - DEBUG - Обработка цепи +3V3_VCCIO (1/4)
+2026-07-12 17:45:09,453 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-12 17:45:09,453 - root - ERROR - Неожиданная ошибка
+Traceback (most recent call last):
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 162, in main
+    cmd_apply(args)
+    ~~~~~~~~~^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 66, in cmd_apply
+    moves, vias = planner.plan()
+                  ~~~~~~~~~~~~^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\placement\planner.py", line 175, in plan
+    dest, direction = self._strategy.compute_position(
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._center,
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        fixed_angle_deg=self.cfg.fixed_angle_deg
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\strategies.py", line 64, in compute_position
+    point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
+                                ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\boundary.py", line 77, in closest_point_on_polygon
+    normal1 = Vector2(seg_vec.y / seg_len, -seg_vec.x / seg_len)
+TypeError: Vector2.__init__() takes from 1 to 2 positional arguments but 3 were given
+2026-07-12 17:45:09,455 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-12 17:47:45,626 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-12 17:47:45,626 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-12 17:47:45,636 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4
+2026-07-12 17:47:45,636 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-12 17:47:45,636 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-12 17:47:45,701 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-12 17:47:45,703 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-12 17:47:45,703 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-12 17:47:45,703 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-12 17:47:45,704 - __main__ - INFO - Планирование расстановки...
+2026-07-12 17:47:45,704 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-12 17:47:45,712 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:47:45,712 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-12 17:47:45,712 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-12 17:47:45,712 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-12 17:47:45,712 - decap_placer.placement.planner - INFO - Начало планирования по правилам
+2026-07-12 17:47:45,713 - decap_placer.placement.planner - DEBUG - Обработка цепи +3V3_VCCIO (1/4)
+2026-07-12 17:47:45,713 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-12 17:47:45,713 - root - ERROR - Неожиданная ошибка
+Traceback (most recent call last):
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 162, in main
+    cmd_apply(args)
+    ~~~~~~~~~^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\placer.py", line 66, in cmd_apply
+    moves, vias = planner.plan()
+                  ~~~~~~~~~~~~^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\placement\planner.py", line 175, in plan
+    dest, direction = self._strategy.compute_position(
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._center,
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        fixed_angle_deg=self.cfg.fixed_angle_deg
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\strategies.py", line 64, in compute_position
+    point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
+                                ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\Python\KiCadDecapPlacer\decap_placer\geometry\boundary.py", line 77, in closest_point_on_polygon
+    normal1 = Vector2.from_xy(seg_vec.y / seg_len, -seg_vec.x / seg_len)
+  File "D:\Projects\Python\KiCadDecapPlacer\.venv\Lib\site-packages\kipy\geometry.py", line 51, in from_xy
+    proto.x_nm = x_nm
+    ^^^^^^^^^^
+TypeError: 'float' object cannot be interpreted as an integer
+2026-07-12 17:47:45,715 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-12 17:49:19,538 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-12 17:49:19,539 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-12 17:49:19,549 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4
+2026-07-12 17:49:19,549 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-12 17:49:19,549 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-12 17:49:19,614 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-12 17:49:19,615 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-12 17:49:19,616 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-12 17:49:19,616 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-12 17:49:19,616 - __main__ - INFO - Планирование расстановки...
+2026-07-12 17:49:19,616 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-12 17:49:19,624 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:49:19,625 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-12 17:49:19,625 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-12 17:49:19,625 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-12 17:49:19,625 - decap_placer.placement.planner - INFO - Начало планирования по правилам
+2026-07-12 17:49:19,625 - decap_placer.placement.planner - DEBUG - Обработка цепи +3V3_VCCIO (1/4)
+2026-07-12 17:49:19,625 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-12 17:49:19,626 - decap_placer.placement.planner - DEBUG -   C5 -> (38.190, 70.240) мм, угол=0.0°
+2026-07-12 17:49:19,626 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,626 - decap_placer.placement.planner - DEBUG -     виа у C5: (39.190, 70.240) мм
+2026-07-12 17:49:19,626 - decap_placer.placement.planner - DEBUG -   C6 -> (45.328, 57.660) мм, угол=270.0°
+2026-07-12 17:49:19,626 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,626 - decap_placer.placement.planner - DEBUG -     виа у C6: (45.328, 58.660) мм
+2026-07-12 17:49:19,627 - decap_placer.placement.planner - DEBUG -   C7 -> (49.828, 57.660) мм, угол=270.0°
+2026-07-12 17:49:19,627 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,627 - decap_placer.placement.planner - DEBUG -     виа у C7: (49.828, 58.660) мм
+2026-07-12 17:49:19,627 - decap_placer.placement.planner - DEBUG -   C8 -> (53.828, 57.660) мм, угол=270.0°
+2026-07-12 17:49:19,627 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,628 - decap_placer.placement.planner - DEBUG -     виа у C8: (53.828, 58.660) мм
+2026-07-12 17:49:19,628 - decap_placer.placement.planner - DEBUG -   C9 -> (56.328, 57.660) мм, угол=270.0°
+2026-07-12 17:49:19,628 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,628 - decap_placer.placement.planner - DEBUG -     виа у C9: (56.328, 58.660) мм
+2026-07-12 17:49:19,628 - decap_placer.placement.planner - DEBUG -   C10 -> (64.990, 69.740) мм, угол=180.0°
+2026-07-12 17:49:19,629 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,629 - decap_placer.placement.planner - DEBUG -     виа у C10: (63.990, 69.740) мм
+2026-07-12 17:49:19,629 - decap_placer.placement.planner - DEBUG -   C11 -> (64.990, 75.740) мм, угол=180.0°
+2026-07-12 17:49:19,629 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,629 - decap_placer.placement.planner - DEBUG -     виа у C11: (63.990, 75.740) мм
+2026-07-12 17:49:19,629 - decap_placer.placement.planner - DEBUG -   C12 -> (55.328, 84.130) мм, угол=90.0°
+2026-07-12 17:49:19,630 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,630 - decap_placer.placement.planner - DEBUG -     виа у C12: (55.328, 83.130) мм
+2026-07-12 17:49:19,630 - decap_placer.placement.planner - DEBUG -   C13 -> (52.328, 84.130) мм, угол=90.0°
+2026-07-12 17:49:19,630 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,630 - decap_placer.placement.planner - DEBUG -     виа у C13: (52.328, 83.130) мм
+2026-07-12 17:49:19,630 - decap_placer.placement.planner - DEBUG -   C14 -> (47.828, 84.130) мм, угол=90.0°
+2026-07-12 17:49:19,631 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,631 - decap_placer.placement.planner - DEBUG -     виа у C14: (47.828, 83.130) мм
+2026-07-12 17:49:19,631 - decap_placer.placement.planner - DEBUG -   C30 -> (41.390, 70.240) мм, угол=0.0°
+2026-07-12 17:49:19,631 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,631 - decap_placer.placement.planner - DEBUG -     виа у C30: (40.390, 70.240) мм
+2026-07-12 17:49:19,631 - decap_placer.placement.planner - DEBUG -   C31 -> (45.328, 60.860) мм, угол=270.0°
+2026-07-12 17:49:19,632 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,632 - decap_placer.placement.planner - DEBUG -     виа у C31: (45.328, 59.860) мм
+2026-07-12 17:49:19,632 - decap_placer.placement.planner - DEBUG -   C32 -> (49.828, 60.860) мм, угол=270.0°
+2026-07-12 17:49:19,632 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,632 - decap_placer.placement.planner - DEBUG -     виа у C32: (49.828, 59.860) мм
+2026-07-12 17:49:19,632 - decap_placer.placement.planner - DEBUG -   C33 -> (53.828, 60.860) мм, угол=270.0°
+2026-07-12 17:49:19,633 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,633 - decap_placer.placement.planner - DEBUG -     виа у C33: (53.828, 59.860) мм
+2026-07-12 17:49:19,633 - decap_placer.placement.planner - DEBUG -   C34 -> (56.328, 60.860) мм, угол=270.0°
+2026-07-12 17:49:19,633 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,633 - decap_placer.placement.planner - DEBUG -     виа у C34: (56.328, 59.860) мм
+2026-07-12 17:49:19,633 - decap_placer.placement.planner - DEBUG -   C35 -> (61.790, 69.740) мм, угол=180.0°
+2026-07-12 17:49:19,634 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,634 - decap_placer.placement.planner - DEBUG -     виа у C35: (62.790, 69.740) мм
+2026-07-12 17:49:19,634 - decap_placer.placement.planner - DEBUG -   C36 -> (61.790, 75.740) мм, угол=180.0°
+2026-07-12 17:49:19,635 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,635 - decap_placer.placement.planner - DEBUG -     виа у C36: (62.790, 75.740) мм
+2026-07-12 17:49:19,635 - decap_placer.placement.planner - DEBUG -   C37 -> (55.328, 80.930) мм, угол=90.0°
+2026-07-12 17:49:19,635 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,635 - decap_placer.placement.planner - DEBUG -     виа у C37: (55.328, 81.930) мм
+2026-07-12 17:49:19,635 - decap_placer.placement.planner - DEBUG - Обработка цепи +1V2_VCCINT (2/4)
+2026-07-12 17:49:19,636 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +1V2_VCCINT
+2026-07-12 17:49:19,636 - decap_placer.placement.planner - DEBUG -   C19 -> (38.190, 64.240) мм, угол=0.0°
+2026-07-12 17:49:19,636 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,636 - decap_placer.placement.planner - DEBUG -     виа у C19: (39.190, 64.240) мм
+2026-07-12 17:49:19,636 - decap_placer.placement.planner - DEBUG -   C20 -> (47.828, 57.660) мм, угол=270.0°
+2026-07-12 17:49:19,637 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,637 - decap_placer.placement.planner - DEBUG -     виа у C20: (47.828, 58.660) мм
+2026-07-12 17:49:19,637 - decap_placer.placement.planner - DEBUG -   C21 -> (56.828, 57.660) мм, угол=270.0°
+2026-07-12 17:49:19,637 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,637 - decap_placer.placement.planner - DEBUG -     виа у C21: (56.828, 58.660) мм
+2026-07-12 17:49:19,637 - decap_placer.placement.planner - DEBUG -   C22 -> (64.990, 65.240) мм, угол=180.0°
+2026-07-12 17:49:19,637 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,638 - decap_placer.placement.planner - DEBUG -     виа у C22: (63.990, 65.240) мм
+2026-07-12 17:49:19,638 - decap_placer.placement.planner - DEBUG -   C23 -> (64.990, 77.240) мм, угол=180.0°
+2026-07-12 17:49:19,638 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,638 - decap_placer.placement.planner - DEBUG -     виа у C23: (63.990, 77.240) мм
+2026-07-12 17:49:19,638 - decap_placer.placement.planner - DEBUG -   C24 -> (54.828, 84.130) мм, угол=90.0°
+2026-07-12 17:49:19,639 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,639 - decap_placer.placement.planner - DEBUG -     виа у C24: (54.828, 83.130) мм
+2026-07-12 17:49:19,639 - decap_placer.placement.planner - DEBUG -   C25 -> (46.828, 84.130) мм, угол=90.0°
+2026-07-12 17:49:19,639 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,639 - decap_placer.placement.planner - DEBUG -     виа у C25: (46.828, 83.130) мм
+2026-07-12 17:49:19,640 - decap_placer.placement.planner - DEBUG -   C26 -> (38.190, 76.240) мм, угол=0.0°
+2026-07-12 17:49:19,640 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,640 - decap_placer.placement.planner - DEBUG -     виа у C26: (39.190, 76.240) мм
+2026-07-12 17:49:19,640 - decap_placer.placement.planner - DEBUG -   C27 -> (37.290, 64.240) мм, угол=0.0°
+2026-07-12 17:49:19,641 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,641 - decap_placer.placement.planner - DEBUG -     виа у C27: (38.290, 64.240) мм
+2026-07-12 17:49:19,641 - decap_placer.placement.planner - DEBUG -   C40 -> (41.390, 64.240) мм, угол=0.0°
+2026-07-12 17:49:19,641 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,641 - decap_placer.placement.planner - DEBUG -     виа у C40: (40.390, 64.240) мм
+2026-07-12 17:49:19,641 - decap_placer.placement.planner - DEBUG -   C41 -> (47.828, 60.860) мм, угол=270.0°
+2026-07-12 17:49:19,642 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,642 - decap_placer.placement.planner - DEBUG -     виа у C41: (47.828, 59.860) мм
+2026-07-12 17:49:19,642 - decap_placer.placement.planner - DEBUG -   C42 -> (56.828, 60.860) мм, угол=270.0°
+2026-07-12 17:49:19,642 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,642 - decap_placer.placement.planner - DEBUG -     виа у C42: (56.828, 59.860) мм
+2026-07-12 17:49:19,642 - decap_placer.placement.planner - DEBUG -   C43 -> (61.790, 65.240) мм, угол=180.0°
+2026-07-12 17:49:19,643 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,643 - decap_placer.placement.planner - DEBUG -     виа у C43: (62.790, 65.240) мм
+2026-07-12 17:49:19,643 - decap_placer.placement.planner - DEBUG -   C44 -> (61.790, 77.240) мм, угол=180.0°
+2026-07-12 17:49:19,643 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,643 - decap_placer.placement.planner - DEBUG -     виа у C44: (62.790, 77.240) мм
+2026-07-12 17:49:19,643 - decap_placer.placement.planner - DEBUG -   C45 -> (54.828, 80.930) мм, угол=90.0°
+2026-07-12 17:49:19,644 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,644 - decap_placer.placement.planner - DEBUG -     виа у C45: (54.828, 81.930) мм
+2026-07-12 17:49:19,644 - decap_placer.placement.planner - DEBUG -   C46 -> (46.828, 80.930) мм, угол=90.0°
+2026-07-12 17:49:19,644 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,644 - decap_placer.placement.planner - DEBUG -     виа у C46: (46.828, 81.930) мм
+2026-07-12 17:49:19,644 - decap_placer.placement.planner - DEBUG - Обработка цепи +2V5_VCCA (3/4)
+2026-07-12 17:49:19,644 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +2V5_VCCA
+2026-07-12 17:49:19,645 - decap_placer.placement.planner - DEBUG -   C28 -> (64.990, 62.740) мм, угол=180.0°
+2026-07-12 17:49:19,645 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,645 - decap_placer.placement.planner - DEBUG -     виа у C28: (63.990, 62.740) мм
+2026-07-12 17:49:19,645 - decap_placer.placement.planner - DEBUG -   C29 -> (64.990, 68.240) мм, угол=180.0°
+2026-07-12 17:49:19,645 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,645 - decap_placer.placement.planner - DEBUG -     виа у C29: (63.990, 68.240) мм
+2026-07-12 17:49:19,646 - decap_placer.placement.planner - DEBUG -   C51 -> (61.790, 62.740) мм, угол=180.0°
+2026-07-12 17:49:19,646 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,646 - decap_placer.placement.planner - DEBUG -     виа у C51: (62.790, 62.740) мм
+2026-07-12 17:49:19,646 - decap_placer.placement.planner - DEBUG -   C52 -> (61.790, 68.240) мм, угол=180.0°
+2026-07-12 17:49:19,646 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,646 - decap_placer.placement.planner - DEBUG -     виа у C52: (62.790, 68.240) мм
+2026-07-12 17:49:19,647 - decap_placer.placement.planner - DEBUG - Обработка цепи +1V2_VCCD_PLL (4/4)
+2026-07-12 17:49:19,647 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +1V2_VCCD_PLL
+2026-07-12 17:49:19,647 - decap_placer.placement.planner - DEBUG -   C38 -> (60.328, 57.660) мм, угол=270.0°
+2026-07-12 17:49:19,647 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,647 - decap_placer.placement.planner - DEBUG -     виа у C38: (60.328, 58.660) мм
+2026-07-12 17:49:19,648 - decap_placer.placement.planner - DEBUG -   C39 -> (42.828, 84.130) мм, угол=90.0°
+2026-07-12 17:49:19,648 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,648 - decap_placer.placement.planner - DEBUG -     виа у C39: (42.828, 83.130) мм
+2026-07-12 17:49:19,648 - decap_placer.placement.planner - DEBUG -   C53 -> (60.328, 60.860) мм, угол=270.0°
+2026-07-12 17:49:19,648 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,648 - decap_placer.placement.planner - DEBUG -     виа у C53: (60.328, 59.860) мм
+2026-07-12 17:49:19,649 - decap_placer.placement.planner - DEBUG -   C54 -> (42.828, 80.930) мм, угол=90.0°
+2026-07-12 17:49:19,649 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,649 - decap_placer.placement.planner - DEBUG -     виа у C54: (42.828, 81.930) мм
+2026-07-12 17:49:19,649 - decap_placer.placement.planner - DEBUG - Планирование термовиа для IC1, площадка 145
+2026-07-12 17:49:19,657 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-12 17:49:19,657 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:19,658 - decap_placer.placement.planner - INFO - Запланировано 16 термовиа на 145
+2026-07-12 17:49:19,658 - decap_placer.placement.planner - INFO - Планирование завершено: 42 перемещений, 58 виа
+2026-07-12 17:49:19,658 - __main__ - INFO - Запланировано перемещений: 42, виа: 58
+2026-07-12 17:49:19,658 - __main__ - INFO - Применение изменений...
+2026-07-12 17:49:19,658 - decap_placer.placement.executor - INFO - Инициализация исполнителя: batch_size=10
+2026-07-12 17:49:19,665 - decap_placer.kicad.adapter - DEBUG - Получено 82 футпринтов
+2026-07-12 17:49:19,675 - decap_placer.placement.executor - WARNING - Обнаружено 142 потенциальных коллизий:
+2026-07-12 17:49:19,675 - decap_placer.placement.executor - WARNING -   C5 и C30 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,675 - decap_placer.placement.executor - WARNING -   C6 и C31 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,675 - decap_placer.placement.executor - WARNING -   C6 и C20 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,675 - decap_placer.placement.executor - WARNING -   C6 и C41 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,675 - decap_placer.placement.executor - WARNING -   C7 и C8 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,675 - decap_placer.placement.executor - WARNING -   C7 и C32 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,675 - decap_placer.placement.executor - WARNING -   C7 и C20 перекрываются (расст. 2.00 мм)
+2026-07-12 17:49:19,675 - decap_placer.placement.executor - WARNING -   C7 и C41 перекрываются (расст. 3.77 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C8 и C7 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C8 и C9 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C8 и C33 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C8 и C34 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C8 и C21 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C9 и C8 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C9 и C33 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C9 и C34 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C9 и C21 перекрываются (расст. 0.50 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C9 и C42 перекрываются (расст. 3.24 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C9 и C38 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C10 и C35 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C10 и C29 перекрываются (расст. 1.50 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C10 и C52 перекрываются (расст. 3.53 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C11 и C36 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C11 и C23 перекрываются (расст. 1.50 мм)
+2026-07-12 17:49:19,676 - decap_placer.placement.executor - WARNING -   C11 и C44 перекрываются (расст. 3.53 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C12 и C13 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C12 и C37 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C12 и C24 перекрываются (расст. 0.50 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C12 и C45 перекрываются (расст. 3.24 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C13 и C12 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C13 и C24 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C13 и C45 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C14 и C25 перекрываются (расст. 1.00 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C14 и C46 перекрываются (расст. 3.35 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C30 и C5 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C31 и C6 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C31 и C20 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,677 - decap_placer.placement.executor - WARNING -   C31 и C41 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C32 и C7 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C32 и C33 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C32 и C20 перекрываются (расст. 3.77 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C32 и C41 перекрываются (расст. 2.00 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C33 и C8 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C33 и C9 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C33 и C32 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C33 и C34 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C33 и C42 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C34 и C8 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C34 и C9 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C34 и C33 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C34 и C21 перекрываются (расст. 3.24 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C34 и C42 перекрываются (расст. 0.50 мм)
+2026-07-12 17:49:19,678 - decap_placer.placement.executor - WARNING -   C34 и C53 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C35 и C10 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C35 и C29 перекрываются (расст. 3.53 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C35 и C52 перекрываются (расст. 1.50 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C36 и C11 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C36 и C23 перекрываются (расст. 3.53 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C36 и C44 перекрываются (расст. 1.50 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C37 и C12 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C37 и C24 перекрываются (расст. 3.24 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C37 и C45 перекрываются (расст. 0.50 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C19 и C27 перекрываются (расст. 0.90 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C19 и C40 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C20 и C6 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C20 и C7 перекрываются (расст. 2.00 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C20 и C31 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C20 и C32 перекрываются (расст. 3.77 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C20 и C41 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C21 и C8 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,679 - decap_placer.placement.executor - WARNING -   C21 и C9 перекрываются (расст. 0.50 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C21 и C34 перекрываются (расст. 3.24 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C21 и C42 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C21 и C38 перекрываются (расст. 3.50 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C22 и C43 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C22 и C28 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C22 и C29 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C22 и C51 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C23 и C11 перекрываются (расст. 1.50 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C23 и C36 перекрываются (расст. 3.53 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C23 и C44 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C24 и C12 перекрываются (расст. 0.50 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C24 и C13 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C24 и C37 перекрываются (расст. 3.24 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C24 и C45 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C25 и C14 перекрываются (расст. 1.00 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C25 и C46 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C25 и C39 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,680 - decap_placer.placement.executor - WARNING -   C27 и C19 перекрываются (расст. 0.90 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C27 и C40 перекрываются (расст. 4.10 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C40 и C19 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C40 и C27 перекрываются (расст. 4.10 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C41 и C6 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C41 и C7 перекрываются (расст. 3.77 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C41 и C31 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C41 и C32 перекрываются (расст. 2.00 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C41 и C20 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C42 и C9 перекрываются (расст. 3.24 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C42 и C33 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C42 и C34 перекрываются (расст. 0.50 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C42 и C21 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C42 и C53 перекрываются (расст. 3.50 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C43 и C22 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C43 и C28 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C43 и C51 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,681 - decap_placer.placement.executor - WARNING -   C43 и C52 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C44 и C11 перекрываются (расст. 3.53 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C44 и C36 перекрываются (расст. 1.50 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C44 и C23 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C45 и C12 перекрываются (расст. 3.24 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C45 и C13 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C45 и C37 перекрываются (расст. 0.50 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C45 и C24 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C46 и C14 перекрываются (расст. 3.35 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C46 и C25 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C46 и C54 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C28 и C22 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C28 и C43 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C28 и C51 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C29 и C10 перекрываются (расст. 1.50 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C29 и C35 перекрываются (расст. 3.53 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C29 и C22 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,682 - decap_placer.placement.executor - WARNING -   C29 и C52 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C51 и C22 перекрываются (расст. 4.06 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C51 и C43 перекрываются (расст. 2.50 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C51 и C28 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C51 и C53 перекрываются (расст. 2.38 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C52 и C10 перекрываются (расст. 3.53 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C52 и C35 перекрываются (расст. 1.50 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C52 и C43 перекрываются (расст. 3.00 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C52 и C29 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C38 и C9 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C38 и C21 перекрываются (расст. 3.50 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C38 и C53 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C39 и C25 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C39 и C54 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C53 и C34 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C53 и C42 перекрываются (расст. 3.50 мм)
+2026-07-12 17:49:19,683 - decap_placer.placement.executor - WARNING -   C53 и C51 перекрываются (расст. 2.38 мм)
+2026-07-12 17:49:19,684 - decap_placer.placement.executor - WARNING -   C53 и C38 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,684 - decap_placer.placement.executor - WARNING -   C54 и C46 перекрываются (расст. 4.00 мм)
+2026-07-12 17:49:19,684 - decap_placer.placement.executor - WARNING -   C54 и C39 перекрываются (расст. 3.20 мм)
+2026-07-12 17:49:19,691 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C5
+2026-07-12 17:49:19,699 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C6
+2026-07-12 17:49:19,706 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C7
+2026-07-12 17:49:19,714 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C8
+2026-07-12 17:49:19,722 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C9
+2026-07-12 17:49:19,729 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C10
+2026-07-12 17:49:19,736 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C11
+2026-07-12 17:49:19,744 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C12
+2026-07-12 17:49:19,752 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C13
+2026-07-12 17:49:19,759 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C14
+2026-07-12 17:49:19,767 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C30
+2026-07-12 17:49:19,774 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C31
+2026-07-12 17:49:19,781 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C32
+2026-07-12 17:49:19,788 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C33
+2026-07-12 17:49:19,796 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C34
+2026-07-12 17:49:19,804 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C35
+2026-07-12 17:49:19,811 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C36
+2026-07-12 17:49:19,818 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C37
+2026-07-12 17:49:19,825 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C19
+2026-07-12 17:49:19,833 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C20
+2026-07-12 17:49:19,840 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C21
+2026-07-12 17:49:19,847 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C22
+2026-07-12 17:49:19,855 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C23
+2026-07-12 17:49:19,862 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C24
+2026-07-12 17:49:19,870 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C25
+2026-07-12 17:49:19,878 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C26
+2026-07-12 17:49:19,885 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C27
+2026-07-12 17:49:19,892 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C40
+2026-07-12 17:49:19,899 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C41
+2026-07-12 17:49:19,906 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C42
+2026-07-12 17:49:19,914 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C43
+2026-07-12 17:49:19,921 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C44
+2026-07-12 17:49:19,928 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C45
+2026-07-12 17:49:19,935 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C46
+2026-07-12 17:49:19,942 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C28
+2026-07-12 17:49:19,950 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C29
+2026-07-12 17:49:19,957 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C51
+2026-07-12 17:49:19,966 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C52
+2026-07-12 17:49:19,974 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C38
+2026-07-12 17:49:19,981 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C39
+2026-07-12 17:49:19,988 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C53
+2026-07-12 17:49:19,995 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C54
+2026-07-12 17:49:19,995 - decap_placer.placement.executor - DEBUG - Флип не требуется
+2026-07-12 17:49:19,995 - decap_placer.placement.executor - INFO - Перемещение в 5 батчах
+2026-07-12 17:49:19,996 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 1/5
+2026-07-12 17:49:19,996 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,003 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C5
+2026-07-12 17:49:20,010 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C6
+2026-07-12 17:49:20,019 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C7
+2026-07-12 17:49:20,026 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C8
+2026-07-12 17:49:20,033 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C9
+2026-07-12 17:49:20,041 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C10
+2026-07-12 17:49:20,048 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C11
+2026-07-12 17:49:20,055 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C12
+2026-07-12 17:49:20,063 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C13
+2026-07-12 17:49:20,070 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C14
+2026-07-12 17:49:20,071 - decap_placer.kicad.adapter - DEBUG - Обновление 10 элементов
+2026-07-12 17:49:20,073 - decap_placer.placement.executor - DEBUG -   обновлено 10 футпринтов
+2026-07-12 17:49:20,073 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 1/5
+2026-07-12 17:49:20,078 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 1/5
+2026-07-12 17:49:20,078 - decap_placer.placement.executor - INFO -   батч перемещений 1 выполнен (10 шт.)
+2026-07-12 17:49:20,078 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 2/5
+2026-07-12 17:49:20,079 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,087 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C30
+2026-07-12 17:49:20,095 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C31
+2026-07-12 17:49:20,103 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C32
+2026-07-12 17:49:20,111 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C33
+2026-07-12 17:49:20,120 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C34
+2026-07-12 17:49:20,127 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C35
+2026-07-12 17:49:20,135 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C36
+2026-07-12 17:49:20,143 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C37
+2026-07-12 17:49:20,151 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C19
+2026-07-12 17:49:20,158 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C20
+2026-07-12 17:49:20,159 - decap_placer.kicad.adapter - DEBUG - Обновление 10 элементов
+2026-07-12 17:49:20,161 - decap_placer.placement.executor - DEBUG -   обновлено 10 футпринтов
+2026-07-12 17:49:20,161 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 2/5
+2026-07-12 17:49:20,166 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 2/5
+2026-07-12 17:49:20,166 - decap_placer.placement.executor - INFO -   батч перемещений 2 выполнен (10 шт.)
+2026-07-12 17:49:20,166 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 3/5
+2026-07-12 17:49:20,166 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,174 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C21
+2026-07-12 17:49:20,182 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C22
+2026-07-12 17:49:20,190 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C23
+2026-07-12 17:49:20,199 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C24
+2026-07-12 17:49:20,207 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C25
+2026-07-12 17:49:20,215 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C26
+2026-07-12 17:49:20,223 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C27
+2026-07-12 17:49:20,230 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C40
+2026-07-12 17:49:20,238 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C41
+2026-07-12 17:49:20,246 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C42
+2026-07-12 17:49:20,246 - decap_placer.kicad.adapter - DEBUG - Обновление 10 элементов
+2026-07-12 17:49:20,248 - decap_placer.placement.executor - DEBUG -   обновлено 10 футпринтов
+2026-07-12 17:49:20,249 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 3/5
+2026-07-12 17:49:20,253 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 3/5
+2026-07-12 17:49:20,254 - decap_placer.placement.executor - INFO -   батч перемещений 3 выполнен (10 шт.)
+2026-07-12 17:49:20,254 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 4/5
+2026-07-12 17:49:20,254 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,262 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C43
+2026-07-12 17:49:20,270 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C44
+2026-07-12 17:49:20,278 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C45
+2026-07-12 17:49:20,286 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C46
+2026-07-12 17:49:20,294 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C28
+2026-07-12 17:49:20,302 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C29
+2026-07-12 17:49:20,310 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C51
+2026-07-12 17:49:20,317 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C52
+2026-07-12 17:49:20,325 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C38
+2026-07-12 17:49:20,333 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C39
+2026-07-12 17:49:20,334 - decap_placer.kicad.adapter - DEBUG - Обновление 10 элементов
+2026-07-12 17:49:20,336 - decap_placer.placement.executor - DEBUG -   обновлено 10 футпринтов
+2026-07-12 17:49:20,336 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 4/5
+2026-07-12 17:49:20,341 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 4/5
+2026-07-12 17:49:20,341 - decap_placer.placement.executor - INFO -   батч перемещений 4 выполнен (10 шт.)
+2026-07-12 17:49:20,341 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 5/5
+2026-07-12 17:49:20,342 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,354 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C53
+2026-07-12 17:49:20,362 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C54
+2026-07-12 17:49:20,362 - decap_placer.kicad.adapter - DEBUG - Обновление 2 элементов
+2026-07-12 17:49:20,363 - decap_placer.placement.executor - DEBUG -   обновлено 2 футпринтов
+2026-07-12 17:49:20,363 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 5/5
+2026-07-12 17:49:20,368 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 5/5
+2026-07-12 17:49:20,368 - decap_placer.placement.executor - INFO -   батч перемещений 5 выполнен (2 шт.)
+2026-07-12 17:49:20,368 - decap_placer.placement.executor - INFO - Создание виа в 6 батчах
+2026-07-12 17:49:20,368 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 1/6
+2026-07-12 17:49:20,368 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,369 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,369 - decap_placer.kicad.adapter - DEBUG - Создание виа в (39.190, 70.240) мм, net=GND
+2026-07-12 17:49:20,372 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,372 - decap_placer.kicad.adapter - DEBUG - Создание виа в (45.328, 58.660) мм, net=GND
+2026-07-12 17:49:20,377 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,377 - decap_placer.kicad.adapter - DEBUG - Создание виа в (49.828, 58.660) мм, net=GND
+2026-07-12 17:49:20,379 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,379 - decap_placer.kicad.adapter - DEBUG - Создание виа в (53.828, 58.660) мм, net=GND
+2026-07-12 17:49:20,382 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,382 - decap_placer.kicad.adapter - DEBUG - Создание виа в (56.328, 58.660) мм, net=GND
+2026-07-12 17:49:20,384 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,384 - decap_placer.kicad.adapter - DEBUG - Создание виа в (63.990, 69.740) мм, net=GND
+2026-07-12 17:49:20,386 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,386 - decap_placer.kicad.adapter - DEBUG - Создание виа в (63.990, 75.740) мм, net=GND
+2026-07-12 17:49:20,388 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,388 - decap_placer.kicad.adapter - DEBUG - Создание виа в (55.328, 83.130) мм, net=GND
+2026-07-12 17:49:20,390 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,391 - decap_placer.kicad.adapter - DEBUG - Создание виа в (52.328, 83.130) мм, net=GND
+2026-07-12 17:49:20,393 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,393 - decap_placer.kicad.adapter - DEBUG - Создание виа в (47.828, 83.130) мм, net=GND
+2026-07-12 17:49:20,395 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-12 17:49:20,395 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-12 17:49:20,395 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-12 17:49:20,395 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 1/6
+2026-07-12 17:49:20,399 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 1/6
+2026-07-12 17:49:20,400 - decap_placer.placement.executor - INFO -   батч виа 1 выполнен (10 шт.)
+2026-07-12 17:49:20,400 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 2/6
+2026-07-12 17:49:20,400 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,401 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,401 - decap_placer.kicad.adapter - DEBUG - Создание виа в (40.390, 70.240) мм, net=GND
+2026-07-12 17:49:20,404 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,404 - decap_placer.kicad.adapter - DEBUG - Создание виа в (45.328, 59.860) мм, net=GND
+2026-07-12 17:49:20,406 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,407 - decap_placer.kicad.adapter - DEBUG - Создание виа в (49.828, 59.860) мм, net=GND
+2026-07-12 17:49:20,409 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,409 - decap_placer.kicad.adapter - DEBUG - Создание виа в (53.828, 59.860) мм, net=GND
+2026-07-12 17:49:20,411 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,411 - decap_placer.kicad.adapter - DEBUG - Создание виа в (56.328, 59.860) мм, net=GND
+2026-07-12 17:49:20,413 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,413 - decap_placer.kicad.adapter - DEBUG - Создание виа в (62.790, 69.740) мм, net=GND
+2026-07-12 17:49:20,415 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,415 - decap_placer.kicad.adapter - DEBUG - Создание виа в (62.790, 75.740) мм, net=GND
+2026-07-12 17:49:20,418 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,418 - decap_placer.kicad.adapter - DEBUG - Создание виа в (55.328, 81.930) мм, net=GND
+2026-07-12 17:49:20,420 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,420 - decap_placer.kicad.adapter - DEBUG - Создание виа в (39.190, 64.240) мм, net=GND
+2026-07-12 17:49:20,422 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,423 - decap_placer.kicad.adapter - DEBUG - Создание виа в (47.828, 58.660) мм, net=GND
+2026-07-12 17:49:20,424 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-12 17:49:20,425 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-12 17:49:20,425 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-12 17:49:20,425 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 2/6
+2026-07-12 17:49:20,429 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 2/6
+2026-07-12 17:49:20,429 - decap_placer.placement.executor - INFO -   батч виа 2 выполнен (10 шт.)
+2026-07-12 17:49:20,429 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 3/6
+2026-07-12 17:49:20,429 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,430 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,430 - decap_placer.kicad.adapter - DEBUG - Создание виа в (56.828, 58.660) мм, net=GND
+2026-07-12 17:49:20,433 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,433 - decap_placer.kicad.adapter - DEBUG - Создание виа в (63.990, 65.240) мм, net=GND
+2026-07-12 17:49:20,435 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,436 - decap_placer.kicad.adapter - DEBUG - Создание виа в (63.990, 77.240) мм, net=GND
+2026-07-12 17:49:20,438 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,438 - decap_placer.kicad.adapter - DEBUG - Создание виа в (54.828, 83.130) мм, net=GND
+2026-07-12 17:49:20,440 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,440 - decap_placer.kicad.adapter - DEBUG - Создание виа в (46.828, 83.130) мм, net=GND
+2026-07-12 17:49:20,442 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,443 - decap_placer.kicad.adapter - DEBUG - Создание виа в (39.190, 76.240) мм, net=GND
+2026-07-12 17:49:20,445 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,445 - decap_placer.kicad.adapter - DEBUG - Создание виа в (38.290, 64.240) мм, net=GND
+2026-07-12 17:49:20,447 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,447 - decap_placer.kicad.adapter - DEBUG - Создание виа в (40.390, 64.240) мм, net=GND
+2026-07-12 17:49:20,449 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,449 - decap_placer.kicad.adapter - DEBUG - Создание виа в (47.828, 59.860) мм, net=GND
+2026-07-12 17:49:20,451 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,451 - decap_placer.kicad.adapter - DEBUG - Создание виа в (56.828, 59.860) мм, net=GND
+2026-07-12 17:49:20,453 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-12 17:49:20,454 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-12 17:49:20,454 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-12 17:49:20,454 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 3/6
+2026-07-12 17:49:20,458 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 3/6
+2026-07-12 17:49:20,458 - decap_placer.placement.executor - INFO -   батч виа 3 выполнен (10 шт.)
+2026-07-12 17:49:20,458 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 4/6
+2026-07-12 17:49:20,458 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,460 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,460 - decap_placer.kicad.adapter - DEBUG - Создание виа в (62.790, 65.240) мм, net=GND
+2026-07-12 17:49:20,462 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,462 - decap_placer.kicad.adapter - DEBUG - Создание виа в (62.790, 77.240) мм, net=GND
+2026-07-12 17:49:20,468 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,468 - decap_placer.kicad.adapter - DEBUG - Создание виа в (54.828, 81.930) мм, net=GND
+2026-07-12 17:49:20,471 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,471 - decap_placer.kicad.adapter - DEBUG - Создание виа в (46.828, 81.930) мм, net=GND
+2026-07-12 17:49:20,473 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,473 - decap_placer.kicad.adapter - DEBUG - Создание виа в (63.990, 62.740) мм, net=GND
+2026-07-12 17:49:20,475 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,475 - decap_placer.kicad.adapter - DEBUG - Создание виа в (63.990, 68.240) мм, net=GND
+2026-07-12 17:49:20,478 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,478 - decap_placer.kicad.adapter - DEBUG - Создание виа в (62.790, 62.740) мм, net=GND
+2026-07-12 17:49:20,480 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,480 - decap_placer.kicad.adapter - DEBUG - Создание виа в (62.790, 68.240) мм, net=GND
+2026-07-12 17:49:20,482 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,482 - decap_placer.kicad.adapter - DEBUG - Создание виа в (60.328, 58.660) мм, net=GND
+2026-07-12 17:49:20,484 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,484 - decap_placer.kicad.adapter - DEBUG - Создание виа в (42.828, 83.130) мм, net=GND
+2026-07-12 17:49:20,486 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-12 17:49:20,487 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-12 17:49:20,487 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-12 17:49:20,487 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 4/6
+2026-07-12 17:49:20,491 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 4/6
+2026-07-12 17:49:20,491 - decap_placer.placement.executor - INFO -   батч виа 4 выполнен (10 шт.)
+2026-07-12 17:49:20,491 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 5/6
+2026-07-12 17:49:20,491 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,492 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,493 - decap_placer.kicad.adapter - DEBUG - Создание виа в (60.328, 59.860) мм, net=GND
+2026-07-12 17:49:20,495 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,495 - decap_placer.kicad.adapter - DEBUG - Создание виа в (42.828, 81.930) мм, net=GND
+2026-07-12 17:49:20,498 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,498 - decap_placer.kicad.adapter - DEBUG - Создание виа в (48.653, 68.065) мм, net=GND
+2026-07-12 17:49:20,501 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,501 - decap_placer.kicad.adapter - DEBUG - Создание виа в (50.603, 68.065) мм, net=GND
+2026-07-12 17:49:20,503 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,503 - decap_placer.kicad.adapter - DEBUG - Создание виа в (52.553, 68.065) мм, net=GND
+2026-07-12 17:49:20,505 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,506 - decap_placer.kicad.adapter - DEBUG - Создание виа в (54.503, 68.065) мм, net=GND
+2026-07-12 17:49:20,508 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,508 - decap_placer.kicad.adapter - DEBUG - Создание виа в (48.653, 70.015) мм, net=GND
+2026-07-12 17:49:20,510 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,510 - decap_placer.kicad.adapter - DEBUG - Создание виа в (50.603, 70.015) мм, net=GND
+2026-07-12 17:49:20,512 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,512 - decap_placer.kicad.adapter - DEBUG - Создание виа в (52.553, 70.015) мм, net=GND
+2026-07-12 17:49:20,514 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,515 - decap_placer.kicad.adapter - DEBUG - Создание виа в (54.503, 70.015) мм, net=GND
+2026-07-12 17:49:20,516 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-12 17:49:20,517 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-12 17:49:20,517 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-12 17:49:20,517 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 5/6
+2026-07-12 17:49:20,521 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 5/6
+2026-07-12 17:49:20,522 - decap_placer.placement.executor - INFO -   батч виа 5 выполнен (10 шт.)
+2026-07-12 17:49:20,522 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 6/6
+2026-07-12 17:49:20,522 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-12 17:49:20,523 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,523 - decap_placer.kicad.adapter - DEBUG - Создание виа в (48.653, 71.965) мм, net=GND
+2026-07-12 17:49:20,526 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,526 - decap_placer.kicad.adapter - DEBUG - Создание виа в (50.603, 71.965) мм, net=GND
+2026-07-12 17:49:20,529 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,529 - decap_placer.kicad.adapter - DEBUG - Создание виа в (52.553, 71.965) мм, net=GND
+2026-07-12 17:49:20,532 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,532 - decap_placer.kicad.adapter - DEBUG - Создание виа в (54.503, 71.965) мм, net=GND
+2026-07-12 17:49:20,534 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,534 - decap_placer.kicad.adapter - DEBUG - Создание виа в (48.653, 73.915) мм, net=GND
+2026-07-12 17:49:20,536 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,537 - decap_placer.kicad.adapter - DEBUG - Создание виа в (50.603, 73.915) мм, net=GND
+2026-07-12 17:49:20,540 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,540 - decap_placer.kicad.adapter - DEBUG - Создание виа в (52.553, 73.915) мм, net=GND
+2026-07-12 17:49:20,542 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-12 17:49:20,542 - decap_placer.kicad.adapter - DEBUG - Создание виа в (54.503, 73.915) мм, net=GND
+2026-07-12 17:49:20,544 - decap_placer.kicad.adapter - DEBUG - Создание 8 элементов
+2026-07-12 17:49:20,545 - decap_placer.kicad.adapter - DEBUG - Создано 8 элементов
+2026-07-12 17:49:20,545 - decap_placer.placement.executor - DEBUG -   создано 8 виа
+2026-07-12 17:49:20,545 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 6/6
+2026-07-12 17:49:20,550 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 6/6
+2026-07-12 17:49:20,550 - decap_placer.placement.executor - INFO -   батч виа 6 выполнен (8 шт.)
+2026-07-12 17:49:20,550 - __main__ - INFO - ✅ Все операции выполнены успешно
+2026-07-12 17:49:20,550 - pynng.nng - DEBUG - Pipe callback event 2

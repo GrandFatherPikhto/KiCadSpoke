@@ -4,7 +4,7 @@ import math
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 from kipy.geometry import Vector2
-from .boundary import ray_boundary_distance
+from .boundary import ray_boundary_distance, closest_point_on_polygon
 from ..utils.units import MM
 
 class PlacementStrategy(ABC):
@@ -54,3 +54,21 @@ class FixedStrategy(PlacementStrategy):
         point, _ = RadialStrategy().compute_position(center, pad_pos, boundary_polygon, placement, offset_mm)
         rad = math.radians(fixed_angle_deg)
         return point, (math.cos(rad), math.sin(rad))
+    
+class BoundaryStrategy(PlacementStrategy):
+    def compute_position(self, center: Vector2, pad_pos: Vector2,
+                         boundary_polygon: List[Vector2],
+                         placement: str, offset_mm: float,
+                         fixed_angle_deg: float = 0.0) -> Tuple[Vector2, Tuple[float, float]]:
+        point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
+        ux, uy = normal  # теперь normal - кортеж
+        offset = offset_mm * MM
+        if placement == "outside":
+            point = Vector2.from_xy(int(point_on_boundary.x - ux * offset),
+                                    int(point_on_boundary.y - uy * offset))
+        elif placement == "inside":
+            point = Vector2.from_xy(int(point_on_boundary.x + ux * offset),
+                                    int(point_on_boundary.y + uy * offset))
+        else:
+            point = point_on_boundary
+        return point, (ux, uy) 

@@ -14,7 +14,7 @@ target_ref: "IC1"             # refdes микросхемы (FPGA), вокруг
 boundary_zone: "RA_DECAP_ZONE"
 
 side: "back"                  # сторона размещения конденсаторов: front | back
-rotation_mode: "radial"       # radial (вдоль луча центр->площадка) |
+rotation_mode: "boundary"       # radial (вдоль луча центр->площадка) |
                               # orthogonal (то же, но округлено до ближайших
                               # 90° — параллельно/перпендикулярно сторонам
                               # прямоугольной зоны, а не "лучами") | fixed

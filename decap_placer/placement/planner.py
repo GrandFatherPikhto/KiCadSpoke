@@ -8,7 +8,7 @@ from kipy.geometry import Vector2, Angle
 
 from ..config import Config, ViaConfig, Assignment
 from ..kicad.adapter import KiCadBoardAdapter
-from ..geometry.strategies import PlacementStrategy, RadialStrategy, OrthogonalStrategy, FixedStrategy
+from ..geometry.strategies import PlacementStrategy, RadialStrategy, OrthogonalStrategy, FixedStrategy, BoundaryStrategy
 from ..geometry.boundary import polyline_points
 from ..geometry.thermal_grid import compute_thermal_via_grid
 from ..utils.units import MM
@@ -57,6 +57,9 @@ class PlacementPlanner:
         elif mode == "fixed":
             logger.debug(f"Выбрана фиксированная стратегия (угол {self.cfg.fixed_angle_deg}°)")
             return FixedStrategy()
+        elif mode == "boundary":
+            logger.debug(f"Выбрана стратегия по границам")
+            return BoundaryStrategy()
         else:
             raise ValueError(f"Неизвестный rotation_mode: {mode}")
 
