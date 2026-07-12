@@ -6,11 +6,12 @@ from typing import List, Tuple, Optional
 from kipy.board_types import BoardLayer, Pad
 from kipy.geometry import Vector2, Angle
 
-from ..config import Config, ViaConfig, Assignment
+from ..config import Config, ViaConfig, SpokeComponent
 from ..kicad.adapter import KiCadBoardAdapter
 from ..geometry.strategies import PlacementStrategy, RadialStrategy, OrthogonalStrategy, FixedStrategy, BoundaryStrategy
 from ..geometry.boundary import polyline_points
 from ..geometry.thermal_grid import compute_thermal_via_grid
+from ..geometry.relax import relax_positions
 from ..utils.units import MM
 from ..exceptions import ComponentNotFoundError, GeometryError
 
@@ -82,23 +83,38 @@ class PlacementPlanner:
             return 180.0 - angle_deg
         return angle_deg
 
-    def _merge_via_config(self, assignment: Assignment) -> ViaConfig:
-        global_cfg = self.cfg.via
-        override = assignment.via
+    def _merge_via_config(self, component: SpokeComponent) -> ViaConfig:
+        """
+        ИСПРАВЛЕНО (2026-07-12): раньше assignment.via уже приходил
+        преждевременно сконструированным как полный ViaConfig (со всеми
+        полями, включая те, что не были в YAML — они получали ДЕФОЛТЫ
+        ViaConfig, не None), и здесь проверялось "if value is not None" —
+        что никогда не отличало "не задано" от "явно задано в дефолтное
+        значение", и enabled=True из global тихо перезатирался на
+        enabled=False. Теперь component.via — сырой bool/dict/None
+        (см. config.py), и мёрж явно смотрит, какие КЛЮЧИ реально
+        присутствуют в словаре — только они переопределяют global.
+        """
+        global_dict = dict(self.cfg.via.__dict__)
+        override = component.via
+
         if override is None:
-            return global_cfg
+            return ViaConfig(**global_dict)
+
         if isinstance(override, bool):
             if override:
-                return global_cfg
+                return ViaConfig(**global_dict)
             else:
-                return ViaConfig(enabled=False)
-        if isinstance(override, ViaConfig):
-            merged = ViaConfig(**global_cfg.__dict__)
-            for key, value in override.__dict__.items():
-                if value is not None:
-                    setattr(merged, key, value)
-            return merged
-        raise ValueError(f"Некорректное значение via: {override}")
+                merged = dict(global_dict)
+                merged["enabled"] = False
+                return ViaConfig(**merged)
+
+        if isinstance(override, dict):
+            merged = dict(global_dict)
+            merged.update(override)  # только реально присутствующие ключи
+            return ViaConfig(**merged)
+
+        raise ValueError(f"Некорректное значение via: {override!r} (ожидается bool, dict или None)")
 
     def _plan_stitching_vias(self, cap_point: Vector2, direction: Tuple[float, float],
                               via_cfg: ViaConfig, placement: str) -> List[Vector2]:
@@ -155,62 +171,92 @@ class PlacementPlanner:
         return [ViaCommand(p, tva.drill_mm, tva.diameter_mm, tva.net, tva.target_ref) for p in points]
 
     def plan(self) -> Tuple[List[MoveCommand], List[ViaCommand]]:
-        moves = []
         vias = []
 
-        logger.info("Начало планирования по правилам")
+        # --- Фаза 1: считаем "сырые" позиции по стратегии, БЕЗ виа ---
+        # (виа планируются позже, в фазе 3, уже на раздвинутых позициях —
+        # иначе виа привязались бы к точкам, которые раздвижка потом сдвинет)
+        raw = []  # список (component, dest, direction, angle)
+        logger.info("Начало планирования по правилам (фаза 1: сырые позиции)")
         for rule_idx, rule in enumerate(self.cfg.rules):
             logger.debug(f"Обработка цепи {rule.net} ({rule_idx+1}/{len(self.cfg.rules)})")
             net = self.adapter.get_net_by_name(rule.net)
             if net is None:
                 logger.warning(f"Цепь {rule.net} не найдена, пропускаем")
                 continue
-            for ass_idx, assignment in enumerate(rule.assignments):
-                pad = self._find_pad(self._target_fp, assignment.pad)
+            for spoke in rule.spokes:
+                pad = self._find_pad(self._target_fp, spoke.pad)
                 if pad is None:
-                    logger.warning(f"У {self.cfg.target_ref} нет площадки {assignment.pad}, пропуск")
+                    logger.warning(f"У {self.cfg.target_ref} нет площадки {spoke.pad}, "
+                                   f"пропуск всей спицы ({len(spoke.components)} компонент.)")
                     continue
 
-                try:
-                    dest, direction = self._strategy.compute_position(
-                        self._center,
-                        pad.position,
-                        self._boundary_polygon,
-                        assignment.placement,
-                        assignment.offset_mm,
-                        fixed_angle_deg=self.cfg.fixed_angle_deg
-                    )
-                except GeometryError as e:
-                    raise GeometryError(f"Ошибка для {assignment.ref}: {e}")
+                for component in spoke.components:
+                    try:
+                        dest, direction = self._strategy.compute_position(
+                            self._center,
+                            pad.position,
+                            self._boundary_polygon,
+                            component.placement,
+                            component.offset_mm,
+                            fixed_angle_deg=self.cfg.fixed_angle_deg
+                        )
+                    except GeometryError as e:
+                        raise GeometryError(f"Ошибка для {component.ref} (спица {spoke.pad}): {e}")
 
-                phi_deg = math.degrees(math.atan2(direction[1], direction[0]))
-                phi_deg = self._mirror_angle(phi_deg)
-                angle = Angle.from_degrees(phi_deg)
+                    phi_deg = math.degrees(math.atan2(direction[1], direction[0]))
+                    phi_deg = self._mirror_angle(phi_deg)
+                    angle = Angle.from_degrees(phi_deg)
 
-                moves.append(MoveCommand(
-                    ref=assignment.ref,
-                    position=dest,
-                    angle=angle,
-                    layer=self._target_layer
-                ))
-                logger.debug(f"  {assignment.ref} -> ({dest.x/MM:.3f}, {dest.y/MM:.3f}) мм, угол={phi_deg:.1f}°")
+                    raw.append((component, dest, direction, angle))
+                    logger.debug(f"  {component.ref} (спица {spoke.pad}, сырая позиция) -> "
+                                 f"({dest.x/MM:.3f}, {dest.y/MM:.3f}) мм, угол={phi_deg:.1f}°")
 
-                via_cfg = self._merge_via_config(assignment)
-                if via_cfg.enabled:
-                    via_net = self.adapter.get_net_by_name(via_cfg.net)
-                    if via_net is None:
-                        logger.warning(f"Цепь {via_cfg.net} для виа у {assignment.ref} не найдена")
-                        continue
-                    via_positions = self._plan_stitching_vias(dest, direction, via_cfg, assignment.placement)
-                    for pos in via_positions:
-                        vias.append(ViaCommand(
-                            position=pos,
-                            drill_mm=via_cfg.drill_mm,
-                            diameter_mm=via_cfg.diameter_mm,
-                            net_name=via_cfg.net,
-                            owner_ref=assignment.ref
-                        ))
-                        logger.debug(f"    виа у {assignment.ref}: ({pos.x/MM:.3f}, {pos.y/MM:.3f}) мм")
+        # --- Фаза 2: раздвигаем конфликтующие точки вдоль ряда ---
+        # ВАЖНО: группировка в relax_positions идёт по (нормаль стороны,
+        # перпендикулярная координата) — т.е. АВТОМАТИЧЕСКИ по одной и той
+        # же стороне зоны И одной и той же линии (inside/outside), но
+        # НЕЗАВИСИМО от того, какой цепи принадлежит конденсатор. Это и
+        # решает межцепевые конфликты (см. Config.min_row_spacing_mm).
+        entries = [(dest, direction, (component, direction, angle)) for component, dest, direction, angle in raw]
+        relaxed = relax_positions(entries, self.cfg.min_row_spacing_mm, MM)
+
+        original_dest_by_id = {id(component): dest for component, dest, _, _ in raw}
+        moved_count = sum(
+            1 for new_pos, (component, _, _) in relaxed
+            if (orig := original_dest_by_id.get(id(component))) is not None
+            and (new_pos.x != orig.x or new_pos.y != orig.y)
+        )
+        if moved_count:
+            logger.info(f"Раздвижка вдоль ряда: скорректировано позиций у {moved_count} конденсаторов "
+                        f"(min_row_spacing_mm={self.cfg.min_row_spacing_mm})")
+
+        # --- Фаза 3: финальные MoveCommand + планирование виа на раздвинутых позициях ---
+        moves = []
+        for new_pos, (component, direction, angle) in relaxed:
+            moves.append(MoveCommand(
+                ref=component.ref,
+                position=new_pos,
+                angle=angle,
+                layer=self._target_layer
+            ))
+
+            via_cfg = self._merge_via_config(component)
+            if via_cfg.enabled:
+                via_net = self.adapter.get_net_by_name(via_cfg.net)
+                if via_net is None:
+                    logger.warning(f"Цепь {via_cfg.net} для виа у {component.ref} не найдена")
+                    continue
+                via_positions = self._plan_stitching_vias(new_pos, direction, via_cfg, component.placement)
+                for pos in via_positions:
+                    vias.append(ViaCommand(
+                        position=pos,
+                        drill_mm=via_cfg.drill_mm,
+                        diameter_mm=via_cfg.diameter_mm,
+                        net_name=via_cfg.net,
+                        owner_ref=component.ref
+                    ))
+                    logger.debug(f"    виа у {component.ref}: ({pos.x/MM:.3f}, {pos.y/MM:.3f}) мм")
 
         # Термовиа
         vias.extend(self._plan_thermal_vias())

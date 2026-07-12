@@ -36,15 +36,57 @@ def ray_boundary_distance(center: Vector2, target: Vector2, boundary_pts: List[V
         raise GeometryError("луч не пересекает границу зоны – проверьте геометрию/сторону")
     return best_t, (ux, uy)
 
+def polygon_signed_area(polygon: List[Vector2]) -> float:
+    """
+    Удвоенная знаковая площадь полигона (формула shoelace). Знак даёт
+    ориентацию обхода (CW/CCW) — используется для того, чтобы определить
+    направление "наружу" ОДИН РАЗ для всего полигона, а не для каждой
+    опрашиваемой точки отдельно (см. ИСПРАВЛЕНО ниже).
+    """
+    n = len(polygon)
+    area = 0.0
+    for i in range(n):
+        p1, p2 = polygon[i], polygon[(i + 1) % n]
+        area += p1.x * p2.y - p2.x * p1.y
+    return area
+
+
 def closest_point_on_polygon(point: Vector2, polygon: List[Vector2]) -> Tuple[Vector2, Tuple[float, float]]:
     """
-    Находит ближайшую точку на полигоне к заданной точке и нормаль в этой точке.
-    Нормаль направлена внутрь полигона (в сторону уменьшения расстояния).
+    Находит ближайшую точку на полигоне к заданной точке и нормаль,
+    направленную НАРУЖУ от полигона, в этой точке.
     Возвращает (ближайшая_точка, (нормаль_x, нормаль_y)).
+
+    ИСПРАВЛЕНО (2026-07-12): раньше направление нормали (какая из двух
+    перпендикулярных кандидатур — "наружу" или "внутрь") выбиралось по
+    тому, с какой стороны от границы находится ОПРАШИВАЕМАЯ точка (пад) —
+    "какая нормаль сильнее совпадает с направлением от точки к границе".
+    Это ломалось на пограничном случае: если сам вывод IC1 оказывался
+    на волосок СНАРУЖИ зоны (реальный случай — зона нарисована впритык,
+    вывод в 0.008мм за границей), выбор нормали переворачивался на 180°
+    именно для этого вывода — что и давало "inside/outside перепутаны"
+    ровно на одной стороне корпуса, где зона прочерчена не с запасом.
+
+    Теперь направление "наружу" вычисляется ОДИН РАЗ для всего полигона
+    через ориентацию обхода (знаковую площадь, см. polygon_signed_area) —
+    результат не зависит от того, где именно относительно границы стоит
+    конкретная опрашиваемая точка, и на пограничных случаях не ломается.
     """
+    if len(polygon) < 3:
+        raise GeometryError("полигон должен содержать хотя бы 3 точки")
+
+    signed_area = polygon_signed_area(polygon)
+    if signed_area == 0:
+        raise GeometryError("вырожденный полигон (нулевая площадь) — проверьте геометрию зоны")
+    # signed_area > 0 (в координатах KiCad, Y вниз) — обход по часовой
+    # стрелке в привычном "на экране" смысле; знак сам по себе нам не
+    # важен как таковой — важно лишь то, что ОДНА и та же формула
+    # применяется консистентно для всех сторон одного и того же полигона.
+    orientation_sign = 1.0 if signed_area > 0 else -1.0
+
     best_dist = float('inf')
     best_point = None
-    best_normal = None  # будет кортежем (nx, ny)
+    best_normal = None
 
     n = len(polygon)
     for i in range(n):
@@ -68,25 +110,11 @@ def closest_point_on_polygon(point: Vector2, polygon: List[Vector2]) -> Tuple[Ve
             best_point = proj
 
             seg_len = math.sqrt(seg_len_sq)
-            if seg_len == 0:
-                continue
-            # Нормали как кортежи
-            normal1 = (seg_vec.y / seg_len, -seg_vec.x / seg_len)
-            normal2 = (-seg_vec.y / seg_len, seg_vec.x / seg_len)
-
-            vec_to_proj = proj - point
-            dist_to_proj = vec_to_proj.length()
-            if dist_to_proj > 0:
-                vx = vec_to_proj.x / dist_to_proj
-                vy = vec_to_proj.y / dist_to_proj
-                dot1 = normal1[0]*vx + normal1[1]*vy
-                dot2 = normal2[0]*vx + normal2[1]*vy
-                if dot1 > dot2:
-                    best_normal = normal1
-                else:
-                    best_normal = normal2
-            else:
-                best_normal = normal1
+            # Нормаль "наружу" для ЭТОГО ребра, консистентная для всего
+            # полигона через orientation_sign — не зависит от точки point.
+            nx = orientation_sign * seg_vec.y / seg_len
+            ny = -orientation_sign * seg_vec.x / seg_len
+            best_normal = (nx, ny)
 
     if best_point is None or best_normal is None:
         raise GeometryError("Не удалось найти ближайшую точку на полигоне")

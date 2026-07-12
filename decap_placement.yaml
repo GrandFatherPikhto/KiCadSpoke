@@ -1,298 +1,246 @@
-# decap_placement.yaml — конфиг для KiCadDecapPlacer
-#
-# Пример подогнан под тестовую плату GrandFatherPikhto/KiCadIPCTests/
-# test_boards/10CL006 — IC1 = 10CL006YE144C8G, TQFP144 (не BGA!),
-# 144 периметрийных вывода + термопад "145" (EP_(GND)_145, 6.85x6.85мм).
-
-target_ref: "IC1"             # refdes микросхемы (FPGA), вокруг которой расставляем
-
-# Зона-ограничитель (Rule Area) — используется и как граница
-# "изнутри/снаружи", и как опорная линия для placement: boundary.
-# На актуальной плате (test_boards/10CL006YE144C8G) она уже нарисована
-# вручную вокруг IC1 — прямоугольник (с одной доп. точкой на верхней грани),
-# is_rule_area=True, слои F.Cu+B.Cu.
-boundary_zone: "RA_DECAP_ZONE"
-
-side: "back"                  # сторона размещения конденсаторов: front | back
-rotation_mode: "boundary"       # radial (вдоль луча центр->площадка) |
-                              # orthogonal (то же, но округлено до ближайших
-                              # 90° — параллельно/перпендикулярно сторонам
-                              # прямоугольной зоны, а не "лучами") | fixed
+target_ref: IC1
+boundary_zone: RA_DECAP_ZONE
+side: back
+min_row_spacing_mm: 2.0
+rotation_mode: boundary
 fixed_angle_deg: 0.0
-
-# --- Настройки stitching-виа (глобальные по умолчанию, можно переопределить в assignment) ---
 via:
   enabled: true
-  net: "GND"                  # на какую цепь сажаем виа
+  net: GND
   drill_mm: 0.3
   diameter_mm: 0.6
-  offset_from_cap_mm: 1.0     # смещение виа от точки конденсатора (было 0.6 — маловато,
-                              # виа попадали на соседние площадки IC1)
-  direction: "away_from_pad"  # away_from_pad | toward_pad | perpendicular
-  count: 1                    # 1 | 2 (пара по бокам) — при 2 offset считается для каждой в свою сторону перпендикулярно направлению direction
-
-# --- Массив термопереходов под термопадом (EP) ---
-# Независимая от rules/boundary_zone секция: можно использовать конфиг
-# только с ней, без расстановки конденсаторов вовсе. Актуально для
-# TQFP/QFN с открытым металлическим дном на GND (как площадка "145"
-# EP_(GND)_145 у IC1 10CL006YE144C8G — TQFP144, а не BGA: у него нет ничего
-# "под корпусом", кроме этого одного центрального термопада 6.85x6.85мм).
+  offset_from_cap_mm: 1.0
+  direction: away_from_pad
+  count: 1
 thermal_via_array:
   enabled: true
-  target_ref: "IC1"     # по умолчанию берётся общий target_ref сверху,
-                         # но можно указать отдельно, если термопад не у
-                         # того же компонента, что и rules
-  pad: "145"             # номер площадки термопада
-  net: "GND"
+  target_ref: IC1
+  pad: '145'
+  net: GND
   rows: 4
   cols: 4
-  margin_mm: 0.5         # отступ от края площадки до ближайшего ряда виа
-  pattern: "grid"        # grid | staggered (шахматное смещение чётных/нечётных строк)
+  margin_mm: 0.5
+  pattern: grid
   drill_mm: 0.3
   diameter_mm: 0.5
-
-
-# --- rules сгенерированы generate_rules.py (обновлено 2026-07-12) ---
-# Изменения этой версии:
-# 1. Исправлен угол при отражении на B.Cu (kicad_decap_placer.py):
-#    для зеркального футпринта нужный угол — 180°-φ, а не φ (подтверждено
-#    эмпирически тестом флипа: 0° -> 180°). Раньше давало "ёжик" — у
-#    каждого конденсатора угол был неверным на свою величину.
-# 2. Исправлен знак направления stitching-виа (kicad_decap_placer.py):
-#    via.direction: away_from_pad раньше считался в одну сторону для
-#    inside и outside, хотя inside-конденсатор физически МЕЖДУ центром и
-#    выводом (там "от вывода" = к центру), а outside — ЗА выводом (там
-#    "от вывода" = ещё дальше наружу). Из-за этого виа у inside-
-#    конденсаторов уезжали прямо на площадки IC1.
-# 3. Увеличены отступы: 100nF (inside) 0.5->1.0мм, 4.7uF (outside)
-#    1.5->2.2мм, offset_from_cap_mm виа 0.6->1.0мм (см. via: выше).
-# 4. Добавлен фан-аут: если round-robin присвоил ДВУМ конденсаторам один
-#    и тот же вывод (сейчас только C19+C27 -> pad 5 на VCCINT, т.к.
-#    конденсаторов больше, чем выводов), второй получает увеличенный
-#    offset_mm (+0.9мм за каждый повторный заход), чтобы не сесть в одну
-#    точку с первым.
-# 5. Добавлен (но пока не сработал — реальный минимум между выводами
-#    2.5мм) фильтр минимального расстояния между выводами перед
-#    round-robin — механизм на случай более плотных цепей в будущем.
 rules:
-  - net: "+3V3_VCCIO"
-    assignments:
-      - ref: "C5"
-        pad: "17"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C6"
-        pad: "139"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C7"
-        pad: "130"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C8"
-        pad: "122"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C9"
-        pad: "117"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C10"
-        pad: "93"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C11"
-        pad: "81"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C12"
-        pad: "62"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C13"
-        pad: "56"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C14"
-        pad: "47"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C30"
-        pad: "17"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C31"
-        pad: "139"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C32"
-        pad: "130"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C33"
-        pad: "122"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C34"
-        pad: "117"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C35"
-        pad: "93"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C36"
-        pad: "81"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C37"
-        pad: "62"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-
-  - net: "+1V2_VCCINT"
-    assignments:
-      - ref: "C19"
-        pad: "5"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C20"
-        pad: "134"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C21"
-        pad: "116"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C22"
-        pad: "102"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C23"
-        pad: "78"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C24"
-        pad: "61"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C25"
-        pad: "45"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C26"
-        pad: "29"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C27"
-        pad: "5"
-        placement: "inside"
-        offset_mm: 1.9
-        via: true
-      - ref: "C40"
-        pad: "5"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C41"
-        pad: "134"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C42"
-        pad: "116"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C43"
-        pad: "102"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C44"
-        pad: "78"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C45"
-        pad: "61"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C46"
-        pad: "45"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-
-  - net: "+2V5_VCCA"
-    assignments:
-      - ref: "C28"
-        pad: "107"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C29"
-        pad: "96"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C51"
-        pad: "107"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C52"
-        pad: "96"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-
-  - net: "+1V2_VCCD_PLL"
-    assignments:
-      - ref: "C38"
-        pad: "109"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C39"
-        pad: "37"
-        placement: "inside"
-        offset_mm: 1.0
-        via: true
-      - ref: "C53"
-        pad: "109"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
-      - ref: "C54"
-        pad: "37"
-        placement: "outside"
-        offset_mm: 2.2
-        via: true
+- net: +3V3_VCCIO
+  spokes:
+  - pad: '17'
+    components:
+    - ref: C5
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C30
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '139'
+    components:
+    - ref: C6
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C31
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '130'
+    components:
+    - ref: C7
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C32
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '122'
+    components:
+    - ref: C8
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C33
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '117'
+    components:
+    - ref: C9
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C34
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '93'
+    components:
+    - ref: C10
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C35
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '81'
+    components:
+    - ref: C11
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C36
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '62'
+    components:
+    - ref: C12
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C37
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '56'
+    components:
+    - ref: C13
+      placement: inside
+      offset_mm: 1.0
+      via: true
+  - pad: '47'
+    components:
+    - ref: C14
+      placement: inside
+      offset_mm: 1.0
+      via: true
+- net: +1V2_VCCINT
+  spokes:
+  - pad: '5'
+    components:
+    - ref: C19
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C40
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '134'
+    components:
+    - ref: C20
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C41
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '116'
+    components:
+    - ref: C21
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C42
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '102'
+    components:
+    - ref: C22
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C43
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '78'
+    components:
+    - ref: C23
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C44
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '61'
+    components:
+    - ref: C24
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C45
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '45'
+    components:
+    - ref: C25
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C46
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '29'
+    components:
+    - ref: C26
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C27
+      placement: outside
+      offset_mm: 2.0
+      via: true
+- net: +2V5_VCCA
+  spokes:
+  - pad: '107'
+    components:
+    - ref: C28
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C51
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '96'
+    components:
+    - ref: C29
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C52
+      placement: outside
+      offset_mm: 2.2
+      via: true
+- net: +1V2_VCCD_PLL
+  spokes:
+  - pad: '109'
+    components:
+    - ref: C38
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C53
+      placement: outside
+      offset_mm: 2.2
+      via: true
+  - pad: '37'
+    components:
+    - ref: C39
+      placement: inside
+      offset_mm: 1.0
+      via: true
+    - ref: C54
+      placement: outside
+      offset_mm: 2.2
+      via: true

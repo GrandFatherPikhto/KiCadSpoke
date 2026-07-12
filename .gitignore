@@ -60,6 +60,7 @@ fp-info-cache
 *.app
 
 *.zip
+*.7z
 
 arch/
 test_sample/

@@ -54,21 +54,35 @@ class FixedStrategy(PlacementStrategy):
         point, _ = RadialStrategy().compute_position(center, pad_pos, boundary_polygon, placement, offset_mm)
         rad = math.radians(fixed_angle_deg)
         return point, (math.cos(rad), math.sin(rad))
-    
+
 class BoundaryStrategy(PlacementStrategy):
+    """
+    ИСПРАВЛЕНО (2026-07-12): outside/inside были перепутаны местами.
+
+    closest_point_on_polygon() возвращает normal, направленную НАРУЖУ от
+    полигона (когда исходная точка — площадка — лежит внутри зоны, что и
+    есть наш реальный случай: IC1 нарисован внутри RA_DECAP_ZONE).
+    Проверено расчётом на реальных координатах зоны: для точки на границе
+    (163.31, 59.28) с normal=(0,-1) (наружу, в сторону уменьшения Y) —
+    старая версия "outside" двигала точку в сторону +Y (обратно ВНУТРЬ
+    зоны, к площадке), а "inside" — в сторону -Y (НАРУЖУ, за границу).
+    Т.е. ветки были буквально перепутаны. Правильно:
+        outside = точка_на_границе + normal*offset  (дальше НАРУЖУ)
+        inside  = точка_на_границе - normal*offset  (внутрь, к центру)
+    """
     def compute_position(self, center: Vector2, pad_pos: Vector2,
                          boundary_polygon: List[Vector2],
                          placement: str, offset_mm: float,
                          fixed_angle_deg: float = 0.0) -> Tuple[Vector2, Tuple[float, float]]:
         point_on_boundary, normal = closest_point_on_polygon(pad_pos, boundary_polygon)
-        ux, uy = normal  # теперь normal - кортеж
+        nx, ny = normal
         offset = offset_mm * MM
         if placement == "outside":
-            point = Vector2.from_xy(int(point_on_boundary.x - ux * offset),
-                                    int(point_on_boundary.y - uy * offset))
+            point = Vector2.from_xy(int(point_on_boundary.x + nx * offset),
+                                    int(point_on_boundary.y + ny * offset))
         elif placement == "inside":
-            point = Vector2.from_xy(int(point_on_boundary.x + ux * offset),
-                                    int(point_on_boundary.y + uy * offset))
+            point = Vector2.from_xy(int(point_on_boundary.x - nx * offset),
+                                    int(point_on_boundary.y - ny * offset))
         else:
             point = point_on_boundary
-        return point, (ux, uy) 
+        return point, (nx, ny)

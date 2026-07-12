@@ -1,9 +1,10 @@
 # decap_placer/rules/generator.py
 
 from typing import Dict, List, Tuple, Optional
+from collections import OrderedDict
 import math
 from .parser import parse_net_file, parse_pcb_file
-from ..config import Rule, Assignment, ViaConfig
+from ..config import Rule, Spoke, SpokeComponent, ViaConfig
 
 class RulesGenerator:
     def __init__(self,
@@ -17,6 +18,20 @@ class RulesGenerator:
                  min_pin_spacing_mm: float = 2.0):
         """
         :param groups: {net_name: {"100nF": [refs], "4.7uF": [refs]}}
+
+        ИЗМЕНЕНО (2026-07-12): repeat_fan_step_mm больше НЕ используется для
+        разведения конденсаторов, которым не хватило своего вывода
+        (round-robin повторно указал на уже занятый pin) — раньше это
+        давало им РАЗНЫЙ offset_mm, что в модели "рядами вдоль зоны"
+        (BoundaryStrategy) уводило их на разные ПЕРПЕНДИКУЛЯРНЫЕ линии, где
+        relax_positions их уже не видел как конфликтующих (см. историю с
+        C19/C27 — второй компонент того же pin'а всё равно оказывался
+        в 0.9мм от первого, просто на "невидимой" для раздвижки линии).
+        Теперь оба компонента получают ОДИНАКОВЫЙ base_offset и попадают в
+        ОДНУ спицу (Spoke) на этом pin'е — relax_positions видит их и
+        раздвигает вдоль ряда наравне со всеми остальными конфликтами.
+        Параметр оставлен в сигнатуре ради обратной совместимости CLI
+        (placer.py generate --fan-step), но сейчас ни на что не влияет.
         """
         self.net_path = net_path
         self.pcb_path = pcb_path
@@ -24,7 +39,7 @@ class RulesGenerator:
         self.groups = groups
         self.default_100nf_offset = default_100nf_offset_mm
         self.default_47uf_offset = default_47uf_offset_mm
-        self.repeat_fan_step = repeat_fan_step_mm
+        self.repeat_fan_step = repeat_fan_step_mm  # не используется, см. докстринг выше
         self.min_pin_spacing = min_pin_spacing_mm
 
         self.net_nodes = parse_net_file(net_path)
@@ -64,7 +79,7 @@ class RulesGenerator:
         return selected
 
     def generate(self) -> List[Rule]:
-        """Возвращает список правил (Rule)."""
+        """Возвращает список правил (Rule), каждое — со списком спиц (Spoke)."""
         rules = []
         for net_name, groups_dict in self.groups.items():
             pins_all = self._pins_sorted_by_angle(net_name)
@@ -72,43 +87,41 @@ class RulesGenerator:
                 continue  # нет пинов на этой цепи
             pins = self._filter_pins_min_spacing(pins_all)
 
-            assignments = []
-            # Проходим по группам: 100nF (inside) и 4.7uF (outside)
-            for value_label, placement, base_offset in [
+            # Группируем компоненты по pad — ОДНА спица на pin, даже если
+            # round-robin несколько раз указал на один и тот же pin.
+            components_by_pad: "OrderedDict[str, List[SpokeComponent]]" = OrderedDict()
+
+            for value_label, placement, offset_mm in [
                 ("100nF", "inside", self.default_100nf_offset),
                 ("4.7uF", "outside", self.default_47uf_offset)
             ]:
                 caps = groups_dict.get(value_label, [])
                 for i, ref in enumerate(caps):
                     pad = pins[i % len(pins)]
-                    repeat_index = i // len(pins)
-                    offset = round(base_offset + repeat_index * self.repeat_fan_step, 3)
-                    assignments.append(Assignment(
-                        ref=ref,
-                        pad=pad,
-                        placement=placement,
-                        offset_mm=offset,
-                        via=True  # или ViaConfig() – по умолчанию включены
-                    ))
-            rules.append(Rule(net=net_name, assignments=assignments))
+                    components_by_pad.setdefault(pad, []).append(
+                        SpokeComponent(ref=ref, placement=placement, offset_mm=offset_mm, via=True)
+                    )
+
+            spokes = [Spoke(pad=pad, components=comps) for pad, comps in components_by_pad.items()]
+            rules.append(Rule(net=net_name, spokes=spokes))
         return rules
 
     def generate_yaml(self) -> str:
-        """Генерирует YAML-строку в формате, совместимом с decap_placement.yaml."""
+        """Генерирует YAML-строку в формате spokes/components, совместимом с decap_placement.yaml."""
         import yaml
         rules = self.generate()
-        # Преобразуем в dict для YAML
         out = {"rules": []}
         for rule in rules:
-            rule_dict = {"net": rule.net, "assignments": []}
-            for ass in rule.assignments:
-                item = {
-                    "ref": ass.ref,
-                    "pad": ass.pad,
-                    "placement": ass.placement,
-                    "offset_mm": ass.offset_mm,
-                    "via": True
-                }
-                rule_dict["assignments"].append(item)
+            rule_dict = {"net": rule.net, "spokes": []}
+            for spoke in rule.spokes:
+                spoke_dict = {"pad": spoke.pad, "components": []}
+                for comp in spoke.components:
+                    spoke_dict["components"].append({
+                        "ref": comp.ref,
+                        "placement": comp.placement,
+                        "offset_mm": comp.offset_mm,
+                        "via": True,
+                    })
+                rule_dict["spokes"].append(spoke_dict)
             out["rules"].append(rule_dict)
         return yaml.dump(out, allow_unicode=True, sort_keys=False)

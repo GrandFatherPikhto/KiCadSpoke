@@ -61,6 +61,22 @@ class KiCadBoardAdapter:
         logger.debug(f"Получено {len(nets)} цепей")
         return nets
 
+    # --- Bounding box (для коллизий — см. collision.py) ---
+    def get_bounding_boxes(self, items) -> List[Optional[Any]]:
+        """
+        Возвращает bounding box'ы (Box2 | None) для списка элементов ОДНИМ
+        запросом. Board.get_item_bounding_box(list) возвращает List[Optional[Box2]]
+        для последовательности элементов (для одного элемента вернул бы
+        просто Box2|None — поэтому здесь всегда передаём список).
+        """
+        if not items:
+            return []
+        result = self._board.get_item_bounding_box(list(items))
+        # На случай, если бы вдруг вернулся не список (защитная нормализация)
+        if not isinstance(result, list):
+            result = [result]
+        return result
+
     # --- Транзакции ---
     def begin_commit(self):
         logger.debug("Начало транзакции")
@@ -95,7 +111,18 @@ class KiCadBoardAdapter:
         logger.debug("Флип выполнен")
 
     def commit_with_retry(self, description: str, work_fn, retries: int = 1) -> bool:
+        """
+        ИСПРАВЛЕНО (2026-07-12): раньше `commit = self.begin_commit()` был
+        внутри try, но если begin_commit() САМ падал (реальный, воспроизведённый
+        сценарий — см. историю с зависшей IPC-сессией и "KiCad is busy"),
+        `commit` оставался НЕ ОПРЕДЕЛЁН, и `except: self.drop_commit(commit)`
+        падал с UnboundLocalError, полностью маскируя настоящую причину.
+        Теперь commit=None до try, drop_commit вызывается только если commit
+        реально был получен.
+        """
+        last_exc = None
         for attempt in range(retries + 1):
+            commit = None
             try:
                 logger.debug(f"Попытка {attempt+1}/{retries+1} для {description}")
                 commit = self.begin_commit()
@@ -103,11 +130,20 @@ class KiCadBoardAdapter:
                 self.push_commit(commit, description)
                 return True
             except Exception as e:
-                self.drop_commit(commit)
-                logger.warning(f"Ошибка в транзакции {description} (попытка {attempt+1}): {e}")
+                last_exc = e
+                if commit is not None:
+                    try:
+                        self.drop_commit(commit)
+                    except Exception as drop_exc:
+                        logger.error(f"Не удалось откатить транзакцию {description}: {drop_exc}")
+                logger.warning(f"Ошибка в транзакции {description} (попытка {attempt+1}): "
+                               f"{type(e).__name__}: {e}")
                 if attempt == retries:
                     raise
                 time.sleep(0.5)
+        # Сюда не дойдём (либо return True, либо raise выше), но на всякий случай:
+        if last_exc:
+            raise last_exc
         return False
 
     def create_via(self, position: Vector2, net: Net, drill_mm: float, diameter_mm: float) -> Via:
