@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "D:\\Projects\\Python\\KiCadDecapPlacer\\test_boards\\10CL006YE144C8G\\10CL006YE144C8G.kicad_sch")
-		(date "2026-07-12T15:27:55")
+		(date "2026-07-12T15:31:12")
 		(tool "Eeschema 10.0.4")
 		(sheet
 			(number "1")
@@ -2000,12 +2000,12 @@
 		)
 		(comp
 			(ref "C37")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(value "4.7 uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -2037,7 +2037,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "98c1986c-c477-4c33-b718-fcc796b333b5")
+			(tstamps "25e1dad9-10af-4939-9a29-493992477a51")
 			(units
 				(unit
 					(name "A")
@@ -2091,7 +2091,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "d78c219d-4ee6-4f05-9b4a-af01c6576b3e")
+			(tstamps "98c1986c-c477-4c33-b718-fcc796b333b5")
 			(units
 				(unit
 					(name "A")
@@ -2108,12 +2108,12 @@
 		)
 		(comp
 			(ref "C39")
-			(value "4.7 uF")
-			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -2145,7 +2145,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "4bcbab3b-8982-4757-95dc-809abed61695")
+			(tstamps "d78c219d-4ee6-4f05-9b4a-af01c6576b3e")
 			(units
 				(unit
 					(name "A")
@@ -2199,7 +2199,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "76519274-1d84-4ef3-9e2c-1128d2155345")
+			(tstamps "4bcbab3b-8982-4757-95dc-809abed61695")
 			(units
 				(unit
 					(name "A")
@@ -2253,7 +2253,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "6750262e-59ac-4823-9e87-92f68af8a540")
+			(tstamps "76519274-1d84-4ef3-9e2c-1128d2155345")
 			(units
 				(unit
 					(name "A")
@@ -2307,7 +2307,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "4dacbc23-0878-4e5b-aedb-85ddf124f5a1")
+			(tstamps "6750262e-59ac-4823-9e87-92f68af8a540")
 			(units
 				(unit
 					(name "A")
@@ -2361,7 +2361,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "51d7d1fe-55ee-4805-a4f0-5a0cf3dd96b0")
+			(tstamps "4dacbc23-0878-4e5b-aedb-85ddf124f5a1")
 			(units
 				(unit
 					(name "A")
@@ -2415,7 +2415,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "0c07ee84-6819-468f-ad15-c64f5186a126")
+			(tstamps "51d7d1fe-55ee-4805-a4f0-5a0cf3dd96b0")
 			(units
 				(unit
 					(name "A")
@@ -2469,7 +2469,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "237702bf-caa3-4f2f-aa15-2b59cbc1ff2b")
+			(tstamps "0c07ee84-6819-468f-ad15-c64f5186a126")
 			(units
 				(unit
 					(name "A")
@@ -2486,7 +2486,7 @@
 		)
 		(comp
 			(ref "C46")
-			(value "1uF")
+			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
@@ -2523,7 +2523,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "fbfe2a47-ca10-45d6-975d-aaf8ef1af0db")
+			(tstamps "237702bf-caa3-4f2f-aa15-2b59cbc1ff2b")
 			(units
 				(unit
 					(name "A")
@@ -2577,7 +2577,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "fee9db4b-0734-4ec9-b4e8-dce0a64fcd54")
+			(tstamps "fbfe2a47-ca10-45d6-975d-aaf8ef1af0db")
 			(units
 				(unit
 					(name "A")
@@ -2631,7 +2631,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "e563129d-ba93-4ab1-9576-d7dfbb7617ed")
+			(tstamps "fee9db4b-0734-4ec9-b4e8-dce0a64fcd54")
 			(units
 				(unit
 					(name "A")
@@ -2685,7 +2685,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "6a7ec79f-4a2c-4042-a840-694a90970af9")
+			(tstamps "e563129d-ba93-4ab1-9576-d7dfbb7617ed")
 			(units
 				(unit
 					(name "A")
@@ -2702,7 +2702,7 @@
 		)
 		(comp
 			(ref "C50")
-			(value "4.7 uF")
+			(value "1uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
@@ -2739,7 +2739,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "b437a51f-7566-4f8c-b6ed-b80dd4b1cb07")
+			(tstamps "6a7ec79f-4a2c-4042-a840-694a90970af9")
 			(units
 				(unit
 					(name "A")
@@ -2793,7 +2793,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "2e1f4b65-dbff-4bb6-a084-3a0789d3729d")
+			(tstamps "b437a51f-7566-4f8c-b6ed-b80dd4b1cb07")
 			(units
 				(unit
 					(name "A")
@@ -2847,7 +2847,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "21c6a9e4-213e-4c01-9665-aee5680f3b73")
+			(tstamps "2e1f4b65-dbff-4bb6-a084-3a0789d3729d")
 			(units
 				(unit
 					(name "A")
@@ -2901,7 +2901,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "65b9464a-434d-4b12-9d5e-886af8d80bf9")
+			(tstamps "21c6a9e4-213e-4c01-9665-aee5680f3b73")
 			(units
 				(unit
 					(name "A")
@@ -2918,6 +2918,60 @@
 		)
 		(comp
 			(ref "C54")
+			(value "4.7 uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "65b9464a-434d-4b12-9d5e-886af8d80bf9")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C55")
 			(value "1uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
@@ -2971,7 +3025,7 @@
 			)
 		)
 		(comp
-			(ref "C55")
+			(ref "C56")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
@@ -3025,7 +3079,7 @@
 			)
 		)
 		(comp
-			(ref "C56")
+			(ref "C57")
 			(value "1uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
@@ -3079,7 +3133,7 @@
 			)
 		)
 		(comp
-			(ref "C57")
+			(ref "C58")
 			(value "1uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
@@ -3133,7 +3187,7 @@
 			)
 		)
 		(comp
-			(ref "C58")
+			(ref "C59")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
@@ -3187,7 +3241,7 @@
 			)
 		)
 		(comp
-			(ref "C59")
+			(ref "C60")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
@@ -3241,7 +3295,7 @@
 			)
 		)
 		(comp
-			(ref "C60")
+			(ref "C61")
 			(value "1uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
@@ -3295,7 +3349,7 @@
 			)
 		)
 		(comp
-			(ref "C61")
+			(ref "C62")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
@@ -6053,27 +6107,27 @@
 			(name "+1V2_VCCD_PLL")
 			(class "Default")
 			(node
-				(ref "C37")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
 				(ref "C38")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C47")
+				(ref "C39")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C52")
+				(ref "C48")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
 				(ref "C53")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C54")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6145,11 +6199,6 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C39")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
 				(ref "C40")
 				(pin "1")
 				(pintype "passive")
@@ -6181,6 +6230,11 @@
 			)
 			(node
 				(ref "C46")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C47")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6273,17 +6327,17 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C48")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C50")
+				(ref "C49")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
 				(ref "C51")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C52")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6326,22 +6380,22 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C54")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
 				(ref "C55")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C57")
+				(ref "C56")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C59")
+				(ref "C58")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C60")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6366,12 +6420,12 @@
 			(name "+3V3_FLASH")
 			(class "Default")
 			(node
-				(ref "C60")
+				(ref "C61")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C61")
+				(ref "C62")
 				(pin "2")
 				(pintype "passive")
 			)
@@ -6402,12 +6456,12 @@
 			(name "+3V3_OSCILL")
 			(class "Default")
 			(node
-				(ref "C56")
+				(ref "C57")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C58")
+				(ref "C59")
 				(pin "2")
 				(pintype "passive")
 			)
@@ -6493,12 +6547,17 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C49")
+				(ref "C37")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
 				(ref "C5")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C50")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -7181,12 +7240,12 @@
 			)
 			(node
 				(ref "C58")
-				(pin "1")
+				(pin "2")
 				(pintype "passive")
 			)
 			(node
 				(ref "C59")
-				(pin "2")
+				(pin "1")
 				(pintype "passive")
 			)
 			(node
@@ -7201,6 +7260,11 @@
 			)
 			(node
 				(ref "C61")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C62")
 				(pin "1")
 				(pintype "passive")
 			)
