@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 """
-KiCadDecapPlacer — расстановка развязывающих конденсаторов вокруг BGA-
-компонента (например, FPGA) через KiCad IPC API (kicad-python), с
-поддержкой:
+KiCadDecapPlacer — расстановка развязывающих конденсаторов вокруг
+периферийного/BGA-компонента (например, FPGA) через KiCad IPC API
+(kicad-python), с поддержкой:
   - трёх режимов размещения относительно границы Rule Area: outside,
-    inside, boundary;
+    inside, boundary (inside имеет смысл для BGA; для периметрийных
+    корпусов вроде TQFP используйте outside/boundary);
   - опциональной stitching-виа на GND (или любую другую цепь) рядом с
-    каждым конденсатором.
+    каждым конденсатором;
+  - независимого генератора массива термопереходов (thermal via array)
+    внутри площадки термопада (EP) — актуально для TQFP/QFN с открытым
+    металлическим дном под GND, где сам конденсатор не нужен, а нужна
+    решётка виа для отвода тепла и связи с внутренним слоем земли.
+
+Секция thermal_via_array не зависит от rules/boundary_zone — можно
+использовать конфиг только с ней, без расстановки конденсаторов вовсе.
 
 Проверено на реальном API kicad-python==0.7.1 (см. пометки ВАЖНО по
 тексту — это места, где документация API скуднее кода, и стоит один раз
@@ -134,6 +142,111 @@ def compute_cap_position(center: Vector2, pad_pos: Vector2, boundary_pts, placem
     return point, (ux, uy)
 
 
+def get_pad_size(pad):
+    """Возвращает (width, height) площадки в её локальной (неповёрнутой)
+    системе координат, во внутренних единицах. Берёт первый доступный
+    медный слой падстека — для простых SMD-площадок (как термопад TQFP)
+    он один."""
+    layers = pad.padstack.copper_layers
+    if not layers:
+        raise ValueError("у площадки нет медных слоёв в падстеке — не могу определить размер")
+    size = layers[0].size
+    return size.x, size.y
+
+
+def compute_thermal_via_grid(pad, rows: int, cols: int, margin_mm: float, stagger: bool = False):
+    """
+    Строит сетку из rows x cols точек внутри площадки термопада (EP),
+    отступив margin_mm от каждого края, с учётом реального поворота
+    площадки (pad.padstack.angle — она уже включает поворот футпринта,
+    т.к. KiCad держит её синхронизированной при повороте компонента).
+
+    stagger=True сдвигает нечётные строки на половину шага по X (для более
+    равномерного теплоотвода при том же количестве отверстий).
+
+    Возвращает список Vector2 в абсолютных координатах платы.
+    """
+    if rows < 1 or cols < 1:
+        raise ValueError("rows и cols должны быть >= 1")
+
+    width, height = get_pad_size(pad)
+    margin = margin_mm * MM
+    usable_w = width - 2 * margin
+    usable_h = height - 2 * margin
+    if usable_w <= 0 or usable_h <= 0:
+        raise ValueError(
+            f"margin_mm={margin_mm} слишком большой для площадки {width/MM:.2f}x{height/MM:.2f} мм"
+        )
+
+    # Локальные координаты (до поворота), центр площадки — начало координат.
+    local_points = []
+    for r in range(rows):
+        y = 0 if rows == 1 else -usable_h / 2 + usable_h * r / (rows - 1)
+        row_offset = (usable_w / (cols * 2)) if (stagger and cols > 1 and r % 2 == 1) else 0
+        for c in range(cols):
+            x = 0 if cols == 1 else -usable_w / 2 + usable_w * c / (cols - 1)
+            local_points.append((x + row_offset, y))
+
+    angle_rad = pad.padstack.angle.to_radians()
+    cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+
+    absolute_points = []
+    for lx, ly in local_points:
+        rx = lx * cos_a - ly * sin_a
+        ry = lx * sin_a + ly * cos_a
+        absolute_points.append(Vector2.from_xy(int(pad.position.x + rx), int(pad.position.y + ry)))
+    return absolute_points
+
+
+def plan_thermal_via_array(footprints, nets, cfg, default_target_ref, logger_print=print):
+    """
+    Собирает план виа для термопада, если в конфиге есть секция
+    thermal_via_array с enabled: true. Возвращает список
+    (Vector2, drill_mm, diameter_mm, net, owner_ref) — в том же духе, что
+    и planned_vias, чтобы main() мог их объединить без специального кода.
+    """
+    tva_cfg = cfg.get("thermal_via_array")
+    if not tva_cfg or not tva_cfg.get("enabled", False):
+        return []
+
+    ref = tva_cfg.get("target_ref", default_target_ref)
+    fp = find_footprint(footprints, ref)
+    if fp is None:
+        logger_print(f"[ошибка] thermal_via_array: компонент {ref!r} не найден — пропуск", file=sys.stderr)
+        return []
+
+    pad_number = tva_cfg["pad"]
+    pad = find_pad(fp, pad_number)
+    if pad is None:
+        logger_print(f"[ошибка] thermal_via_array: у {ref} нет площадки {pad_number!r} — пропуск", file=sys.stderr)
+        return []
+
+    net_name = tva_cfg.get("net", "GND")
+    if pad.net.name != net_name:
+        logger_print(f"[warn] thermal_via_array: площадка {pad_number} принадлежит цепи "
+                      f"{pad.net.name!r}, а в конфиге указана {net_name!r}", file=sys.stderr)
+    net = find_net_by_name(nets, net_name)
+    if net is None:
+        logger_print(f"[ошибка] thermal_via_array: цепь {net_name!r} не найдена на плате — пропуск", file=sys.stderr)
+        return []
+
+    try:
+        points = compute_thermal_via_grid(
+            pad,
+            rows=tva_cfg.get("rows", 4),
+            cols=tva_cfg.get("cols", 4),
+            margin_mm=tva_cfg.get("margin_mm", 0.5),
+            stagger=(tva_cfg.get("pattern", "grid") == "staggered"),
+        )
+    except ValueError as e:
+        logger_print(f"[ошибка] thermal_via_array: {e}", file=sys.stderr)
+        return []
+
+    drill_mm = tva_cfg.get("drill_mm", 0.3)
+    diameter_mm = tva_cfg.get("diameter_mm", 0.5)
+    return [(p, drill_mm, diameter_mm, net, ref) for p in points]
+
+
 def resolve_via_settings(global_via, assignment_via):
     """Сливает глобальный via: {...} с per-assignment переопределением.
     assignment_via может быть: отсутствовать (наследуем всё), bool
@@ -220,69 +333,76 @@ def main():
     if target is None:
         sys.exit(f"[ошибка] не найден компонент {cfg['target_ref']!r} на плате")
 
-    boundary = find_boundary_zone(zones, cfg["boundary_zone"])
-    if boundary is None:
-        sys.exit(f"[ошибка] не найдена зона {cfg['boundary_zone']!r}")
-    boundary_pts = polyline_points(boundary.outline.outline)
-
     center = target.position
-    layer = LAYER_MAP[cfg["side"]]
+    layer = LAYER_MAP[cfg.get("side", "back")]
     global_via_cfg = cfg.get("via", {"enabled": False})
 
     planned_caps = []   # (footprint, dest, angle)
-    planned_vias = []   # (Vector2, via_cfg, net)
+    planned_vias = []   # (Vector2, drill_mm, diameter_mm, net, owner_ref)
 
-    for rule in cfg["rules"]:
-        net_name = rule["net"]
-        for a in rule["assignments"]:
-            pad = find_pad(target, a["pad"])
-            if pad is None:
-                print(f"[ошибка] у {cfg['target_ref']} нет площадки {a['pad']!r} — пропуск", file=sys.stderr)
-                continue
-            if pad.net.name != net_name:
-                print(f"[warn] площадка {a['pad']} принадлежит цепи {pad.net.name!r}, "
-                      f"а в конфиге указана {net_name!r} — проверьте номер площадки", file=sys.stderr)
+    # --- Расстановка конденсаторов + stitching-виа (нужна секция rules) ---
+    if cfg.get("rules"):
+        boundary = find_boundary_zone(zones, cfg["boundary_zone"])
+        if boundary is None:
+            sys.exit(f"[ошибка] не найдена зона {cfg['boundary_zone']!r}")
+        boundary_pts = polyline_points(boundary.outline.outline)
 
-            cap = find_footprint(footprints, a["ref"])
-            if cap is None:
-                print(f"[ошибка] конденсатор {a['ref']!r} не найден на плате — пропуск", file=sys.stderr)
-                continue
+        for rule in cfg["rules"]:
+            net_name = rule["net"]
+            for a in rule["assignments"]:
+                pad = find_pad(target, a["pad"])
+                if pad is None:
+                    print(f"[ошибка] у {cfg['target_ref']} нет площадки {a['pad']!r} — пропуск", file=sys.stderr)
+                    continue
+                if pad.net.name != net_name:
+                    print(f"[warn] площадка {a['pad']} принадлежит цепи {pad.net.name!r}, "
+                          f"а в конфиге указана {net_name!r} — проверьте номер площадки", file=sys.stderr)
 
-            placement = a.get("placement", "outside")
-            offset_mm = a.get("offset_mm", 1.0)
+                cap = find_footprint(footprints, a["ref"])
+                if cap is None:
+                    print(f"[ошибка] конденсатор {a['ref']!r} не найден на плате — пропуск", file=sys.stderr)
+                    continue
 
-            try:
-                dest, direction = compute_cap_position(center, pad.position, boundary_pts, placement, offset_mm)
-            except ValueError as e:
-                print(f"[ошибка] {a['ref']}: {e}", file=sys.stderr)
-                continue
+                placement = a.get("placement", "outside")
+                offset_mm = a.get("offset_mm", 1.0)
 
-            if cfg.get("rotation_mode", "radial") == "radial":
-                angle = Angle.from_degrees(math.degrees(math.atan2(direction[1], direction[0])))
-            else:
-                angle = Angle.from_degrees(cfg.get("fixed_angle_deg", 0.0))
+                try:
+                    dest, direction = compute_cap_position(center, pad.position, boundary_pts, placement, offset_mm)
+                except ValueError as e:
+                    print(f"[ошибка] {a['ref']}: {e}", file=sys.stderr)
+                    continue
 
-            planned_caps.append((cap, dest, angle))
-
-            via_cfg = resolve_via_settings(global_via_cfg, a.get("via"))
-            if via_cfg.get("enabled", False):
-                via_net_name = via_cfg.get("net", "GND")
-                via_net = find_net_by_name(nets, via_net_name)
-                if via_net is None:
-                    print(f"[warn] цепь {via_net_name!r} для виа у {a['ref']} не найдена на плате — виа пропущена", file=sys.stderr)
+                if cfg.get("rotation_mode", "radial") == "radial":
+                    angle = Angle.from_degrees(math.degrees(math.atan2(direction[1], direction[0])))
                 else:
-                    for via_pos in plan_vias_for_cap(dest, direction, via_cfg, via_net):
-                        planned_vias.append((via_pos, via_cfg, via_net, a["ref"]))
+                    angle = Angle.from_degrees(cfg.get("fixed_angle_deg", 0.0))
+
+                planned_caps.append((cap, dest, angle))
+
+                via_cfg = resolve_via_settings(global_via_cfg, a.get("via"))
+                if via_cfg.get("enabled", False):
+                    via_net_name = via_cfg.get("net", "GND")
+                    via_net = find_net_by_name(nets, via_net_name)
+                    if via_net is None:
+                        print(f"[warn] цепь {via_net_name!r} для виа у {a['ref']} не найдена на плате — виа пропущена", file=sys.stderr)
+                    else:
+                        drill_mm = via_cfg.get("drill_mm", 0.3)
+                        diameter_mm = via_cfg.get("diameter_mm", 0.6)
+                        for via_pos in plan_vias_for_cap(dest, direction, via_cfg, via_net):
+                            planned_vias.append((via_pos, drill_mm, diameter_mm, via_net, a["ref"]))
+
+    # --- Массив термопереходов под термопадом (независимая секция) ---
+    planned_vias.extend(plan_thermal_via_array(footprints, nets, cfg, cfg["target_ref"]))
 
     print(f"Запланировано перемещений конденсаторов: {len(planned_caps)}")
     for cap, dest, angle in planned_caps:
         ref = cap.reference_field.text.value
         print(f"  {ref}: -> ({dest.x/MM:.3f}, {dest.y/MM:.3f}) мм, угол={angle.degrees:.1f}°")
 
-    print(f"Запланировано виа: {len(planned_vias)}")
-    for pos, via_cfg, net, owner_ref in planned_vias:
+    print(f"Запланировано виа (stitching + термопереходы): {len(planned_vias)}")
+    for pos, drill_mm, diameter_mm, net, owner_ref in planned_vias:
         print(f"  возле {owner_ref}: ({pos.x/MM:.3f}, {pos.y/MM:.3f}) мм, "
-              f"net={net.name}, d={via_cfg.get('diameter_mm')}мм/сверло={via_cfg.get('drill_mm')}мм")
+              f"net={net.name}, d={diameter_mm}мм/сверло={drill_mm}мм")
 
     if args.dry_run:
         print("[dry-run] изменения не применены")
@@ -295,16 +415,17 @@ def main():
             cap.orientation = angle
             if cap.layer != layer:
                 cap.layer = layer  # см. предупреждение из прошлой сессии: сверить визуально с Flip footprint
-        board.update_items([c for c, _, _ in planned_caps])
+        if planned_caps:
+            board.update_items([c for c, _, _ in planned_caps])
 
         new_vias = [
-            make_via(pos, net, via_cfg.get("drill_mm", 0.3), via_cfg.get("diameter_mm", 0.6))
-            for pos, via_cfg, net, _owner in planned_vias
+            make_via(pos, net, drill_mm, diameter_mm)
+            for pos, drill_mm, diameter_mm, net, _owner in planned_vias
         ]
         if new_vias:
             board.create_items(new_vias)
 
-        board.push_commit(commit, "KiCadDecapPlacer: расстановка развязки + stitching-виа")
+        board.push_commit(commit, "KiCadDecapPlacer: расстановка развязки + stitching/термо-виа")
         print("Готово, коммит применён.")
     except Exception:
         board.drop_commit(commit)
