@@ -72,6 +72,25 @@ def pins_sorted_by_angle(net):
         return math.atan2(y - ic1_y, x - ic1_x)
     return sorted(pins, key=angle_of)
 
+MIN_PIN_SPACING_MM = 2.0  # пропускаем выводы теснее этого (по кругу, после сортировки по углу)
+
+def filter_pins_min_spacing(pins, min_spacing_mm):
+    """Греедидно выбирает подмножество выводов так, чтобы соседние (по
+    кругу, в порядке сортировки по углу) выбранные точки были не ближе
+    min_spacing_mm друг к другу. При реальных данных этой платы (минимум
+    2.5мм между соседними выводами на одной цепи) ничего не отфильтрует —
+    но механизм нужен на случай более плотных плат/цепей в будущем."""
+    if len(pins) <= 1:
+        return pins
+    selected = [pins[0]]
+    last_pos = ic1_pads_abs[pins[0]]
+    for p in pins[1:]:
+        pos = ic1_pads_abs[p]
+        if math.hypot(pos[0] - last_pos[0], pos[1] - last_pos[1]) >= min_spacing_mm:
+            selected.append(p)
+            last_pos = pos
+    return selected
+
 # --- Финальные группы, подтверждённые пользователем ---
 GROUPS = {
     "+3V3_VCCIO":      {"100nF": [f"C{i}" for i in range(5, 15)],   "4.7uF": [f"C{i}" for i in range(30, 38)]},
@@ -80,23 +99,35 @@ GROUPS = {
     "+1V2_VCCD_PLL":   {"100nF": ["C38", "C39"],                     "4.7uF": ["C53", "C54"]},
 }
 
-DEFAULT_100NF_OFFSET_MM = 0.5   # inside: насколько НЕ доходим до площадки
-DEFAULT_47UF_OFFSET_MM = 1.5    # outside: отступ наружу от границы зоны
+DEFAULT_100NF_OFFSET_MM = 1.0   # inside: насколько НЕ доходим до площадки (было 0.5 — маловато)
+DEFAULT_47UF_OFFSET_MM = 2.2    # outside: отступ наружу от границы зоны (было 1.5)
+REPEAT_FAN_STEP_MM = 0.9        # доп. отступ за каждый повторный заход на уже занятый вывод
 
 lines = []
 lines.append("rules:")
 for net, groups in GROUPS.items():
-    pins = pins_sorted_by_angle(net)
-    assert pins, f"нет пинов IC1 на цепи {net}!"
+    pins_all = pins_sorted_by_angle(net)
+    assert pins_all, f"нет пинов IC1 на цепи {net}!"
+    pins = filter_pins_min_spacing(pins_all, MIN_PIN_SPACING_MM)
+    if len(pins) < len(pins_all):
+        print(f"[info] {net}: пропущено {len(pins_all) - len(pins)} вывод(ов) теснее {MIN_PIN_SPACING_MM}мм "
+              f"({sorted(set(pins_all) - set(pins))})")
 
     lines.append(f"  - net: \"{net}\"")
     lines.append("    assignments:")
 
-    for value_label, placement, offset_mm in [("100nF", "inside", DEFAULT_100NF_OFFSET_MM),
-                                                 ("4.7uF", "outside", DEFAULT_47UF_OFFSET_MM)]:
+    for value_label, placement, base_offset_mm in [("100nF", "inside", DEFAULT_100NF_OFFSET_MM),
+                                                      ("4.7uF", "outside", DEFAULT_47UF_OFFSET_MM)]:
         caps = groups[value_label]
         for i, ref in enumerate(caps):
             pad = pins[i % len(pins)]
+            # Если этому выводу уже назначен конденсатор в текущем проходе
+            # (caps > pins), не сажаем второй ровно в ту же точку — уводим
+            # дальше по offset_mm пропорционально номеру повтора. Иначе
+            # получаем два конденсатора/виа в одной точке (см. C19+C27 на
+            # pin 5 в прошлой версии).
+            repeat_index = i // len(pins)
+            offset_mm = round(base_offset_mm + repeat_index * REPEAT_FAN_STEP_MM, 3)
             lines.append(f"      - ref: \"{ref}\"")
             lines.append(f"        pad: \"{pad}\"")
             lines.append(f"        placement: \"{placement}\"")
@@ -113,7 +144,7 @@ with open("/home/claude/generated_rules.yaml", "w", encoding="utf-8") as f:
 # --- Отчёт: сколько раз каждый пин используется (round-robin по кругу) ---
 print("\n--- Использование выводов (round-robin) ---")
 for net, groups in GROUPS.items():
-    pins = pins_sorted_by_angle(net)
+    pins = filter_pins_min_spacing(pins_sorted_by_angle(net), MIN_PIN_SPACING_MM)
     for value_label in ("100nF", "4.7uF"):
         caps = groups[value_label]
         usage = {}

@@ -109,6 +109,25 @@ def ray_boundary_distance(center: Vector2, target: Vector2, boundary_pts):
     return best_t, (ux, uy)
 
 
+def mirror_corrected_angle_deg(phi_deg, layer):
+    """
+    Корректирует угол φ (посчитанный в "обычных", не зеркальных
+    координатах — например, вдоль луча центр->площадка) под слой, на
+    котором окажется компонент.
+
+    ПРОВЕРЕНО ЭМПИРИЧЕСКИ (2026-07-12, тест флипа): у зеркального
+    (обратная сторона, B.Cu) футпринта локальная ось X тоже отражена,
+    поэтому чтобы компонент физически смотрел в направлении φ в
+    АБСОЛЮТНЫХ координатах платы, угол нужно ставить 180°-φ, а не φ.
+    Флип симметричного 0603 с φ=0° дал ровно 180°, что и подтверждает
+    формулу. Без этой поправки получался "ёжик" — у каждого конденсатора
+    угол был неверным на свою величину, зависящую от его собственного φ.
+    """
+    if layer == BoardLayer.BL_B_Cu:
+        return 180.0 - phi_deg
+    return phi_deg
+
+
 def compute_cap_position(center: Vector2, pad_pos: Vector2, boundary_pts, placement: str, offset_mm: float):
     """
     Считает целевую точку конденсатора вдоль луча center->pad_pos, в
@@ -274,9 +293,21 @@ def make_via(position: Vector2, net, drill_mm: float, diameter_mm: float):
     return via
 
 
-def plan_vias_for_cap(cap_point, direction, via_cfg, net):
+def plan_vias_for_cap(cap_point, direction, via_cfg, net, placement="outside"):
     """Возвращает список позиций (Vector2) для stitching-виа рядом с
     конденсатором.
+
+    ВАЖНО (2026-07-12, реальный баг с виа на пинах IC1): "от вывода" — это
+    РАЗНЫЕ абсолютные направления в зависимости от placement самого
+    конденсатора:
+      - outside: конденсатор УЖЕ дальше от центра, чем сам вывод (за
+        границей зоны), поэтому "дальше от вывода" = ещё дальше наружу,
+        вдоль direction (ux, uy).
+      - inside: конденсатор МЕЖДУ центром и выводом (ближе к центру), и
+        "дальше от вывода" означает УЙТИ К ЦЕНТРУ, т.е. против direction.
+    Раньше знак был фиксирован (всегда вдоль direction) — из-за этого у
+    inside-конденсаторов виа "away_from_pad" на самом деле уезжала К
+    выводу, а не от него, и попадала прямо на площадки IC1.
 
     count=1: одна виа смещена от cap_point на offset_from_cap_mm вдоль оси,
              выбранной via.direction (away_from_pad/toward_pad/perpendicular).
@@ -289,15 +320,16 @@ def plan_vias_for_cap(cap_point, direction, via_cfg, net):
              несимметричный результат.
     """
     ux, uy = direction
+    away_sign = -1.0 if placement == "inside" else 1.0
     offset = via_cfg.get("offset_from_cap_mm", 0.5) * MM
     count = int(via_cfg.get("count", 1))
 
     if count == 1:
         mode = via_cfg.get("direction", "away_from_pad")
         if mode == "away_from_pad":
-            vx, vy = ux, uy
+            vx, vy = ux * away_sign, uy * away_sign
         elif mode == "toward_pad":
-            vx, vy = -ux, -uy
+            vx, vy = -ux * away_sign, -uy * away_sign
         elif mode == "perpendicular":
             vx, vy = -uy, ux
         else:
@@ -378,8 +410,18 @@ def main():
                     print(f"[ошибка] {a['ref']}: {e}", file=sys.stderr)
                     continue
 
-                if cfg.get("rotation_mode", "radial") == "radial":
-                    angle = Angle.from_degrees(math.degrees(math.atan2(direction[1], direction[0])))
+                rotation_mode = cfg.get("rotation_mode", "radial")
+                if rotation_mode in ("radial", "orthogonal"):
+                    phi_deg = math.degrees(math.atan2(direction[1], direction[0]))
+                    if rotation_mode == "orthogonal":
+                        # Округляем радиальный угол до ближайших 90° — для
+                        # прямоугольной (выровненной по X/Y) Rule Area это
+                        # ставит конденсатор параллельно или перпендикулярно
+                        # её сторонам вместо "лучей от центра". Работает для
+                        # любой стороны зоны без доп. настроек, т.к. зона
+                        # уже выровнена по осям.
+                        phi_deg = round(phi_deg / 90.0) * 90.0
+                    angle = Angle.from_degrees(mirror_corrected_angle_deg(phi_deg, layer))
                 else:
                     angle = Angle.from_degrees(cfg.get("fixed_angle_deg", 0.0))
 
@@ -394,7 +436,7 @@ def main():
                     else:
                         drill_mm = via_cfg.get("drill_mm", 0.3)
                         diameter_mm = via_cfg.get("diameter_mm", 0.6)
-                        for via_pos in plan_vias_for_cap(dest, direction, via_cfg, via_net):
+                        for via_pos in plan_vias_for_cap(dest, direction, via_cfg, via_net, placement=placement):
                             planned_vias.append((via_pos, drill_mm, diameter_mm, via_net, a["ref"]))
 
     # --- Массив термопереходов под термопадом (независимая секция) ---
@@ -434,14 +476,58 @@ def main():
     batch_size = args.batch_size
     failed_caps, failed_vias = [], []
 
+    # --- Флип на нужную сторону через настоящий GUI-action ---
+    # ПРОВЕРЕНО (2026-07-12): простое footprint.layer = ... меняет только
+    # поле в данных и НЕ зеркалирует площадки/шёлкографию — визуально
+    # компонент остаётся как будто на прежней стороне. Настоящий переворот
+    # — это action "pcbnew.InteractiveEdit.flip" (хоткей F в GUI), который
+    # работает через ТЕКУЩЕЕ ВЫДЕЛЕНИЕ, а не принимает объекты напрямую.
+    # Он меняет layer и добавляет 180° к повороту, позицию НЕ трогает.
+    # run_action — не begin_commit/push_commit транзакция, это отдельное
+    # GUI-действие со своим undo.
+    #
+    # КРИТИЧНО: после флипа локальные Python-объекты в planned_caps ещё
+    # хранят СТАРЫЕ layer/orientation (с момента исходного get_footprints()
+    # при планировании) — если потом пушить их как есть через
+    # update_items(), это молча ОТКАТИТ флип обратно. Поэтому после флипа
+    # обязательно перечитываем футпринты заново и подменяем объекты в
+    # planned_caps на свежие перед тем, как выставлять итоговые position/
+    # orientation.
+    need_flip = [(cap, dest, angle) for cap, dest, angle in planned_caps if cap.layer != layer]
+    if need_flip:
+        print(f"\nФлип на {cfg.get('side', 'back')}: {len(need_flip)} конденсаторов")
+        flip_batches = [need_flip[i:i + batch_size] for i in range(0, len(need_flip), batch_size)]
+        for idx, batch in enumerate(flip_batches, 1):
+            try:
+                board.clear_selection()
+                board.add_to_selection([c for c, _, _ in batch])
+                status = kicad.run_action("pcbnew.InteractiveEdit.flip")
+                board.clear_selection()
+                print(f"  флип-батч {idx}/{len(flip_batches)} ({len(batch)} шт.): {status}")
+            except Exception as e:
+                print(f"[ошибка] флип-батч {idx}/{len(flip_batches)}: {type(e).__name__}: {e}", file=sys.stderr)
+                try:
+                    board.clear_selection()
+                except Exception:
+                    pass
+
+        # Перечитываем футпринты заново — см. предупреждение выше.
+        fresh_footprints = list(board.get_footprints())
+        fresh_by_ref = {fp.reference_field.text.value: fp for fp in fresh_footprints}
+        planned_caps = [
+            (fresh_by_ref.get(cap.reference_field.text.value, cap), dest, angle)
+            for cap, dest, angle in planned_caps
+        ]
+
     cap_batches = [planned_caps[i:i + batch_size] for i in range(0, len(planned_caps), batch_size)]
     for idx, batch in enumerate(cap_batches, 1):
         def work(batch=batch):
             for cap, dest, angle in batch:
                 cap.position = dest
                 cap.orientation = angle
-                if cap.layer != layer:
-                    cap.layer = layer  # см. предупреждение из прошлой сессии: сверить визуально с Flip footprint
+                # Слой сюда уже НЕ выставляем — он выставлен флипом выше;
+                # прямое присвоение .layer здесь только повторило бы старую
+                # проблему (без реального зеркалирования площадок).
             board.update_items([c for c, _, _ in batch])
 
         desc = f"KiCadDecapPlacer: конденсаторы, батч {idx}/{len(cap_batches)}"

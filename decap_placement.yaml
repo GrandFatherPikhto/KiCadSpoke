@@ -14,7 +14,10 @@ target_ref: "IC1"             # refdes микросхемы (FPGA), вокруг
 boundary_zone: "RA_DECAP_ZONE"
 
 side: "back"                  # сторона размещения конденсаторов: front | back
-rotation_mode: "radial"       # radial (вдоль луча центр->площадка) | fixed
+rotation_mode: "radial"       # radial (вдоль луча центр->площадка) |
+                              # orthogonal (то же, но округлено до ближайших
+                              # 90° — параллельно/перпендикулярно сторонам
+                              # прямоугольной зоны, а не "лучами") | fixed
 fixed_angle_deg: 0.0
 
 # --- Настройки stitching-виа (глобальные по умолчанию, можно переопределить в assignment) ---
@@ -23,7 +26,8 @@ via:
   net: "GND"                  # на какую цепь сажаем виа
   drill_mm: 0.3
   diameter_mm: 0.6
-  offset_from_cap_mm: 0.6     # смещение виа от точки конденсатора
+  offset_from_cap_mm: 1.0     # смещение виа от точки конденсатора (было 0.6 — маловато,
+                              # виа попадали на соседние площадки IC1)
   direction: "away_from_pad"  # away_from_pad | toward_pad | perpendicular
   count: 1                    # 1 | 2 (пара по бокам) — при 2 offset считается для каждой в свою сторону перпендикулярно направлению direction
 
@@ -47,116 +51,121 @@ thermal_via_array:
   drill_mm: 0.3
   diameter_mm: 0.5
 
-rules:
-  # ВНИМАНИЕ: refdes конденсаторов, номера площадок IC1 и точная привязка
 
-# --- rules сгенерированы generate_rules.py из реального netlist (2026-07-12) ---
-# Источники: 10CL006YE144C8G.net (актуальный, C27 исправлен на 100nF) +
-# 10CL006YE144C8G.kicad_pcb (актуальный борт с уже нарисованной RA_DECAP_ZONE).
-# Логика: 100nF -> placement: inside (внутри зоны, ближе к выводу — обратная
-# сторона под соответствующим выводом); 4.7uF -> placement: outside
-# (снаружи зоны, тем же выводом контакт "смотрит" на площадку). Вывод IC1
-# для каждого конденсатора выбран round-robin по выводам той же цепи,
-# отсортированным по углу вокруг центра IC1 (соседние физически выводы
-# идут подряд). Там, где конденсаторов больше, чем выводов на цепи
-# (+1V2_VCCINT: 9 конденсаторов 100nF на 8 выводов), один вывод получает
-# два конденсатора (C19 и C27 -> pad 5) — это нормально для round-robin,
-# но при желании можно вручную развести их на two соседних вывода.
-# C46-C49 (старые "выходные конденсаторы П-фильтров") НЕ включены — по
-# факту актуальные "не трогаем" сейчас C47/C48/C49/C50 (сдвинулись из-за
-# правки C27), их вообще нет в rules ниже.
+# --- rules сгенерированы generate_rules.py (обновлено 2026-07-12) ---
+# Изменения этой версии:
+# 1. Исправлен угол при отражении на B.Cu (kicad_decap_placer.py):
+#    для зеркального футпринта нужный угол — 180°-φ, а не φ (подтверждено
+#    эмпирически тестом флипа: 0° -> 180°). Раньше давало "ёжик" — у
+#    каждого конденсатора угол был неверным на свою величину.
+# 2. Исправлен знак направления stitching-виа (kicad_decap_placer.py):
+#    via.direction: away_from_pad раньше считался в одну сторону для
+#    inside и outside, хотя inside-конденсатор физически МЕЖДУ центром и
+#    выводом (там "от вывода" = к центру), а outside — ЗА выводом (там
+#    "от вывода" = ещё дальше наружу). Из-за этого виа у inside-
+#    конденсаторов уезжали прямо на площадки IC1.
+# 3. Увеличены отступы: 100nF (inside) 0.5->1.0мм, 4.7uF (outside)
+#    1.5->2.2мм, offset_from_cap_mm виа 0.6->1.0мм (см. via: выше).
+# 4. Добавлен фан-аут: если round-robin присвоил ДВУМ конденсаторам один
+#    и тот же вывод (сейчас только C19+C27 -> pad 5 на VCCINT, т.к.
+#    конденсаторов больше, чем выводов), второй получает увеличенный
+#    offset_mm (+0.9мм за каждый повторный заход), чтобы не сесть в одну
+#    точку с первым.
+# 5. Добавлен (но пока не сработал — реальный минимум между выводами
+#    2.5мм) фильтр минимального расстояния между выводами перед
+#    round-robin — механизм на случай более плотных цепей в будущем.
 rules:
   - net: "+3V3_VCCIO"
     assignments:
       - ref: "C5"
         pad: "17"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C6"
         pad: "139"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C7"
         pad: "130"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C8"
         pad: "122"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C9"
         pad: "117"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C10"
         pad: "93"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C11"
         pad: "81"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C12"
         pad: "62"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C13"
         pad: "56"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C14"
         pad: "47"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C30"
         pad: "17"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C31"
         pad: "139"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C32"
         pad: "130"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C33"
         pad: "122"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C34"
         pad: "117"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C35"
         pad: "93"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C36"
         pad: "81"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C37"
         pad: "62"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
 
   - net: "+1V2_VCCINT"
@@ -164,82 +173,82 @@ rules:
       - ref: "C19"
         pad: "5"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C20"
         pad: "134"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C21"
         pad: "116"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C22"
         pad: "102"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C23"
         pad: "78"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C24"
         pad: "61"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C25"
         pad: "45"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C26"
         pad: "29"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C27"
         pad: "5"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.9
         via: true
       - ref: "C40"
         pad: "5"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C41"
         pad: "134"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C42"
         pad: "116"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C43"
         pad: "102"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C44"
         pad: "78"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C45"
         pad: "61"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C46"
         pad: "45"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
 
   - net: "+2V5_VCCA"
@@ -247,22 +256,22 @@ rules:
       - ref: "C28"
         pad: "107"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C29"
         pad: "96"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C51"
         pad: "107"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C52"
         pad: "96"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
 
   - net: "+1V2_VCCD_PLL"
@@ -270,20 +279,20 @@ rules:
       - ref: "C38"
         pad: "109"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C39"
         pad: "37"
         placement: "inside"
-        offset_mm: 0.5
+        offset_mm: 1.0
         via: true
       - ref: "C53"
         pad: "109"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
       - ref: "C54"
         pad: "37"
         placement: "outside"
-        offset_mm: 1.5
+        offset_mm: 2.2
         via: true
