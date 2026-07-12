@@ -3,9 +3,12 @@
 import time
 import logging
 from typing import List, Tuple
+
 from ..kicad.adapter import KiCadBoardAdapter
 from ..config import Config
+from ..exceptions import PlacerError
 from .planner import MoveCommand, ViaCommand
+from .collision import check_collisions as detect_collisions   # <-- переименовали импорт
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +19,27 @@ class BatchExecutor:
         self.batch_size = batch_size
         logger.info(f"Инициализация исполнителя: batch_size={batch_size}")
 
-    def execute(self, moves: List[MoveCommand], vias: List[ViaCommand]) -> Tuple[List[str], List[str]]:
+    def execute(self, moves: List[MoveCommand], vias: List[ViaCommand],
+                check_collisions: bool = True,
+                collision_margin_mm: float = 0.2) -> Tuple[List[str], List[str]]:
+        """
+        Применяет команды. Возвращает (failed_refs, failed_via_owners).
+        Если check_collisions=True, проверяет коллизии и выводит предупреждения.
+        """
         failed_refs = []
         failed_via_owners = []
+
+        # Проверка коллизий
+        if check_collisions and moves:
+            all_fps = self.adapter.get_footprints()
+            ignore_refs = {self.cfg.target_ref}
+            conflicts = detect_collisions(moves, all_fps, ignore_refs, collision_margin_mm)   # <-- используем переименованную функцию
+            if conflicts:
+                logger.warning(f"Обнаружено {len(conflicts)} потенциальных коллизий:")
+                for ref1, ref2, dist in conflicts:
+                    logger.warning(f"  {ref1} и {ref2} перекрываются (расст. {dist:.2f} мм)")
+            else:
+                logger.info("Проверка коллизий: конфликтов не обнаружено")
 
         # 1. Флип
         refs_to_flip = [m.ref for m in moves if self._needs_flip(m)]

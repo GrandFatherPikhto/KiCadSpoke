@@ -79,7 +79,11 @@ def cmd_apply(args):
 
     logger.info("Применение изменений...")
     executor = BatchExecutor(adapter, cfg, batch_size=args.batch_size)
-    failed_refs, failed_vias = executor.execute(moves, vias)
+    failed_refs, failed_vias = executor.execute(
+            moves, vias,
+            check_collisions=not args.no_collision_check,
+            collision_margin_mm=args.collision_margin
+        )
 
     if failed_refs:
         logger.warning(f"Не удалось переместить: {sorted(set(failed_refs))}")
@@ -146,6 +150,8 @@ def main():
     gen_parser.add_argument("--min-spacing", type=float, default=2.0, help="Минимальное расстояние между пинами")
     gen_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
     gen_parser.add_argument("--log-file", help="Файл для сохранения логов")
+    apply_parser.add_argument("--no-collision-check", action="store_true", help="Отключить проверку коллизий")
+    apply_parser.add_argument("--collision-margin", type=float, default=0.2, help="Дополнительный зазор при проверке коллизий, мм")
 
     args = parser.parse_args()
 
