@@ -31,29 +31,41 @@ DEFAULT_GROUPS = {
 }
 
 
-def setup_logging(verbose: bool = False):
+def setup_logging(verbose: bool = False, log_file: str = None):
+    """Настройка логирования: уровень и вывод в консоль и/или файл."""
     level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    handlers = []
+    # Консольный обработчик
+    console = logging.StreamHandler(sys.stdout)
+    console.setLevel(level)
+    console.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+    handlers.append(console)
+
+    # Файловый обработчик (если указан)
+    if log_file:
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler.setLevel(logging.DEBUG)  # В файл пишем всё
+        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+        handlers.append(file_handler)
+
+    logging.basicConfig(level=logging.DEBUG, handlers=handlers)
 
 
 def cmd_apply(args):
     """Основная команда: применить расстановку."""
-    logging.info(f"Загрузка конфига: {args.config}")
+    logger = logging.getLogger(__name__)
+    logger.info(f"Загрузка конфига: {args.config}")
     cfg = load_config(args.config)
 
-    logging.info(f"Подключение к KiCad (таймаут {args.timeout_ms} мс)")
+    logger.info(f"Подключение к KiCad (таймаут {args.timeout_ms} мс)")
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
     adapter.refresh_board()
 
-    logging.info("Планирование расстановки...")
+    logger.info("Планирование расстановки...")
     planner = PlacementPlanner(adapter, cfg)
     moves, vias = planner.plan()
 
-    logging.info(f"Запланировано перемещений: {len(moves)}, виа: {len(vias)}")
+    logger.info(f"Запланировано перемещений: {len(moves)}, виа: {len(vias)}")
 
     if args.dry_run:
         print("\n=== DRY RUN ===")
@@ -65,23 +77,24 @@ def cmd_apply(args):
             print(f"  via у {v.owner_ref}: ({v.position.x/1e6:.3f}, {v.position.y/1e6:.3f}) мм")
         return
 
-    logging.info("Применение изменений...")
+    logger.info("Применение изменений...")
     executor = BatchExecutor(adapter, cfg, batch_size=args.batch_size)
     failed_refs, failed_vias = executor.execute(moves, vias)
 
     if failed_refs:
-        logging.warning(f"Не удалось переместить: {sorted(set(failed_refs))}")
+        logger.warning(f"Не удалось переместить: {sorted(set(failed_refs))}")
     if failed_vias:
-        logging.warning(f"Не удалось создать виа рядом с: {sorted(set(failed_vias))}")
+        logger.warning(f"Не удалось создать виа рядом с: {sorted(set(failed_vias))}")
     if not failed_refs and not failed_vias:
-        logging.info("✅ Все операции выполнены успешно")
+        logger.info("✅ Все операции выполнены успешно")
     else:
-        logging.warning("⚠️ Некоторые операции завершились с ошибками – проверьте лог.")
+        logger.warning("⚠️ Некоторые операции завершились с ошибками – проверьте лог.")
 
 
 def cmd_generate(args):
     """Команда генерации правил."""
-    logging.info(f"Генерация правил для {args.target} из {args.net} и {args.pcb}")
+    logger = logging.getLogger(__name__)
+    logger.info(f"Генерация правил для {args.target} из {args.net} и {args.pcb}")
     generator = RulesGenerator(
         net_path=args.net,
         pcb_path=args.pcb,
@@ -96,7 +109,7 @@ def cmd_generate(args):
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(yaml_str)
-        logging.info(f"Правила сохранены в {args.output}")
+        logger.info(f"Правила сохранены в {args.output}")
     else:
         print(yaml_str)
 
@@ -119,6 +132,7 @@ def main():
     apply_parser.add_argument("--timeout-ms", type=int, default=20000, help="Таймаут IPC, мс")
     apply_parser.add_argument("--batch-size", type=int, default=10, help="Размер батча для коммитов")
     apply_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
+    apply_parser.add_argument("--log-file", help="Файл для сохранения логов")
 
     # Подкоманда generate
     gen_parser = subparsers.add_parser("generate", help="Сгенерировать правила (YAML)")
@@ -131,10 +145,11 @@ def main():
     gen_parser.add_argument("--fan-step", type=float, default=0.9, help="Шаг при повторном использовании пина")
     gen_parser.add_argument("--min-spacing", type=float, default=2.0, help="Минимальное расстояние между пинами")
     gen_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
+    gen_parser.add_argument("--log-file", help="Файл для сохранения логов")
 
     args = parser.parse_args()
 
-    setup_logging(verbose=getattr(args, "verbose", False))
+    setup_logging(verbose=getattr(args, "verbose", False), log_file=getattr(args, "log_file", None))
 
     try:
         if args.command == "apply":

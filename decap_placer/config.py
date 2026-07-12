@@ -1,5 +1,11 @@
+# decap_placer/config.py
+
+import logging
 from dataclasses import dataclass, field
 from typing import Optional, List
+import yaml
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ViaConfig:
@@ -8,8 +14,8 @@ class ViaConfig:
     drill_mm: float = 0.3
     diameter_mm: float = 0.6
     offset_from_cap_mm: float = 1.0
-    direction: str = "away_from_pad"   # away_from_pad | toward_pad | perpendicular
-    count: int = 1                      # 1 или 2
+    direction: str = "away_from_pad"
+    count: int = 1
 
 @dataclass
 class ThermalViaArrayConfig:
@@ -20,7 +26,7 @@ class ThermalViaArrayConfig:
     rows: int = 4
     cols: int = 4
     margin_mm: float = 0.5
-    pattern: str = "grid"              # grid | staggered
+    pattern: str = "grid"
     drill_mm: float = 0.3
     diameter_mm: float = 0.5
 
@@ -28,9 +34,9 @@ class ThermalViaArrayConfig:
 class Assignment:
     ref: str
     pad: str
-    placement: str                     # inside | outside | boundary
+    placement: str
     offset_mm: float
-    via: Optional[ViaConfig | bool] = None   # переопределение via для данного конденсатора
+    via: Optional[ViaConfig | bool] = None
 
 @dataclass
 class Rule:
@@ -41,20 +47,18 @@ class Rule:
 class Config:
     target_ref: str
     boundary_zone: str
-    side: str                          # front | back
-    rotation_mode: str                 # radial | orthogonal | fixed
+    side: str
+    rotation_mode: str
     fixed_angle_deg: float
     via: ViaConfig
     thermal_via_array: ThermalViaArrayConfig
     rules: List[Rule]
 
-import yaml
-
 def load_config(path: str) -> Config:
+    logger.info(f"Загрузка конфигурации из {path}")
     with open(path, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f)
 
-    # Парсим via глобально
     via_data = data.get('via', {})
     via = ViaConfig(
         enabled=via_data.get('enabled', False),
@@ -96,7 +100,7 @@ def load_config(path: str) -> Config:
             ))
         rules.append(Rule(net=rule_data['net'], assignments=assignments))
 
-    return Config(
+    cfg = Config(
         target_ref=data['target_ref'],
         boundary_zone=data['boundary_zone'],
         side=data.get('side', 'back'),
@@ -105,4 +109,7 @@ def load_config(path: str) -> Config:
         via=via,
         thermal_via_array=thermal_via,
         rules=rules,
-    )    
+    )
+    logger.debug(f"Конфигурация загружена: target={cfg.target_ref}, side={cfg.side}, "
+                 f"правил={len(cfg.rules)}")
+    return cfg
