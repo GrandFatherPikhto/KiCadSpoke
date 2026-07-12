@@ -10089,7 +10089,7 @@
 				)
 			)
 		)
-		(property "Value" "4.7 uF"
+		(property "Value" "100 nF"
 			(at 52.07 226.06 90)
 			(show_name no)
 			(do_not_autoplace no)
