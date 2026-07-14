@@ -8,14 +8,13 @@ from ..config import Rule, Spoke, SpokeComponent, ViaConfig
 
 class RulesGenerator:
     def __init__(self,
-                 net_path: str,
-                 pcb_path: str,
-                 target_ref: str,
-                 groups: Dict[str, Dict[str, List[str]]],
-                 default_100nf_offset_mm: float = 1.0,
-                 default_47uf_offset_mm: float = 2.2,
-                 repeat_fan_step_mm: float = 0.9,
-                 min_pin_spacing_mm: float = 2.0):
+                net_path: str,
+                pcb_path: str,
+                target_ref: str,
+                groups: Dict[str, Dict[str, List[str]]],
+                default_100nf_offset_mm: float = 1.0,
+                default_47uf_offset_mm: float = 2.2,
+                min_pin_spacing_mm: float = 2.0):
         """
         :param groups: {net_name: {"100nF": [refs], "4.7uF": [refs]}}
 
@@ -39,7 +38,6 @@ class RulesGenerator:
         self.groups = groups
         self.default_100nf_offset = default_100nf_offset_mm
         self.default_47uf_offset = default_47uf_offset_mm
-        self.repeat_fan_step = repeat_fan_step_mm  # не используется, см. докстринг выше
         self.min_pin_spacing = min_pin_spacing_mm
 
         self.net_nodes = parse_net_file(net_path)

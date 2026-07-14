@@ -113,19 +113,17 @@ class Config:
     # Если спице требуется сдвинуться больше этого — она расклеивается на
     # отдельные компоненты (фаза B, relax_1d как раньше).
     max_spoke_rigid_shift_mm: float = 1.5
-
-
-def resolve_power_pin_facing(component: SpokeComponent, spoke: Spoke, cfg: Config) -> str:
-    """
-    Разрешает direction "pad"/"away" с приоритетом: компонент -> спица ->
-    глобальный конфиг. Тот же принцип, что и у via: (локальное
-    определение побеждает, если задано).
-    """
-    if component.power_pin_facing is not None:
-        return component.power_pin_facing
-    if spoke.power_pin_facing is not None:
-        return spoke.power_pin_facing
-    return cfg.power_pin_facing
+    # Клиренс (мм) вокруг пад IC1/конденсаторов при поиске свободного места
+    # под виа (geometry/keepout.py). Обсуждался диапазон 0.15-0.2мм.
+    via_keepout_clearance_mm: float = 0.2
+    # Параметры поиска свободного места для via
+    via_search_step_mm: float = 0.1
+    via_search_max_radius_mm: float = 3.0
+    via_search_n_directions: int = 8
+    
+    optimizer_type: str = "nlp" # "heuristic" или "nlp"
+    relax_max_iterations: int = 10
+    relax_group_tolerance_nm: int = 1000  # в нанометрах, для округления групп
 
 
 def _load_via_config(via_data: Dict[str, Any]) -> ViaConfig:
@@ -209,6 +207,10 @@ def load_config(path: str) -> Config:
         min_row_spacing_mm=data.get('min_row_spacing_mm', 2.0),
         power_pin_facing=data.get('power_pin_facing', 'away'),
         max_spoke_rigid_shift_mm=data.get('max_spoke_rigid_shift_mm', 1.5),
+        via_keepout_clearance_mm=data.get('via_keepout_clearance_mm', 0.2),
+        via_search_step_mm=data.get('via_search_step_mm', 0.1),
+        via_search_max_radius_mm=data.get('via_search_max_radius_mm', 3.0),
+        via_search_n_directions=data.get('via_search_n_directions', 8),
     )
     total_components = sum(len(s.components) for r in cfg.rules for s in r.spokes)
     logger.debug(f"Конфигурация загружена: target={cfg.target_ref}, side={cfg.side}, "

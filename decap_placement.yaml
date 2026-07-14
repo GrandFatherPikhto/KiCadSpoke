@@ -9,7 +9,7 @@ via:
   net: GND
   drill_mm: 0.3
   diameter_mm: 0.6
-  offset_from_cap_mm: 1.0
+  offset_from_cap_mm: 2.0
   direction: away_from_pad
   count: 1
 thermal_via_array:

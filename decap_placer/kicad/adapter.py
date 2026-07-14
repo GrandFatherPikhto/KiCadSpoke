@@ -4,10 +4,11 @@ import time
 import logging
 from typing import List, Optional, Any
 import kipy
-from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, BoardLayer
+from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, BoardLayer, Pad
 from kipy.geometry import Vector2, Angle
 from kipy.proto.common.types import base_types_pb2 as common_types_pb2
 
+from .interfaces import IBoardAdapter
 from ..exceptions import BoardNotFoundError, ComponentNotFoundError
 from ..utils.units import MM
 
@@ -17,7 +18,10 @@ class KiCadBoardAdapter:
     def __init__(self, timeout_ms: int = 20000):
         logger.debug(f"Инициализация KiCadBoardAdapter с таймаутом {timeout_ms} мс")
         self._kicad = kipy.KiCad(timeout_ms=timeout_ms)
-        self._board = None
+        logger.debug("Создание экземпляра kipy.KiCad...")
+        self._kicad = kipy.KiCad(timeout_ms=timeout_ms)
+        logger.debug("Экземпляр kipy.KiCad создан")
+        self._board = None        
 
     def refresh_board(self):
         logger.debug("Обновление доски из KiCad")
@@ -39,6 +43,23 @@ class KiCadBoardAdapter:
         fps = list(self._board.get_footprints())
         logger.debug(f"Получено {len(fps)} футпринтов")
         return fps
+
+    def get_footprint_pads(self, footprint: FootprintInstance) -> List[Pad]:
+        """
+        Возвращает список пад данного футпринта. Не ходит в API отдельно —
+        площадки уже лежат в footprint.definition.items вместе с полями/
+        графикой, просто фильтруем по типу. Вынесено сюда из planner.py,
+        чтобы не дублировать в будущих местах (например, при сборке
+        keepout для виа — см. geometry/keepout.py).
+        """
+        return [item for item in footprint.definition.items if isinstance(item, Pad)]
+
+    def get_pad_by_number(self, footprint: FootprintInstance, pad_number: str) -> Optional[Pad]:
+        """Находит конкретную площадку футпринта по номеру (например, '1', '145')."""
+        for pad in self.get_footprint_pads(footprint):
+            if pad.number == pad_number:
+                return pad
+        return None
 
     def get_zone_by_name(self, name: str) -> Optional[Zone]:
         for z in self._board.get_zones():
@@ -155,3 +176,4 @@ class KiCadBoardAdapter:
         via.drill_diameter = int(drill_mm * MM)
         via.diameter = int(diameter_mm * MM)
         return via
+

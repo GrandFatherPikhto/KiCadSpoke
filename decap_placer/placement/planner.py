@@ -2,49 +2,58 @@
 
 import math
 import logging
-from typing import List, Tuple, Optional
-from kipy.board_types import BoardLayer, Pad
+from typing import List, Tuple, Optional, Set
+from kipy.board_types import BoardLayer, Pad, FootprintInstance
 from kipy.geometry import Vector2, Angle
 
-from ..config import Config, ViaConfig, SpokeComponent
+from ..config import Config, ViaConfig, SpokeComponent, Spoke
 from ..kicad.adapter import KiCadBoardAdapter
 from ..geometry.strategies import PlacementStrategy, RadialStrategy, OrthogonalStrategy, FixedStrategy, BoundaryStrategy
 from ..geometry.boundary import polyline_points
 from ..geometry.thermal_grid import compute_thermal_via_grid
 from ..geometry.relax import relax_positions
+from ..geometry.keepout import Rect, build_keepout, find_free_point
 from ..utils.units import MM
+
+from .services.position_calculator import PositionCalculator
+from .services.power_pin_orienter import PowerPinOrienter
+from .services.spacing_relaxer import SpacingRelaxer
+# from .services.keepout_builder import KeepoutBuilder
+from .services.via_planner import ViaPlanner
+
+from ..optimization.factory import OptimizerFactory
+from ..optimization.heuristic_optimizer import HeuristicOptimizer
+
 from ..exceptions import ComponentNotFoundError, GeometryError
 
 from dataclasses import dataclass
 
+from .commands import MoveCommand, ViaCommand
+
 logger = logging.getLogger(__name__)
 
-@dataclass
-class MoveCommand:
-    ref: str
-    position: Vector2
-    angle: Angle
-    layer: BoardLayer
-
-@dataclass
-class ViaCommand:
-    position: Vector2
-    drill_mm: float
-    diameter_mm: float
-    net_name: str
-    owner_ref: str
 
 class PlacementPlanner:
+
     def __init__(self, adapter: KiCadBoardAdapter, config: Config):
         self.adapter = adapter
         self.cfg = config
+        self.optimizer = OptimizerFactory.create(config.optimizer_type, adapter, config)
+        # self.spacing_relaxer = SpacingRelaxer(adapter, config)
         self._strategy = self._create_strategy()
         self._target_fp = adapter.get_footprint(config.target_ref)
         if self._target_fp is None:
             raise ComponentNotFoundError(f"Целевой компонент {config.target_ref} не найден")
+        # self.position_calc = PositionCalculator(adapter, config)
+        # self.power_pin_orienter = PowerPinOrienter(adapter, config)
+        # self.keepout_builder = KeepoutBuilder(adapter, config)
+        # self.via_planner = ViaPlanner(adapter, config, self.keepout_builder)
+        self.via_planner = ViaPlanner(adapter, config)
         self._center = self._target_fp.position
         self._target_layer = BoardLayer.BL_B_Cu if config.side == "back" else BoardLayer.BL_F_Cu
         self._boundary_polygon = self._get_boundary_polygon()
+        self._zone_center_point = self._compute_zone_center(self._boundary_polygon)
+        self._planned = None  # заполняется в plan_moves(), нужно plan_vias()
         logger.info(f"Планировщик инициализирован: target={config.target_ref}, side={config.side}")
 
     def _create_strategy(self) -> PlacementStrategy:
@@ -72,194 +81,60 @@ class PlacementPlanner:
         logger.debug(f"Граница зоны содержит {len(pts)} точек")
         return pts
 
+    def _compute_zone_center(self, boundary_polygon: List[Vector2]) -> Vector2:
+        """Центр (по bbox) зоны — используется как preferred_direction для
+        GND-виа при поиске свободного места (см. plan_vias/keepout)."""
+        xs = [p.x for p in boundary_polygon]
+        ys = [p.y for p in boundary_polygon]
+        return Vector2.from_xy(int((min(xs) + max(xs)) / 2), int((min(ys) + max(ys)) / 2))
+
     def _find_pad(self, fp, pad_number: str) -> Optional[Pad]:
-        for item in fp.definition.items:
-            if isinstance(item, Pad) and item.number == pad_number:
-                return item
-        return None
+        return self.adapter.get_pad_by_number(fp, pad_number)
 
     def _mirror_angle(self, angle_deg: float) -> float:
         if self.cfg.side == "back":
             return 180.0 - angle_deg
         return angle_deg
 
-    def _merge_via_config(self, component: SpokeComponent) -> ViaConfig:
-        """
-        ИСПРАВЛЕНО (2026-07-12): раньше assignment.via уже приходил
-        преждевременно сконструированным как полный ViaConfig (со всеми
-        полями, включая те, что не были в YAML — они получали ДЕФОЛТЫ
-        ViaConfig, не None), и здесь проверялось "if value is not None" —
-        что никогда не отличало "не задано" от "явно задано в дефолтное
-        значение", и enabled=True из global тихо перезатирался на
-        enabled=False. Теперь component.via — сырой bool/dict/None
-        (см. config.py), и мёрж явно смотрит, какие КЛЮЧИ реально
-        присутствуют в словаре — только они переопределяют global.
-        """
-        global_dict = dict(self.cfg.via.__dict__)
-        override = component.via
+    def plan_moves(self) -> List[MoveCommand]:
+        initial = []   # оптимизатор сам сгенерирует начальное приближение
+        final = self.optimizer.optimize(
+            initial,
+            self._target_fp,
+            self._boundary_polygon,
+            self.cfg.rules,
+            self.cfg.side,
+            self._target_layer
+        )
+        moves = []
+        self._planned = []
+        for fp in final:
+            angle_obj = Angle.from_degrees(fp.angle)
+            moves.append(MoveCommand(ref=fp.component.ref, position=fp.position,
+                                    angle=angle_obj, layer=self._target_layer))
+            self._planned.append((fp.component, fp.position, fp.direction))
+        logger.info(f"plan_moves завершено: {len(moves)} перемещений")
 
-        if override is None:
-            return ViaConfig(**global_dict)
-
-        if isinstance(override, bool):
-            if override:
-                return ViaConfig(**global_dict)
-            else:
-                merged = dict(global_dict)
-                merged["enabled"] = False
-                return ViaConfig(**merged)
-
-        if isinstance(override, dict):
-            merged = dict(global_dict)
-            merged.update(override)  # только реально присутствующие ключи
-            return ViaConfig(**merged)
-
-        raise ValueError(f"Некорректное значение via: {override!r} (ожидается bool, dict или None)")
-
-    def _plan_stitching_vias(self, cap_point: Vector2, direction: Tuple[float, float],
-                              via_cfg: ViaConfig, placement: str) -> List[Vector2]:
-        ux, uy = direction
-        away_sign = -1.0 if placement == "inside" else 1.0
-        offset = via_cfg.offset_from_cap_mm * MM
-        count = via_cfg.count
-
-        if count == 1:
-            mode = via_cfg.direction
-            if mode == "away_from_pad":
-                vx, vy = ux * away_sign, uy * away_sign
-            elif mode == "toward_pad":
-                vx, vy = -ux * away_sign, -uy * away_sign
-            elif mode == "perpendicular":
-                vx, vy = -uy, ux
-            else:
-                raise ValueError(f"неизвестный via.direction: {mode}")
-            return [Vector2.from_xy(int(cap_point.x + vx * offset), int(cap_point.y + vy * offset))]
-        elif count == 2:
-            px, py = -uy, ux
-            return [
-                Vector2.from_xy(int(cap_point.x + px * offset), int(cap_point.y + py * offset)),
-                Vector2.from_xy(int(cap_point.x - px * offset), int(cap_point.y - py * offset)),
-            ]
-        else:
-            raise ValueError(f"via.count поддерживает 1 или 2, получено {count}")
-
-    def _plan_thermal_vias(self) -> List[ViaCommand]:
-        tva = self.cfg.thermal_via_array
-        if not tva.enabled:
-            return []
-        logger.debug(f"Планирование термовиа для {tva.target_ref}, площадка {tva.pad}")
-        fp = self.adapter.get_footprint(tva.target_ref)
-        if fp is None:
-            raise ComponentNotFoundError(f"Термопад: компонент {tva.target_ref} не найден")
-        pad = self._find_pad(fp, tva.pad)
-        if pad is None:
-            raise ComponentNotFoundError(f"Термопад: у {tva.target_ref} нет площадки {tva.pad}")
-        net = self.adapter.get_net_by_name(tva.net)
-        if net is None:
-            raise ComponentNotFoundError(f"Термопад: цепь {tva.net} не найдена")
-        try:
-            points = compute_thermal_via_grid(
-                pad,
-                rows=tva.rows,
-                cols=tva.cols,
-                margin_mm=tva.margin_mm,
-                stagger=(tva.pattern == "staggered")
-            )
-        except GeometryError as e:
-            raise GeometryError(f"Термопад: {e}")
-        logger.info(f"Запланировано {len(points)} термовиа на {tva.pad}")
-        return [ViaCommand(p, tva.drill_mm, tva.diameter_mm, tva.net, tva.target_ref) for p in points]
+        return moves
+        
+    def plan_vias(self) -> List[ViaCommand]:
+        return self.via_planner.plan_vias(
+            planned=self._planned,
+            target_fp=self._target_fp,
+            zone_center_point=self._zone_center_point,
+            boundary_polygon=self._boundary_polygon
+        )
 
     def plan(self) -> Tuple[List[MoveCommand], List[ViaCommand]]:
-        vias = []
-
-        # --- Фаза 1: считаем "сырые" позиции по стратегии, БЕЗ виа ---
-        # (виа планируются позже, в фазе 3, уже на раздвинутых позициях —
-        # иначе виа привязались бы к точкам, которые раздвижка потом сдвинет)
-        raw = []  # список (component, dest, direction, angle)
-        logger.info("Начало планирования по правилам (фаза 1: сырые позиции)")
-        for rule_idx, rule in enumerate(self.cfg.rules):
-            logger.debug(f"Обработка цепи {rule.net} ({rule_idx+1}/{len(self.cfg.rules)})")
-            net = self.adapter.get_net_by_name(rule.net)
-            if net is None:
-                logger.warning(f"Цепь {rule.net} не найдена, пропускаем")
-                continue
-            for spoke in rule.spokes:
-                pad = self._find_pad(self._target_fp, spoke.pad)
-                if pad is None:
-                    logger.warning(f"У {self.cfg.target_ref} нет площадки {spoke.pad}, "
-                                   f"пропуск всей спицы ({len(spoke.components)} компонент.)")
-                    continue
-
-                for component in spoke.components:
-                    try:
-                        dest, direction = self._strategy.compute_position(
-                            self._center,
-                            pad.position,
-                            self._boundary_polygon,
-                            component.placement,
-                            component.offset_mm,
-                            fixed_angle_deg=self.cfg.fixed_angle_deg
-                        )
-                    except GeometryError as e:
-                        raise GeometryError(f"Ошибка для {component.ref} (спица {spoke.pad}): {e}")
-
-                    phi_deg = math.degrees(math.atan2(direction[1], direction[0]))
-                    phi_deg = self._mirror_angle(phi_deg)
-                    angle = Angle.from_degrees(phi_deg)
-
-                    raw.append((component, dest, direction, angle))
-                    logger.debug(f"  {component.ref} (спица {spoke.pad}, сырая позиция) -> "
-                                 f"({dest.x/MM:.3f}, {dest.y/MM:.3f}) мм, угол={phi_deg:.1f}°")
-
-        # --- Фаза 2: раздвигаем конфликтующие точки вдоль ряда ---
-        # ВАЖНО: группировка в relax_positions идёт по (нормаль стороны,
-        # перпендикулярная координата) — т.е. АВТОМАТИЧЕСКИ по одной и той
-        # же стороне зоны И одной и той же линии (inside/outside), но
-        # НЕЗАВИСИМО от того, какой цепи принадлежит конденсатор. Это и
-        # решает межцепевые конфликты (см. Config.min_row_spacing_mm).
-        entries = [(dest, direction, (component, direction, angle)) for component, dest, direction, angle in raw]
-        relaxed = relax_positions(entries, self.cfg.min_row_spacing_mm, MM)
-
-        original_dest_by_id = {id(component): dest for component, dest, _, _ in raw}
-        moved_count = sum(
-            1 for new_pos, (component, _, _) in relaxed
-            if (orig := original_dest_by_id.get(id(component))) is not None
-            and (new_pos.x != orig.x or new_pos.y != orig.y)
-        )
-        if moved_count:
-            logger.info(f"Раздвижка вдоль ряда: скорректировано позиций у {moved_count} конденсаторов "
-                        f"(min_row_spacing_mm={self.cfg.min_row_spacing_mm})")
-
-        # --- Фаза 3: финальные MoveCommand + планирование виа на раздвинутых позициях ---
-        moves = []
-        for new_pos, (component, direction, angle) in relaxed:
-            moves.append(MoveCommand(
-                ref=component.ref,
-                position=new_pos,
-                angle=angle,
-                layer=self._target_layer
-            ))
-
-            via_cfg = self._merge_via_config(component)
-            if via_cfg.enabled:
-                via_net = self.adapter.get_net_by_name(via_cfg.net)
-                if via_net is None:
-                    logger.warning(f"Цепь {via_cfg.net} для виа у {component.ref} не найдена")
-                    continue
-                via_positions = self._plan_stitching_vias(new_pos, direction, via_cfg, component.placement)
-                for pos in via_positions:
-                    vias.append(ViaCommand(
-                        position=pos,
-                        drill_mm=via_cfg.drill_mm,
-                        diameter_mm=via_cfg.diameter_mm,
-                        net_name=via_cfg.net,
-                        owner_ref=component.ref
-                    ))
-                    logger.debug(f"    виа у {component.ref}: ({pos.x/MM:.3f}, {pos.y/MM:.3f}) мм")
-
-        # Термовиа
-        vias.extend(self._plan_thermal_vias())
-
-        logger.info(f"Планирование завершено: {len(moves)} перемещений, {len(vias)} виа")
+        """
+        Обратно совместимая обёртка: plan_moves() + plan_vias() подряд, без
+        коммита/перечитывания платы между ними — то есть виа считаются по
+        позициям из plan_moves(), ещё не применённым к реальной плате.
+        Поведение идентично старому единому plan(). Как только executor
+        начнёт по-настоящему коммитить между фазами (следующий шаг), этот
+        метод перестанет использоваться для боевого прогона — но останется
+        полезным для dry-run и тестов, где коммит не нужен.
+        """
+        moves = self.plan_moves()
+        vias = self.plan_vias()
         return moves, vias

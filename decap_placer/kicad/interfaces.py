@@ -1,0 +1,53 @@
+from abc import ABC, abstractmethod
+from typing import List, Optional, Any
+from kipy.board_types import FootprintInstance, Zone, Net, Pad, Via
+from kipy.geometry import Vector2
+
+class IBoardAdapter(ABC):
+    @abstractmethod
+    def refresh_board(self): ...
+
+    @abstractmethod
+    def get_footprint(self, ref: str) -> Optional[FootprintInstance]: ...
+
+    @abstractmethod
+    def get_footprints(self) -> List[FootprintInstance]: ...
+
+    @abstractmethod
+    def get_footprint_pads(self, fp: FootprintInstance) -> List[Pad]: ...
+
+    @abstractmethod
+    def get_pad_by_number(self, fp: FootprintInstance, number: str) -> Optional[Pad]: ...
+
+    @abstractmethod
+    def get_zone_by_name(self, name: str) -> Optional[Zone]: ...
+
+    @abstractmethod
+    def get_net_by_name(self, name: str) -> Optional[Net]: ...
+
+    @abstractmethod
+    def get_bounding_boxes(self, items) -> List[Optional[Any]]: ...
+
+    @abstractmethod
+    def begin_commit(self): ...
+
+    @abstractmethod
+    def push_commit(self, commit, description: str): ...
+
+    @abstractmethod
+    def drop_commit(self, commit): ...
+
+    @abstractmethod
+    def update_items(self, items): ...
+
+    @abstractmethod
+    def create_items(self, items): ...
+
+    @abstractmethod
+    def flip_selected(self, footprints: List[FootprintInstance]): ...
+
+    @abstractmethod
+    def commit_with_retry(self, description: str, work_fn, retries: int = 1) -> bool: ...
+
+    @abstractmethod
+    def create_via(self, position: Vector2, net: Net, drill_mm: float, diameter_mm: float) -> Via: ...
