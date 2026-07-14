@@ -236,13 +236,13 @@
 	(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder"
 		(layer "F.Cu")
 		(uuid "02ec9386-2239-4908-9a17-c7a597a91aed")
-		(at 166.515 79.195)
+		(at 159.54 76 90)
 		(descr "Capacitor SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC-7351 nominal with elongated pad for handsoldering. (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "capacitor handsolder")
 		(property "Reference" "C1"
-			(at 0 -1.43 0)
+			(at 0 -1.43 90)
 			(layer "F.SilkS")
-			(uuid "19bbd069-df65-4d04-be70-c73f3d8e4b57")
+			(uuid "573e52ce-1cfe-4464-a9b9-98c677bf49a2")
 			(effects
 				(font
 					(size 1 1)
@@ -251,9 +251,9 @@
 			)
 		)
 		(property "Value" "1uF"
-			(at 0 1.43 0)
+			(at 0 1.43 90)
 			(layer "F.Fab")
-			(uuid "53ecfcbd-4e29-4ce6-892f-7245a9bf3a25")
+			(uuid "a93ba673-fadb-4c4d-abdd-4dd638ceeba2")
 			(effects
 				(font
 					(size 1 1)
@@ -262,10 +262,10 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 0 0 0)
+			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "5b582f4c-5884-48da-9407-7751d8565c4e")
+			(uuid "f6d53343-e2cc-4acd-a413-3be197999a90")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -273,10 +273,10 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 0 0 0)
+			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "3d41f5a0-e359-4c3a-997a-86a794651689")
+			(uuid "3c59f86f-79d0-4d36-a044-4873554ae762")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -338,7 +338,7 @@
 			(uuid "1a8eb9ca-8ba1-454d-b104-b9d4805cceea")
 		)
 		(fp_text user "${REFERENCE}"
-			(at 0 0 0)
+			(at 0 0 90)
 			(layer "F.Fab")
 			(uuid "8fb1a97b-39a3-422a-b9e7-23d25f2475b5")
 			(effects
@@ -349,7 +349,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.8625 0)
+			(at -0.8625 0 90)
 			(size 1.075 0.95)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
@@ -358,7 +358,7 @@
 			(uuid "4f5119ad-061e-4ab7-a459-90871495282f")
 		)
 		(pad "2" smd roundrect
-			(at 0.8625 0)
+			(at 0.8625 0 90)
 			(size 1.075 0.95)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
@@ -6108,7 +6108,7 @@
 		(property "Reference" "C34"
 			(at 0 -1.43 0)
 			(layer "F.SilkS")
-			(uuid "7dbcca00-f152-4d9b-beb6-9eb861723be9")
+			(uuid "f129d17c-48ba-4f3e-886f-66c644319c32")
 			(effects
 				(font
 					(size 1 1)
@@ -6119,7 +6119,7 @@
 		(property "Value" "4.7 uF"
 			(at 0 1.43 0)
 			(layer "F.Fab")
-			(uuid "7374c475-740d-4764-8865-7b63ff5f2700")
+			(uuid "8a55e020-d3e6-4f9f-a0d1-a083531ef0cd")
 			(effects
 				(font
 					(size 1 1)
@@ -6131,7 +6131,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "4b439225-48f1-4a15-87f6-d1427c0c29fa")
+			(uuid "f21160f1-9263-4ab3-873d-2a0824ffefb5")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6142,7 +6142,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "cd47cc78-e752-43a6-a8e9-ab3b09f2caf9")
+			(uuid "beb8e82f-4626-4070-8d54-32a3ea936460")
 			(effects
 				(font
 					(size 1.27 1.27)

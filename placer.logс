@@ -7437,3 +7437,680 @@ TypeError: ViaPlanner._plan_stitching_vias() takes 5 positional arguments but 6 
 2026-07-13 19:19:39,462 - decap_placer.placement.executor - INFO -   батч виа 6 выполнен (8 шт.)
 2026-07-13 19:19:39,463 - __main__ - INFO - ✅ Все операции выполнены успешно
 2026-07-13 19:19:39,463 - pynng.nng - DEBUG - Pipe callback event 2
+2026-07-14 13:59:09,527 - __main__ - INFO - Загрузка конфига: decap_placement.yaml
+2026-07-14 13:59:09,527 - decap_placer.config - INFO - Загрузка конфигурации из decap_placement.yaml
+2026-07-14 13:59:09,534 - decap_placer.config - DEBUG - Конфигурация загружена: target=IC1, side=back, правил=4, спиц=22, компонентов=42
+2026-07-14 13:59:09,535 - __main__ - INFO - Подключение к KiCad (таймаут 20000 мс)
+2026-07-14 13:59:09,535 - decap_placer.kicad.adapter - DEBUG - Инициализация KiCadBoardAdapter с таймаутом 20000 мс
+2026-07-14 13:59:09,536 - decap_placer.kicad.adapter - DEBUG - Создание экземпляра kipy.KiCad...
+2026-07-14 13:59:09,536 - decap_placer.kicad.adapter - DEBUG - Экземпляр kipy.KiCad создан
+2026-07-14 13:59:09,536 - decap_placer.kicad.adapter - DEBUG - Обновление доски из KiCad
+2026-07-14 13:59:09,538 - pynng.nng - DEBUG - Pipe callback event 0
+2026-07-14 13:59:09,538 - pynng.nng - DEBUG - Pipe callback event 1
+2026-07-14 13:59:09,538 - decap_placer.kicad.adapter - INFO - Доска получена
+2026-07-14 13:59:09,538 - __main__ - INFO - Планирование расстановки...
+2026-07-14 13:59:09,538 - decap_placer.placement.planner - DEBUG - Выбрана стратегия по границам
+2026-07-14 13:59:09,546 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-14 13:59:09,546 - decap_placer.kicad.adapter - DEBUG - Найдена зона RA_DECAP_ZONE
+2026-07-14 13:59:09,546 - decap_placer.placement.planner - DEBUG - Граница зоны содержит 4 точек
+2026-07-14 13:59:09,547 - decap_placer.placement.planner - INFO - Планировщик инициализирован: target=IC1, side=back
+2026-07-14 13:59:09,547 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +3V3_VCCIO
+2026-07-14 13:59:09,547 - decap_placer.placement.services.position_calculator - DEBUG -   C5 (спица 17, сырая позиция) -> (71.190, 68.288) мм, угол=360.0°
+2026-07-14 13:59:09,547 - decap_placer.placement.services.position_calculator - DEBUG -   C30 (спица 17, сырая позиция) -> (67.990, 68.288) мм, угол=360.0°
+2026-07-14 13:59:09,547 - decap_placer.placement.services.position_calculator - DEBUG -   C6 (спица 139, сырая позиция) -> (73.890, 60.050) мм, угол=270.0°
+2026-07-14 13:59:09,547 - decap_placer.placement.services.position_calculator - DEBUG -   C31 (спица 139, сырая позиция) -> (73.890, 56.850) мм, угол=270.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C7 (спица 130, сырая позиция) -> (78.390, 60.050) мм, угол=270.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C32 (спица 130, сырая позиция) -> (78.390, 56.850) мм, угол=270.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C8 (спица 122, сырая позиция) -> (82.390, 60.050) мм, угол=270.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C33 (спица 122, сырая позиция) -> (82.390, 56.850) мм, угол=270.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C9 (спица 117, сырая позиция) -> (84.890, 60.050) мм, угол=270.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C34 (спица 117, сырая позиция) -> (84.890, 56.850) мм, угол=270.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C10 (спица 93, сырая позиция) -> (89.110, 67.788) мм, угол=180.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C35 (спица 93, сырая позиция) -> (92.310, 67.788) мм, угол=180.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C11 (спица 81, сырая позиция) -> (89.110, 73.788) мм, угол=180.0°
+2026-07-14 13:59:09,548 - decap_placer.placement.services.position_calculator - DEBUG -   C36 (спица 81, сырая позиция) -> (92.310, 73.788) мм, угол=180.0°
+2026-07-14 13:59:09,549 - decap_placer.placement.services.position_calculator - DEBUG -   C12 (спица 62, сырая позиция) -> (83.890, 78.050) мм, угол=90.0°
+2026-07-14 13:59:09,549 - decap_placer.placement.services.position_calculator - DEBUG -   C37 (спица 62, сырая позиция) -> (83.890, 81.250) мм, угол=90.0°
+2026-07-14 13:59:09,549 - decap_placer.placement.services.position_calculator - DEBUG -   C13 (спица 56, сырая позиция) -> (80.890, 78.050) мм, угол=90.0°
+2026-07-14 13:59:09,549 - decap_placer.placement.services.position_calculator - DEBUG -   C14 (спица 47, сырая позиция) -> (76.390, 78.050) мм, угол=90.0°
+2026-07-14 13:59:09,549 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +1V2_VCCINT
+2026-07-14 13:59:09,549 - decap_placer.placement.services.position_calculator - DEBUG -   C19 (спица 5, сырая позиция) -> (71.190, 62.288) мм, угол=360.0°
+2026-07-14 13:59:09,549 - decap_placer.placement.services.position_calculator - DEBUG -   C40 (спица 5, сырая позиция) -> (67.990, 62.288) мм, угол=360.0°
+2026-07-14 13:59:09,549 - decap_placer.placement.services.position_calculator - DEBUG -   C20 (спица 134, сырая позиция) -> (76.390, 60.050) мм, угол=270.0°
+2026-07-14 13:59:09,549 - decap_placer.placement.services.position_calculator - DEBUG -   C41 (спица 134, сырая позиция) -> (76.390, 56.850) мм, угол=270.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C21 (спица 116, сырая позиция) -> (85.390, 60.050) мм, угол=270.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C42 (спица 116, сырая позиция) -> (85.390, 56.850) мм, угол=270.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C22 (спица 102, сырая позиция) -> (89.110, 63.288) мм, угол=180.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C43 (спица 102, сырая позиция) -> (92.310, 63.288) мм, угол=180.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C23 (спица 78, сырая позиция) -> (89.110, 75.288) мм, угол=180.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C44 (спица 78, сырая позиция) -> (92.310, 75.288) мм, угол=180.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C24 (спица 61, сырая позиция) -> (83.390, 78.050) мм, угол=90.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C45 (спица 61, сырая позиция) -> (83.390, 81.250) мм, угол=90.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C25 (спица 45, сырая позиция) -> (75.390, 78.050) мм, угол=90.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C46 (спица 45, сырая позиция) -> (75.390, 81.250) мм, угол=90.0°
+2026-07-14 13:59:09,550 - decap_placer.placement.services.position_calculator - DEBUG -   C26 (спица 29, сырая позиция) -> (71.190, 74.288) мм, угол=360.0°
+2026-07-14 13:59:09,551 - decap_placer.placement.services.position_calculator - DEBUG -   C27 (спица 29, сырая позиция) -> (68.190, 74.288) мм, угол=360.0°
+2026-07-14 13:59:09,551 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +2V5_VCCA
+2026-07-14 13:59:09,551 - decap_placer.placement.services.position_calculator - DEBUG -   C28 (спица 107, сырая позиция) -> (89.110, 60.788) мм, угол=180.0°
+2026-07-14 13:59:09,551 - decap_placer.placement.services.position_calculator - DEBUG -   C51 (спица 107, сырая позиция) -> (92.310, 60.788) мм, угол=180.0°
+2026-07-14 13:59:09,551 - decap_placer.placement.services.position_calculator - DEBUG -   C29 (спица 96, сырая позиция) -> (89.110, 66.288) мм, угол=180.0°
+2026-07-14 13:59:09,551 - decap_placer.placement.services.position_calculator - DEBUG -   C52 (спица 96, сырая позиция) -> (92.310, 66.288) мм, угол=180.0°
+2026-07-14 13:59:09,551 - decap_placer.kicad.adapter - DEBUG - Найдена цепь +1V2_VCCD_PLL
+2026-07-14 13:59:09,552 - decap_placer.placement.services.position_calculator - DEBUG -   C38 (спица 109, сырая позиция) -> (88.890, 60.050) мм, угол=270.0°
+2026-07-14 13:59:09,552 - decap_placer.placement.services.position_calculator - DEBUG -   C53 (спица 109, сырая позиция) -> (88.890, 56.850) мм, угол=270.0°
+2026-07-14 13:59:09,552 - decap_placer.placement.services.position_calculator - DEBUG -   C39 (спица 37, сырая позиция) -> (71.390, 78.050) мм, угол=90.0°
+2026-07-14 13:59:09,552 - decap_placer.placement.services.position_calculator - DEBUG -   C54 (спица 37, сырая позиция) -> (71.390, 81.250) мм, угол=90.0°
+2026-07-14 13:59:09,560 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C5
+2026-07-14 13:59:09,561 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C5 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,561 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C5: power_pin_facing=away, кандидаты=[360.0, 540.0]°, расстояния=[2.356, 1.22]мм, выбран 360.0°
+2026-07-14 13:59:09,561 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C5: угол скорректирован с 360.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,568 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C30
+2026-07-14 13:59:09,568 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C30 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,568 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C30: power_pin_facing=away, кандидаты=[360.0, 540.0]°, расстояния=[0.549, 2.275]мм, выбран 540.0°
+2026-07-14 13:59:09,568 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C30: угол скорректирован с 360.0° -> 540.0° (facing=away)
+2026-07-14 13:59:09,575 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C6
+2026-07-14 13:59:09,576 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C6 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,576 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C6: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[2.317, 1.84]мм, выбран 270.0°
+2026-07-14 13:59:09,576 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C6: угол скорректирован с 270.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,583 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C31
+2026-07-14 13:59:09,583 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C31 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,584 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C31: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[0.588, 1.687]мм, выбран 450.0°
+2026-07-14 13:59:09,584 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C31: угол скорректирован с 270.0° -> 450.0° (facing=away)
+2026-07-14 13:59:09,591 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C7
+2026-07-14 13:59:09,591 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C7 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,591 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C7: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[2.317, 1.84]мм, выбран 270.0°
+2026-07-14 13:59:09,591 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C7: угол скорректирован с 270.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,598 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C32
+2026-07-14 13:59:09,598 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C32 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,598 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C32: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[0.588, 1.687]мм, выбран 450.0°
+2026-07-14 13:59:09,599 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C32: угол скорректирован с 270.0° -> 450.0° (facing=away)
+2026-07-14 13:59:09,606 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C8
+2026-07-14 13:59:09,606 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C8 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,606 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C8: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[2.317, 1.84]мм, выбран 270.0°
+2026-07-14 13:59:09,607 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C8: угол скорректирован с 270.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,613 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C33
+2026-07-14 13:59:09,614 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C33 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,614 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C33: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[0.588, 1.687]мм, выбран 450.0°
+2026-07-14 13:59:09,614 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C33: угол скорректирован с 270.0° -> 450.0° (facing=away)
+2026-07-14 13:59:09,621 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C9
+2026-07-14 13:59:09,622 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C9 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,622 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C9: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[2.317, 1.84]мм, выбран 270.0°
+2026-07-14 13:59:09,622 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C9: угол скорректирован с 270.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,629 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C34
+2026-07-14 13:59:09,629 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C34 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,629 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C34: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[0.588, 1.687]мм, выбран 450.0°
+2026-07-14 13:59:09,629 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C34: угол скорректирован с 270.0° -> 450.0° (facing=away)
+2026-07-14 13:59:09,636 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C10
+2026-07-14 13:59:09,637 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C10 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,637 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C10: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[2.336, 2.336]мм, выбран 360.0°
+2026-07-14 13:59:09,637 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C10: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,644 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C35
+2026-07-14 13:59:09,644 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C35 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,644 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C35: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[0.57, 0.57]мм, выбран 360.0°
+2026-07-14 13:59:09,644 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C35: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,651 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C11
+2026-07-14 13:59:09,651 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C11 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,652 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C11: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[2.336, 2.336]мм, выбран 360.0°
+2026-07-14 13:59:09,652 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C11: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,659 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C36
+2026-07-14 13:59:09,659 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C36 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,659 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C36: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[0.57, 0.57]мм, выбран 360.0°
+2026-07-14 13:59:09,659 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C36: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,666 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C12
+2026-07-14 13:59:09,666 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C12 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,667 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C12: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[2.293, 1.817]мм, выбран 90.0°
+2026-07-14 13:59:09,667 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C12: угол скорректирован с 90.0° -> 90.0° (facing=away)
+2026-07-14 13:59:09,674 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C37
+2026-07-14 13:59:09,674 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C37 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,674 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C37: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[0.612, 1.708]мм, выбран 270.0°
+2026-07-14 13:59:09,674 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C37: угол скорректирован с 90.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,681 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C13
+2026-07-14 13:59:09,682 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C13 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,682 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C13: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[2.293, 1.817]мм, выбран 90.0°
+2026-07-14 13:59:09,682 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C13: угол скорректирован с 90.0° -> 90.0° (facing=away)
+2026-07-14 13:59:09,689 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C14
+2026-07-14 13:59:09,690 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C14 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,690 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C14: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[2.293, 1.817]мм, выбран 90.0°
+2026-07-14 13:59:09,690 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C14: угол скорректирован с 90.0° -> 90.0° (facing=away)
+2026-07-14 13:59:09,697 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C19
+2026-07-14 13:59:09,697 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C19 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,698 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C19: power_pin_facing=away, кандидаты=[360.0, 540.0]°, расстояния=[2.356, 1.22]мм, выбран 360.0°
+2026-07-14 13:59:09,698 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C19: угол скорректирован с 360.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,705 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C40
+2026-07-14 13:59:09,705 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C40 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,705 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C40: power_pin_facing=away, кандидаты=[360.0, 540.0]°, расстояния=[0.549, 2.275]мм, выбран 540.0°
+2026-07-14 13:59:09,706 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C40: угол скорректирован с 360.0° -> 540.0° (facing=away)
+2026-07-14 13:59:09,713 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C20
+2026-07-14 13:59:09,713 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C20 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,713 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C20: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[2.317, 1.84]мм, выбран 270.0°
+2026-07-14 13:59:09,714 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C20: угол скорректирован с 270.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,721 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C41
+2026-07-14 13:59:09,721 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C41 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,721 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C41: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[0.588, 1.687]мм, выбран 450.0°
+2026-07-14 13:59:09,721 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C41: угол скорректирован с 270.0° -> 450.0° (facing=away)
+2026-07-14 13:59:09,729 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C21
+2026-07-14 13:59:09,729 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C21 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,729 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C21: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[2.317, 1.84]мм, выбран 270.0°
+2026-07-14 13:59:09,729 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C21: угол скорректирован с 270.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,736 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C42
+2026-07-14 13:59:09,737 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C42 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,737 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C42: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[0.588, 1.687]мм, выбран 450.0°
+2026-07-14 13:59:09,737 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C42: угол скорректирован с 270.0° -> 450.0° (facing=away)
+2026-07-14 13:59:09,744 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C22
+2026-07-14 13:59:09,744 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C22 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,744 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C22: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[2.336, 2.336]мм, выбран 360.0°
+2026-07-14 13:59:09,744 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C22: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,751 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C43
+2026-07-14 13:59:09,752 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C43 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,752 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C43: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[0.57, 0.57]мм, выбран 360.0°
+2026-07-14 13:59:09,752 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C43: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,759 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C23
+2026-07-14 13:59:09,759 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C23 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,760 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C23: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[2.336, 2.336]мм, выбран 360.0°
+2026-07-14 13:59:09,760 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C23: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,766 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C44
+2026-07-14 13:59:09,767 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C44 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,767 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C44: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[0.57, 0.57]мм, выбран 360.0°
+2026-07-14 13:59:09,767 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C44: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,774 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C24
+2026-07-14 13:59:09,774 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C24 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,774 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C24: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[2.294, 1.817]мм, выбран 90.0°
+2026-07-14 13:59:09,774 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C24: угол скорректирован с 90.0° -> 90.0° (facing=away)
+2026-07-14 13:59:09,781 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C45
+2026-07-14 13:59:09,781 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C45 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,782 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C45: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[0.612, 1.708]мм, выбран 270.0°
+2026-07-14 13:59:09,782 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C45: угол скорректирован с 90.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,789 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C25
+2026-07-14 13:59:09,789 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C25 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,789 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C25: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[2.293, 1.817]мм, выбран 90.0°
+2026-07-14 13:59:09,790 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C25: угол скорректирован с 90.0° -> 90.0° (facing=away)
+2026-07-14 13:59:09,796 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C46
+2026-07-14 13:59:09,797 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C46 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,797 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C46: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[0.612, 1.708]мм, выбран 270.0°
+2026-07-14 13:59:09,797 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C46: угол скорректирован с 90.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,804 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C26
+2026-07-14 13:59:09,804 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C26 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,804 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C26: power_pin_facing=away, кандидаты=[360.0, 540.0]°, расстояния=[2.356, 1.22]мм, выбран 360.0°
+2026-07-14 13:59:09,805 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C26: угол скорректирован с 360.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,811 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C27
+2026-07-14 13:59:09,812 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C27 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,812 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C27: power_pin_facing=away, кандидаты=[360.0, 540.0]°, расстояния=[0.349, 2.075]мм, выбран 540.0°
+2026-07-14 13:59:09,812 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C27: угол скорректирован с 360.0° -> 540.0° (facing=away)
+2026-07-14 13:59:09,819 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C28
+2026-07-14 13:59:09,820 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C28 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,820 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C28: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[2.336, 2.336]мм, выбран 360.0°
+2026-07-14 13:59:09,820 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C28: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,827 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C51
+2026-07-14 13:59:09,827 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C51 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,827 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C51: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[0.57, 0.57]мм, выбран 360.0°
+2026-07-14 13:59:09,827 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C51: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,834 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C29
+2026-07-14 13:59:09,834 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C29 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,834 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C29: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[2.336, 2.336]мм, выбран 360.0°
+2026-07-14 13:59:09,835 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C29: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,842 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C52
+2026-07-14 13:59:09,842 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C52 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,842 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C52: power_pin_facing=away, кандидаты=[180.0, 360.0]°, расстояния=[0.57, 0.57]мм, выбран 360.0°
+2026-07-14 13:59:09,842 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C52: угол скорректирован с 180.0° -> 360.0° (facing=away)
+2026-07-14 13:59:09,849 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C38
+2026-07-14 13:59:09,850 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C38 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,850 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C38: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[2.317, 1.84]мм, выбран 270.0°
+2026-07-14 13:59:09,850 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C38: угол скорректирован с 270.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,857 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C53
+2026-07-14 13:59:09,857 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C53 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,857 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C53: power_pin_facing=away, кандидаты=[270.0, 450.0]°, расстояния=[0.588, 1.687]мм, выбран 450.0°
+2026-07-14 13:59:09,857 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C53: угол скорректирован с 270.0° -> 450.0° (facing=away)
+2026-07-14 13:59:09,864 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C39
+2026-07-14 13:59:09,865 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C39 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,865 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C39: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[2.293, 1.817]мм, выбран 90.0°
+2026-07-14 13:59:09,865 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C39: угол скорректирован с 90.0° -> 90.0° (facing=away)
+2026-07-14 13:59:09,872 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C54
+2026-07-14 13:59:09,873 - decap_placer.placement.services.power_pin_orienter - WARNING - power_pin_facing: C54 требует флипа в этом прогоне — направление силового пина предсказывается по НЕПОДТВЕРЖДЁННОМУ допущению о конвенции флипа, стоит перепроверить на живой плате
+2026-07-14 13:59:09,873 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C54: power_pin_facing=away, кандидаты=[90.0, 270.0]°, расстояния=[0.612, 1.708]мм, выбран 270.0°
+2026-07-14 13:59:09,873 - decap_placer.placement.services.power_pin_orienter - DEBUG -   C54: угол скорректирован с 90.0° -> 270.0° (facing=away)
+2026-07-14 13:59:09,873 - decap_placer.optimization.nlp_optimizer - INFO - Запуск NLP-оптимизации для 42 конденсаторов
+2026-07-14 13:59:09,873 - decap_placer.optimization.nlp_optimizer - INFO - Запуск scipy.optimize.minimize (SLSQP)
+2026-07-14 13:59:10,537 - decap_placer.optimization.nlp_optimizer - INFO - NLP оптимизация завершена успешно, функция=0.130
+2026-07-14 13:59:10,538 - decap_placer.optimization.nlp_optimizer - INFO - NLP оптимизация завершена, обработано 42 конденсаторов
+2026-07-14 13:59:10,538 - decap_placer.placement.planner - INFO - plan_moves завершено: 42 перемещений
+2026-07-14 13:59:10,545 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C10
+2026-07-14 13:59:10,553 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C11
+2026-07-14 13:59:10,560 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C12
+2026-07-14 13:59:10,569 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C13
+2026-07-14 13:59:10,577 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C14
+2026-07-14 13:59:10,585 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C19
+2026-07-14 13:59:10,592 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C20
+2026-07-14 13:59:10,600 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C21
+2026-07-14 13:59:10,608 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C22
+2026-07-14 13:59:10,615 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C23
+2026-07-14 13:59:10,623 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C24
+2026-07-14 13:59:10,630 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C25
+2026-07-14 13:59:10,638 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C26
+2026-07-14 13:59:10,646 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C27
+2026-07-14 13:59:10,652 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C28
+2026-07-14 13:59:10,660 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C29
+2026-07-14 13:59:10,667 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C30
+2026-07-14 13:59:10,674 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C31
+2026-07-14 13:59:10,680 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C32
+2026-07-14 13:59:10,687 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C33
+2026-07-14 13:59:10,695 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C34
+2026-07-14 13:59:10,701 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C35
+2026-07-14 13:59:10,708 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C36
+2026-07-14 13:59:10,716 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C37
+2026-07-14 13:59:10,722 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C38
+2026-07-14 13:59:10,729 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C39
+2026-07-14 13:59:10,736 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C40
+2026-07-14 13:59:10,743 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C41
+2026-07-14 13:59:10,750 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C42
+2026-07-14 13:59:10,757 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C43
+2026-07-14 13:59:10,764 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C44
+2026-07-14 13:59:10,779 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C45
+2026-07-14 13:59:10,786 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C46
+2026-07-14 13:59:10,793 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C5
+2026-07-14 13:59:10,800 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C51
+2026-07-14 13:59:10,807 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C52
+2026-07-14 13:59:10,814 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C53
+2026-07-14 13:59:10,821 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C54
+2026-07-14 13:59:10,828 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C6
+2026-07-14 13:59:10,835 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C7
+2026-07-14 13:59:10,841 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C8
+2026-07-14 13:59:10,848 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C9
+2026-07-14 13:59:10,850 - decap_placer.placement.services.via_planner - DEBUG - Keepout для stitching-виа: 229 прямоугольников (клиренс 0.2мм)
+2026-07-14 13:59:10,850 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,851 - decap_placer.placement.services.via_planner - DEBUG -     виа у C19: (73.190, 62.288) мм
+2026-07-14 13:59:10,851 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,851 - decap_placer.placement.services.via_planner - DEBUG -     виа у C5: (73.190, 68.288) мм
+2026-07-14 13:59:10,851 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,851 - decap_placer.placement.services.via_planner - DEBUG -     виа у C26: (73.190, 74.288) мм
+2026-07-14 13:59:10,852 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,852 - decap_placer.placement.services.via_planner - DEBUG -     виа у C40: (65.990, 62.288) мм
+2026-07-14 13:59:10,852 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,852 - decap_placer.placement.services.via_planner - DEBUG -     виа у C30: (65.990, 68.288) мм
+2026-07-14 13:59:10,852 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,852 - decap_placer.placement.services.via_planner - DEBUG -     виа у C6: (73.890, 62.050) мм
+2026-07-14 13:59:10,853 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,853 - decap_placer.placement.services.via_planner - DEBUG -     виа у C20: (76.390, 62.050) мм
+2026-07-14 13:59:10,853 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,853 - decap_placer.placement.services.via_planner - DEBUG -     виа у C7: (78.390, 62.050) мм
+2026-07-14 13:59:10,853 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,853 - decap_placer.placement.services.via_planner - DEBUG -     виа у C8: (82.223, 62.050) мм
+2026-07-14 13:59:10,854 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,854 - decap_placer.placement.services.via_planner - DEBUG -     виа у C9: (84.223, 62.050) мм
+2026-07-14 13:59:10,854 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,854 - decap_placer.placement.services.via_planner - DEBUG -     виа у C21: (86.223, 62.050) мм
+2026-07-14 13:59:10,854 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,855 - decap_placer.placement.services.via_planner - DEBUG -     виа у C38: (88.880, 62.017) мм
+2026-07-14 13:59:10,855 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,855 - decap_placer.placement.services.via_planner - DEBUG -     виа у C31: (73.890, 54.850) мм
+2026-07-14 13:59:10,855 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,856 - decap_placer.placement.services.via_planner - DEBUG -     виа у C41: (76.390, 54.850) мм
+2026-07-14 13:59:10,856 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,856 - decap_placer.placement.services.via_planner - DEBUG -     виа у C32: (78.390, 54.850) мм
+2026-07-14 13:59:10,856 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,856 - decap_placer.placement.services.via_planner - DEBUG -     виа у C33: (82.223, 54.850) мм
+2026-07-14 13:59:10,857 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,857 - decap_placer.placement.services.via_planner - DEBUG -     виа у C34: (84.223, 54.850) мм
+2026-07-14 13:59:10,857 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,857 - decap_placer.placement.services.via_planner - DEBUG -     виа у C42: (86.223, 54.850) мм
+2026-07-14 13:59:10,857 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,857 - decap_placer.placement.services.via_planner - DEBUG -     виа у C53: (88.890, 54.850) мм
+2026-07-14 13:59:10,858 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,858 - decap_placer.placement.services.via_planner - DEBUG -     виа у C28: (87.207, 61.115) мм
+2026-07-14 13:59:10,858 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,858 - decap_placer.placement.services.via_planner - DEBUG -     виа у C22: (87.110, 63.288) мм
+2026-07-14 13:59:10,859 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,859 - decap_placer.placement.services.via_planner - DEBUG -     виа у C29: (87.110, 66.038) мм
+2026-07-14 13:59:10,859 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,859 - decap_placer.placement.services.via_planner - DEBUG -     виа у C10: (87.110, 68.038) мм
+2026-07-14 13:59:10,860 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,860 - decap_placer.placement.services.via_planner - DEBUG -     виа у C11: (87.110, 73.538) мм
+2026-07-14 13:59:10,860 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,860 - decap_placer.placement.services.via_planner - DEBUG -     виа у C23: (87.110, 75.538) мм
+2026-07-14 13:59:10,861 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,861 - decap_placer.placement.services.via_planner - DEBUG -     виа у C51: (94.310, 60.788) мм
+2026-07-14 13:59:10,861 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,861 - decap_placer.placement.services.via_planner - DEBUG -     виа у C43: (94.310, 63.288) мм
+2026-07-14 13:59:10,862 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,862 - decap_placer.placement.services.via_planner - DEBUG -     виа у C52: (94.310, 66.038) мм
+2026-07-14 13:59:10,862 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,862 - decap_placer.placement.services.via_planner - DEBUG -     виа у C35: (94.310, 68.038) мм
+2026-07-14 13:59:10,863 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,863 - decap_placer.placement.services.via_planner - DEBUG -     виа у C36: (94.310, 73.538) мм
+2026-07-14 13:59:10,863 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,863 - decap_placer.placement.services.via_planner - DEBUG -     виа у C44: (94.310, 75.538) мм
+2026-07-14 13:59:10,864 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,864 - decap_placer.placement.services.via_planner - DEBUG -     виа у C39: (71.390, 76.050) мм
+2026-07-14 13:59:10,864 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,864 - decap_placer.placement.services.via_planner - DEBUG -     виа у C25: (74.890, 76.050) мм
+2026-07-14 13:59:10,864 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,865 - decap_placer.placement.services.via_planner - DEBUG -     виа у C14: (76.890, 76.050) мм
+2026-07-14 13:59:10,865 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,865 - decap_placer.placement.services.via_planner - DEBUG -     виа у C13: (80.723, 76.050) мм
+2026-07-14 13:59:10,865 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,865 - decap_placer.placement.services.via_planner - DEBUG -     виа у C24: (82.723, 76.050) мм
+2026-07-14 13:59:10,866 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,866 - decap_placer.placement.services.via_planner - DEBUG -     виа у C12: (84.723, 76.050) мм
+2026-07-14 13:59:10,866 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,866 - decap_placer.placement.services.via_planner - DEBUG -     виа у C54: (71.390, 83.250) мм
+2026-07-14 13:59:10,866 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,867 - decap_placer.placement.services.via_planner - DEBUG -     виа у C46: (75.390, 83.250) мм
+2026-07-14 13:59:10,867 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,867 - decap_placer.placement.services.via_planner - DEBUG -     виа у C45: (82.640, 83.250) мм
+2026-07-14 13:59:10,867 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,867 - decap_placer.placement.services.via_planner - DEBUG -     виа у C37: (84.640, 83.250) мм
+2026-07-14 13:59:10,868 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,868 - decap_placer.placement.services.via_planner - DEBUG -     виа у C27: (66.190, 74.288) мм
+2026-07-14 13:59:10,868 - decap_placer.placement.services.via_planner - DEBUG - Планирование термовиа для IC1, площадка 145
+2026-07-14 13:59:10,875 - decap_placer.kicad.adapter - DEBUG - Найден футпринт IC1
+2026-07-14 13:59:10,876 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:10,883 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C10
+2026-07-14 13:59:10,890 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C11
+2026-07-14 13:59:10,897 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C12
+2026-07-14 13:59:10,904 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C13
+2026-07-14 13:59:10,911 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C14
+2026-07-14 13:59:10,919 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C19
+2026-07-14 13:59:10,926 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C20
+2026-07-14 13:59:10,933 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C21
+2026-07-14 13:59:10,940 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C22
+2026-07-14 13:59:10,947 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C23
+2026-07-14 13:59:10,954 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C24
+2026-07-14 13:59:10,961 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C25
+2026-07-14 13:59:10,968 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C26
+2026-07-14 13:59:10,975 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C27
+2026-07-14 13:59:10,982 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C28
+2026-07-14 13:59:10,989 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C29
+2026-07-14 13:59:10,996 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C30
+2026-07-14 13:59:11,003 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C31
+2026-07-14 13:59:11,010 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C32
+2026-07-14 13:59:11,017 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C33
+2026-07-14 13:59:11,024 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C34
+2026-07-14 13:59:11,031 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C35
+2026-07-14 13:59:11,038 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C36
+2026-07-14 13:59:11,045 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C37
+2026-07-14 13:59:11,052 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C38
+2026-07-14 13:59:11,059 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C39
+2026-07-14 13:59:11,066 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C40
+2026-07-14 13:59:11,073 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C41
+2026-07-14 13:59:11,080 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C42
+2026-07-14 13:59:11,087 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C43
+2026-07-14 13:59:11,095 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C44
+2026-07-14 13:59:11,101 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C45
+2026-07-14 13:59:11,108 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C46
+2026-07-14 13:59:11,115 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C5
+2026-07-14 13:59:11,122 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C51
+2026-07-14 13:59:11,130 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C52
+2026-07-14 13:59:11,137 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C53
+2026-07-14 13:59:11,144 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C54
+2026-07-14 13:59:11,150 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C6
+2026-07-14 13:59:11,157 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C7
+2026-07-14 13:59:11,164 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C8
+2026-07-14 13:59:11,171 - decap_placer.kicad.adapter - DEBUG - Найден футпринт C9
+2026-07-14 13:59:11,174 - decap_placer.placement.services.via_planner - INFO - Запланировано 16 термовиа на 145
+2026-07-14 13:59:11,174 - decap_placer.placement.services.via_planner - INFO - plan_vias завершено: 58 виа
+2026-07-14 13:59:11,174 - __main__ - INFO - Запланировано перемещений: 42, виа: 58
+2026-07-14 13:59:11,174 - __main__ - INFO - Применение изменений...
+2026-07-14 13:59:11,174 - decap_placer.placement.executor - INFO - Инициализация исполнителя: batch_size=10
+2026-07-14 13:59:11,181 - decap_placer.kicad.adapter - DEBUG - Получено 82 футпринтов
+2026-07-14 13:59:11,186 - decap_placer.placement.executor - WARNING - Обнаружено 42 потенциальных коллизий:
+2026-07-14 13:59:11,186 - decap_placer.placement.executor - WARNING -   C19 и C40 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,186 - decap_placer.placement.executor - WARNING -   C5 и C30 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,186 - decap_placer.placement.executor - WARNING -   C26 и C27 перекрываются (расст. 3.00 мм)
+2026-07-14 13:59:11,186 - decap_placer.placement.executor - WARNING -   C6 и C20 перекрываются (расст. 2.50 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C6 и C31 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C20 и C7 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C20 и C41 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C7 и C32 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C8 и C9 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C8 и C33 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C9 и C21 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C9 и C34 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C21 и C42 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C38 и C53 перекрываются (расст. 3.17 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C38 и C28 перекрываются (расст. 1.15 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C31 и C41 перекрываются (расст. 2.50 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C41 и C32 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C32 и C33 перекрываются (расст. 3.83 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C33 и C34 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C34 и C42 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C42 и C53 перекрываются (расст. 2.67 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C28 и C22 перекрываются (расст. 2.18 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C28 и C51 перекрываются (расст. 3.12 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C22 и C43 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,187 - decap_placer.placement.executor - WARNING -   C29 и C10 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C29 и C52 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C10 и C35 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C11 и C23 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C11 и C36 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C23 и C44 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C51 и C43 перекрываются (расст. 2.50 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C43 и C52 перекрываются (расст. 2.75 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C52 и C35 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C36 и C44 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C39 и C54 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C25 и C14 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C25 и C46 перекрываются (расст. 3.24 мм)
+2026-07-14 13:59:11,188 - decap_placer.placement.executor - WARNING -   C13 и C24 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,189 - decap_placer.placement.executor - WARNING -   C24 и C12 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,189 - decap_placer.placement.executor - WARNING -   C24 и C45 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,189 - decap_placer.placement.executor - WARNING -   C12 и C37 перекрываются (расст. 3.20 мм)
+2026-07-14 13:59:11,189 - decap_placer.placement.executor - WARNING -   C45 и C37 перекрываются (расст. 2.00 мм)
+2026-07-14 13:59:11,189 - decap_placer.placement.executor - INFO - Флип 42 компонентов на back
+2026-07-14 13:59:11,189 - decap_placer.kicad.adapter - INFO - Флип 10 футпринтов через GUI action
+2026-07-14 13:59:11,239 - decap_placer.kicad.adapter - DEBUG - Флип выполнен
+2026-07-14 13:59:11,239 - decap_placer.placement.executor - INFO -   флип 10 шт. (батч 1)
+2026-07-14 13:59:11,239 - decap_placer.kicad.adapter - INFO - Флип 10 футпринтов через GUI action
+2026-07-14 13:59:11,276 - decap_placer.kicad.adapter - DEBUG - Флип выполнен
+2026-07-14 13:59:11,276 - decap_placer.placement.executor - INFO -   флип 10 шт. (батч 2)
+2026-07-14 13:59:11,276 - decap_placer.kicad.adapter - INFO - Флип 10 футпринтов через GUI action
+2026-07-14 13:59:11,318 - decap_placer.kicad.adapter - DEBUG - Флип выполнен
+2026-07-14 13:59:11,319 - decap_placer.placement.executor - INFO -   флип 10 шт. (батч 3)
+2026-07-14 13:59:11,319 - decap_placer.kicad.adapter - INFO - Флип 10 футпринтов через GUI action
+2026-07-14 13:59:11,358 - decap_placer.kicad.adapter - DEBUG - Флип выполнен
+2026-07-14 13:59:11,358 - decap_placer.placement.executor - INFO -   флип 10 шт. (батч 4)
+2026-07-14 13:59:11,359 - decap_placer.kicad.adapter - INFO - Флип 2 футпринтов через GUI action
+2026-07-14 13:59:11,393 - decap_placer.kicad.adapter - DEBUG - Флип выполнен
+2026-07-14 13:59:11,393 - decap_placer.placement.executor - INFO -   флип 2 шт. (батч 5)
+2026-07-14 13:59:11,907 - decap_placer.kicad.adapter - DEBUG - Получено 82 футпринтов
+2026-07-14 13:59:11,908 - decap_placer.placement.executor - INFO - Перемещение в 5 батчах
+2026-07-14 13:59:11,908 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 1/5
+2026-07-14 13:59:11,908 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:11,910 - decap_placer.kicad.adapter - DEBUG - Обновление 10 элементов
+2026-07-14 13:59:11,916 - decap_placer.placement.executor - DEBUG -   обновлено 10 футпринтов
+2026-07-14 13:59:11,916 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 1/5
+2026-07-14 13:59:11,921 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 1/5
+2026-07-14 13:59:11,921 - decap_placer.placement.executor - INFO -   батч перемещений 1 выполнен (10 шт.)
+2026-07-14 13:59:11,921 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 2/5
+2026-07-14 13:59:11,921 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:11,924 - decap_placer.kicad.adapter - DEBUG - Обновление 10 элементов
+2026-07-14 13:59:11,927 - decap_placer.placement.executor - DEBUG -   обновлено 10 футпринтов
+2026-07-14 13:59:11,927 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 2/5
+2026-07-14 13:59:11,932 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 2/5
+2026-07-14 13:59:11,933 - decap_placer.placement.executor - INFO -   батч перемещений 2 выполнен (10 шт.)
+2026-07-14 13:59:11,933 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 3/5
+2026-07-14 13:59:11,933 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:11,935 - decap_placer.kicad.adapter - DEBUG - Обновление 10 элементов
+2026-07-14 13:59:11,938 - decap_placer.placement.executor - DEBUG -   обновлено 10 футпринтов
+2026-07-14 13:59:11,939 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 3/5
+2026-07-14 13:59:11,944 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 3/5
+2026-07-14 13:59:11,944 - decap_placer.placement.executor - INFO -   батч перемещений 3 выполнен (10 шт.)
+2026-07-14 13:59:11,944 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 4/5
+2026-07-14 13:59:11,944 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:11,946 - decap_placer.kicad.adapter - DEBUG - Обновление 10 элементов
+2026-07-14 13:59:11,949 - decap_placer.placement.executor - DEBUG -   обновлено 10 футпринтов
+2026-07-14 13:59:11,949 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 4/5
+2026-07-14 13:59:11,954 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 4/5
+2026-07-14 13:59:11,954 - decap_placer.placement.executor - INFO -   батч перемещений 4 выполнен (10 шт.)
+2026-07-14 13:59:11,955 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Move batch 5/5
+2026-07-14 13:59:11,955 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:11,956 - decap_placer.kicad.adapter - DEBUG - Обновление 2 элементов
+2026-07-14 13:59:11,958 - decap_placer.placement.executor - DEBUG -   обновлено 2 футпринтов
+2026-07-14 13:59:11,959 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Move batch 5/5
+2026-07-14 13:59:11,963 - decap_placer.kicad.adapter - INFO - Транзакция применена: Move batch 5/5
+2026-07-14 13:59:11,963 - decap_placer.placement.executor - INFO -   батч перемещений 5 выполнен (2 шт.)
+2026-07-14 13:59:11,964 - decap_placer.placement.executor - INFO - Создание виа в 6 батчах
+2026-07-14 13:59:11,964 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 1/6
+2026-07-14 13:59:11,964 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:11,965 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,965 - decap_placer.kicad.adapter - DEBUG - Создание виа в (73.190, 62.288) мм, net=GND
+2026-07-14 13:59:11,971 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,971 - decap_placer.kicad.adapter - DEBUG - Создание виа в (73.190, 68.288) мм, net=GND
+2026-07-14 13:59:11,973 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,973 - decap_placer.kicad.adapter - DEBUG - Создание виа в (73.190, 74.288) мм, net=GND
+2026-07-14 13:59:11,975 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,975 - decap_placer.kicad.adapter - DEBUG - Создание виа в (65.990, 62.288) мм, net=GND
+2026-07-14 13:59:11,982 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,982 - decap_placer.kicad.adapter - DEBUG - Создание виа в (65.990, 68.288) мм, net=GND
+2026-07-14 13:59:11,984 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,984 - decap_placer.kicad.adapter - DEBUG - Создание виа в (73.890, 62.050) мм, net=GND
+2026-07-14 13:59:11,986 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,987 - decap_placer.kicad.adapter - DEBUG - Создание виа в (76.390, 62.050) мм, net=GND
+2026-07-14 13:59:11,989 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,989 - decap_placer.kicad.adapter - DEBUG - Создание виа в (78.390, 62.050) мм, net=GND
+2026-07-14 13:59:11,991 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,991 - decap_placer.kicad.adapter - DEBUG - Создание виа в (82.223, 62.050) мм, net=GND
+2026-07-14 13:59:11,993 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:11,993 - decap_placer.kicad.adapter - DEBUG - Создание виа в (84.223, 62.050) мм, net=GND
+2026-07-14 13:59:11,995 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-14 13:59:11,995 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-14 13:59:11,996 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-14 13:59:11,996 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 1/6
+2026-07-14 13:59:11,999 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 1/6
+2026-07-14 13:59:12,000 - decap_placer.placement.executor - INFO -   батч виа 1 выполнен (10 шт.)
+2026-07-14 13:59:12,000 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 2/6
+2026-07-14 13:59:12,000 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:12,003 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,003 - decap_placer.kicad.adapter - DEBUG - Создание виа в (86.223, 62.050) мм, net=GND
+2026-07-14 13:59:12,014 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,014 - decap_placer.kicad.adapter - DEBUG - Создание виа в (88.880, 62.017) мм, net=GND
+2026-07-14 13:59:12,016 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,016 - decap_placer.kicad.adapter - DEBUG - Создание виа в (73.890, 54.850) мм, net=GND
+2026-07-14 13:59:12,018 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,018 - decap_placer.kicad.adapter - DEBUG - Создание виа в (76.390, 54.850) мм, net=GND
+2026-07-14 13:59:12,020 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,020 - decap_placer.kicad.adapter - DEBUG - Создание виа в (78.390, 54.850) мм, net=GND
+2026-07-14 13:59:12,022 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,022 - decap_placer.kicad.adapter - DEBUG - Создание виа в (82.223, 54.850) мм, net=GND
+2026-07-14 13:59:12,025 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,025 - decap_placer.kicad.adapter - DEBUG - Создание виа в (84.223, 54.850) мм, net=GND
+2026-07-14 13:59:12,027 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,027 - decap_placer.kicad.adapter - DEBUG - Создание виа в (86.223, 54.850) мм, net=GND
+2026-07-14 13:59:12,029 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,029 - decap_placer.kicad.adapter - DEBUG - Создание виа в (88.890, 54.850) мм, net=GND
+2026-07-14 13:59:12,031 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,031 - decap_placer.kicad.adapter - DEBUG - Создание виа в (87.207, 61.115) мм, net=GND
+2026-07-14 13:59:12,033 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-14 13:59:12,034 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-14 13:59:12,034 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-14 13:59:12,034 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 2/6
+2026-07-14 13:59:12,037 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 2/6
+2026-07-14 13:59:12,038 - decap_placer.placement.executor - INFO -   батч виа 2 выполнен (10 шт.)
+2026-07-14 13:59:12,038 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 3/6
+2026-07-14 13:59:12,038 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:12,039 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,039 - decap_placer.kicad.adapter - DEBUG - Создание виа в (87.110, 63.288) мм, net=GND
+2026-07-14 13:59:12,041 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,041 - decap_placer.kicad.adapter - DEBUG - Создание виа в (87.110, 66.038) мм, net=GND
+2026-07-14 13:59:12,044 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,044 - decap_placer.kicad.adapter - DEBUG - Создание виа в (87.110, 68.038) мм, net=GND
+2026-07-14 13:59:12,054 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,054 - decap_placer.kicad.adapter - DEBUG - Создание виа в (87.110, 73.538) мм, net=GND
+2026-07-14 13:59:12,057 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,057 - decap_placer.kicad.adapter - DEBUG - Создание виа в (87.110, 75.538) мм, net=GND
+2026-07-14 13:59:12,059 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,059 - decap_placer.kicad.adapter - DEBUG - Создание виа в (94.310, 60.788) мм, net=GND
+2026-07-14 13:59:12,061 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,061 - decap_placer.kicad.adapter - DEBUG - Создание виа в (94.310, 63.288) мм, net=GND
+2026-07-14 13:59:12,064 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,064 - decap_placer.kicad.adapter - DEBUG - Создание виа в (94.310, 66.038) мм, net=GND
+2026-07-14 13:59:12,066 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,066 - decap_placer.kicad.adapter - DEBUG - Создание виа в (94.310, 68.038) мм, net=GND
+2026-07-14 13:59:12,068 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,068 - decap_placer.kicad.adapter - DEBUG - Создание виа в (94.310, 73.538) мм, net=GND
+2026-07-14 13:59:12,070 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-14 13:59:12,071 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-14 13:59:12,071 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-14 13:59:12,071 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 3/6
+2026-07-14 13:59:12,075 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 3/6
+2026-07-14 13:59:12,075 - decap_placer.placement.executor - INFO -   батч виа 3 выполнен (10 шт.)
+2026-07-14 13:59:12,075 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 4/6
+2026-07-14 13:59:12,075 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:12,078 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,078 - decap_placer.kicad.adapter - DEBUG - Создание виа в (94.310, 75.538) мм, net=GND
+2026-07-14 13:59:12,089 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,089 - decap_placer.kicad.adapter - DEBUG - Создание виа в (71.390, 76.050) мм, net=GND
+2026-07-14 13:59:12,092 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,092 - decap_placer.kicad.adapter - DEBUG - Создание виа в (74.890, 76.050) мм, net=GND
+2026-07-14 13:59:12,094 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,094 - decap_placer.kicad.adapter - DEBUG - Создание виа в (76.890, 76.050) мм, net=GND
+2026-07-14 13:59:12,096 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,096 - decap_placer.kicad.adapter - DEBUG - Создание виа в (80.723, 76.050) мм, net=GND
+2026-07-14 13:59:12,098 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,099 - decap_placer.kicad.adapter - DEBUG - Создание виа в (82.723, 76.050) мм, net=GND
+2026-07-14 13:59:12,101 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,101 - decap_placer.kicad.adapter - DEBUG - Создание виа в (84.723, 76.050) мм, net=GND
+2026-07-14 13:59:12,103 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,103 - decap_placer.kicad.adapter - DEBUG - Создание виа в (71.390, 83.250) мм, net=GND
+2026-07-14 13:59:12,105 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,105 - decap_placer.kicad.adapter - DEBUG - Создание виа в (75.390, 83.250) мм, net=GND
+2026-07-14 13:59:12,107 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,107 - decap_placer.kicad.adapter - DEBUG - Создание виа в (82.640, 83.250) мм, net=GND
+2026-07-14 13:59:12,109 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-14 13:59:12,110 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-14 13:59:12,110 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-14 13:59:12,110 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 4/6
+2026-07-14 13:59:12,114 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 4/6
+2026-07-14 13:59:12,114 - decap_placer.placement.executor - INFO -   батч виа 4 выполнен (10 шт.)
+2026-07-14 13:59:12,114 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 5/6
+2026-07-14 13:59:12,114 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:12,115 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,115 - decap_placer.kicad.adapter - DEBUG - Создание виа в (84.640, 83.250) мм, net=GND
+2026-07-14 13:59:12,117 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,117 - decap_placer.kicad.adapter - DEBUG - Создание виа в (66.190, 74.288) мм, net=GND
+2026-07-14 13:59:12,120 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,120 - decap_placer.kicad.adapter - DEBUG - Создание виа в (77.215, 66.113) мм, net=GND
+2026-07-14 13:59:12,122 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,123 - decap_placer.kicad.adapter - DEBUG - Создание виа в (79.165, 66.113) мм, net=GND
+2026-07-14 13:59:12,126 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,126 - decap_placer.kicad.adapter - DEBUG - Создание виа в (81.115, 66.113) мм, net=GND
+2026-07-14 13:59:12,129 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,129 - decap_placer.kicad.adapter - DEBUG - Создание виа в (83.065, 66.113) мм, net=GND
+2026-07-14 13:59:12,131 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,131 - decap_placer.kicad.adapter - DEBUG - Создание виа в (77.215, 68.063) мм, net=GND
+2026-07-14 13:59:12,133 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,133 - decap_placer.kicad.adapter - DEBUG - Создание виа в (79.165, 68.063) мм, net=GND
+2026-07-14 13:59:12,135 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,135 - decap_placer.kicad.adapter - DEBUG - Создание виа в (81.115, 68.063) мм, net=GND
+2026-07-14 13:59:12,137 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,137 - decap_placer.kicad.adapter - DEBUG - Создание виа в (83.065, 68.063) мм, net=GND
+2026-07-14 13:59:12,139 - decap_placer.kicad.adapter - DEBUG - Создание 10 элементов
+2026-07-14 13:59:12,140 - decap_placer.kicad.adapter - DEBUG - Создано 10 элементов
+2026-07-14 13:59:12,140 - decap_placer.placement.executor - DEBUG -   создано 10 виа
+2026-07-14 13:59:12,140 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 5/6
+2026-07-14 13:59:12,144 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 5/6
+2026-07-14 13:59:12,144 - decap_placer.placement.executor - INFO -   батч виа 5 выполнен (10 шт.)
+2026-07-14 13:59:12,144 - decap_placer.kicad.adapter - DEBUG - Попытка 1/2 для Via batch 6/6
+2026-07-14 13:59:12,145 - decap_placer.kicad.adapter - DEBUG - Начало транзакции
+2026-07-14 13:59:12,145 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,146 - decap_placer.kicad.adapter - DEBUG - Создание виа в (77.215, 70.013) мм, net=GND
+2026-07-14 13:59:12,148 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,148 - decap_placer.kicad.adapter - DEBUG - Создание виа в (79.165, 70.013) мм, net=GND
+2026-07-14 13:59:12,150 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,150 - decap_placer.kicad.adapter - DEBUG - Создание виа в (81.115, 70.013) мм, net=GND
+2026-07-14 13:59:12,153 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,153 - decap_placer.kicad.adapter - DEBUG - Создание виа в (83.065, 70.013) мм, net=GND
+2026-07-14 13:59:12,157 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,157 - decap_placer.kicad.adapter - DEBUG - Создание виа в (77.215, 71.963) мм, net=GND
+2026-07-14 13:59:12,159 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,159 - decap_placer.kicad.adapter - DEBUG - Создание виа в (79.165, 71.963) мм, net=GND
+2026-07-14 13:59:12,161 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,161 - decap_placer.kicad.adapter - DEBUG - Создание виа в (81.115, 71.963) мм, net=GND
+2026-07-14 13:59:12,163 - decap_placer.kicad.adapter - DEBUG - Найдена цепь GND
+2026-07-14 13:59:12,163 - decap_placer.kicad.adapter - DEBUG - Создание виа в (83.065, 71.963) мм, net=GND
+2026-07-14 13:59:12,165 - decap_placer.kicad.adapter - DEBUG - Создание 8 элементов
+2026-07-14 13:59:12,166 - decap_placer.kicad.adapter - DEBUG - Создано 8 элементов
+2026-07-14 13:59:12,166 - decap_placer.placement.executor - DEBUG -   создано 8 виа
+2026-07-14 13:59:12,166 - decap_placer.kicad.adapter - DEBUG - Применение транзакции: Via batch 6/6
+2026-07-14 13:59:12,170 - decap_placer.kicad.adapter - INFO - Транзакция применена: Via batch 6/6
+2026-07-14 13:59:12,170 - decap_placer.placement.executor - INFO -   батч виа 6 выполнен (8 шт.)
+2026-07-14 13:59:12,171 - __main__ - INFO - ✅ Все операции выполнены успешно
+2026-07-14 13:59:12,171 - pynng.nng - DEBUG - Pipe callback event 2
