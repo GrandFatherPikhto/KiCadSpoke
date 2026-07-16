@@ -1,0 +1,71 @@
+# ─────────────────────────── PYTHON ───────────────────────────
+# Кэш компилятора Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Виртуальные окружения (Virtual Environments)
+.venv/
+venv/
+ENV/
+env/
+# Для pipenv и poetry
+.pypoetry/
+.pipenv/
+
+# Дистрибутивы, сборка и пакеты
+*.egg-info/
+.eggs/
+dos2unix.exe
+build/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+
+# Логи и отчеты об ошибках
+# *.log
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Настройки сред разработки (IDE)
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# ──────────────────────────── KICAD ────────────────────────────
+# Игнорируем временные файлы KiCad, если запускаете скрипт прямо в папке проекта
+*.bak
+*.kicad_prl
+*-bak
+_autosave-*
+fp-info-cache
+~*.*
+*.lck
+
+# ────────────────────────────── C ──────────────────────────────
+# На будущее: если начнете писать CLI на Си в этой же папке
+*.o
+*.obj
+*.out
+*.exe
+*.app
+
+*.zip
+
+arch/
+test_sample/
+files/
+olddocs/
+old/
+orig/

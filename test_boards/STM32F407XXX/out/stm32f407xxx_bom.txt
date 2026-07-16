@@ -1,0 +1,43 @@
+﻿=== BOM (Список компонентов) для stm32f407xxx.net ===
+
+Компонент    | Номинал                   | Корпус (Footprint)            
+-------------------------------------------------------------------------
+C1           | 470uF 16V                 | CP_Radial_D10.0mm_P5.00mm     
+C2           | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C3           | 470uF 6.3V                | CP_EIA-7343-31_Kemet-D_HandSolder
+C4           | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C5           | 470uF 6.3V                | CP_EIA-7343-31_Kemet-D_HandSolder
+C6           | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C7           | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C8           | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C9           | 2.2nF 63V                 | C_1210_3225Metric_Pad1.33x2.70mm_HandSolder
+C10          | 22nF 63V                  | C_1210_3225Metric_Pad1.33x2.70mm_HandSolder
+C11          | 22nF 63V                  | C_1210_3225Metric_Pad1.33x2.70mm_HandSolder
+C12          | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C13          | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C14          | 2.2nF 63V                 | C_1210_3225Metric_Pad1.33x2.70mm_HandSolder
+C15          | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C16          | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C17          | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C18          | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C19          | 2.2uF 63V                 | C_1210_3225Metric_Pad1.33x2.70mm_HandSolder
+C20          | 2.2uF 63V                 | C_1210_3225Metric_Pad1.33x2.70mm_HandSolder
+C21          | 22pF                      | C_0402_1005Metric_Pad0.74x0.62mm_HandSolder
+C22          | 22pF                      | C_0402_1005Metric_Pad0.74x0.62mm_HandSolder
+C23          | 6.8pF                     | C_0402_1005Metric_Pad0.74x0.62mm_HandSolder
+C24          | 6.8pF                     | C_0402_1005Metric_Pad0.74x0.62mm_HandSolder
+C25          | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C26          | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+C30          | 100nF                     | C_0603_1608Metric_Pad1.08x0.95mm_HandSolder
+FB1          | FerriteBead               | L_0603_1608Metric_Pad1.05x0.95mm_HandSolder
+FB2          | FerriteBead               | L_0603_1608Metric_Pad1.05x0.95mm_HandSolder
+J1           | 12V Input                 | JST_XH_B2B-XH-AM_1x02_P2.50mm_Vertical
+J2           | Prog                      | PinHeader_1x05_P2.54mm_Vertical
+J3           | Boot0                     | PinHeader_1x03_P2.54mm_Vertical
+R1           | 10K                       | R_0603_1608Metric_Pad0.98x0.95mm_HandSolder
+SW1          | Reset                     | SW_PUSH_6mm                   
+U1           | ~                         | Converter_DC-DC_Mini360       
+U2           | AMS1117-3.3               | SOT-223-3_TabPin2             
+U4           | STM32F407VGTx             | LQFP-100_14x14mm_P0.5mm       
+Y1           | Crystal 8MHz              | Crystal_HC49-4H_Vertical      
+Y2           | Crystal 32.768kHz         | Crystal_HC49-4H_Vertical      

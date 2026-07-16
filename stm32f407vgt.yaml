@@ -1,0 +1,202 @@
+templates:
+  stm32f407vgt:
+    vias:
+    - offset_along_mm: 17.75
+      offset_across_mm: -19.475
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 10.075
+      offset_across_mm: -15.025
+      net: +3V3_DIG
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 18.45
+      offset_across_mm: -23.55
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 32.1
+      offset_across_mm: -25.775
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 37.7
+      offset_across_mm: -37.775
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 28.9
+      offset_across_mm: -3.575
+      net: +3V3_DIG
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 8.75
+      offset_across_mm: -22.95
+      net: GND
+      drill_mm: 0.4
+      diameter_mm: 0.8
+    - offset_along_mm: 15.675
+      offset_across_mm: -27.575
+      net: +3V3_DIG
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 19.925
+      offset_across_mm: -23.625
+      net: /STM32F4xx/BOOT0
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 15.675
+      offset_across_mm: -29.525
+      net: +3V3_DIG
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 17.9
+      offset_across_mm: -3.175
+      net: +3V3_DIG
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 8.325
+      offset_across_mm: -20.725
+      net: +3V3_DIG
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 9.975
+      offset_across_mm: -1.05
+      net: +3V3_ANALOG
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 10.0
+      offset_across_mm: -5.55
+      net: +3V3_ANALOG
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 38.175
+      offset_across_mm: -23.7
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 7.375
+      offset_across_mm: -27.05
+      net: GND
+      drill_mm: 0.4
+      diameter_mm: 0.8
+    - offset_along_mm: 6.85
+      offset_across_mm: -18.025
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 32.75
+      offset_across_mm: -22.875
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 18.2
+      offset_across_mm: -12.125
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 17.35
+      offset_across_mm: -14.525
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 35.825
+      offset_across_mm: -14.1
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 12.2
+      offset_across_mm: -27.0
+      net: GND
+      drill_mm: 0.4
+      diameter_mm: 0.8
+    components:
+    - role: MCU_STM32F407
+      offset_along_mm: 22.925
+      offset_across_mm: -18.025
+      angle_deg: 0.0
+    - role: PWR3V3_CAP2
+      offset_along_mm: 9.1375
+      offset_across_mm: -3.375
+      angle_deg: 180.0
+    - role: VCAP2
+      offset_along_mm: 35.625
+      offset_across_mm: -29.4
+      angle_deg: 0.0
+    - role: Q8CL1
+      offset_along_mm: 4.525
+      offset_across_mm: -18.025
+      angle_deg: 0.0
+    - role: PWR3V3_DIG_CAP3
+      offset_along_mm: 11.625
+      offset_across_mm: -14.1625
+      angle_deg: -90.0
+    - role: RST_BUTTON
+      offset_along_mm: 4.725
+      offset_across_mm: -6.875
+      angle_deg: 180.0
+    - role: PWR3V3A_CAP1
+      offset_along_mm: 9.1375
+      offset_across_mm: -7.95
+      angle_deg: 180.0
+    - role: PWR3V3_DIG_CAP5
+      offset_along_mm: 17.025
+      offset_across_mm: -5.675
+      angle_deg: 180.0
+    - role: PWR3V3_DIG_CAP1
+      offset_along_mm: 10.075
+      offset_across_mm: -19.9375
+      angle_deg: 90.0
+    - role: MCU_PROG
+      offset_along_mm: 41.95
+      offset_across_mm: -26.925
+      angle_deg: 0.0
+    - role: CRYSTALL_32KHZ
+      offset_along_mm: 7.32
+      offset_across_mm: -34.95
+      angle_deg: 0.0
+    - role: Q32CL1
+      offset_along_mm: 7.38
+      offset_across_mm: -28.725
+      angle_deg: -90.0
+    - role: BOOT_RES
+      offset_along_mm: 37.15
+      offset_across_mm: -8.7125
+      angle_deg: 90.0
+    - role: Q32CL2
+      offset_along_mm: 12.21
+      offset_across_mm: -28.725
+      angle_deg: -90.0
+    - role: MCU_BOOT
+      offset_along_mm: 41.95
+      offset_across_mm: -9.615
+      angle_deg: 0.0
+    - role: PWR3V3_DIG_CAP2
+      offset_along_mm: 11.105
+      offset_across_mm: -24.8
+      angle_deg: 90.0
+    - role: PWR3V3_DIG_CAP6
+      offset_along_mm: 29.7875
+      offset_across_mm: -5.675
+      angle_deg: 0.0
+    - role: PWR3V3_DIG_CAP4
+      offset_along_mm: 17.7875
+      offset_across_mm: -29.425
+      angle_deg: 0.0
+    - role: VCAP1
+      offset_along_mm: 27.275
+      offset_across_mm: 0.0
+      angle_deg: -90.0
+    - role: Q8CL2
+      offset_along_mm: 6.8175
+      offset_across_mm: -22.965
+      angle_deg: 0.0
+    - role: CRYSTALL_8MHZ
+      offset_along_mm: 0.0
+      offset_across_mm: -18.035
+      angle_deg: 90.0
+    - role: PWR3V3_DIG_CAP7
+      offset_along_mm: 34.75
+      offset_across_mm: -23.1625
+      angle_deg: -90.0

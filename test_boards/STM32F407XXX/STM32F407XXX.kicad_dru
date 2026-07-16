@@ -1,0 +1,11 @@
+(version 1)
+
+(rule "Thicker tracks inside PowerZones"
+    (constraint track_width (min 0.6mm) (max 1.2mm))
+    (condition "A.insideArea('PowerZone_12_5V') || A.insideArea('PowerZone_3V3_DIG') || A.insideArea('PowerZone_3V3_ANALOG')"))
+
+(rule "Int2 Layer Power Highway Config"
+    (constraint clearance (min 0.5mm))
+    (constraint track_width (opt 1.5mm) (min 1.5mm) (max 2.0mm))
+    (condition "A.Layer == 'Int2.Cu'"))
+
