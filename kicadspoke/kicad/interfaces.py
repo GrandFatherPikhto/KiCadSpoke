@@ -17,6 +17,9 @@ class IBoardAdapter(ABC):
     def get_vias(self) -> List[Via]: ...
 
     @abstractmethod
+    def get_selected_items(self) -> List[Any]: ...
+
+    @abstractmethod
     def get_field_value(self, footprint: FootprintInstance, field_name: str) -> Optional[str]: ...
 
     @abstractmethod

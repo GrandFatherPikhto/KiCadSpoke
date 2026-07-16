@@ -10,6 +10,7 @@ placer.py — главный скрипт для расстановки разв
 import argparse
 import sys
 import logging
+import yaml
 from pathlib import Path
 
 # Добавляем корень проекта в sys.path
@@ -23,6 +24,7 @@ from kicadspoke.exceptions import PlacerError
 from kicadspoke.undo import undo_last_operation
 from kicadspoke.validation import run_all_checks
 from kicadspoke.registry import PlacementRegistry, registry_path_for_config
+from kicadspoke.template_extraction import extract_template_from_selection
 
 
 def setup_logging(verbose: bool = False, log_file: str = None):
@@ -116,6 +118,31 @@ def cmd_apply(args):
         logger.warning("⚠️ Некоторые операции завершились с ошибками – проверьте лог.")
 
 
+def cmd_extract(args):
+    """Извлекает шаблон спицы из текущего выделения на плате в YAML."""
+    logger = logging.getLogger(__name__)
+    logger.info(f"Подключение к KiCad (таймаут {args.timeout_ms} мс)")
+    adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
+    adapter.refresh_board()
+
+    template_dict = extract_template_from_selection(adapter, args.name)
+
+    output_path = Path(args.output)
+    existing = {}
+    if output_path.exists():
+        with open(output_path, "r", encoding="utf-8") as f:
+            existing = yaml.safe_load(f) or {}
+        if args.name in existing.get("templates", {}):
+            logger.warning(f"Шаблон {args.name!r} уже есть в {output_path} — будет перезаписан")
+
+    existing.setdefault("templates", {}).update(template_dict)
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
+
+    logger.info(f"✅ Шаблон {args.name!r} записан в {output_path}")
+
+
 def cmd_undo(args):
     """Откатывает последнюю операцию."""
     logger = logging.getLogger(__name__)
@@ -139,7 +166,7 @@ def cmd_undo(args):
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] not in ['apply', 'undo']:
+    if len(sys.argv) > 1 and sys.argv[1] not in ['apply', 'undo', 'extract']:
         sys.argv.insert(1, 'apply')
 
     parser = argparse.ArgumentParser(
@@ -162,6 +189,13 @@ def main():
     undo_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
     undo_parser.add_argument("--log-file", help="Файл для сохранения логов")
 
+    extract_parser = subparsers.add_parser("extract", help="Извлечь шаблон спицы из текущего выделения")
+    extract_parser.add_argument("--name", required=True, help="Имя шаблона (ключ в templates:)")
+    extract_parser.add_argument("--output", required=True, help="Путь к YAML-файлу для записи")
+    extract_parser.add_argument("--timeout-ms", type=int, default=20000, help="Таймаут IPC, мс")
+    extract_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
+    extract_parser.add_argument("--log-file", help="Файл для сохранения логов")
+
     args = parser.parse_args()
 
     setup_logging(verbose=getattr(args, "verbose", False), log_file=getattr(args, "log_file", None))
@@ -171,6 +205,8 @@ def main():
             cmd_apply(args)
         elif args.command == "undo":
             cmd_undo(args)
+        elif args.command == "extract":
+            cmd_extract(args)
         else:
             parser.print_help()
             sys.exit(1)

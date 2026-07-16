@@ -4,7 +4,7 @@ import time
 import logging
 from typing import List, Optional, Any
 import kipy
-from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, BoardLayer, Pad, Field
+from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, BoardLayer, Pad, Field, Group
 from kipy.geometry import Vector2, Box2, Angle
 
 from .interfaces import IBoardAdapter
@@ -47,6 +47,33 @@ class KiCadBoardAdapter(IBoardAdapter):
         vias = list(self._board.get_vias())
         logger.debug(f"Получено {len(vias)} виа")
         return vias
+
+    def get_selected_items(self) -> List[Any]:
+        """
+        Текущее выделение в PCB-редакторе, с учётом Group — у Group
+        свойство .items, полученное с сервера, ВСЕГДА ПУСТОЕ (просто
+        локальный кэш обёртки), реальные участники группы — в
+        .proto.items (список KIID). Разворачиваем группы в их реальных
+        участников через сопоставление id по всем футпринтам/виа платы.
+        """
+        raw_selection = list(self._board.get_selection())
+        direct_items = [item for item in raw_selection if not isinstance(item, Group)]
+        group_uuids = set()
+        for item in raw_selection:
+            if isinstance(item, Group):
+                for kiid in item.proto.items:
+                    group_uuids.add(str(kiid.value))
+
+        if group_uuids:
+            for fp in self.get_footprints():
+                if str(fp.id.value) in group_uuids:
+                    direct_items.append(fp)
+            for via in self.get_vias():
+                if str(via.id.value) in group_uuids:
+                    direct_items.append(via)
+
+        logger.debug(f"Выделено объектов (с учётом групп): {len(direct_items)}")
+        return direct_items
 
     def get_field_value(self, footprint: FootprintInstance, field_name: str) -> Optional[str]:
         """
