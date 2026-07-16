@@ -1,0 +1,246 @@
+target_ref: IC1
+side: back
+
+thermal_via_array:
+  enabled: true
+  target_ref: IC1
+  pad: '145'
+  net: GND
+  rows: 4
+  cols: 4
+  margin_mm: 0.5
+  pattern: grid
+  drill_mm: 0.3
+  diameter_mm: 0.5
+
+# Один шаблон на всё -- вся геометрия локальная (along/across), при
+# rotation_deg=0 это выглядело бы как "эталонный" правый борт.
+templates:
+  cap_pair_left:
+    power_via:
+      offset_along_mm: 0.0
+      offset_across_mm: 1.5
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    component1:                      # "тонкий" (100nF)
+      offset_along_mm: -1.0
+      offset_across_mm: 1.5
+      angle_deg: 270.0
+      gnd_via_offset_along_mm: 0.0
+      gnd_via_offset_across_mm: 1.0
+      gnd_via_net: GND
+    component2:                      # "толстый" (4.7uF)
+      offset_along_mm: -1.0
+      offset_across_mm: -1.5
+      angle_deg: 90.0
+      gnd_via_offset_along_mm: 0.0
+      gnd_via_offset_across_mm: -1.3
+      gnd_via_net: GND
+
+  cap_pair_right:
+    power_via:
+      offset_along_mm: 0.0
+      offset_across_mm: 1.5
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    component1:                      # "тонкий" (100nF)
+      offset_along_mm: 1.0
+      offset_across_mm: 1.5
+      angle_deg: 270.0
+      gnd_via_offset_along_mm: 0.0
+      gnd_via_offset_across_mm: 1.0
+      gnd_via_net: GND
+    component2:                      # "толстый" (4.7uF)
+      offset_along_mm: 1.0
+      offset_across_mm: -1.5
+      angle_deg: 90.0
+      gnd_via_offset_along_mm: 0.0
+      gnd_via_offset_across_mm: -1.3
+      gnd_via_net: GND
+
+  cap_pair_vcca_top_right:
+    power_via:
+      offset_along_mm: 0.0
+      offset_across_mm: -1.5
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    component1:                      # "тонкий" (100nF)
+      offset_along_mm: -1.0
+      offset_across_mm: -1.5
+      angle_deg: 90.0
+      gnd_via_offset_along_mm: -1.0
+      gnd_via_offset_across_mm: -1.0
+      gnd_via_net: GND
+    component2:                      # "толстый" (4.7uF)
+      offset_along_mm: -1.0
+      offset_across_mm: 1.5
+      angle_deg: 270.0
+      gnd_via_offset_along_mm: 0.0
+      gnd_via_offset_across_mm: 1.3
+      gnd_via_net: GND
+
+rules:
+- net: +3V3_VCCIO
+  spokes:
+  - pad: '17' # VCCIO1
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 90.0
+    component1: C5
+    component2: C21
+
+  - pad: '26' # VCCIO2
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 90.0
+    component1: C6
+    component2: C22
+
+  - pad: '40' # VCCIO3_1
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    component1: C7
+    component2: C23
+
+  - pad: '47' # VCCIO3_2
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    component1: C8
+    component2: C24
+
+  - pad: '56' # VCCIO4_1
+    template: cap_pair_left
+    shift_x_mm: 1.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    component1: C9
+    component2: C25
+
+  - pad: '62' # VCCIO4_2
+    template: cap_pair_left
+    shift_x_mm: 1.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    component1: C10
+    component2: C26
+
+  - pad: '81' # VCCIO5
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 270.0
+    component1: C11
+    component2: C27
+
+  - pad: '93' # VCCIO6
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 270.0
+    component1: C12
+    component2: C28
+
+  - pad: '117' # VCCIO7_1
+    template: cap_pair_left
+    shift_x_mm: -0.7
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C13
+    component2: C29
+
+  - pad: '122' # VCCIO7_2
+    template: cap_pair_left
+    shift_x_mm: -0.7
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C14
+    component2: C30
+
+  - pad: '130' # VCCIO8_1
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C15
+    component2: C31
+
+  - pad: '139' # VCCIO8_2
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C16
+    component2: C32
+
+rules:
+- net: +1V2_VCCINT
+  spokes:
+  - pad: '5' # VCCINT_1
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C33
+    component2: C41
+
+  - pad: '29' # VCCINT_2
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C34
+    component2: C42
+
+  - pad: '45' # VCCINT_3
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C35
+    component2: C43
+
+  - pad: '61' # VCCINT_4
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C36
+    component2: C44
+
+  - pad: '78' # VCCINT_5
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C37
+    component2: C45
+
+  - pad: '102' # VCCINT_6
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C38
+    component2: C46
+
+  - pad: '116' # VCCINT_7
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C39
+    component2: C47
+
+  - pad: '134' # VCCINT_8
+    template: cap_pair_left
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    component1: C40
+    component2: C48
