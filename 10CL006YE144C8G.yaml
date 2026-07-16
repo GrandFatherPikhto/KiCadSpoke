@@ -16,35 +16,75 @@ thermal_via_array:
 # Один шаблон на всё -- вся геометрия локальная (along/across), при
 # rotation_deg=0 это выглядело бы как "эталонный" правый борт.
 #
-# DecapPlacer 4.0: components -- список произвольной длины, каждый
-# элемент -- РОЛЬ ("LIGHT"/"HEAVY"), не ref. Конкретный компонент
-# подбирается автоматически из пула: все футпринты, чей реальный пад
-# сидит на цепи правила (rule.net ниже) и у кого пользовательское поле
-# Role (в Eeschema) совпадает с этой ролью. Разбираются по очереди, в
-# естественном численном порядке (C5 раньше C10) -- никаких ref в
-# конфиге больше нет вовсе.
+# KiCadSpoke: components -- список произвольной длины, каждый элемент --
+# РОЛЬ ("LIGHT"/"HEAVY"), не ref. Конкретный компонент подбирается
+# автоматически из пула: все футпринты, чей реальный пад сидит на цепи
+# правила (rule.net ниже) и у кого пользовательское поле Role (в
+# Eeschema) совпадает с этой ролью. Разбираются по очереди, в
+# естественном численном порядке (C5 раньше C10).
+#
+# Обобщённые via: vias -- список произвольной длины НА ОБОИХ уровнях
+# (спица и компонент). Координаты ВСЕГДА от нуля спицы (along/across),
+# даже для via внутри components -- не от пада самого компонента. net:
+# не указан (или null) -- берётся цепь правила (rule.net).
+# templates:
+#   cap_pair_standard:
+#     vias:                             # была единственная power_via
+#       - offset_along_mm: 0.0
+#         offset_across_mm: 1.5
+#         drill_mm: 0.3
+#         diameter_mm: 0.6
+#         # net не указан -> +1V2_VCCINT (rule.net)
+#       - offset_along_mm: -1.0
+#         offset_across_mm: -4.2
+#         net: GND
+#         drill_mm: 0.3
+#         diameter_mm: 0.6
+#       - offset_along_mm: -1.0
+#         offset_across_mm: 2.6
+#         net: GND
+#         drill_mm: 0.3
+#         diameter_mm: 0.6
+#     components:
+#       - role: HEAVY                    # "толстый" (4.7uF)
+#         offset_along_mm: -1.0
+#         offset_across_mm: -2.0
+#         angle_deg: 90.0
+#       - role: LIGHT                    # "тонкий" (100nF)
+#         offset_along_mm: -1.0
+#         offset_across_mm: 1.0
+#         angle_deg: 270.0
+
 templates:
   cap_pair_standard:
-    power_via:
-      offset_along_mm: 0.0
-      offset_across_mm: -1.5
-      drill_mm: 0.3
-      diameter_mm: 0.6
+    vias:                             # была единственная power_via
+      - offset_along_mm: 0.0
+        offset_across_mm: 1.5
+        drill_mm: 0.3
+        diameter_mm: 0.6
+        # net не указан -> +1V2_VCCINT (rule.net)
     components:
       - role: LIGHT                    # "тонкий" (100nF)
-        offset_along_mm: 1.0
-        offset_across_mm: -1.0
-        angle_deg: 90.0
-        gnd_via_offset_along_mm: 0.0
-        gnd_via_offset_across_mm: -1.0
-        gnd_via_net: GND
-      - role: HEAVY                    # "толстый" (4.7uF)
-        offset_along_mm: 1.0
-        offset_across_mm: 2.0
+        offset_along_mm: -1.0
+        offset_across_mm: 1.0
         angle_deg: 270.0
-        gnd_via_offset_along_mm: 0.0
-        gnd_via_offset_across_mm: 1.3
-        gnd_via_net: GND
+        vias:                          # была единственная gnd_via_*
+          - offset_along_mm: -1.0
+            offset_across_mm: 2.7
+            net: GND
+            drill_mm: 0.3
+            diameter_mm: 0.6
+      - role: HEAVY                    # "толстый" (4.7uF)
+        offset_along_mm: -1.0
+        offset_across_mm: -2.0
+        angle_deg: 90.0
+        vias:
+          - offset_along_mm: -1.0
+            offset_across_mm: -4.2
+            net: GND
+            drill_mm: 0.3
+            diameter_mm: 0.6
+
 
 rules:
 - net: +3V3_VCCIO
@@ -53,73 +93,73 @@ rules:
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
-    rotation_deg: 270.0
+    rotation_deg: 90.0
 
   - pad: '26' # VCCIO2
     template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: -1.0
-    rotation_deg: 270.0
+    shift_x_mm:  0.0
+    shift_y_mm: -1.8
+    rotation_deg: 90.0
 
   - pad: '40' # VCCIO3_1
     template: cap_pair_standard
-    shift_x_mm: 1.0
+    shift_x_mm: 1.3
     shift_y_mm: 0.0
-    rotation_deg: 0.0
+    rotation_deg: 180.0
 
   - pad: '47' # VCCIO3_2
     template: cap_pair_standard
     shift_x_mm: 2.5
     shift_y_mm: 0.0
-    rotation_deg: 0.0
+    rotation_deg: 180.0
 
   - pad: '56' # VCCIO4_1
     template: cap_pair_standard
-    shift_x_mm: 0.0
+    shift_x_mm: 0.3
     shift_y_mm: 0.0
-    rotation_deg: 0.0
+    rotation_deg: 180.0
 
   - pad: '62' # VCCIO4_2
     template: cap_pair_standard
     shift_x_mm: 2.0
     shift_y_mm: 0.0
-    rotation_deg: 0.0
+    rotation_deg: 180.0
 
   - pad: '81' # VCCIO5
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: -1.0
-    rotation_deg: 90.0
+    rotation_deg: 270.0
 
   - pad: '93' # VCCIO6
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
-    rotation_deg: 90.0
+    rotation_deg: 270.0
 
   - pad: '117' # VCCIO7_1
     template: cap_pair_standard
-    shift_x_mm: -1.7
+    shift_x_mm: -2.0
     shift_y_mm: 0.0
-    rotation_deg: 180.0
+    rotation_deg: 0.0
 
   - pad: '122' # VCCIO7_2
     template: cap_pair_standard
-    shift_x_mm: -2.0
+    shift_x_mm: -1.8
     shift_y_mm: 0.0
-    rotation_deg: 180.0
+    rotation_deg: 0.0
 
   - pad: '130' # VCCIO8_1
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
-    rotation_deg: 180.0
+    rotation_deg: 0.0
 
   - pad: '139' # VCCIO8_2
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
-    rotation_deg: 180.0
+    rotation_deg: 0.0
 
 - net: +1V2_VCCINT
   spokes:
@@ -128,49 +168,49 @@ rules:
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
-    rotation_deg: 270.0
+    rotation_deg: 90.0
 
   - pad: '29' # VCCINT_2
     template: cap_pair_standard
     shift_x_mm: 0.0
-    shift_y_mm: 0.0
-    rotation_deg: 270.0
+    shift_y_mm: -0.8
+    rotation_deg: 90.0
 
   - pad: '45' # VCCINT_3
     template: cap_pair_standard
     shift_x_mm: 1.0
     shift_y_mm: 0.0
-    rotation_deg: 0.0
+    rotation_deg: 180.0
 
   - pad: '61' # VCCINT_4
     template: cap_pair_standard
-    shift_x_mm: 0.0
+    shift_x_mm: -0.0
     shift_y_mm: 0.0
-    rotation_deg: 0.0
+    rotation_deg: 180.0
 
   - pad: '78' # VCCINT_5
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
-    rotation_deg: 90.0
+    rotation_deg: 270.0
 
   - pad: '102' # VCCINT_6
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
-    rotation_deg: 90.0
+    rotation_deg: 270.0
 
   - pad: '116' # VCCINT_7
     template: cap_pair_standard
-    shift_x_mm: 0.0
+    shift_x_mm: -0.3
     shift_y_mm: 0.0
-    rotation_deg: 180.0
+    rotation_deg: 0.0
 
   - pad: '134' # VCCINT_1
     template: cap_pair_standard
-    shift_x_mm: 0.0
+    shift_x_mm: -0.3
     shift_y_mm: 0.0
-    rotation_deg: 180.0
+    rotation_deg: 0.0
 
 - net: +1V2_VCCD_PLL
   spokes:
@@ -179,13 +219,13 @@ rules:
     template: cap_pair_standard
     shift_x_mm: 0.5
     shift_y_mm: 0.0
-    rotation_deg: 0.0
+    rotation_deg: 180.0
 
   - pad: '109' # VCCD_PLL2
     template: cap_pair_standard
     shift_x_mm: -1.5
     shift_y_mm: 0.0
-    rotation_deg: 180.0
+    rotation_deg: 0.0
 
 - net: +2V5_VCCA
   spokes:
@@ -194,10 +234,10 @@ rules:
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: -1.0
-    rotation_deg: 270.0
+    rotation_deg: 90.0
 
   - pad: '107' # VCCA1
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
-    rotation_deg: 90.0
+    rotation_deg: 270.0

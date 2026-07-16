@@ -57,3 +57,6 @@ class IBoardAdapter(ABC):
 
     @abstractmethod
     def create_via(self, position: Vector2, net: Net, drill_mm: float, diameter_mm: float) -> Via: ...
+
+    @abstractmethod
+    def remove_by_id(self, uuid_str: str) -> bool: ...

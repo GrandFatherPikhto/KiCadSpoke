@@ -1,5 +1,6 @@
 # kicadspoke/placement/commands.py
 from dataclasses import dataclass
+from typing import Optional
 from kipy.board_types import BoardLayer
 from kipy.geometry import Vector2, Angle
 
@@ -17,6 +18,7 @@ class ViaCommand:
     diameter_mm: float
     net_name: str
     owner_ref: str
+    registry_key: Optional[str] = None  # см. registry.py — None означает "не участвует в реестре"
 
 @dataclass
 class PlacedComponentInfo:

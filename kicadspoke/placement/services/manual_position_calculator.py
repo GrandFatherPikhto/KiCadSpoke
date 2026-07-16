@@ -8,6 +8,7 @@ from ...config import Config, Rule
 from ...kicad.adapter import KiCadBoardAdapter
 from ...geometry.spoke_layout import apply_spoke_geometry
 from ..commands import PlacedComponentInfo, ViaCommand
+from ...registry import make_registry_key
 from .component_pool import ComponentPool
 
 logger = logging.getLogger(__name__)
@@ -79,11 +80,14 @@ class ManualPositionCalculator:
 
                 layout = apply_spoke_geometry(pad.position, spoke, template, rule.net, role_to_ref)
 
+                anchor_id = f"pad:{spoke.pad}"
+
                 # Via уровня спицы (была power_via)
-                for via in layout.vias:
+                for via_index, via in enumerate(layout.vias):
                     vias_result.append(ViaCommand(
                         position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
-                        net_name=via.net, owner_ref=self.cfg.target_ref
+                        net_name=via.net, owner_ref=self.cfg.target_ref,
+                        registry_key=make_registry_key(anchor_id, spoke.template, None, via_index),
                     ))
                     logger.debug(f"  via спицы (пад {spoke.pad}): "
                                 f"({via.position.x/1e6:.3f}, {via.position.y/1e6:.3f}) мм, net={via.net}")
@@ -98,10 +102,11 @@ class ManualPositionCalculator:
                         f"угол {comp_layout.angle_deg:.1f}°"
                     )
                     # Via уровня компонента (была GND via)
-                    for via in comp_layout.vias:
+                    for via_index, via in enumerate(comp_layout.vias):
                         vias_result.append(ViaCommand(
                             position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
-                            net_name=via.net, owner_ref=comp_layout.ref
+                            net_name=via.net, owner_ref=comp_layout.ref,
+                            registry_key=make_registry_key(anchor_id, spoke.template, comp_layout.role, via_index),
                         ))
                         logger.debug(f"    via {comp_layout.ref}: "
                                     f"({via.position.x/1e6:.3f}, {via.position.y/1e6:.3f}) мм, net={via.net}")

@@ -72,6 +72,7 @@ files/
 olddocs/
 old/
 logs/
+changes/
 
 get_files_list.py
 zip_project.*

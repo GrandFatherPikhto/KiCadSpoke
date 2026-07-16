@@ -194,3 +194,22 @@ class KiCadBoardAdapter(IBoardAdapter):
         via.diameter = int(diameter_mm * MM)
         return via
 
+    def remove_by_id(self, uuid_str: str) -> bool:
+        """
+        Удаляет объект (виа или любой другой) по его id (строка uuid) —
+        нужно для реестра расстановки (удалить устаревшую via перед
+        созданием новой на другом месте). Возвращает True, если запрос на
+        удаление прошёл без исключения — НЕ гарантирует, что объект с
+        таким uuid реально существовал (протухший uuid — не ошибка,
+        просто ничего не произойдёт).
+        """
+        from kipy.proto.common.types import base_types_pb2 as common_types_pb2
+        kiid = common_types_pb2.KIID()
+        kiid.value = uuid_str
+        try:
+            self._board.remove_items_by_id([kiid])
+            return True
+        except Exception as e:
+            logger.warning(f"Не удалось удалить объект {uuid_str}: {type(e).__name__}: {e}")
+            return False
+

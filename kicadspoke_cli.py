@@ -22,6 +22,7 @@ from kicadspoke.placement.executor import BatchExecutor
 from kicadspoke.exceptions import PlacerError
 from kicadspoke.undo import undo_last_operation
 from kicadspoke.validation import run_all_checks
+from kicadspoke.registry import PlacementRegistry, registry_path_for_config
 
 
 def setup_logging(verbose: bool = False, log_file: str = None):
@@ -58,23 +59,28 @@ def cmd_apply(args):
     planner = PlacementPlanner(adapter, cfg)
 
     if args.dry_run:
-        # ВАЖНО: в dry-run ничего не коммитится, поэтому plan_vias() здесь
-        # видит ещё НЕ перемещённые компоненты — GND via в этом режиме
-        # считалась бы от старой позиции. Честно предупреждаем и не
-        # показываем виа вовсе, вместо того чтобы притворяться точным
-        # предпросмотром.
+        # Via больше НЕ зависят от живого пада компонента (обобщённые via
+        # — чистая геометрия от нуля спицы, см. geometry/spoke_layout.py)
+        # — поэтому, в отличие от прежних версий, здесь их можно честно
+        # показать. Единственная оговорка: keepout для термовиа всё ещё
+        # смотрит на ТЕКУЩИЕ (ещё не перемещённые в dry-run) позиции
+        # футпринтов — термовиа в dry-run могут отличаться от боевого
+        # прогона, если конденсаторы реально сдвинутся с текущих мест.
         moves = planner.plan_moves()
+        vias = planner.plan_vias()
         print("\n=== DRY RUN ===")
         print("Перемещения:")
         for m in moves:
             print(f"  {m.ref}: ({m.position.x/1e6:.3f}, {m.position.y/1e6:.3f}) мм, угол={m.angle.degrees:.1f}°")
-        print("\nВиа: не показаны в dry-run — их позиции (особенно GND via) "
-              "зависят от РЕАЛЬНОГО положения компонентов после применения "
-              "перемещений, которого в dry-run ещё не произошло. "
-              "Запустите без --dry-run для точного предпросмотра.")
+        print("\nВиа:")
+        for v in vias:
+            print(f"  via у {v.owner_ref}: ({v.position.x/1e6:.3f}, {v.position.y/1e6:.3f}) мм, net={v.net_name}")
+        print("\n(keepout термовиа посчитан по ТЕКУЩИМ позициям конденсаторов, "
+              "не по целевым — может слегка отличаться от боевого прогона)")
         return
 
     executor = BatchExecutor(adapter, cfg, batch_size=args.batch_size)
+    registry = PlacementRegistry(adapter, registry_path_for_config(args.config))
 
     # --- Фаза 1: перемещения ---
     moves = planner.plan_moves()
@@ -88,16 +94,19 @@ def cmd_apply(args):
     if failed_refs:
         logger.warning(f"Не удалось переместить: {sorted(set(failed_refs))}")
 
-    # --- Перечитываем плату: GND via планируется по РЕАЛЬНЫМ, уже
-    # закоммиченным позициям компонентов, а не по расчётным "на бумаге" ---
+    # --- Перечитываем плату: термовиа (единственное, что по-прежнему
+    # зависит от живой платы) планируются по РЕАЛЬНЫМ, уже закоммиченным
+    # позициям, а не по расчётным "на бумаге" ---
     logger.info("Обновление данных платы перед планированием виа...")
     adapter.refresh_board()
 
     # --- Фаза 2: виа ---
-    vias = planner.plan_vias()
-    logger.info(f"Запланировано виа: {len(vias)}")
+    all_vias = planner.plan_vias()
+    vias_to_create = registry.reconcile(all_vias)
+    logger.info(f"Запланировано виа: {len(all_vias)}, из них реально к созданию "
+               f"(реестр отсеял уже стоящие правильно): {len(vias_to_create)}")
     logger.info("Применение виа...")
-    failed_vias = executor.execute_vias(vias)
+    failed_vias = executor.execute_vias(vias_to_create, registry=registry)
     if failed_vias:
         logger.warning(f"Не удалось создать виа рядом с: {sorted(set(failed_vias))}")
 

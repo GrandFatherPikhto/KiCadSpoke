@@ -132,11 +132,20 @@ class BatchExecutor:
 
         return failed_refs
 
-    def execute_vias(self, vias: List[ViaCommand]) -> List[str]:
+    def execute_vias(self, vias: List[ViaCommand], registry=None) -> List[str]:
         """
         Применяет виа. Пишет ЕДИНЫЙ JSON-лог операции (перемещения из
         предыдущего execute_moves() + эти виа) — undo.py ожидает оба
         раздела в одном файле.
+
+        registry (опционально) — PlacementRegistry (см. registry.py):
+        если передан, для каждой реально созданной via вызывается
+        record_created(), чтобы реестр расстановки знал её uuid.
+
+        ИСПРАВЛЕНО: раньше owner_ref в JSON-логе брался ПРИБЛИЗИТЕЛЬНО —
+        всегда от первого элемента батча (batch[0].owner_ref), независимо
+        от того, какой команде реально соответствует конкретная созданная
+        via. Теперь — точное сопоставление через параллельный список.
         """
         failed_via_owners: List[str] = []
 
@@ -146,6 +155,7 @@ class BatchExecutor:
         for idx, batch in enumerate(via_batches, 1):
             def work(batch=batch):
                 new_vias = []
+                cmd_for_via = []  # параллельный список -- cmd_for_via[i] соответствует new_vias[i]
                 for cmd in batch:
                     net = self.adapter.get_net_by_name(cmd.net_name)
                     if net is None:
@@ -153,18 +163,22 @@ class BatchExecutor:
                         continue
                     via = self.adapter.create_via(cmd.position, net, cmd.drill_mm, cmd.diameter_mm)
                     new_vias.append(via)
+                    cmd_for_via.append(cmd)
                 if new_vias:
                     created = self.adapter.create_items(new_vias)
-                    for v in created:
+                    for cmd, v in zip(cmd_for_via, created):
+                        uuid_str = str(v.id.value)
                         created_via_uuids.append({
-                            'uuid': str(v.id.value),
+                            'uuid': uuid_str,
                             'x_mm': v.position.x / MM,
                             'y_mm': v.position.y / MM,
                             'diameter_mm': v.diameter / MM,
                             'drill_mm': v.drill_diameter / MM,
                             'net_name': v.net.name,
-                            'owner_ref': batch[0].owner_ref  # приблизительно
+                            'owner_ref': cmd.owner_ref
                         })
+                        if registry is not None:
+                            registry.record_created(cmd, uuid_str)
                     logger.debug(f"  создано {len(created)} виа")
             ok = self.adapter.commit_with_retry(f"Via batch {idx}/{len(via_batches)}", work)
             if not ok:
