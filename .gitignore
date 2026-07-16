@@ -33,6 +33,7 @@ share/python-wheels/
 # *.log
 pip-log.txt
 pip-delete-this-directory.txt
+decap_placer.txt
 
 # Настройки сред разработки (IDE)
 .idea/
@@ -62,11 +63,16 @@ fp-info-cache
 *.zip
 *.7z
 
+*.json
+*.log
+
 arch/
 test_sample/
 files/
 olddocs/
 old/
+logs/
 
 get_files_list.py
 zip_project.*
+
