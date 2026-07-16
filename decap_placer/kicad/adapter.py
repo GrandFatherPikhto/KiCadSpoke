@@ -42,6 +42,12 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug(f"Получено {len(fps)} футпринтов")
         return fps
 
+    def get_vias(self) -> List[Via]:
+        """Все существующие на плате виа (для проверки идемпотентности повторного прогона)."""
+        vias = list(self._board.get_vias())
+        logger.debug(f"Получено {len(vias)} виа")
+        return vias
+
     def get_footprint_pads(self, footprint: FootprintInstance) -> List[Pad]:
         """
         Возвращает список пад данного футпринта. Не ходит в API отдельно —

@@ -21,6 +21,7 @@ from decap_placer.placement.planner import PlacementPlanner
 from decap_placer.placement.executor import BatchExecutor
 from decap_placer.exceptions import PlacerError
 from decap_placer.undo import undo_last_operation
+from decap_placer.validation import run_all_checks
 
 
 def setup_logging(verbose: bool = False, log_file: str = None):
@@ -50,6 +51,8 @@ def cmd_apply(args):
     logger.info(f"Подключение к KiCad (таймаут {args.timeout_ms} мс)")
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
     adapter.refresh_board()
+
+    run_all_checks(adapter, cfg)
 
     logger.info("Планирование расстановки...")
     planner = PlacementPlanner(adapter, cfg)

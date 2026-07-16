@@ -28,6 +28,26 @@ class PlacementPlanner:
         self.via_planner = ViaPlanner(adapter, config)
         logger.info(f"Планировщик инициализирован: target={config.target_ref}, side={config.side}")
 
+    # Допуски для проверки "уже на месте" (skip_existing_components) —
+    # достаточно грубые, чтобы не реагировать на шум округления при
+    # повторном чтении координат из IPC, но достаточно точные, чтобы не
+    # спутать с реально другой целевой позицией.
+    _POSITION_TOLERANCE_NM = 10_000       # 0.01 мм
+    _ANGLE_TOLERANCE_DEG = 0.1
+
+    def _already_in_place(self, ref: str, dest: Vector2, angle_deg: float) -> bool:
+        fp = self.adapter.get_footprint(ref)
+        if fp is None:
+            return False
+        if fp.layer != self._target_layer:
+            return False
+        if abs(fp.position.x - dest.x) > self._POSITION_TOLERANCE_NM:
+            return False
+        if abs(fp.position.y - dest.y) > self._POSITION_TOLERANCE_NM:
+            return False
+        angle_diff = abs((fp.orientation.degrees - angle_deg + 180) % 360 - 180)
+        return angle_diff <= self._ANGLE_TOLERANCE_DEG
+
     def plan_moves(self) -> List[MoveCommand]:
         if not self.cfg.place_components:
             self._planned = []
@@ -40,13 +60,20 @@ class PlacementPlanner:
         )
         moves = []
         self._planned = placed
+        skipped = 0
         for info in placed:
+            if self.cfg.skip_existing_components and self._already_in_place(info.ref, info.dest, info.angle_deg):
+                skipped += 1
+                logger.debug(f"  {info.ref}: уже на месте, перемещение пропущено (skip_existing_components)")
+                continue
             moves.append(MoveCommand(
                 ref=info.ref,
                 position=info.dest,
                 angle=Angle.from_degrees(info.angle_deg),
                 layer=self._target_layer
             ))
+        if skipped:
+            logger.info(f"Пропущено {skipped} компонентов, уже находящихся на целевой позиции")
         logger.info(f"plan_moves завершено: {len(moves)} перемещений")
         return moves
 

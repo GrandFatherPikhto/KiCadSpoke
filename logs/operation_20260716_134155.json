@@ -1,0 +1,835 @@
+{
+  "timestamp": "2026-07-16T13:41:55.534825",
+  "moves": [
+    {
+      "ref": "C5",
+      "original_position": {
+        "x": 146445000,
+        "y": 117235000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 68322000,
+        "y": 81858000
+      },
+      "new_angle_deg": 0.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C21",
+      "original_position": {
+        "x": 147005000,
+        "y": 102445000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 65322000,
+        "y": 81857999
+      },
+      "new_angle_deg": 180.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C6",
+      "original_position": {
+        "x": 146445000,
+        "y": 119205000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 68322000,
+        "y": 86358000
+      },
+      "new_angle_deg": 0.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C22",
+      "original_position": {
+        "x": 147005000,
+        "y": 104955000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 65322000,
+        "y": 86357999
+      },
+      "new_angle_deg": 180.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C7",
+      "original_position": {
+        "x": 146445000,
+        "y": 121175000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 71310000,
+        "y": 90846001
+      },
+      "new_angle_deg": 90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C23",
+      "original_position": {
+        "x": 147005000,
+        "y": 107465000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 71309999,
+        "y": 93846000
+      },
+      "new_angle_deg": -90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C8",
+      "original_position": {
+        "x": 146445000,
+        "y": 123145000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 74810000,
+        "y": 90846001
+      },
+      "new_angle_deg": 90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C24",
+      "original_position": {
+        "x": 147005000,
+        "y": 109975000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 74809999,
+        "y": 93846000
+      },
+      "new_angle_deg": -90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C9",
+      "original_position": {
+        "x": 146445000,
+        "y": 125115000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 80310000,
+        "y": 90846001
+      },
+      "new_angle_deg": 90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C25",
+      "original_position": {
+        "x": 147005000,
+        "y": 112485000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 80309999,
+        "y": 93846000
+      },
+      "new_angle_deg": -90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C10",
+      "original_position": {
+        "x": 146445000,
+        "y": 127085000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 83310000,
+        "y": 90846001
+      },
+      "new_angle_deg": 90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C26",
+      "original_position": {
+        "x": 147005000,
+        "y": 114995000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 83309999,
+        "y": 93846000
+      },
+      "new_angle_deg": -90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C11",
+      "original_position": {
+        "x": 146445000,
+        "y": 129055000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 86798001,
+        "y": 85358000
+      },
+      "new_angle_deg": 180.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C27",
+      "original_position": {
+        "x": 151355000,
+        "y": 92405000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 89798000,
+        "y": 85358001
+      },
+      "new_angle_deg": 0.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C12",
+      "original_position": {
+        "x": 146445000,
+        "y": 131025000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 86798001,
+        "y": 79358000
+      },
+      "new_angle_deg": 180.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C28",
+      "original_position": {
+        "x": 151355000,
+        "y": 94915000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 89798000,
+        "y": 79358001
+      },
+      "new_angle_deg": 0.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C13",
+      "original_position": {
+        "x": 146445000,
+        "y": 132995000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 80610000,
+        "y": 72370000
+      },
+      "new_angle_deg": -90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C29",
+      "original_position": {
+        "x": 151355000,
+        "y": 97425000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 80610000,
+        "y": 69370000
+      },
+      "new_angle_deg": 90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C14",
+      "original_position": {
+        "x": 149675000,
+        "y": 117235000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 78110000,
+        "y": 72370000
+      },
+      "new_angle_deg": -90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C30",
+      "original_position": {
+        "x": 151355000,
+        "y": 99935000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 78110000,
+        "y": 69370000
+      },
+      "new_angle_deg": 90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C15",
+      "original_position": {
+        "x": 149675000,
+        "y": 119205000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 74810000,
+        "y": 72370000
+      },
+      "new_angle_deg": -90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C31",
+      "original_position": {
+        "x": 151355000,
+        "y": 102445000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 74810000,
+        "y": 69370000
+      },
+      "new_angle_deg": 90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C16",
+      "original_position": {
+        "x": 149675000,
+        "y": 121175000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 70310000,
+        "y": 72370000
+      },
+      "new_angle_deg": -90.0,
+      "layer": "B.Cu"
+    },
+    {
+      "ref": "C32",
+      "original_position": {
+        "x": 151355000,
+        "y": 104955000
+      },
+      "original_angle_deg": 0.0,
+      "original_layer": "F.Cu",
+      "new_position": {
+        "x": 70310000,
+        "y": 69370000
+      },
+      "new_angle_deg": 90.0,
+      "layer": "B.Cu"
+    }
+  ],
+  "created_vias": [
+    {
+      "uuid": "45d2a68f-3f3d-4275-831b-bef2c823ca3e",
+      "x_mm": 68.322,
+      "y_mm": 80.858,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "78f5a65f-b8c7-4c7b-88c5-c0892e899eeb",
+      "x_mm": 68.322,
+      "y_mm": 85.358,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "ffca7170-cd1b-42e3-80bf-e1a9ff7befc3",
+      "x_mm": 70.31,
+      "y_mm": 90.846,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "877051af-c676-45ec-b138-0f633314fc40",
+      "x_mm": 73.81,
+      "y_mm": 90.846,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "c3cb2a4a-802c-4f62-affc-464085297ebe",
+      "x_mm": 79.31,
+      "y_mm": 90.846,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "e8a38e00-a977-4562-8704-955f62054141",
+      "x_mm": 82.31,
+      "y_mm": 90.846,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "291688c8-2896-4f8c-934e-3c9c7911c986",
+      "x_mm": 86.798,
+      "y_mm": 86.358,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "3d540d99-1f55-44a6-98cc-51721ab7269d",
+      "x_mm": 86.798,
+      "y_mm": 80.358,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "94f80164-1079-4f1f-af91-4a0de9f3df49",
+      "x_mm": 81.61,
+      "y_mm": 72.37,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "8778f98e-060c-482f-a3fd-4e92672ed749",
+      "x_mm": 79.11,
+      "y_mm": 72.37,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "be143092-5153-4e2e-8e59-18012284677f",
+      "x_mm": 75.81,
+      "y_mm": 72.37,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "571b16e9-c9ca-4bf3-bda0-ebb159592426",
+      "x_mm": 71.31,
+      "y_mm": 72.37,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "+3V3_VCCIO",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "359025aa-9c1d-4d78-a0da-3b074d0014d1",
+      "x_mm": 69.8895,
+      "y_mm": 81.858,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "86fe0411-a8b5-4af4-8a31-bddb5676fc38",
+      "x_mm": 63.1595,
+      "y_mm": 81.857999,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "c2d1d0a7-c5d9-48bb-bdcb-8407e704cb45",
+      "x_mm": 69.8895,
+      "y_mm": 86.358,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "5b023e87-9dc3-423a-abd5-ce64209247da",
+      "x_mm": 63.1595,
+      "y_mm": 86.357999,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "68f0d5f2-adb9-491a-b163-077a1aeffc3c",
+      "x_mm": 71.31,
+      "y_mm": 89.278501,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "5247b926-d591-4dfb-a1f0-e02962e5d3ab",
+      "x_mm": 71.309999,
+      "y_mm": 96.0085,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "441dbecc-6e44-4c3b-b11b-a01f56abc908",
+      "x_mm": 74.81,
+      "y_mm": 89.278501,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "e7129422-bdb4-40e6-9ed6-de4f99bc822e",
+      "x_mm": 74.809999,
+      "y_mm": 96.0085,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "33eafafa-a4d3-481d-b9ce-b2ab992083a5",
+      "x_mm": 80.31,
+      "y_mm": 89.278501,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "92be9279-735a-46d8-87ff-a27bd8aeae7e",
+      "x_mm": 80.309999,
+      "y_mm": 96.0085,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "4023081e-346a-4e4d-943d-36e20a6dd0dc",
+      "x_mm": 83.31,
+      "y_mm": 89.278501,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "a85a3651-b229-4447-846f-a0e8a0eadacf",
+      "x_mm": 83.309999,
+      "y_mm": 96.0085,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "8993e5f8-5b7a-4d8d-abc8-afa0691aa25d",
+      "x_mm": 85.230501,
+      "y_mm": 85.358,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "bc8fc92c-e66d-4bb7-9536-5ed6e80beec3",
+      "x_mm": 91.9605,
+      "y_mm": 85.358001,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "4f1887f4-599d-4e69-a5eb-e65e1948b0bb",
+      "x_mm": 85.230501,
+      "y_mm": 79.358,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "1d8f3ea0-b550-4622-94f3-b0c507eb445b",
+      "x_mm": 91.9605,
+      "y_mm": 79.358001,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "cf3ae1b6-4c9f-4ddd-9209-830b34352f65",
+      "x_mm": 80.61,
+      "y_mm": 73.9375,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "934f49b5-dc43-4370-b493-a54701b64427",
+      "x_mm": 80.61,
+      "y_mm": 67.2075,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C9"
+    },
+    {
+      "uuid": "58d4c3fb-db91-4d0e-ac52-c0e45b9f3ef2",
+      "x_mm": 78.11,
+      "y_mm": 73.9375,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "1bb4e776-8858-467b-9d85-2cf33c970df8",
+      "x_mm": 78.11,
+      "y_mm": 67.2075,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "891db5cc-351c-4528-9dd8-5eef26890807",
+      "x_mm": 74.81,
+      "y_mm": 73.9375,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "8ed58ac1-f247-4667-8e97-af2f8b09a979",
+      "x_mm": 74.81,
+      "y_mm": 67.2075,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "b3e68cc4-0ff8-47ac-bebf-cb821fdaadc8",
+      "x_mm": 70.31,
+      "y_mm": 73.9375,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "261df216-c5b3-4be4-b9a3-56bedcbb7bd2",
+      "x_mm": 70.31,
+      "y_mm": 67.2075,
+      "diameter_mm": 0.6,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "5f6284c8-4dc5-463b-a25f-864a179ef8b4",
+      "x_mm": 74.635,
+      "y_mm": 78.683,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "2316afa9-27b9-40a7-a326-cd4810fee6ec",
+      "x_mm": 76.585,
+      "y_mm": 78.683,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "467171a4-02b0-446f-9fd1-b635461fb1fe",
+      "x_mm": 78.535,
+      "y_mm": 78.683,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "be2a0a9a-c1a6-4142-a284-0c763c81e479",
+      "x_mm": 80.485,
+      "y_mm": 78.683,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "C14"
+    },
+    {
+      "uuid": "7db73644-69d6-4fc6-bda6-248fd0566d1b",
+      "x_mm": 74.635,
+      "y_mm": 80.633,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "8707891c-b6ec-4888-927c-4eb552a16cc0",
+      "x_mm": 76.585,
+      "y_mm": 80.633,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "a7216b9a-081a-402c-b690-06c23329ab6c",
+      "x_mm": 78.535,
+      "y_mm": 80.633,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "1315fca6-2534-46c0-8b82-508cc7d649f9",
+      "x_mm": 80.485,
+      "y_mm": 80.633,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "b850ae04-31b7-48f3-ad33-67bf6002f61f",
+      "x_mm": 74.635,
+      "y_mm": 82.583,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "4d081705-bf00-44fc-8e20-d4ef972d594d",
+      "x_mm": 76.585,
+      "y_mm": 82.583,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "6fa96614-9b08-464d-9c4b-e6a724de130f",
+      "x_mm": 78.535,
+      "y_mm": 82.583,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "ccf986f1-79ab-40d1-9f95-79db024af02e",
+      "x_mm": 80.485,
+      "y_mm": 82.583,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "fb422d4b-fc97-4069-9470-326c09c0f238",
+      "x_mm": 74.635,
+      "y_mm": 84.533,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "7d3eaf77-5686-4c0d-96d0-9c61906bfb30",
+      "x_mm": 76.585,
+      "y_mm": 84.533,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "adb3fe70-1576-4a00-9ca1-3ed9cf0dbfc0",
+      "x_mm": 78.535,
+      "y_mm": 84.533,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    },
+    {
+      "uuid": "050b1115-52eb-41f1-a65f-1c90b6d6466a",
+      "x_mm": 80.485,
+      "y_mm": 84.533,
+      "diameter_mm": 0.5,
+      "drill_mm": 0.3,
+      "net_name": "GND",
+      "owner_ref": "IC1"
+    }
+  ]
+}

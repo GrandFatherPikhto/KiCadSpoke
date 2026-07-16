@@ -14,6 +14,9 @@ class IBoardAdapter(ABC):
     def get_footprints(self) -> List[FootprintInstance]: ...
 
     @abstractmethod
+    def get_vias(self) -> List[Via]: ...
+
+    @abstractmethod
     def get_footprint_pads(self, fp: FootprintInstance) -> List[Pad]: ...
 
     @abstractmethod

@@ -15,3 +15,11 @@ class ComponentNotFoundError(PlacerError):
 class GeometryError(PlacerError):
     """Ошибка в геометрических расчётах."""
     pass
+
+class ValidationError(PlacerError):
+    """
+    Фатальная ошибка предварительной проверки конфигурации — обнаружена
+    ДО планирования/перемещений, программа должна остановиться, ничего
+    не тронув на плате.
+    """
+    pass

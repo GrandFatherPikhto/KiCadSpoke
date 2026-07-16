@@ -30,9 +30,20 @@ class ViaPlanner:
     предсказывает его позицию заранее.
     """
 
+    _VIA_POSITION_TOLERANCE_NM = 10_000  # 0.01 мм
+
     def __init__(self, adapter: KiCadBoardAdapter, config: Config):
         self.adapter = adapter
         self.cfg = config
+
+    def _via_already_exists(self, existing_vias, position: Vector2, net_name: str) -> bool:
+        for via in existing_vias:
+            if not via.net or via.net.name != net_name:
+                continue
+            if (abs(via.position.x - position.x) <= self._VIA_POSITION_TOLERANCE_NM and
+                    abs(via.position.y - position.y) <= self._VIA_POSITION_TOLERANCE_NM):
+                return True
+        return False
 
     def plan_vias(
         self,
@@ -44,17 +55,26 @@ class ViaPlanner:
         keepout = self._build_keepout(target_fp, planned)
         logger.debug(f"Keepout: {len(keepout)} прямоугольников")
 
+        existing_vias = self.adapter.get_vias() if self.cfg.skip_existing_components else []
+
+        power = self._plan_power_vias(target_fp, rules, existing_vias)
+        gnd = self._plan_gnd_vias(planned, existing_vias)
+        thermal = self._plan_thermal_vias(planned, target_fp, keepout, existing_vias)
+
         vias = []
-        vias.extend(self._plan_power_vias(target_fp, rules))
-        vias.extend(self._plan_gnd_vias(planned))
-        vias.extend(self._plan_thermal_vias(planned, target_fp, keepout))
+        vias.extend(power)
+        vias.extend(gnd)
+        vias.extend(thermal)
 
         logger.info(f"plan_vias завершено: {len(vias)} виа")
         return vias
 
-    def _plan_power_vias(self, target_fp: FootprintInstance, rules: List[Rule]) -> List[ViaCommand]:
+    def _plan_power_vias(self, target_fp: FootprintInstance, rules: List[Rule],
+                        existing_vias: Optional[List] = None) -> List[ViaCommand]:
         """Power via — целиком из шаблона спицы (pad + shift/rotation + template.power_via)."""
+        existing_vias = existing_vias or []
         result = []
+        skipped = 0
         for rule in rules:
             for spoke in rule.spokes:
                 if not spoke.enabled:
@@ -77,6 +97,12 @@ class ViaPlanner:
                     logger.warning(f"Power via для {spoke.pad}: цепь {layout.power_via_net} не найдена")
                     continue
 
+                if self.cfg.skip_existing_components and self._via_already_exists(
+                        existing_vias, layout.power_via_pos, layout.power_via_net):
+                    skipped += 1
+                    logger.debug(f"  power via для {spoke.pad}: уже существует, пропущена")
+                    continue
+
                 result.append(ViaCommand(
                     position=layout.power_via_pos,
                     drill_mm=layout.power_via_drill_mm,
@@ -86,15 +112,20 @@ class ViaPlanner:
                 ))
                 logger.debug(f"  power via для {spoke.pad}: "
                             f"({layout.power_via_pos.x/MM:.3f}, {layout.power_via_pos.y/MM:.3f}) мм")
+        if skipped:
+            logger.info(f"Пропущено {skipped} power via, уже существующих на плате")
         return result
 
-    def _plan_gnd_vias(self, planned: List[PlacedComponentInfo]) -> List[ViaCommand]:
+    def _plan_gnd_vias(self, planned: List[PlacedComponentInfo],
+                       existing_vias: Optional[List] = None) -> List[ViaCommand]:
         """
         GND via — от РЕАЛЬНОГО пада уже размещённого компонента (не
         предсказание "где он окажется", а факт "где он оказался") плюс
         локальное смещение из шаблона, повёрнутое на угол спицы.
         """
+        existing_vias = existing_vias or []
         result = []
+        skipped = 0
         for info in planned:
             fp = self.adapter.get_footprint(info.ref)
             if fp is None:
@@ -120,6 +151,11 @@ class ViaPlanner:
             )
             pos = Vector2.from_xy(gnd_pad.position.x + offset.x, gnd_pad.position.y + offset.y)
 
+            if self.cfg.skip_existing_components and self._via_already_exists(existing_vias, pos, info.gnd_via_net):
+                skipped += 1
+                logger.debug(f"  GND via для {info.ref}: уже существует, пропущена")
+                continue
+
             result.append(ViaCommand(
                 position=pos,
                 drill_mm=info.gnd_via_drill_mm,
@@ -128,6 +164,8 @@ class ViaPlanner:
                 owner_ref=info.ref
             ))
             logger.debug(f"  GND via для {info.ref}: ({pos.x/MM:.3f}, {pos.y/MM:.3f}) мм")
+        if skipped:
+            logger.info(f"Пропущено {skipped} GND via, уже существующих на плате")
         return result
 
     def _build_keepout(
@@ -156,8 +194,10 @@ class ViaPlanner:
         self,
         planned: List[PlacedComponentInfo],
         target_fp: FootprintInstance,
-        keepout: List[Rect]
+        keepout: List[Rect],
+        existing_vias: Optional[List] = None
     ) -> List[ViaCommand]:
+        existing_vias = existing_vias or []
         tva = self.cfg.thermal_via_array
         if not tva.enabled:
             return []
@@ -183,7 +223,11 @@ class ViaPlanner:
         keepout_excl = self._build_keepout(target_fp, planned, exclude=exclude)
         via_radius = tva.diameter_mm / 2.0 * MM
         result = []
+        skipped = 0
         for p in points:
+            if self.cfg.skip_existing_components and self._via_already_exists(existing_vias, p, tva.net):
+                skipped += 1
+                continue
             # Раньше здесь искали направление "к центру зоны" — зоны
             # больше нет, ищем просто ближайшее свободное место по кругу.
             free_p = find_free_point(
@@ -197,5 +241,7 @@ class ViaPlanner:
                 logger.warning(f"Термовиа: место для ({p.x/MM:.3f}, {p.y/MM:.3f}) мм не найдено, точка пропущена")
                 continue
             result.append(ViaCommand(free_p, tva.drill_mm, tva.diameter_mm, tva.net, tva.target_ref))
+        if skipped:
+            logger.info(f"Пропущено {skipped} термовиа, уже существующих на плате")
         logger.info(f"Запланировано {len(result)} термовиа на {tva.pad}")
         return result
