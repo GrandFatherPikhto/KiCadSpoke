@@ -10,8 +10,8 @@ from pathlib import Path
 # Добавляем корень проекта в путь
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from decap_placer.kicad import KiCadBoardAdapter, IBoardAdapter
-from decap_placer.kicad.adapter import KiCadBoardAdapter as Adapter
+from kicadspoke.kicad import KiCadBoardAdapter, IBoardAdapter
+from kicadspoke.kicad.adapter import KiCadBoardAdapter as Adapter
 
 
 def test_import():

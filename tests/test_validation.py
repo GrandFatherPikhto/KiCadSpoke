@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Тесты на фатальные предварительные проверки (validation.py), DecapPlacer 4.0."""
+"""Тесты на фатальные предварительные проверки (validation.py), KiCadSpoke 4.0."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -7,12 +7,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import pytest
 from unittest.mock import MagicMock
 
-from decap_placer.config import (
+from kicadspoke.config import (
     Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
     TemplateComponentSlot, Rule
 )
-from decap_placer.exceptions import ValidationError
-from decap_placer.validation import check_templates_and_pads_exist, check_role_pool_sufficiency
+from kicadspoke.exceptions import ValidationError
+from kicadspoke.validation import check_templates_and_pads_exist, check_role_pool_sufficiency
 
 
 def _cfg(rules, templates=None):

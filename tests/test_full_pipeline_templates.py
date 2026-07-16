@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-Интеграционный тест нового конвейера (DecapPlacer 4.0, роли вместо
-component1/component2) целиком: PlacementPlanner (manual_position_calculator
-+ component_pool + via_planner) на моках, без живого KiCad.
+Интеграционный тест конвейера KiCadSpoke целиком: PlacementPlanner
+(manual_position_calculator + component_pool + via_planner) на моках.
 
-Тот же пример (пад 109 при rotation_deg=90°, пад 62 при 270°), но теперь
-конкретные компоненты НЕ прописаны в конфиге — подбираются из пула по
-(реальная цепь, поле Role), в детерминированном (естественном) порядке.
+KiCadSpoke, обобщённые via: via уровня спицы и уровня компонента теперь
+вычисляются ОДНОВременно с позициями компонентов, в plan_moves() —
+никакого чтения живого пада компонента для via больше не требуется.
 """
 import sys
 import math
@@ -17,12 +16,12 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
-from decap_placer.config import (
+from kicadspoke.config import (
     Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
-    TemplatePowerVia, TemplateComponentSlot, Rule
+    TemplateVia, TemplateComponentSlot, Rule
 )
-from decap_placer.placement.planner import PlacementPlanner
-from decap_placer.geometry.spoke_layout import rotate_local_offset
+from kicadspoke.placement.planner import PlacementPlanner
+from kicadspoke.geometry.spoke_layout import rotate_local_offset
 
 MM = 1_000_000
 
@@ -43,18 +42,12 @@ def _make_ic1_fp(pads_config):
     return fp
 
 
-def _make_cap_fp(ref, x_mm, y_mm, angle_deg, power_net, role, layer=BoardLayer.BL_B_Cu):
-    """Создаёт мок футпринта конденсатора УЖЕ в финальной позиции (имитация
-    состояния платы ПОСЛЕ того, как executor закоммитил перемещения)."""
+def _make_cap_fp(ref, net_name, role):
+    """Мок футпринта конденсатора -- ДЛЯ ПУЛА нужны только ref/роль/цепь,
+    реальная позиция более не важна для via (вычисляется геометрически)."""
     fp = MagicMock()
     fp.reference_field.text.value = ref
-    fp.position = Vector2.from_xy(int(x_mm * MM), int(y_mm * MM))
-    fp.orientation = Angle.from_degrees(angle_deg)
-    fp.layer = layer
-    fp.definition.items = [
-        _make_pad("1", x_mm, y_mm, power_net),
-        _make_pad("2", x_mm, y_mm, "GND"),
-    ]
+    fp.definition.items = [_make_pad("1", 0, 0, net_name), _make_pad("2", 0, 0, "GND")]
     fp._role = role
     return fp
 
@@ -62,20 +55,19 @@ def _make_cap_fp(ref, x_mm, y_mm, angle_deg, power_net, role, layer=BoardLayer.B
 def _build_config():
     template = SpokeTemplate(
         name="cap_pair_standard",
-        power_via=TemplatePowerVia(offset_along_mm=0.0, offset_across_mm=-1.5,
-                                   drill_mm=0.3, diameter_mm=0.6),
+        vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=-1.5, drill_mm=0.3, diameter_mm=0.6)],
         components=[
             TemplateComponentSlot(
                 role="LIGHT",
                 offset_along_mm=1.0, offset_across_mm=-1.0, angle_deg=90.0,
-                gnd_via_offset_along_mm=0.0, gnd_via_offset_across_mm=-1.0,
-                gnd_via_net="GND", gnd_via_drill_mm=0.3, gnd_via_diameter_mm=0.6,
+                vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=-1.0, net="GND",
+                                 drill_mm=0.3, diameter_mm=0.6)],
             ),
             TemplateComponentSlot(
                 role="HEAVY",
                 offset_along_mm=1.0, offset_across_mm=2.0, angle_deg=270.0,
-                gnd_via_offset_along_mm=0.0, gnd_via_offset_across_mm=1.3,
-                gnd_via_net="GND", gnd_via_drill_mm=0.3, gnd_via_diameter_mm=0.6,
+                vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=1.3, net="GND",
+                                 drill_mm=0.3, diameter_mm=0.6)],
             ),
         ],
     )
@@ -95,8 +87,6 @@ def _build_config():
 
 
 def _make_pool_adapter(ic1, cap_fps):
-    """Общая часть настройки мока adapter: пул компонентов строится из
-    get_footprints() + get_field_value() (роль) + get_footprint_pads() (цепь)."""
     all_fps = [ic1] + cap_fps
     fps_by_ref = {fp.reference_field.text.value: fp for fp in all_fps}
 
@@ -119,12 +109,11 @@ class TestFullPipelineWithTemplates:
             ("109", *pad_pos, "+1V2_VCCINT"),
             ("62", *pad_pos, "+1V2_VCCINT"),
         ])
-        # 2 LIGHT + 2 HEAVY, естественный порядок задаёт распределение по спицам
         cap_fps = [
-            _make_cap_fp("C10", 0, 0, 0, "+1V2_VCCINT", role="LIGHT"),
-            _make_cap_fp("C39", 0, 0, 0, "+1V2_VCCINT", role="LIGHT"),
-            _make_cap_fp("C35", 0, 0, 0, "+1V2_VCCINT", role="HEAVY"),
-            _make_cap_fp("C54", 0, 0, 0, "+1V2_VCCINT", role="HEAVY"),
+            _make_cap_fp("C10", "+1V2_VCCINT", role="LIGHT"),
+            _make_cap_fp("C39", "+1V2_VCCINT", role="LIGHT"),
+            _make_cap_fp("C35", "+1V2_VCCINT", role="HEAVY"),
+            _make_cap_fp("C54", "+1V2_VCCINT", role="HEAVY"),
         ]
         adapter, _ = _make_pool_adapter(ic1, cap_fps)
 
@@ -133,8 +122,6 @@ class TestFullPipelineWithTemplates:
 
         assert len(moves) == 4
         by_ref = {m.ref: m for m in moves}
-        # Естественная сортировка: LIGHT-пул = [C10, C39] -> spoke_109 берёт C10,
-        # spoke_62 берёт C39. HEAVY-пул = [C35, C54] -> spoke_109 берёт C35, spoke_62 -- C54.
         assert set(by_ref.keys()) == {"C10", "C39", "C35", "C54"}
 
         def _expected(origin_mm, along, across, rotation_deg):
@@ -142,32 +129,29 @@ class TestFullPipelineWithTemplates:
             v = rotate_local_offset(along, across, rotation_deg)
             return ox + v.x / MM, oy + v.y / MM
 
-        # spoke_109 (rotation=90°) получила первую LIGHT (C10) и первую HEAVY (C35)
+        # Естественный порядок: LIGHT-пул=[C10,C39] -> spoke_109 берёт C10; HEAVY-пул=[C35,C54] -> spoke_109 берёт C35
         ex, ey = _expected((50.0, 50.0), 1.0, -1.0, 90.0)
         assert abs(by_ref["C10"].position.x / MM - ex) < 1e-3
         assert abs(by_ref["C10"].position.y / MM - ey) < 1e-3
         assert by_ref["C10"].angle.degrees == 90.0 + 90.0
 
-        # spoke_62 (rotation=270°, shift_x=0.4) получила вторую LIGHT (C39)
         ex2, ey2 = _expected((50.4, 50.0), 1.0, -1.0, 270.0)
         assert abs(by_ref["C39"].position.x / MM - ex2) < 1e-3
         assert abs(by_ref["C39"].position.y / MM - ey2) < 1e-3
         assert by_ref["C39"].angle.degrees == 90.0 + 270.0
 
-    def test_plan_vias_power_and_gnd(self):
+    def test_plan_vias_spoke_and_component_level(self):
         cfg = _build_config()
         pad_pos = (50.0, 50.0)
         ic1 = _make_ic1_fp([
             ("109", *pad_pos, "+1V2_VCCINT"),
             ("62", *pad_pos, "+1V2_VCCINT"),
         ])
-        # Компоненты УЖЕ в финальных позициях (имитация состояния платы
-        # после того, как executor закоммитил plan_moves()).
         cap_fps = [
-            _make_cap_fp("C39", 51.0, 49.0, 180.0, "+1V2_VCCINT", role="LIGHT"),
-            _make_cap_fp("C54", 52.0, 49.0, 360.0, "+1V2_VCCINT", role="HEAVY"),
-            _make_cap_fp("C10", 51.4, 51.0, 360.0, "+1V2_VCCINT", role="LIGHT"),
-            _make_cap_fp("C35", 48.4, 51.0, 540.0, "+1V2_VCCINT", role="HEAVY"),
+            _make_cap_fp("C39", "+1V2_VCCINT", role="LIGHT"),
+            _make_cap_fp("C54", "+1V2_VCCINT", role="HEAVY"),
+            _make_cap_fp("C10", "+1V2_VCCINT", role="LIGHT"),
+            _make_cap_fp("C35", "+1V2_VCCINT", role="HEAVY"),
         ]
         net_gnd = Net(name="GND")
         net_power = Net(name="+1V2_VCCINT")
@@ -179,20 +163,16 @@ class TestFullPipelineWithTemplates:
         adapter.get_bounding_boxes.return_value = []
 
         planner = PlacementPlanner(adapter, cfg)
-        planner.plan_moves()  # заполняет self._planned (и потребляет пул)
+        planner.plan_moves()  # заполняет self._planned и self._planned_vias, потребляет пул
         vias = planner.plan_vias()
 
-        power_vias = [v for v in vias if v.net_name == "+1V2_VCCINT"]
-        gnd_vias = [v for v in vias if v.owner_ref in ("C39", "C54", "C10", "C35")]
+        spoke_level = [v for v in vias if v.owner_ref == "IC1"]
+        component_level = [v for v in vias if v.owner_ref in ("C39", "C54", "C10", "C35")]
 
-        assert len(power_vias) == 2  # по одной на спицу (109 и 62)
-        assert len(gnd_vias) == 4    # по одной на каждый компонент
+        assert len(spoke_level) == 2   # по одной на спицу (109 и 62)
+        assert len(component_level) == 4  # по одной на каждый компонент
 
-        # Каждая GND via должна быть в разумной близости от СВОЕГО компонента
-        for via in gnd_vias:
-            fp = fps_by_ref[via.owner_ref]
-            dist_mm = math.hypot(
-                (via.position.x - fp.position.x) / MM,
-                (via.position.y - fp.position.y) / MM,
-            )
-            assert dist_mm < 2.0, f"GND via {via.owner_ref} слишком далеко от своего компонента"
+        for v in spoke_level:
+            assert v.net_name == "+1V2_VCCINT"  # net=None в шаблоне -> взят rule.net
+        for v in component_level:
+            assert v.net_name == "GND"

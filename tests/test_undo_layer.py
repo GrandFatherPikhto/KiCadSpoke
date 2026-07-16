@@ -25,8 +25,8 @@ from kipy.board_types import BoardLayer
 # via_planner.py теперь на новой модели (шаблоны), заглушка под старые
 # классы больше не нужна.
 
-from decap_placer.placement.executor import BatchExecutor, _layer_to_str
-from decap_placer.placement.commands import MoveCommand
+from kicadspoke.placement.executor import BatchExecutor, _layer_to_str
+from kicadspoke.placement.commands import MoveCommand
 
 MM = 1_000_000
 

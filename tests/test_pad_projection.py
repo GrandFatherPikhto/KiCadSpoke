@@ -22,8 +22,8 @@ from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer
 
 
-from decap_placer.geometry.pad_projection import predict_pad_position, local_pad_offset
-from decap_placer.utils.units import MM
+from kicadspoke.geometry.pad_projection import predict_pad_position, local_pad_offset
+from kicadspoke.utils.units import MM
 
 
 def _make_fp(x_mm, y_mm, angle_deg, layer):

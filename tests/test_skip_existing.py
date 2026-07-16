@@ -14,12 +14,12 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
-from decap_placer.config import (
+from kicadspoke.config import (
     Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
-    TemplatePowerVia, TemplateComponentSlot, Rule
+    TemplateComponentSlot, Rule
 )
-from decap_placer.placement.planner import PlacementPlanner
-from decap_placer.placement.services.via_planner import ViaPlanner
+from kicadspoke.placement.planner import PlacementPlanner
+from kicadspoke.placement.services.via_planner import ViaPlanner
 
 MM = 1_000_000
 
