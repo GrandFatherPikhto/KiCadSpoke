@@ -59,12 +59,19 @@ class TemplateComponentSlot:
     с этой ролью (см. placement/services/component_pool.py).
     Координаты локальные (along/across) — от нуля СПИЦЫ, не от самого
     компонента. via этого слота — та же локальная система, см. TemplateVia.
+
+    net_template — ОПЦИОНАЛЬНО, для TemplatePlacer (сопоставление роли
+    по цепям, а не по выделению): ожидаемая цепь этого компонента, тем же
+    синтаксисом плейсхолдеров, что и TemplateVia.net (см.
+    net_resolution.py). Для ManualSpoke/component_pool.py не используется
+    вообще — там роль ищется по (rule.net, Role), без своего поля здесь.
     """
     role: str
     offset_along_mm: float = 0.0
     offset_across_mm: float = 0.0
     angle_deg: float = 0.0
     vias: List[TemplateVia] = field(default_factory=list)
+    net_template: Optional[str] = None
 
 
 @dataclass
@@ -111,6 +118,33 @@ class Rule:
 
 
 @dataclass
+class ClonePlacement:
+    """
+    Применение шаблона на новом месте (TemplatePlacer/Cloner) — в отличие
+    от ManualSpoke (якорь = номер пада IC), якорь здесь — просто имя,
+    ни с каким конкретным компонентом не связанное (anchor_id в реестре
+    = f"name:{name}"). origin_x_mm/origin_y_mm/rotation_deg — АБСОЛЮТНАЯ
+    точка на плате (не смещение от чего-либо) и угол — вместе они играют
+    ту же роль, что pad+shift+rotation у ManualSpoke.
+
+    Сопоставление роль->ref — ЛИБО через текущее выделение на плате
+    (для редких, штучных секций типа одной MCU), ЛИБО через явные цепи
+    (params/nets/net_overrides — для многократно повторяющихся секций
+    вроде П-фильтров или каналов ЦАП). Наличие params ИЛИ nets означает
+    режим "по цепям"; их отсутствие — режим "по выделению".
+    """
+    name: str
+    template: str
+    origin_x_mm: float
+    origin_y_mm: float
+    rotation_deg: float = 0.0
+    nets: Dict[str, str] = field(default_factory=dict)      # role -> net (буквально)
+    params: Dict[str, Any] = field(default_factory=dict)     # для {placeholder} в net шаблона
+    net_overrides: Dict[str, str] = field(default_factory=dict)  # финальная подмена resolved-имени
+    enabled: bool = True
+
+
+@dataclass
 class Config:
     """Главный конфигурационный объект."""
     target_ref: str
@@ -118,6 +152,7 @@ class Config:
     templates: Dict[str, SpokeTemplate] = field(default_factory=dict)
     thermal_via_array: ThermalViaArrayConfig = field(default_factory=ThermalViaArrayConfig)
     rules: List[Rule] = field(default_factory=list)
+    clone_placements: List[ClonePlacement] = field(default_factory=list)
     place_components: bool = True
     skip_existing_components: bool = False
     # Параметры поиска свободного места -- сейчас используются только для
@@ -145,6 +180,7 @@ def _load_template_component_slot(data: Dict[str, Any]) -> TemplateComponentSlot
         offset_across_mm=data.get('offset_across_mm', 0.0),
         angle_deg=data.get('angle_deg', 0.0),
         vias=[_load_template_via(v) for v in data.get('vias', [])],
+        net_template=data.get('net_template'),
     )
 
 
@@ -179,6 +215,20 @@ def _load_manual_spoke(data: Dict[str, Any]) -> ManualSpoke:
     )
 
 
+def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
+    return ClonePlacement(
+        name=data['name'],
+        template=data['template'],
+        origin_x_mm=data['origin_x_mm'],
+        origin_y_mm=data['origin_y_mm'],
+        rotation_deg=data.get('rotation_deg', 0.0),
+        nets=data.get('nets', {}) or {},
+        params=data.get('params', {}) or {},
+        net_overrides=data.get('net_overrides', {}) or {},
+        enabled=data.get('enabled', True),
+    )
+
+
 def load_config(path: str) -> Config:
     logger.info(f"Загрузка конфигурации из {path}")
     with open(path, 'r', encoding='utf-8') as f:
@@ -206,12 +256,15 @@ def load_config(path: str) -> Config:
         spokes = [_load_manual_spoke(spoke_data) for spoke_data in rule_data.get('spokes', [])]
         rules.append(Rule(net=rule_data['net'], spokes=spokes))
 
+    clone_placements = [_load_clone_placement(cp) for cp in data.get('clone_placements', [])]
+
     cfg = Config(
         target_ref=data['target_ref'],
         side=data.get('side', 'back'),
         templates=templates,
         thermal_via_array=thermal_via,
         rules=rules,
+        clone_placements=clone_placements,
         place_components=data.get('place_components', True),
         skip_existing_components=data.get('skip_existing_components', False),
         via_keepout_clearance_mm=data.get('via_keepout_clearance_mm', 0.2),
@@ -221,5 +274,6 @@ def load_config(path: str) -> Config:
     )
     total_spokes = sum(len(r.spokes) for r in cfg.rules)
     logger.debug(f"Конфигурация загружена: target={cfg.target_ref}, side={cfg.side}, "
-                 f"шаблонов={len(cfg.templates)}, правил={len(cfg.rules)}, спиц={total_spokes}")
+                 f"шаблонов={len(cfg.templates)}, правил={len(cfg.rules)}, спиц={total_spokes}, "
+                 f"clone_placements={len(cfg.clone_placements)}")
     return cfg
