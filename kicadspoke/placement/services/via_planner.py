@@ -13,10 +13,12 @@ from ...utils.units import MM
 from ...exceptions import GeometryError, ComponentNotFoundError
 from ..commands import ViaCommand, PlacedComponentInfo
 
+from ..interfaces import IViaPlanner
+
 logger = logging.getLogger(__name__)
 
 
-class ViaPlanner:
+class ViaPlanner(IViaPlanner):
     """
     ИЗМЕНЕНО (KiCadSpoke, обобщённые via): via уровня спицы и уровня
     компонента теперь полностью вычисляются заранее в

@@ -11,10 +11,13 @@ from ..commands import PlacedComponentInfo, ViaCommand
 from ...registry import make_registry_key
 from .component_pool import ComponentPool
 
+from ..interfaces import IPositionCalculator
+
+
 logger = logging.getLogger(__name__)
 
 
-class ManualPositionCalculator:
+class ManualPositionCalculator(IPositionCalculator):
     """
     Ручное позиционирование компонентов и via по шаблонам спиц (см.
     geometry/spoke_layout.py). Геометрия зоны больше не нужна вообще —
