@@ -33,7 +33,7 @@ from typing import Dict, List, Optional
 from .placement.commands import ViaCommand
 from .utils.units import MM
 
-from constants import POSITION_TOLERANCE_MM, SPOKE_LEVEL_ROLE_PLACEHOLDER
+from .constants import POSITION_TOLERANCE_MM, SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 logger = logging.getLogger(__name__)
 
