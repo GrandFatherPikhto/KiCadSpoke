@@ -60,6 +60,7 @@ def test_owner_ref_matches_actual_command_not_first_in_batch():
     tmpdir = tempfile.mkdtemp()
     try:
         os.chdir(tmpdir)
+        executor = BatchExecutor(adapter, cfg, batch_size=10)
         executor.execute_vias([via_a, via_b])
         log_files = list(Path("logs").glob("*.json"))
         assert len(log_files) == 1

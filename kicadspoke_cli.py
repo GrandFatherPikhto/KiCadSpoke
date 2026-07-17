@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from kicadspoke.config import load_config
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner
-from kicadspoke.placement.executor import BatchExecutor
+from kicadspoke.placement.executor import BatchExecutor   # <-- новый путь
 from kicadspoke.exceptions import PlacerError
 from kicadspoke.undo import undo_last_operation
 from kicadspoke.validation import run_all_checks
@@ -61,13 +61,6 @@ def cmd_apply(args):
     planner = PlacementPlanner(adapter, cfg)
 
     if args.dry_run:
-        # Via больше НЕ зависят от живого пада компонента (обобщённые via
-        # — чистая геометрия от нуля спицы, см. geometry/spoke_layout.py)
-        # — поэтому, в отличие от прежних версий, здесь их можно честно
-        # показать. Единственная оговорка: keepout для термовиа всё ещё
-        # смотрит на ТЕКУЩИЕ (ещё не перемещённые в dry-run) позиции
-        # футпринтов — термовиа в dry-run могут отличаться от боевого
-        # прогона, если конденсаторы реально сдвинутся с текущих мест.
         moves = planner.plan_moves()
         vias = planner.plan_vias()
         print("\n=== DRY RUN ===")
@@ -96,9 +89,7 @@ def cmd_apply(args):
     if failed_refs:
         logger.warning(f"Не удалось переместить: {sorted(set(failed_refs))}")
 
-    # --- Перечитываем плату: термовиа (единственное, что по-прежнему
-    # зависит от живой платы) планируются по РЕАЛЬНЫМ, уже закоммиченным
-    # позициям, а не по расчётным "на бумаге" ---
+    # --- Перечитываем плату ---
     logger.info("Обновление данных платы перед планированием виа...")
     adapter.refresh_board()
 
