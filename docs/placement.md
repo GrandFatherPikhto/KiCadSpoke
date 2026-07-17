@@ -21,8 +21,15 @@ placement/
 ├── __init__.py                 # Экспорт публичных компонентов
 ├── collision.py                # Проверка коллизий компонентов (упрощённая)
 ├── commands.py                 # Структуры данных для команд и информации о компонентах
-├── executor.py                 # Исполнитель команд (флип, перемещение, создание via)
 ├── planner.py                  # Главный планировщик
+├── executor/                   # Исполнитель команд (разбит на модули)
+│   ├── __init__.py
+│   ├── base.py                 # Утилиты (layer_to_str)
+│   ├── batch_executor.py       # Фасад, объединяющий перемещения и via
+│   ├── move_executor.py        # Исполнение перемещений
+│   ├── via_executor.py         # Исполнение создания via
+│   ├── flip_manager.py         # Управление флипом компонентов
+│   └── operation_logger.py     # Логирование операций в JSON
 └── services/                   # Сервисные классы
     ├── __init__.py
     ├── clone_role_resolver.py  # Разрешение ролей для клонируемых размещений (TemplatePlacer)
@@ -41,8 +48,8 @@ placement/
 Экспортирует публичные классы для удобного импорта из других модулей (например, `from kicadspoke.placement import PlacementPlanner, BatchExecutor`).  
 Обычно содержит:
 ```python
-from .planner import PlacementPlanner
 from .executor import BatchExecutor
+from .planner import PlacementPlanner
 from .commands import MoveCommand, ViaCommand, PlacedComponentInfo
 ```
 
@@ -59,9 +66,9 @@ from .commands import MoveCommand, ViaCommand, PlacedComponentInfo
 |-------|------|----------|
 | `MoveCommand` | `ref: str`, `position: Vector2`, `angle: Angle`, `layer: BoardLayer` | Команда перемещения/поворота компонента. |
 | `ViaCommand` | `position: Vector2`, `drill_mm: float`, `diameter_mm: float`, `net_name: str`, `owner_ref: str`, `registry_key: Optional[str]` | Команда создания переходного отверстия. `registry_key` используется для реестра расстановки (см. `registry.py`). |
-| `PlacedComponentInfo` | `ref: str`, `dest: Vector2`, `angle_deg: float` | Информация о размещённом компоненте (передаётся от калькулятора к via-планировщику). В отличие от предыдущей версии, здесь нет полей для via – все via теперь вычисляются заранее в `ManualPositionCalculator`. |
+| `PlacedComponentInfo` | `ref: str`, `dest: Vector2`, `angle_deg: float` | Информация о размещённом компоненте (передаётся от калькулятора к via-планировщику). |
 
-**Используется в:** `planner.py`, `executor.py`, `manual_position_calculator.py`, `via_planner.py`, `registry.py`.
+**Используется в:** `planner.py`, `executor/`, `manual_position_calculator.py`, `via_planner.py`, `registry.py`.
 
 ---
 
@@ -78,32 +85,8 @@ from .commands import MoveCommand, ViaCommand, PlacedComponentInfo
 | `footprints_overlap(pos1, r1, pos2, r2, margin_mm)` | Проверяет перекрытие двух кругов с запасом. |
 | `check_collisions(moves, all_footprints, adapter, ignore_refs, margin_mm)` | Проверяет коллизии между перемещаемыми компонентами и остальными. Возвращает список конфликтных пар (ref1, ref2, расстояние). |
 
-**Используется в:** `executor.py` (опционально, при включённой проверке).  
+**Используется в:** `executor/move_executor.py` (опционально, при включённой проверке).  
 **Примечание:** проверка может давать ложные срабатывания, поэтому отключается флагом `--no-collision-check`.
-
----
-
-### `executor.py`
-
-**Назначение:**  
-Применяет команды перемещения и создания via к реальной плате через адаптер. Разделяет фазы (сначала перемещения, потом via) с обязательным перечитыванием платы между ними. Ведёт логирование для undo и поддерживает реестр расстановки.
-
-**Класс `BatchExecutor`:**
-
-| Метод | Описание |
-|-------|----------|
-| `__init__(adapter, config, batch_size)` | Инициализация с размером батча для коммитов. |
-| `execute_moves(moves, check_collisions, collision_margin_mm)` | Применяет только перемещения. Возвращает список refdes, которые не удалось применить. Сохраняет исходные состояния для undo. |
-| `execute_vias(vias, registry=None)` | Создаёт via. Возвращает список owner_ref'ов, для которых via не создались. Принимает опциональный `registry` для записи созданных via в реестр. **Исправлено:** теперь owner_ref в JSON-логе берётся точно для каждой via, а не приблизительно (batch[0].owner_ref). |
-| `execute(moves, vias, ...)` | Обратно совместимая обёртка (не рекомендуется для боевого использования – не перечитывает плату между фазами). |
-| `_needs_flip(cmd, fp_by_ref)` | Проверяет, нужно ли перевернуть компонент на целевой слой. |
-| `_flip_in_batches(refs, fp_by_ref)` | Переворачивает компоненты батчами через GUI-action. |
-| `_write_operation_log(move_log, via_log)` | Сохраняет JSON-лог операции для undo. |
-
-**Важно:**  
-После `execute_moves()` вызывающий код обязан выполнить `adapter.refresh_board()`, чтобы `execute_vias()` работала с актуальными данными (термовиа рассчитываются по реальному термопаду). Это реализовано в `kicadspoke_cli.py:cmd_apply()`.
-
-**Используется в:** `kicadspoke_cli.py` для выполнения плана.
 
 ---
 
@@ -119,10 +102,97 @@ from .commands import MoveCommand, ViaCommand, PlacedComponentInfo
 | `__init__(adapter, config)` | Инициализация, поиск целевого компонента (IC), определение слоя. |
 | `_already_in_place(ref, dest, angle_deg)` | Проверяет, находится ли компонент уже на целевой позиции (с учётом слоя, позиции и угла). Допуски: 0.01 мм по координатам, 0.1° по углу. |
 | `plan_moves()` | Вызывает `ManualPositionCalculator.compute_raw_positions()`, получает списки компонентов и via. Применяет `skip_existing_components` к компонентам. Возвращает список `MoveCommand`. Сохраняет `_planned` и `_planned_vias` для последующего использования в `plan_vias()`. |
-| `plan_vias()` | Вызывает `ViaPlanner.plan_vias()` с сохранёнными данными. Возвращает список `ViaCommand`. Применяет `skip_existing_components` к via (через `ViaPlanner`). |
+| `plan_vias()` | Вызывает `ViaPlanner.plan_vias()` с сохранёнными данными. Возвращает список `ViaCommand`. Применяет `skip_existing_components` к via (через `ViaPlanner` и реестр). |
 | `plan()` | Обратно совместимая обёртка (вызывает `plan_moves()` и `plan_vias()` подряд). Для боевого использования не рекомендуется (см. `kicadspoke_cli.py`). |
 
 **Используется в:** `kicadspoke_cli.py` для получения плана.
+
+---
+
+### `executor/` – Исполнитель команд
+
+Директория `executor/` разбита на несколько модулей для улучшения читаемости и тестируемости.
+
+#### `executor/base.py`
+
+**Назначение:**  
+Содержит общие утилиты, используемые всеми исполнителями.
+
+| Функция | Описание |
+|---------|----------|
+| `layer_to_str(layer)` | Преобразует `BoardLayer` в строку `"F.Cu"` или `"B.Cu"` (используется для логирования). |
+
+---
+
+#### `executor/operation_logger.py`
+
+**Назначение:**  
+Отвечает за запись JSON-логов операций для команды `undo`.
+
+**Класс `OperationLogger`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(log_dir)` | Создаёт папку для логов (по умолчанию `logs/`). |
+| `write_operation_log(move_log, via_log)` | Записывает JSON-файл с временной меткой. Возвращает путь к файлу или `None` при ошибке. |
+
+---
+
+#### `executor/flip_manager.py`
+
+**Назначение:**  
+Управляет переворотом (flip) компонентов на другую сторону платы. Использует `adapter.flip_selected` и батчирование.
+
+**Класс `FlipManager`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, batch_size)` | Инициализация с адаптером и размером батча. |
+| `flip_if_needed(moves)` | Проверяет, какие компоненты требуют флипа (слой отличается от целевого), выполняет флип батчами и возвращает обновлённый словарь `ref->footprint`. |
+
+---
+
+#### `executor/move_executor.py`
+
+**Назначение:**  
+Применяет перемещения компонентов к плате. Включает проверку коллизий, флип и батчирование.
+
+**Класс `MoveExecutor`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config, batch_size)` | Инициализация. |
+| `execute_moves(moves, check_collisions, collision_margin_mm)` | Выполняет перемещения. Возвращает `(failed_refs, move_log)`. |
+
+---
+
+#### `executor/via_executor.py`
+
+**Назначение:**  
+Создаёт via на плате. Использует реестр расстановки (если передан) для записи созданных via.
+
+**Класс `ViaExecutor`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config, batch_size)` | Инициализация. |
+| `execute_vias(vias, registry)` | Создаёт via батчами. Возвращает `(failed_via_owners, via_log)`. В случае успеха вызывает `registry.record_created()` для каждой via. |
+
+---
+
+#### `executor/batch_executor.py`
+
+**Назначение:**  
+Фасад, объединяющий `MoveExecutor` и `ViaExecutor`, а также управляющий логированием. Сохраняет совместимость со старым интерфейсом.
+
+**Класс `BatchExecutor`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config, batch_size)` | Инициализация. |
+| `execute_moves(moves, ...)` | Вызывает `MoveExecutor.execute_moves()` и сохраняет лог. |
+| `execute_vias(vias, registry)` | Вызывает `ViaExecutor.execute_vias()` и записывает единый JSON-лог (объединяя move_log и via_log). |
+| `execute(moves, vias, ...)` | Обратно совместимая обёртка (вызывает `execute_moves` и `execute_vias` подряд). Не рекомендуется для боевого использования. |
 
 ---
 
@@ -195,7 +265,7 @@ from .via_planner import ViaPlanner
 
 **Назначение:**  
 В текущей версии `ViaPlanner` отвечает только за:
-- Фильтрацию уже существующих via (идемпотентность) для всех via, переданных из `ManualPositionCalculator` (через `skip_existing_components`).
+- Фильтрацию уже существующих via (идемпотентность) для всех via, переданных из `ManualPositionCalculator` (через `skip_existing_components` и реестр).
 - Планирование термовиа (массива под термопадом) с поиском свободных мест через `find_free_point`.
 
 Все остальные via (уровня спицы и уровня компонента) уже рассчитаны в `ManualPositionCalculator` и передаются готовыми.
@@ -206,7 +276,7 @@ from .via_planner import ViaPlanner
 |-------|----------|
 | `__init__(adapter, config)` | Инициализация. |
 | `_via_already_exists(existing_vias, position, net_name)` | Проверяет, существует ли уже via с данной цепью в указанной позиции (с допуском 0.01 мм). |
-| `plan_vias(planned_components, planned_vias, target_fp, target_layer)` | Основной метод: фильтрует `planned_vias` через `skip_existing_components`, строит keepout для термовиа, вызывает `_plan_thermal_vias`. Возвращает итоговый список `ViaCommand`. |
+| `plan_vias(planned_components, planned_vias, target_fp, target_layer)` | Основной метод: фильтрует `planned_vias` через `skip_existing_components` и реестр, строит keepout для термовиа, вызывает `_plan_thermal_vias`. Возвращает итоговый список `ViaCommand`. |
 | `_build_keepout(target_fp, planned, exclude)` | Строит keepout из падов IC и компонентов (для термовиа). |
 | `_plan_thermal_vias(planned, target_fp, keepout, existing_vias)` | Генерирует термовиа по сетке с поиском свободных мест и пропуском существующих. |
 
@@ -221,7 +291,7 @@ from .via_planner import ViaPlanner
 - **`geometry/thermal_grid.py`** и **`geometry/keepout.py`** – используются в `via_planner.py` для термовиа и keepout.
 - **`config.py`** – предоставляет структуры данных (Config, ManualSpoke, SpokeTemplate, ClonePlacement и т.д.).
 - **`validation.py`** – выполняет предварительные проверки перед вызовом планировщика.
-- **`registry.py`** – используется в `kicadspoke_cli.py` для управления реестром via; `executor.py` передаёт в него созданные via.
+- **`registry.py`** – используется в `kicadspoke_cli.py` для управления реестром via; `executor/via_executor.py` передаёт в него созданные via.
 - **`net_resolution.py`** – используется в `clone_role_resolver.py` для разрешения цепей с плейсхолдерами.
 - **`utils/units.py`** – константа `MM` для перевода миллиметров в нанометры.
 
