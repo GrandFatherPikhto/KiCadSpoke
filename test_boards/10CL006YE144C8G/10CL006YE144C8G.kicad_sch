@@ -7969,7 +7969,7 @@
 				)
 			)
 		)
-		(property "Role" "LIGHT"
+		(property "Role" "PI_FILTER_C2"
 			(at 44.45 52.07 0)
 			(hide yes)
 			(show_name no)
@@ -8851,7 +8851,7 @@
 				)
 			)
 		)
-		(property "Role" "LIGHT"
+		(property "Role" "PI_FILTER_C2"
 			(at 44.45 30.48 0)
 			(hide yes)
 			(show_name no)
@@ -9306,6 +9306,17 @@
 				)
 			)
 		)
+		(property "Role" "PI_FILTER_C1"
+			(at 34.29 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "9aee5758-453e-4aa1-840c-51038f2bda17")
 		)
@@ -9380,6 +9391,16 @@
 		(property "Description" "Unpolarized capacitor"
 			(at 34.29 77.47 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PI_FILTER_C1"
+			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -11084,6 +11105,16 @@
 				)
 			)
 		)
+		(property "Role" "PI_FILTER_C1"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "50fbb987-29ae-4c4e-9f9c-ad17974d74ef")
 		)
@@ -11520,6 +11551,17 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 34.29 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PI_FILTER_C1"
 			(at 34.29 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -12629,6 +12671,17 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 85.09 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PI_FILTER_C3"
 			(at 85.09 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -15035,7 +15088,7 @@
 				)
 			)
 		)
-		(property "Role" "LIGHT"
+		(property "Role" "PI_FILTER_C2"
 			(at 44.45 77.47 0)
 			(hide yes)
 			(show_name no)
@@ -15954,18 +16007,7 @@
 				)
 			)
 		)
-		(property "TemplateRole" "LIGHT"
-			(at 44.45 102.87 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Role" "LIGHT"
+		(property "Role" "PI_FILTER_C2"
 			(at 44.45 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -16148,6 +16190,17 @@
 			)
 		)
 		(property "Description" "Ferrite bead"
+			(at 58.42 99.06 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PI_FILTER_FB"
 			(at 58.42 99.06 0)
 			(hide yes)
 			(show_name no)
@@ -16489,6 +16542,16 @@
 		(property "Description" "Ferrite bead"
 			(at 58.42 48.26 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PI_FILTER_FB"
+			(at 10.16 106.68 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -17881,6 +17944,17 @@
 			)
 		)
 		(property "Description" "Ferrite bead"
+			(at 58.42 26.67 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PI_FILTER_FB"
 			(at 58.42 26.67 0)
 			(hide yes)
 			(show_name no)
@@ -19417,6 +19491,16 @@
 				)
 			)
 		)
+		(property "Role" "PI_FILTER_C3"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "1db45669-fd37-4721-a9ea-979b305072e5")
 		)
@@ -20253,6 +20337,17 @@
 				)
 			)
 		)
+		(property "Role" "PI_FILTER_C3"
+			(at 85.09 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "1719044d-1576-4b6b-9633-c86b23533997")
 		)
@@ -20325,6 +20420,16 @@
 		(property "Description" "Ferrite bead"
 			(at 58.42 73.66 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PI_FILTER_FB"
+			(at -15.24 132.08 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -20407,6 +20512,16 @@
 		(property "Description" "Unpolarized capacitor"
 			(at 85.09 52.07 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PI_FILTER_C3"
+			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects

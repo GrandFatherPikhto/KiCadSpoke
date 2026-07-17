@@ -1,0 +1,16 @@
+target_ref: IC1
+side: back
+
+clone_placements:
+  - name: power_filter_vccint
+    template: pi_filter
+    origin_x_mm: 20.0
+    origin_y_mm: 20.0
+    rotation_deg: 0.0
+    enabled: true
+    params:
+      NET_IN: "+1V2"
+      NET_OUT: "+1V2_VCCINT"
+
+templates:
+  pi_filter: !include pi_filter.yaml

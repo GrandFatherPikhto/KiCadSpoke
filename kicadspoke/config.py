@@ -123,9 +123,13 @@ class ClonePlacement:
     Применение шаблона на новом месте (TemplatePlacer/Cloner) — в отличие
     от ManualSpoke (якорь = номер пада IC), якорь здесь — просто имя,
     ни с каким конкретным компонентом не связанное (anchor_id в реестре
-    = f"name:{name}"). origin_x_mm/origin_y_mm/rotation_deg — АБСОЛЮТНАЯ
-    точка на плате (не смещение от чего-либо) и угол — вместе они играют
-    ту же роль, что pad+shift+rotation у ManualSpoke.
+    = f"name:{name}"). Два режима позиционирования:
+      - anchor_ref задан: ноль = центр пада anchor_pad (или центр
+        футпринта, если anchor_pad нет), origin_x_mm/origin_y_mm —
+        необязательный ПЛОСКИЙ сдвиг от якоря (без поворота, как shift
+        у ManualSpoke), rotation_deg крутит только содержимое шаблона.
+      - anchor_ref не задан: origin_x_mm/origin_y_mm — АБСОЛЮТНАЯ
+        точка на плате (обязательны), как раньше.
 
     Сопоставление роль->ref — ЛИБО через текущее выделение на плате
     (для редких, штучных секций типа одной MCU), ЛИБО через явные цепи
@@ -142,7 +146,8 @@ class ClonePlacement:
     params: Dict[str, Any] = field(default_factory=dict)     # для {placeholder} в net шаблона
     net_overrides: Dict[str, str] = field(default_factory=dict)  # финальная подмена resolved-имени
     enabled: bool = True
-
+    anchor_ref: Optional[str] = None
+    anchor_pad: Optional[str] = None
 
 @dataclass
 class Config:
@@ -216,16 +221,39 @@ def _load_manual_spoke(data: Dict[str, Any]) -> ManualSpoke:
 
 
 def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
+    name = data['name']
+    anchor_ref = data.get('anchor_ref')
+    anchor_pad = data.get('anchor_pad')
+
+    if anchor_pad is not None and anchor_ref is None:
+        raise ValidationError(format_fatal_error(
+            f"anchor_pad без anchor_ref в clone_placement {name!r}",
+            [f"anchor_pad={anchor_pad!r} задан, но anchor_ref отсутствует — "
+             f"пад сам по себе ничего не значит, укажи чей он (anchor_ref: IC1)"]
+        ))
+
+    # В якорном режиме origin_x/y — необязательный сдвиг от якоря (0.0 по
+    # умолчанию, как shift у ManualSpoke). Без якоря — обязательная
+    # абсолютная точка, как раньше.
+    if anchor_ref is None and ('origin_x_mm' not in data or 'origin_y_mm' not in data):
+        raise ValidationError(format_fatal_error(
+            f"нет ни якоря, ни абсолютных координат в clone_placement {name!r}",
+            [f"укажи либо origin_x_mm/origin_y_mm (абсолютная точка на плате), "
+             f"либо anchor_ref (+ опционально anchor_pad) для привязки к компоненту"]
+        ))
+
     return ClonePlacement(
-        name=data['name'],
+        name=name,
         template=data['template'],
-        origin_x_mm=data['origin_x_mm'],
-        origin_y_mm=data['origin_y_mm'],
+        origin_x_mm=data.get('origin_x_mm', 0.0),
+        origin_y_mm=data.get('origin_y_mm', 0.0),
         rotation_deg=data.get('rotation_deg', 0.0),
         nets=data.get('nets', {}) or {},
         params=data.get('params', {}) or {},
         net_overrides=data.get('net_overrides', {}) or {},
         enabled=data.get('enabled', True),
+        anchor_ref=anchor_ref,
+        anchor_pad=str(anchor_pad) if anchor_pad is not None else None,
     )
 
 

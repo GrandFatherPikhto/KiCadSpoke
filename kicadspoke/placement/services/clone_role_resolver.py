@@ -119,8 +119,16 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
             if expected_net in nets_on_fp:
                 matched.append(fp)
 
-        if not matched:
-            problems.append(f"роль {role!r}: не найден компонент на цепи {expected_net!r}")
+        if not candidates:
+            problems.append(f"роль {role!r}: НИ ОДНОГО компонента с такой ролью на плате вообще "
+                            f"(проверьте поле Role в схеме, и что Update PCB from Schematic выполнялся)")
+        elif not matched:
+            found_nets = sorted({n for fp in candidates for n in
+                                 {p.net.name for p in adapter.get_footprint_pads(fp) if p.net and p.net.name}})
+            refs = sorted(fp.reference_field.text.value for fp in candidates)
+            problems.append(f"роль {role!r}: компонент(ы) {refs} с этой ролью на плате ЕСТЬ, "
+                            f"но ни один не сидит на цепи {expected_net!r} — реально они на "
+                            f"{found_nets} (проверьте params/имя цепи или подключение на схеме)")
         elif len(matched) > 1:
             refs = sorted(fp.reference_field.text.value for fp in matched)
             problems.append(f"роль {role!r}: неоднозначность — несколько компонентов "

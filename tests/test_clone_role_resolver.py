@@ -178,3 +178,65 @@ class TestResolveRolesByNets:
         clone = ClonePlacement(name="z", template="t4", origin_x_mm=0, origin_y_mm=0, nets={"X": "NO_SUCH_NET"})
         with pytest.raises(ValidationError, match="NO_SUCH_NET"):
             resolve_roles_by_nets(adapter, tpl, clone)
+
+    def test_no_role_at_all_gives_distinct_message(self):
+        """Роли на плате вообще нет (ни одного футпринта с таким Role) —
+        сообщение должно явно отличаться от 'есть, но не на той цепи'."""
+        tpl = SpokeTemplate(name="t5", components=[TemplateComponentSlot(role="NONEXISTENT_ROLE")])
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = []  # вообще ничего на плате
+        clone = ClonePlacement(name="z", template="t5", origin_x_mm=0, origin_y_mm=0,
+                              nets={"NONEXISTENT_ROLE": "GND"})
+        with pytest.raises(ValidationError, match="НИ ОДНОГО компонента с такой ролью"):
+            resolve_roles_by_nets(adapter, tpl, clone)
+
+    def test_role_exists_wrong_net_gives_distinct_message_with_real_nets(self):
+        """Компонент(ы) с ролью реально есть, но не на ожидаемой цепи —
+        сообщение должно назвать, на каких цепях они реально сидят."""
+        tpl = SpokeTemplate(name="t6", components=[TemplateComponentSlot(role="X")])
+        fps = [_make_fp("A", "X", ["ACTUAL_NET"])]
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = fps
+        adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprint_pads.side_effect = _get_pads
+
+        clone = ClonePlacement(name="z", template="t6", origin_x_mm=0, origin_y_mm=0, nets={"X": "EXPECTED_NET"})
+        with pytest.raises(ValidationError, match="ACTUAL_NET") as exc_info:
+            resolve_roles_by_nets(adapter, tpl, clone)
+        msg = str(exc_info.value)
+        assert "A" in msg
+        assert "ЕСТЬ" in msg  # отличается от "НИ ОДНОГО"
+
+    def test_realistic_scenario_some_roles_ok_some_missing_some_wrong_net(self):
+        """
+        Реальный сценарий: 4 роли фильтра, где часть компонентов
+        физически не подключена к ожидаемой цепи -- итоговое сообщение
+        должно чётко разграничить каждую роль по причине отказа.
+        """
+        tpl = SpokeTemplate(name="pi_filter", components=[
+            TemplateComponentSlot(role="PI_FILTER_C1", net_template="{NET_IN}"),
+            TemplateComponentSlot(role="PI_FILTER_C2", net_template="{NET_IN}"),
+            TemplateComponentSlot(role="PI_FILTER_FB", net_template="{NET_OUT}"),
+            TemplateComponentSlot(role="FB_FILTER_C3", net_template="{NET_OUT}"),
+        ])
+        # PI_FILTER_C1/C2 -- компонентов с такой ролью вообще нет на плате.
+        # PI_FILTER_FB -- есть, но сидит на другой цепи.
+        # FB_FILTER_C3 -- есть и корректно подключена.
+        fps = [
+            _make_fp("C99", "PI_FILTER_FB", ["+3V3"]),       # не та цепь (ожидали +3V3_VCCIO)
+            _make_fp("C100", "FB_FILTER_C3", ["+3V3_VCCIO"]),  # верно
+        ]
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = fps
+        adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprint_pads.side_effect = _get_pads
+
+        clone = ClonePlacement(name="power_filter_vccio", template="pi_filter", origin_x_mm=0, origin_y_mm=0,
+                              params={"NET_IN": "+3V3", "NET_OUT": "+3V3_VCCIO"})
+        with pytest.raises(ValidationError) as exc_info:
+            resolve_roles_by_nets(adapter, tpl, clone)
+        msg = str(exc_info.value)
+        assert "PI_FILTER_C1" in msg and "НИ ОДНОГО" in msg
+        assert "PI_FILTER_C2" in msg
+        assert "PI_FILTER_FB" in msg and "C99" in msg and "+3V3" in msg
+        assert "FB_FILTER_C3" not in msg  # эта роль резолвилась успешно, в проблемах её быть не должно

@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "D:\\Projects\\Python\\KiCadSpoke\\test_boards\\10CL006YE144C8G\\10CL006YE144C8G.kicad_sch")
-		(date "2026-07-12T19:35:40")
+		(date "2026-07-17T15:07:59")
 		(tool "Eeschema 10.0.4")
 		(sheet
 			(number "1")
@@ -61,6 +61,8 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "Role") "PI_FILTER_C1")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -72,6 +74,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_C1")
 			)
 			(property
 				(name "Sheetname")
@@ -115,6 +121,8 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "Role") "PI_FILTER_C1")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -126,6 +134,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_C1")
 			)
 			(property
 				(name "Sheetname")
@@ -169,6 +181,8 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "Role") "PI_FILTER_C1")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -180,6 +194,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_C1")
 			)
 			(property
 				(name "Sheetname")
@@ -223,6 +241,8 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "Role") "FB_FILTER_C1")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -234,6 +254,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "FB_FILTER_C1")
 			)
 			(property
 				(name "Sheetname")
@@ -277,6 +301,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -288,6 +316,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -331,6 +367,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -342,6 +382,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -385,6 +433,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -396,6 +448,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -439,6 +499,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -450,6 +514,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -493,6 +565,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -504,6 +580,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -547,6 +631,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -558,6 +646,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -601,6 +697,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -612,6 +712,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -655,6 +763,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -666,6 +778,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -709,6 +829,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -720,6 +844,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -763,6 +895,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -774,6 +910,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -795,7 +939,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "3d044dfe-2fe1-4225-9bec-40e388b3706e")
+			(tstamps "5ec3fea8-c048-4eb8-a0ce-e55d33b6447d")
 			(units
 				(unit
 					(name "A")
@@ -817,6 +961,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -828,6 +976,146 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "b7ab4529-7350-467a-8bd9-8d17637c6dbf")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C16")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "ae8ec47c-c30d-447e-bd4a-b406be010599")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C17")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "PI_FILTER_C2")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_C2")
 			)
 			(property
 				(name "Sheetname")
@@ -865,11 +1153,15 @@
 			)
 		)
 		(comp
-			(ref "C16")
+			(ref "C18")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "PI_FILTER_C2")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
@@ -882,6 +1174,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_C2")
 			)
 			(property
 				(name "Sheetname")
@@ -919,11 +1219,15 @@
 			)
 		)
 		(comp
-			(ref "C17")
+			(ref "C19")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "PI_FILTER_C2")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
@@ -936,6 +1240,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_C2")
 			)
 			(property
 				(name "Sheetname")
@@ -973,11 +1285,13 @@
 			)
 		)
 		(comp
-			(ref "C18")
+			(ref "C20")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "FB_FILTER_C2")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
@@ -990,6 +1304,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "FB_FILTER_C2")
 			)
 			(property
 				(name "Sheetname")
@@ -1027,606 +1345,16 @@
 			)
 		)
 		(comp
-			(ref "C19")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "999811f6-1a1b-424b-82ee-6b9d2312308c")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C20")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "8db97dcd-49e1-411d-9abe-65714e63b247")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
 			(ref "C21")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "82d8baf5-3d2b-4993-9ee2-f84ee8d6f1fb")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C22")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "d97ce90b-c0b8-4176-82bc-8dcf2763f6b9")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C23")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "5259a336-c038-4b14-8210-f986e8a08dc0")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C24")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "ad78865d-82dd-424f-a0bd-36fc476a5811")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C25")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "80bd67d6-5167-4b7f-b85b-ae8357b11c89")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C26")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "906a9611-8826-4e07-818a-0463a54218ec")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C27")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "46a88b2d-1d4a-4265-b1a4-f7cdeaab9dba")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C28")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "74f215e9-280c-4647-a1b4-411e0c2b8a3f")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C29")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "c6796f11-a1c9-4095-a73d-cf8191013857")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C30")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -1638,6 +1366,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -1675,11 +1411,15 @@
 			)
 		)
 		(comp
-			(ref "C31")
+			(ref "C22")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1692,6 +1432,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -1729,11 +1477,15 @@
 			)
 		)
 		(comp
-			(ref "C32")
+			(ref "C23")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1743,9 +1495,17 @@
 					(name "Description") "Unpolarized capacitor")
 			)
 			(libsource
-				(lib "Device")
-				(part "C")
+				(lib "")
+				(part "C_1")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -1783,11 +1543,15 @@
 			)
 		)
 		(comp
-			(ref "C33")
+			(ref "C24")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1800,6 +1564,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -1837,11 +1609,15 @@
 			)
 		)
 		(comp
-			(ref "C34")
+			(ref "C25")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1854,6 +1630,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -1891,11 +1675,15 @@
 			)
 		)
 		(comp
-			(ref "C35")
+			(ref "C26")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1908,6 +1696,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -1945,11 +1741,15 @@
 			)
 		)
 		(comp
-			(ref "C36")
+			(ref "C27")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1962,6 +1762,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -1999,11 +1807,15 @@
 			)
 		)
 		(comp
-			(ref "C37")
+			(ref "C28")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2016,6 +1828,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2053,13 +1873,17 @@
 			)
 		)
 		(comp
-			(ref "C38")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(ref "C29")
+			(value "4.7 uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -2070,6 +1894,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2091,7 +1923,601 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "98c1986c-c477-4c33-b718-fcc796b333b5")
+			(tstamps "9c0ce0c4-b60f-4e0c-a527-eed69c801d01")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C30")
+			(value "4.7 uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "94935ccd-4d11-4080-9ca2-f9c20c45582c")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C31")
+			(value "4.7 uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "8a713236-40a6-4709-ba3c-fe1e7624e637")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C32")
+			(value "4.7 uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "070cde17-e9bb-49ab-a1fc-32cfdac20dbe")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C33")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "999811f6-1a1b-424b-82ee-6b9d2312308c")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C34")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "8db97dcd-49e1-411d-9abe-65714e63b247")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C35")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "82d8baf5-3d2b-4993-9ee2-f84ee8d6f1fb")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C36")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "d97ce90b-c0b8-4176-82bc-8dcf2763f6b9")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C37")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "5259a336-c038-4b14-8210-f986e8a08dc0")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C38")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "ad78865d-82dd-424f-a0bd-36fc476a5811")
 			(units
 				(unit
 					(name "A")
@@ -2113,6 +2539,10 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
@@ -2124,6 +2554,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -2145,7 +2583,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "d78c219d-4ee6-4f05-9b4a-af01c6576b3e")
+			(tstamps "80bd67d6-5167-4b7f-b85b-ae8357b11c89")
 			(units
 				(unit
 					(name "A")
@@ -2162,10 +2600,80 @@
 		)
 		(comp
 			(ref "C40")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "906a9611-8826-4e07-818a-0463a54218ec")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C41")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2178,6 +2686,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2215,11 +2731,15 @@
 			)
 		)
 		(comp
-			(ref "C41")
+			(ref "C42")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2232,6 +2752,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2269,11 +2797,15 @@
 			)
 		)
 		(comp
-			(ref "C42")
+			(ref "C43")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2286,6 +2818,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2323,11 +2863,15 @@
 			)
 		)
 		(comp
-			(ref "C43")
+			(ref "C44")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2340,6 +2884,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2377,11 +2929,15 @@
 			)
 		)
 		(comp
-			(ref "C44")
+			(ref "C45")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2394,6 +2950,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2431,11 +2995,15 @@
 			)
 		)
 		(comp
-			(ref "C45")
+			(ref "C46")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2448,6 +3016,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2485,11 +3061,15 @@
 			)
 		)
 		(comp
-			(ref "C46")
+			(ref "C47")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2502,6 +3082,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2539,11 +3127,15 @@
 			)
 		)
 		(comp
-			(ref "C47")
-			(value "1uF")
+			(ref "C48")
+			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2556,6 +3148,74 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "6fc5b42b-6b37-4db6-a041-39915251f0b5")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C49")
+			(value "1uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Role") "FB_FILTER_C3")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "FB_FILTER_C3")
 			)
 			(property
 				(name "Sheetname")
@@ -2593,11 +3253,13 @@
 			)
 		)
 		(comp
-			(ref "C48")
+			(ref "C50")
 			(value "1uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "FB_FILTER_C3")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2610,6 +3272,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "FB_FILTER_C3")
 			)
 			(property
 				(name "Sheetname")
@@ -2647,11 +3313,13 @@
 			)
 		)
 		(comp
-			(ref "C49")
+			(ref "C51")
 			(value "1uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "FB_FILTER_C3")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2664,6 +3332,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "FB_FILTER_C3")
 			)
 			(property
 				(name "Sheetname")
@@ -2701,11 +3373,13 @@
 			)
 		)
 		(comp
-			(ref "C50")
+			(ref "C52")
 			(value "1uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "FB_FILTER_C3")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2718,6 +3392,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "FB_FILTER_C3")
 			)
 			(property
 				(name "Sheetname")
@@ -2755,119 +3433,147 @@
 			)
 		)
 		(comp
-			(ref "C51")
-			(value "4.7 uF")
-			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "b437a51f-7566-4f8c-b6ed-b80dd4b1cb07")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C52")
-			(value "4.7 uF")
-			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "2e1f4b65-dbff-4bb6-a084-3a0789d3729d")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
 			(ref "C53")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "98c1986c-c477-4c33-b718-fcc796b333b5")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C54")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "d78c219d-4ee6-4f05-9b4a-af01c6576b3e")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C55")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2880,6 +3586,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2917,11 +3631,15 @@
 			)
 		)
 		(comp
-			(ref "C54")
+			(ref "C56")
 			(value "4.7 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -2934,6 +3652,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -2971,65 +3697,15 @@
 			)
 		)
 		(comp
-			(ref "C55")
-			(value "1uF")
-			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
-			)
-			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "1b8db370-c6c2-444f-9f20-5d4e5b0a8592")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C56")
+			(ref "C57")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
@@ -3044,58 +3720,12 @@
 				(description "Unpolarized capacitor")
 			)
 			(property
-				(name "Sheetname")
-				(value "10CL006YE144C8G")
+				(name "TemplateRole")
+				(value "LIGHT")
 			)
 			(property
-				(name "Sheetfile")
-				(value "10CL006YE144C8G.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "f6772dc0-53e8-47a4-bdde-005ce7228f00")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C57")
-			(value "1uF")
-			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -3117,7 +3747,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "024870b6-fc23-4f4b-8c62-d49629c8f837")
+			(tstamps "74f215e9-280c-4647-a1b4-411e0c2b8a3f")
 			(units
 				(unit
 					(name "A")
@@ -3134,12 +3764,16 @@
 		)
 		(comp
 			(ref "C58")
-			(value "1uF")
-			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+					(name "TemplateRole") "LIGHT")
+				(field
+					(name "Role") "LIGHT")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -3150,6 +3784,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "LIGHT")
+			)
+			(property
+				(name "Role")
+				(value "LIGHT")
 			)
 			(property
 				(name "Sheetname")
@@ -3171,7 +3813,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "d6acae30-988e-489c-8383-d2d6ec7b674a")
+			(tstamps "c6796f11-a1c9-4095-a73d-cf8191013857")
 			(units
 				(unit
 					(name "A")
@@ -3188,12 +3830,16 @@
 		)
 		(comp
 			(ref "C59")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(value "4.7 uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -3204,6 +3850,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -3225,7 +3879,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "31d12f85-978c-4b31-8ae5-afbf7ffd20a7")
+			(tstamps "b437a51f-7566-4f8c-b6ed-b80dd4b1cb07")
 			(units
 				(unit
 					(name "A")
@@ -3242,12 +3896,16 @@
 		)
 		(comp
 			(ref "C60")
-			(value "100 nF")
-			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(value "4.7 uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+					(name "TemplateRole") "HEAVY")
+				(field
+					(name "Role") "HEAVY")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -3258,6 +3916,14 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "TemplateRole")
+				(value "HEAVY")
+			)
+			(property
+				(name "Role")
+				(value "HEAVY")
 			)
 			(property
 				(name "Sheetname")
@@ -3279,7 +3945,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "2d69b1d7-95b1-4f6b-9f4d-5ab9bdcd3dd1")
+			(tstamps "2e1f4b65-dbff-4bb6-a084-3a0789d3729d")
 			(units
 				(unit
 					(name "A")
@@ -3333,7 +3999,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "77f469c7-b283-4a46-abbc-20ab562b5cc7")
+			(tstamps "1b8db370-c6c2-444f-9f20-5d4e5b0a8592")
 			(units
 				(unit
 					(name "A")
@@ -3350,6 +4016,330 @@
 		)
 		(comp
 			(ref "C62")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "f6772dc0-53e8-47a4-bdde-005ce7228f00")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C63")
+			(value "1uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "d6acae30-988e-489c-8383-d2d6ec7b674a")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C64")
+			(value "1uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "024870b6-fc23-4f4b-8c62-d49629c8f837")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C65")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "2d69b1d7-95b1-4f6b-9f4d-5ab9bdcd3dd1")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C66")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "31d12f85-978c-4b31-8ae5-afbf7ffd20a7")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C67")
+			(value "1uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "10CL006YE144C8G")
+			)
+			(property
+				(name "Sheetfile")
+				(value "10CL006YE144C8G.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "77f469c7-b283-4a46-abbc-20ab562b5cc7")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C68")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder")
 			(description "Unpolarized capacitor")
@@ -3409,6 +4399,8 @@
 			(description "Ferrite bead")
 			(fields
 				(field
+					(name "Role") "PI_FILTER_FB")
+				(field
 					(name "Footprint") "Inductor_SMD:L_0402_1005Metric")
 				(field
 					(name "Datasheet")
@@ -3420,6 +4412,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM15PD121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -3463,6 +4459,8 @@
 			(description "Ferrite bead")
 			(fields
 				(field
+					(name "Role") "PI_FILTER_FB")
+				(field
 					(name "Footprint") "Inductor_SMD:L_0402_1005Metric")
 				(field
 					(name "Datasheet")
@@ -3474,6 +4472,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM15PD121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -3517,6 +4519,8 @@
 			(description "Ferrite bead")
 			(fields
 				(field
+					(name "Role") "PI_FILTER_FB")
+				(field
 					(name "Footprint") "Inductor_SMD:L_0402_1005Metric")
 				(field
 					(name "Datasheet")
@@ -3528,6 +4532,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM15PD121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -3571,6 +4579,8 @@
 			(description "Ferrite bead")
 			(fields
 				(field
+					(name "Role") "FB_FILTER_FB")
+				(field
 					(name "Footprint") "Inductor_SMD:L_0402_1005Metric")
 				(field
 					(name "Datasheet")
@@ -3582,6 +4592,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM15PD121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "FB_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -4269,7 +5283,7 @@
 		)
 		(comp
 			(ref "R2")
-			(value "4.7K")
+			(value "2R2")
 			(footprint "Resistor_SMD:R_0402_1005Metric_Pad0.72x0.64mm_HandSolder")
 			(description "Resistor")
 			(fields
@@ -4306,7 +5320,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "7c0b3801-ef86-4f1c-8845-edfcaccdb5f3")
+			(tstamps "db2f7632-74f8-4096-93f6-db5b20a5bc97")
 			(units
 				(unit
 					(name "A")
@@ -4414,7 +5428,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "db2f7632-74f8-4096-93f6-db5b20a5bc97")
+			(tstamps "d188374f-5a65-4964-b4c6-adcf5c7575c7")
 			(units
 				(unit
 					(name "A")
@@ -4468,7 +5482,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "d188374f-5a65-4964-b4c6-adcf5c7575c7")
+			(tstamps "4dbef920-e160-4c62-a4c1-28c474217f9b")
 			(units
 				(unit
 					(name "A")
@@ -4485,7 +5499,7 @@
 		)
 		(comp
 			(ref "R6")
-			(value "2R2")
+			(value "4.7K")
 			(footprint "Resistor_SMD:R_0402_1005Metric_Pad0.72x0.64mm_HandSolder")
 			(description "Resistor")
 			(fields
@@ -4522,7 +5536,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "4dbef920-e160-4c62-a4c1-28c474217f9b")
+			(tstamps "7c0b3801-ef86-4f1c-8845-edfcaccdb5f3")
 			(units
 				(unit
 					(name "A")
@@ -4997,6 +6011,40 @@
 	(groups)
 	(variants)
 	(libparts
+		(libpart
+			(lib "")
+			(part "C_1")
+			(description "Unpolarized capacitor")
+			(footprints
+				(fp "C_*")
+			)
+			(fields
+				(field
+					(name "Reference") "C")
+				(field
+					(name "Value") "C")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "")
+					(type "passive")
+				)
+			)
+		)
 		(libpart
 			(lib "Connector_Generic")
 			(part "Conn_02x05_Odd_Even")
@@ -6077,12 +7125,12 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C15")
+				(ref "C17")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C16")
+				(ref "C18")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6107,17 +7155,7 @@
 			(name "+1V2_VCCD_PLL")
 			(class "Default")
 			(node
-				(ref "C38")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C39")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C48")
+				(ref "C50")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6128,6 +7166,16 @@
 			)
 			(node
 				(ref "C54")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C55")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C56")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6154,47 +7202,37 @@
 			(name "+1V2_VCCINT")
 			(class "Default")
 			(node
-				(ref "C19")
+				(ref "C33")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C20")
+				(ref "C34")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C21")
+				(ref "C35")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C22")
+				(ref "C36")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C23")
+				(ref "C37")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C24")
+				(ref "C38")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C25")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C26")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C27")
+				(ref "C39")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6235,6 +7273,16 @@
 			)
 			(node
 				(ref "C47")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C48")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C49")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6297,7 +7345,7 @@
 			(name "+2V5")
 			(class "Default")
 			(node
-				(ref "C17")
+				(ref "C19")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6317,27 +7365,27 @@
 			(name "+2V5_VCCA")
 			(class "Default")
 			(node
-				(ref "C28")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C29")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C49")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
 				(ref "C51")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C52")
+				(ref "C57")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C58")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C59")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C60")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6370,7 +7418,7 @@
 			(name "+3V3")
 			(class "Default")
 			(node
-				(ref "C18")
+				(ref "C20")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6380,22 +7428,22 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C55")
+				(ref "C61")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C56")
+				(ref "C62")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C58")
+				(ref "C63")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C60")
+				(ref "C65")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6405,7 +7453,7 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "R5")
+				(ref "R4")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6420,22 +7468,22 @@
 			(name "+3V3_FLASH")
 			(class "Default")
 			(node
-				(ref "C61")
+				(ref "C67")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C62")
+				(ref "C68")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R4")
+				(ref "R2")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R6")
+				(ref "R5")
 				(pin "2")
 				(pintype "passive")
 			)
@@ -6456,12 +7504,12 @@
 			(name "+3V3_OSCILL")
 			(class "Default")
 			(node
-				(ref "C57")
+				(ref "C64")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C59")
+				(ref "C66")
 				(pin "2")
 				(pintype "passive")
 			)
@@ -6471,7 +7519,7 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "R5")
+				(ref "R4")
 				(pin "2")
 				(pintype "passive")
 			)
@@ -6512,6 +7560,61 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "C15")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C16")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C21")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C22")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C23")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C24")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C25")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C26")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C27")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C28")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C29")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
 				(ref "C30")
 				(pin "1")
 				(pintype "passive")
@@ -6527,37 +7630,12 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C33")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C34")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C35")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C36")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C37")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
 				(ref "C5")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C50")
+				(ref "C52")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6871,7 +7949,7 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "R2")
+				(ref "R6")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6942,7 +8020,7 @@
 			(name "/FL_HOLD")
 			(class "Default")
 			(node
-				(ref "R4")
+				(ref "R2")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -6958,7 +8036,7 @@
 			(name "/FL_WP")
 			(class "Default")
 			(node
-				(ref "R6")
+				(ref "R5")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -7245,7 +8323,7 @@
 			)
 			(node
 				(ref "C59")
-				(pin "1")
+				(pin "2")
 				(pintype "passive")
 			)
 			(node
@@ -7265,6 +8343,36 @@
 			)
 			(node
 				(ref "C62")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C63")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C64")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C65")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C66")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C67")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C68")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -7440,7 +8548,7 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "R2")
+				(ref "R6")
 				(pin "2")
 				(pintype "passive")
 			)

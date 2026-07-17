@@ -1,0 +1,60 @@
+target_ref: IC1
+side: front
+clone_placements:
+  - name: pi_filter_vccio
+    template: pi_filter
+    anchor_ref: IC1
+    anchor_pad: '17'
+    origin_x_mm: 50.0
+    origin_y_mm: 50.0
+    rotation_deg: 0.0
+    enabled: true
+    params:
+      NET_IN: "+3V3"
+      NET_OUT: "+3V3_VCCIO"
+    nets:
+      PI_FILTER_C1: "+3V3"
+      PI_FILTER_C2: "+3V3"
+      PI_FILTER_FB: "+3V3_VCCIO"
+      PI_FILTER_C3: "+3V3_VCCIO"
+
+templates: 
+  pi_filter:
+    vias:
+    - offset_along_mm: 0.0
+      offset_across_mm: -2.82
+      net: "{NET_IN}"
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 1.35
+      offset_across_mm: 0.0
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 2.82
+      offset_across_mm: -1.69
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 3.17
+      offset_across_mm: -0.18
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    components:
+    - role: PI_FILTER_C2
+      offset_along_mm: 3.6375
+      offset_across_mm: -2.255
+      angle_deg: -90.0
+    - role: PI_FILTER_C1
+      offset_along_mm: 1.34
+      offset_across_mm: -1.96
+      angle_deg: -90.0
+    - role: PI_FILTER_C3
+      offset_along_mm: 5.2325
+      offset_across_mm: -0.18
+      angle_deg: 180.0
+    - role: PI_FILTER_FB
+      offset_along_mm: 5.61
+      offset_across_mm: -2.8225
+      angle_deg: 0.0
