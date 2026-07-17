@@ -10,6 +10,7 @@ from ..kicad.adapter import KiCadBoardAdapter
 from ..utils.units import MM
 from .services.via_planner import ViaPlanner
 from .services.manual_position_calculator import ManualPositionCalculator
+from .services.clone_position_calculator import ClonePositionCalculator
 from ..exceptions import ComponentNotFoundError
 from .commands import MoveCommand, ViaCommand
 
@@ -22,6 +23,7 @@ class PlacementPlanner:
         self.adapter = adapter
         self.cfg = config
         self.position_calc = ManualPositionCalculator(adapter, config)
+        self.clone_calc = ClonePositionCalculator(adapter, config)
         self._target_fp = adapter.get_footprint(config.target_ref)
         if self._target_fp is None:
             raise ComponentNotFoundError(f"Целевой компонент {config.target_ref} не найден")
@@ -52,21 +54,31 @@ class PlacementPlanner:
         return angle_diff <= self._ANGLE_TOLERANCE_DEG
 
     def plan_moves(self) -> List[MoveCommand]:
-        if not self.cfg.place_components:
-            self._planned = []
-            self._planned_vias = []
+        self._planned = []
+        self._planned_vias = []
+
+        if self.cfg.place_components and self.cfg.rules:
+            placed, planned_vias = self.position_calc.compute_raw_positions(
+                self._target_fp,
+                self.cfg.rules,
+                self.cfg.side
+            )
+            self._planned.extend(placed)
+            self._planned_vias.extend(planned_vias)
+        elif not self.cfg.rules:
+            logger.debug("rules пуст — компоненты/via по ManualSpoke не планируются")
+        else:
             logger.info("place_components=False – перемещения конденсаторов не планируются")
-            return []
-        placed, planned_vias = self.position_calc.compute_raw_positions(
-            self._target_fp,
-            self.cfg.rules,
-            self.cfg.side
-        )
+
+        if self.cfg.clone_placements:
+            clone_placed, clone_vias = self.clone_calc.compute_raw_positions(self.cfg.clone_placements)
+            self._planned.extend(clone_placed)
+            self._planned_vias.extend(clone_vias)
+            logger.info(f"ClonePlacement: {len(clone_placed)} компонентов, {len(clone_vias)} via")
+
         moves = []
-        self._planned = placed
-        self._planned_vias = planned_vias
         skipped = 0
-        for info in placed:
+        for info in self._planned:
             if self.cfg.skip_existing_components and self._already_in_place(info.ref, info.dest, info.angle_deg):
                 skipped += 1
                 logger.debug(f"  {info.ref}: уже на месте, перемещение пропущено (skip_existing_components)")

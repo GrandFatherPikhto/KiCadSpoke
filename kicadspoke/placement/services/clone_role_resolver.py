@@ -35,6 +35,16 @@ from .component_pool import ROLE_FIELD_NAME
 logger = logging.getLogger(__name__)
 
 
+def clone_uses_selection_mode(clone: ClonePlacement) -> bool:
+    """
+    Режим "по выделению", если не заданы ни nets, ни params — иначе "по
+    цепям". Единственное место, где принимается это решение — и
+    ClonePositionCalculator, и validation.py должны спрашивать именно
+    здесь, а не дублировать правило у себя.
+    """
+    return not (clone.nets or clone.params)
+
+
 def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone_name: str) -> Dict[str, str]:
     """Сопоставление по текущему выделению на плате."""
     items = adapter.get_selected_items()

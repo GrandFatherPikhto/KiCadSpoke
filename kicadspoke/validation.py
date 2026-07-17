@@ -18,6 +18,7 @@ from .config import Config
 from .kicad.adapter import KiCadBoardAdapter
 from .exceptions import ValidationError, format_fatal_error
 from .placement.services.component_pool import ComponentPool
+from .placement.services.clone_role_resolver import clone_uses_selection_mode
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +96,47 @@ def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None
     logger.debug("Проверка достаточности пулов по ролям: всё сходится")
 
 
+def check_clone_templates_exist(cfg: Config) -> None:
+    """
+    Каждый ClonePlacement должен ссылаться на существующий шаблон — чисто
+    конфиговая проверка, живой платы не требует вообще.
+    """
+    problems = []
+    for clone in cfg.clone_placements:
+        if not clone.enabled:
+            continue
+        if clone.template not in cfg.templates:
+            problems.append(f"clone_placements {clone.name!r}: шаблон {clone.template!r} не найден в templates")
+    if problems:
+        raise ValidationError(format_fatal_error("clone_placements ссылается на несуществующий шаблон", problems))
+    logger.debug("Проверка шаблонов clone_placements: все ссылки корректны")
+
+
+def check_single_selection_based_clone(cfg: Config) -> None:
+    """
+    В KiCad в любой момент активно ТОЛЬКО ОДНО выделение — значит, за один
+    прогон нельзя обработать больше одного ClonePlacement в режиме "по
+    выделению" (нет ни nets, ни params). Если их больше одного — фатально,
+    с подсказкой либо выключить лишние (enabled: false), либо запускать
+    apply отдельно на каждый через --clone-placement NAME.
+    """
+    selection_based = [c.name for c in cfg.clone_placements if c.enabled and clone_uses_selection_mode(c)]
+    if len(selection_based) > 1:
+        raise ValidationError(format_fatal_error(
+            "несколько clone_placements в режиме «по выделению» в одном прогоне",
+            [f"найдено {len(selection_based)}: {selection_based} — в KiCad активно только одно "
+             f"выделение сразу, обработать все сразу нельзя",
+             "решение: либо enabled: false у всех, кроме одного, либо запускать "
+             "apply отдельно для каждого через --clone-placement NAME"]
+        ))
+    logger.debug("Проверка на множественное выделение в clone_placements: сходится")
+
+
 def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     """Запускает все проверки по порядку — от дешёвых к более полным."""
     logger.info("Предварительные проверки конфигурации...")
+    check_clone_templates_exist(cfg)
+    check_single_selection_based_clone(cfg)
     check_templates_and_pads_exist(adapter, cfg)
     check_role_pool_sufficiency(adapter, cfg)
     logger.info("Все предварительные проверки пройдены")

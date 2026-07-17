@@ -52,6 +52,17 @@ def cmd_apply(args):
     logger.info(f"Загрузка конфига: {args.config}")
     cfg = load_config(args.config)
 
+    if getattr(args, "clone_placement", None):
+        name = args.clone_placement
+        matching = [c for c in cfg.clone_placements if c.name == name]
+        if not matching:
+            all_names = [c.name for c in cfg.clone_placements]
+            sys.exit(f"[ошибка] clone_placements с именем {name!r} не найден в конфиге. "
+                    f"Доступные: {all_names}")
+        cfg.clone_placements = matching
+        logger.info(f"--clone-placement {name!r}: обрабатываю только его "
+                   f"(остальные clone_placements в этом прогоне игнорируются)")
+
     logger.info(f"Подключение к KiCad (таймаут {args.timeout_ms} мс)")
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
     adapter.refresh_board()
@@ -176,6 +187,11 @@ def main():
     apply_parser.add_argument("--log-file", help="Файл для сохранения логов")
     apply_parser.add_argument("--no-collision-check", action="store_true", help="Отключить проверку коллизий")
     apply_parser.add_argument("--collision-margin", type=float, default=0.2, help="Дополнительный зазор при проверке коллизий, мм")
+    apply_parser.add_argument("--clone-placement", metavar="NAME",
+                              help="Обработать только ОДИН clone_placements с этим именем "
+                                   "(остальные игнорируются на этот прогон) — нужно, если несколько "
+                                   "clone_placements в режиме «по выделению»: в KiCad активно только "
+                                   "одно выделение сразу, обработать все разом нельзя")
 
     undo_parser = subparsers.add_parser("undo", help="Откатить последнюю операцию")
     undo_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
