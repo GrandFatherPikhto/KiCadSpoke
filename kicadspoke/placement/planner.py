@@ -13,6 +13,8 @@ from .services.manual_position_calculator import ManualPositionCalculator
 from ..exceptions import ComponentNotFoundError
 from .commands import MoveCommand, ViaCommand
 
+from ..constants import POSITION_TOLERANCE_NM, ANGLE_TOLERANCE_DEG
+
 logger = logging.getLogger(__name__)
 
 class PlacementPlanner:
@@ -33,8 +35,8 @@ class PlacementPlanner:
     # достаточно грубые, чтобы не реагировать на шум округления при
     # повторном чтении координат из IPC, но достаточно точные, чтобы не
     # спутать с реально другой целевой позицией.
-    _POSITION_TOLERANCE_NM = 10_000       # 0.01 мм
-    _ANGLE_TOLERANCE_DEG = 0.1
+    _POSITION_TOLERANCE_NM = POSITION_TOLERANCE_NM
+    _ANGLE_TOLERANCE_DEG = ANGLE_TOLERANCE_DEG
 
     def _already_in_place(self, ref: str, dest: Vector2, angle_deg: float) -> bool:
         fp = self.adapter.get_footprint(ref)

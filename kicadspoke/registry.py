@@ -33,11 +33,12 @@ from typing import Dict, List, Optional
 from .placement.commands import ViaCommand
 from .utils.units import MM
 
+from constants import POSITION_TOLERANCE_MM, SPOKE_LEVEL_ROLE_PLACEHOLDER
+
 logger = logging.getLogger(__name__)
 
-_POSITION_TOLERANCE_MM = 0.01
-_SPOKE_LEVEL_ROLE_PLACEHOLDER = "__spoke__"
-
+_POSITION_TOLERANCE_MM = POSITION_TOLERANCE_MM
+_SPOKE_LEVEL_ROLE_PLACEHOLDER = SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 def make_registry_key(anchor_id: str, template_name: str, role: Optional[str], via_index: int) -> str:
     role_part = role if role is not None else _SPOKE_LEVEL_ROLE_PLACEHOLDER

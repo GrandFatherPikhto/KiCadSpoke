@@ -15,10 +15,9 @@ from typing import Dict, List
 from ...kicad.adapter import KiCadBoardAdapter
 from ...exceptions import ValidationError
 
+from ...constants import ROLE_FIELD_NAME
+
 logger = logging.getLogger(__name__)
-
-ROLE_FIELD_NAME = "Role"
-
 
 def _natural_sort_key(ref: str):
     """C5 < C10 — не как при обычной строковой сортировке ('C10' < 'C5')."""

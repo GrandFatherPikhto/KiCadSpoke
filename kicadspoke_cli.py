@@ -25,6 +25,7 @@ from kicadspoke.undo import undo_last_operation
 from kicadspoke.validation import run_all_checks
 from kicadspoke.registry import PlacementRegistry, registry_path_for_config
 from kicadspoke.template_extraction import extract_template_from_selection
+from kicadspoke.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
 
 
 def setup_logging(verbose: bool = False, log_file: str = None):
@@ -169,8 +170,8 @@ def main():
     apply_parser = subparsers.add_parser("apply", help="Применить расстановку")
     apply_parser.add_argument("config", help="YAML конфигурационный файл")
     apply_parser.add_argument("--dry-run", action="store_true", help="Только распечатать план, не применять")
-    apply_parser.add_argument("--timeout-ms", type=int, default=20000, help="Таймаут IPC, мс")
-    apply_parser.add_argument("--batch-size", type=int, default=10, help="Размер батча для коммитов")
+    apply_parser.add_argument("--timeout-ms", type=int, default=DEFAULT_TIMEOUT_MS, help="Таймаут IPC, мс")
+    apply_parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="Размер батча для коммитов")
     apply_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
     apply_parser.add_argument("--log-file", help="Файл для сохранения логов")
     apply_parser.add_argument("--no-collision-check", action="store_true", help="Отключить проверку коллизий")

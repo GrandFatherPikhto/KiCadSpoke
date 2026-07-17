@@ -5,10 +5,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional
 
+from ...constants import DEFAULT_LOG_DIR
+
 logger = logging.getLogger(__name__)
 
 class OperationLogger:
-    def __init__(self, log_dir: str = "logs"):
+    def __init__(self, log_dir: str = DEFAULT_LOG_DIR):
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
 

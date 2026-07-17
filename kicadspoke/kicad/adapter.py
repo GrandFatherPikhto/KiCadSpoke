@@ -11,10 +11,12 @@ from .interfaces import IBoardAdapter
 from ..exceptions import BoardNotFoundError, ComponentNotFoundError
 from ..utils.units import MM
 
+from ..constants import DEFAULT_TIMEOUT_MS
+
 logger = logging.getLogger(__name__)
 
 class KiCadBoardAdapter(IBoardAdapter):
-    def __init__(self, timeout_ms: int = 20000):
+    def __init__(self, timeout_ms: int = DEFAULT_TIMEOUT_MS):
         logger.debug(f"Инициализация KiCadBoardAdapter с таймаутом {timeout_ms} мс")
         logger.debug("Создание экземпляра kipy.KiCad...")
         self._kicad = kipy.KiCad(timeout_ms=timeout_ms)

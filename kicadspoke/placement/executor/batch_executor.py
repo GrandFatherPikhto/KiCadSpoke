@@ -8,10 +8,12 @@ from .via_executor import ViaExecutor
 from .operation_logger import OperationLogger
 from ...registry import PlacementRegistry
 
+from ...constants import DEFAULT_BATCH_SIZE
+
 logger = logging.getLogger(__name__)
 
 class BatchExecutor:
-    def __init__(self, adapter: KiCadBoardAdapter, config: Config, batch_size: int = 10):
+    def __init__(self, adapter: KiCadBoardAdapter, config: Config, batch_size: int = DEFAULT_BATCH_SIZE):
         self.adapter = adapter
         self.cfg = config
         self.batch_size = batch_size
