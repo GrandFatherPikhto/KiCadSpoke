@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-KiCadDecapPlacer — расстановка развязывающих конденсаторов вокруг
+KiCadSpoke — расстановка развязывающих конденсаторов вокруг
 периферийного/BGA-компонента (например, FPGA) через KiCad IPC API
 (kicad-python), с поддержкой:
   - трёх режимов размещения относительно границы Rule Area: outside,
@@ -530,7 +530,7 @@ def main():
                 # проблему (без реального зеркалирования площадок).
             board.update_items([c for c, _, _ in batch])
 
-        desc = f"KiCadDecapPlacer: конденсаторы, батч {idx}/{len(cap_batches)}"
+        desc = f"KiCadSpoke: конденсаторы, батч {idx}/{len(cap_batches)}"
         ok = commit_batch(desc, work)
         print(f"  батч конденсаторов {idx}/{len(cap_batches)} ({len(batch)} шт.): {'OK' if ok else 'ОШИБКА — пропущен'}")
         if not ok:
@@ -542,7 +542,7 @@ def main():
             new_vias = [make_via(pos, net, drill_mm, diameter_mm) for pos, drill_mm, diameter_mm, net, _owner in batch]
             board.create_items(new_vias)
 
-        desc = f"KiCadDecapPlacer: виа, батч {idx}/{len(via_batches)}"
+        desc = f"KiCadSpoke: виа, батч {idx}/{len(via_batches)}"
         ok = commit_batch(desc, work)
         print(f"  батч виа {idx}/{len(via_batches)} ({len(batch)} шт.): {'OK' if ok else 'ОШИБКА — пропущен'}")
         if not ok:
