@@ -17,7 +17,7 @@ kicadspoke/diagnostics/
 ├── get_selected_component.py      # Детальная информация о выделенных компонентах
 ├── get_selection.py               # Список выделенных объектов
 ├── test_create_one_via.py         # Создание одной via
-├── test_custom_field.py           # Проверка чтения поля Role
+├── test_custom_fields.py          # Проверка чтения поля Role
 ├── test_flip_one_cap.py           # Проверка флипа одного компонента
 ├── test_move_one_cap.py           # Проверка перемещения одного компонента
 └── test_pad_mirror_convention.py  # Проверка конвенции зеркалирования пада
@@ -56,6 +56,12 @@ python -m kicadspoke.diagnostics.diagnostic_keepout <config.yaml>
 ```bash
 python -m kicadspoke.diagnostics.get_pad_bbox --ref IC1 --pad 17 --verbose
 ```
+
+**Параметры:**
+- `--ref` – refdes компонента (по умолчанию `IC1`).
+- `--pad` – номер пада (если не указан, показывает все).
+- `--timeout` – таймаут IPC (мс).
+- `--verbose` – подробный вывод.
 
 **Вывод:**
 - Размер bbox (мм).
@@ -127,21 +133,27 @@ python -m kicadspoke.diagnostics.test_create_one_via --remove <uuid>
 - `--net` – цепь via (по умолчанию `GND`).
 - `--drill-mm` – диаметр сверла.
 - `--diameter-mm` – внешний диаметр.
+- `--timeout-ms` – таймаут IPC.
 
 **Зависимости:**  
 `kicadspoke.kicad.adapter`.
 
 ---
 
-### `test_custom_field.py`
+### `test_custom_fields.py`
 
 **Назначение:**  
 Проверяет чтение пользовательского поля компонента через IPC. Выводит все тексты и поля (`Field`) компонента, а затем ищет поле с заданным именем (по умолчанию `Role`). Это критично для проверки работы ролей.
 
 **Использование:**
 ```bash
-python -m kicadspoke.diagnostics.test_custom_field C5 --field Role
+python -m kicadspoke.diagnostics.test_custom_fields C5 --field Role
 ```
+
+**Параметры:**
+- `--field` – имя поля для поиска (по умолчанию `Role`).
+- `--timeout-ms` – таймаут IPC.
+- `--verbose` – подробный вывод.
 
 **Вывод:**  
 - Список всех полей и текстов компонента.
@@ -161,6 +173,9 @@ python -m kicadspoke.diagnostics.test_custom_field C5 --field Role
 ```bash
 python -m kicadspoke.diagnostics.test_flip_one_cap C6
 ```
+
+**Параметры:**
+- `--timeout-ms` – таймаут IPC.
 
 **Вывод:**  
 Состояние компонента (слой, позиция, угол) до и после флипа.
@@ -187,6 +202,7 @@ python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
 **Параметры:**
 - `--delta-mm` – величина сдвига (мм).
 - `--revert` – сдвиг в обратную сторону.
+- `--timeout-ms` – таймаут IPC.
 
 **Вывод:**  
 Время выполнения каждого шага (подключение, begin_commit, update_items, push_commit) в миллисекундах.
@@ -208,6 +224,7 @@ python -m kicadspoke.diagnostics.test_pad_mirror_convention C6 --pad 2
 
 **Параметры:**
 - `--pad` – номер пада для отслеживания (по умолчанию `2`).
+- `--timeout-ms` – таймаут IPC.
 
 **Вывод:**  
 - Расхождение базовой формулы после поворота.
@@ -236,3 +253,17 @@ python -m kicadspoke.diagnostics.test_pad_mirror_convention C6 --pad 2
 
 ---
 
+## Расширение диагностических скриптов
+
+Если вам необходимо добавить новый диагностический скрипт:
+
+1. Разместите его в `kicadspoke/diagnostics/`.
+2. Используйте актуальный API `kicadspoke` (адаптер, геометрию, конфигурацию).
+3. Добавьте описание в этот документ.
+4. Обеспечьте, чтобы скрипт не изменял плату (или предупреждал об этом), если он не предназначен для мутации.
+
+---
+
+## Лицензия
+
+Диагностические скрипты распространяются под лицензией MIT, так же как и основной проект.

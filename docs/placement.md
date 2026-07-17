@@ -4,7 +4,9 @@
 
 Директория `placement/` содержит основную логику расстановки компонентов и создания via. Она координирует все этапы процесса:
 
-1. **Планирование** – расчёт целевых позиций компонентов и via на основе шаблонов спиц, автоматический подбор refdes через пул ролей (`ComponentPool`) или через явное разрешение цепей для клонирования (`CloneRoleResolver`).
+1. **Планирование** – расчёт целевых позиций компонентов и via на основе шаблонов спиц для двух типов размещений:
+   - **`ManualSpoke`** (правила `rules`) – привязка к падам целевого компонента (IC) с автоматическим подбором refdes через пул ролей (`ComponentPool`).
+   - **`ClonePlacement`** (клонируемые секции) – многократное применение шаблона в разных местах платы с разрешением ролей по выделению или по явным цепям (`CloneRoleResolver`).
 2. **Исполнение** – применение перемещений и создание via на плате через адаптер KiCad, с разделением на две фазы (сначала перемещения, затем via) и обязательным перечитыванием платы между ними.
 3. **Логирование и откат** – сохранение информации об операции в JSON для команды `undo`.
 4. **Проверка коллизий** – упрощённая проверка перекрытий (опционально).
@@ -22,6 +24,7 @@ placement/
 ├── collision.py                # Проверка коллизий компонентов (упрощённая)
 ├── commands.py                 # Структуры данных для команд и информации о компонентах
 ├── planner.py                  # Главный планировщик
+├── interfaces.py               # Интерфейсы IPositionCalculator и IViaPlanner
 ├── executor/                   # Исполнитель команд (разбит на модули)
 │   ├── __init__.py
 │   ├── base.py                 # Утилиты (layer_to_str)
@@ -32,9 +35,10 @@ placement/
 │   └── operation_logger.py     # Логирование операций в JSON
 └── services/                   # Сервисные классы
     ├── __init__.py
-    ├── clone_role_resolver.py  # Разрешение ролей для клонируемых размещений (TemplatePlacer)
     ├── component_pool.py       # Подбор компонентов по ролям и цепи (для ManualSpoke)
-    ├── manual_position_calculator.py   # Расчёт позиций компонентов и via по шаблонам спиц
+    ├── clone_role_resolver.py  # Разрешение ролей для ClonePlacement (по выделению или по цепям)
+    ├── clone_position_calculator.py # Расчёт позиций и via для ClonePlacement
+    ├── manual_position_calculator.py   # Расчёт позиций и via для ManualSpoke
     └── via_planner.py          # Планирование термовиа и фильтрация существующих via
 ```
 
@@ -68,7 +72,7 @@ from .commands import MoveCommand, ViaCommand, PlacedComponentInfo
 | `ViaCommand` | `position: Vector2`, `drill_mm: float`, `diameter_mm: float`, `net_name: str`, `owner_ref: str`, `registry_key: Optional[str]` | Команда создания переходного отверстия. `registry_key` используется для реестра расстановки (см. `registry.py`). |
 | `PlacedComponentInfo` | `ref: str`, `dest: Vector2`, `angle_deg: float` | Информация о размещённом компоненте (передаётся от калькулятора к via-планировщику). |
 
-**Используется в:** `planner.py`, `executor/`, `manual_position_calculator.py`, `via_planner.py`, `registry.py`.
+**Используется в:** `planner.py`, `executor/`, `manual_position_calculator.py`, `clone_position_calculator.py`, `via_planner.py`, `registry.py`.
 
 ---
 
@@ -90,10 +94,24 @@ from .commands import MoveCommand, ViaCommand, PlacedComponentInfo
 
 ---
 
+### `interfaces.py`
+
+**Назначение:**  
+Определяет абстрактные интерфейсы для калькуляторов позиций и планировщиков via, что позволяет легко подменять реализации (например, для автоматической геометрии в будущем) и улучшает тестируемость.
+
+| Интерфейс | Метод | Описание |
+|-----------|-------|----------|
+| `IPositionCalculator` | `compute_raw_positions(target_fp, rules, side)` | Расчёт позиций компонентов и via для `ManualSpoke` (на основе падов IC). |
+| `IViaPlanner` | `plan_vias(planned_components, planned_vias, target_fp, target_layer)` | Планирование via (термовиа + фильтрация через реестр). |
+
+**Используются в:** `planner.py`, `manual_position_calculator.py`, `via_planner.py`.
+
+---
+
 ### `planner.py`
 
 **Назначение:**  
-Главный планировщик – координирует расчёт позиций и via (через `ManualPositionCalculator`) и применяет логику пропуска уже стоящих на месте компонентов (`skip_existing_components`). Разделяет планирование на две фазы: `plan_moves()` и `plan_vias()`.
+Главный планировщик – координирует расчёт позиций и via для `rules` (через `ManualPositionCalculator`) и `clone_placements` (через `ClonePositionCalculator`). Применяет логику пропуска уже стоящих на месте компонентов (`skip_existing_components`). Разделяет планирование на две фазы: `plan_moves()` и `plan_vias()`.
 
 **Класс `PlacementPlanner`:**
 
@@ -101,7 +119,7 @@ from .commands import MoveCommand, ViaCommand, PlacedComponentInfo
 |-------|----------|
 | `__init__(adapter, config)` | Инициализация, поиск целевого компонента (IC), определение слоя. |
 | `_already_in_place(ref, dest, angle_deg)` | Проверяет, находится ли компонент уже на целевой позиции (с учётом слоя, позиции и угла). Допуски: 0.01 мм по координатам, 0.1° по углу. |
-| `plan_moves()` | Вызывает `ManualPositionCalculator.compute_raw_positions()`, получает списки компонентов и via. Применяет `skip_existing_components` к компонентам. Возвращает список `MoveCommand`. Сохраняет `_planned` и `_planned_vias` для последующего использования в `plan_vias()`. |
+| `plan_moves()` | Вызывает `ManualPositionCalculator.compute_raw_positions()` для `rules` и `ClonePositionCalculator.compute_raw_positions()` для `clone_placements`, объединяет результаты. Применяет `skip_existing_components` к компонентам. Возвращает список `MoveCommand`. Сохраняет `_planned` и `_planned_vias` для последующего использования в `plan_vias()`. |
 | `plan_vias()` | Вызывает `ViaPlanner.plan_vias()` с сохранёнными данными. Возвращает список `ViaCommand`. Применяет `skip_existing_components` к via (через `ViaPlanner` и реестр). |
 | `plan()` | Обратно совместимая обёртка (вызывает `plan_moves()` и `plan_vias()` подряд). Для боевого использования не рекомендуется (см. `kicadspoke_cli.py`). |
 
@@ -204,6 +222,7 @@ from .commands import MoveCommand, ViaCommand, PlacedComponentInfo
 ```python
 from .component_pool import ComponentPool
 from .clone_role_resolver import CloneRoleResolver
+from .clone_position_calculator import ClonePositionCalculator
 from .manual_position_calculator import ManualPositionCalculator
 from .via_planner import ViaPlanner
 ```
@@ -213,7 +232,7 @@ from .via_planner import ViaPlanner
 #### `services/component_pool.py`
 
 **Назначение:**  
-Подбирает конкретные refdes компонентов для ролей шаблона. Пул строится один раз на каждое правило (`rule.net`) и разбирается спицами этого правила по очереди.
+Подбирает конкретные refdes компонентов для ролей шаблона в рамках `ManualSpoke`. Пул строится один раз на каждое правило (`rule.net`) и разбирается спицами этого правила по очереди.
 
 **Класс `ComponentPool`:**
 
@@ -224,38 +243,54 @@ from .via_planner import ViaPlanner
 | `pop(role, spoke_pad)` | Забирает следующий компонент с указанной ролью. Если пул исчерпан – выбрасывает `ValidationError`. |
 | `remaining_count(role)` | Возвращает количество оставшихся компонентов с данной ролью. |
 
-**Используется в:** `manual_position_calculator.py` для получения refdes для каждой спицы.
+**Используется в:** `manual_position_calculator.py`.
 
 ---
 
 #### `services/clone_role_resolver.py`
 
 **Назначение:**  
-Разрешает роли для **клонируемых размещений** (`ClonePlacement`), где сопоставление роль→ref выполняется не по выделению, а по явным цепям (через `nets` и `params`). Используется в TemplatePlacer для многократно повторяющихся секций (например, каналов ЦАП, П-фильтров).
+Разрешает роли для **клонируемых размещений** (`ClonePlacement`). Поддерживает два режима:
 
-**Класс `CloneRoleResolver`:**
+- **Режим «по выделению»** – пользователь выделяет компоненты конкретного экземпляра в PCB-редакторе. Программа считывает поле `Role` у каждого выделенного компонента и сопоставляет с ролями шаблона.
+- **Режим «по цепям»** – для каждого слота роли явно задаётся цепь (через `nets` или `net_template` с плейсхолдерами). Программа ищет компоненты с нужной ролью, подключённые к этой цепи, разрешая имена цепей через `net_resolution` (с поддержкой `params` и `net_overrides`).
+
+Функции:
+- `clone_uses_selection_mode(clone)` – определяет режим по наличию `nets` или `params`.
+- `resolve_roles_by_selection(adapter, template, clone_name)` – сопоставление по выделению.
+- `resolve_roles_by_nets(adapter, template, clone)` – сопоставление по цепям.
+
+**Используется в:** `clone_position_calculator.py`.
+
+---
+
+#### `services/clone_position_calculator.py`
+
+**Назначение:**  
+Расчёт абсолютных позиций компонентов и via для `ClonePlacement`. Не требует `target_fp` или `rules` – использует абсолютные координаты `origin_x_mm/origin_y_mm` и разрешает роли через `clone_role_resolver`.
+
+**Класс `ClonePositionCalculator`:**
 
 | Метод | Описание |
 |-------|----------|
-| `__init__(adapter, placement)` | Принимает адаптер и объект `ClonePlacement`. |
-| `resolve()` | Для каждой роли в шаблоне определяет цепь (через `net_resolution.resolve_net` с учётом `params` и `net_overrides`), затем ищет на плате компонент, подключённый к этой цепи и имеющий соответствующую роль. Возвращает словарь `{role: ref}`. Если компонент не найден – выбрасывает `ValidationError`. |
+| `__init__(adapter, config)` | Инициализация. |
+| `compute_raw_positions(clone_placements)` | Для каждого клона определяет режим, получает `role_to_ref`, вызывает `apply_clone_geometry` и возвращает `(PlacedComponentInfo[], ViaCommand[])` с корректными `registry_key` (anchor_id = `name:{clone.name}`). |
 
-**Используется в:** `manual_position_calculator.py` (в будущем, для обработки `clone_placements`). Пока что в основном коде не задействован, но готов к использованию.
+**Используется в:** `planner.py`.
 
 ---
 
 #### `services/manual_position_calculator.py`
 
 **Назначение:**  
-Расчёт абсолютных позиций компонентов и via на основе шаблонов спиц (`SpokeTemplate`) и конкретных данных спицы (`ManualSpoke`) или клонируемого размещения (`ClonePlacement`). Не использует геометрию зоны – только пад FPGA + сдвиг/поворот + локальные координаты шаблона. Подбирает refdes через `ComponentPool` (для ManualSpoke) или через `CloneRoleResolver` (для ClonePlacement). Все via (как уровня спицы, так и уровня компонента) вычисляются в этом же методе и возвращаются готовыми `ViaCommand` – без обращения к живой плате.
+Расчёт абсолютных позиций компонентов и via для `ManualSpoke` на основе падов IC, шаблонов и пула ролей. Реализует интерфейс `IPositionCalculator`.
 
 **Класс `ManualPositionCalculator`:**
 
 | Метод | Описание |
 |-------|----------|
 | `__init__(adapter, config)` | Инициализация с адаптером и конфигом. |
-| `compute_raw_positions(target_fp, rules, side)` | Для каждого правила строит `ComponentPool`, затем для каждой спицы вызывает `apply_spoke_geometry` с полученным сопоставлением роль→ref. Возвращает кортеж `(список PlacedComponentInfo, список ViaCommand)`. |
-| `_resolve_clone_placements(target_fp, side)` | (в будущем) Обрабатывает `clone_placements`, используя `CloneRoleResolver`. |
+| `compute_raw_positions(target_fp, rules, side)` | Для каждого правила строит `ComponentPool`, затем для каждой спицы вызывает `apply_spoke_geometry` с полученным сопоставлением роль→ref. Возвращает кортеж `(список PlacedComponentInfo, список ViaCommand)` с корректными `registry_key` (anchor_id = `pad:{pad}`). |
 
 **Используется в:** `planner.py`.
 
@@ -264,11 +299,11 @@ from .via_planner import ViaPlanner
 #### `services/via_planner.py`
 
 **Назначение:**  
-В текущей версии `ViaPlanner` отвечает только за:
-- Фильтрацию уже существующих via (идемпотентность) для всех via, переданных из `ManualPositionCalculator` (через `skip_existing_components` и реестр).
+Реализует интерфейс `IViaPlanner`. Отвечает только за:
+- Фильтрацию уже существующих via (идемпотентность) для всех via, переданных из калькуляторов (через `skip_existing_components` и реестр).
 - Планирование термовиа (массива под термопадом) с поиском свободных мест через `find_free_point`.
 
-Все остальные via (уровня спицы и уровня компонента) уже рассчитаны в `ManualPositionCalculator` и передаются готовыми.
+Все остальные via (уровня спицы и уровня компонента) уже рассчитаны в `ManualPositionCalculator` и `ClonePositionCalculator` и передаются готовыми.
 
 **Класс `ViaPlanner`:**
 
@@ -288,11 +323,13 @@ from .via_planner import ViaPlanner
 
 - **`kicad/adapter.py`** – используется для всех операций с платой (чтение, запись, транзакции).
 - **`geometry/spoke_layout.py`** – используется в `manual_position_calculator.py` для преобразования локальных координат в глобальные и генерации via.
+- **`geometry/clone_geometry.py`** – используется в `clone_position_calculator.py` для аналогичного преобразования для `ClonePlacement`.
 - **`geometry/thermal_grid.py`** и **`geometry/keepout.py`** – используются в `via_planner.py` для термовиа и keepout.
 - **`config.py`** – предоставляет структуры данных (Config, ManualSpoke, SpokeTemplate, ClonePlacement и т.д.).
 - **`validation.py`** – выполняет предварительные проверки перед вызовом планировщика.
 - **`registry.py`** – используется в `kicadspoke_cli.py` для управления реестром via; `executor/via_executor.py` передаёт в него созданные via.
 - **`net_resolution.py`** – используется в `clone_role_resolver.py` для разрешения цепей с плейсхолдерами.
+- **`constants.py`** – константы (допуски, имена полей, таймауты) используются в `planner.py`, `component_pool.py`, `via_planner.py` и других модулях.
 - **`utils/units.py`** – константа `MM` для перевода миллиметров в нанометры.
 
 ---
@@ -313,4 +350,6 @@ from .via_planner import ViaPlanner
 
 - **Идемпотентность** – включение `skip_existing_components: true` позволяет безопасно перезапускать скрипт; реестр расстановки (`registry.py`) предотвращает дублирование via.
 
-- **Автоматический подбор refdes** – через `ComponentPool` по полю `Role` в схеме (для ManualSpoke). Для клонируемых секций используется `CloneRoleResolver` с явными цепями и плейсхолдерами.
+- **Автоматический подбор refdes** – через `ComponentPool` по полю `Role` в схеме (для `ManualSpoke`). Для `ClonePlacement` используются два режима сопоставления ролей (по выделению или по цепям) с поддержкой плейсхолдеров через `net_resolution` и `net_overrides`.
+
+- **Клонирование секций** – для многократно повторяющихся шаблонов используйте `clone_placements` с явными цепями (`nets`/`params`) и запускайте без выделения; для штучных экземпляров используйте режим «по выделению» (без `nets` и `params`), выделяя компоненты в KiCad перед запуском.

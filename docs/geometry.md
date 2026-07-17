@@ -4,7 +4,7 @@
 
 Модули в директории `geometry/` предоставляют низкоуровневые геометрические функции и классы, используемые для расчёта позиций компонентов и via, построения ограничивающих областей (keepout), поиска свободного места, предсказания положения падов после перемещения/поворота, генерации сетки термовиа и преобразования локальных координат шаблонов в глобальные.
 
-Эти модули **не зависят** от KiCad и адаптера – они оперируют только координатами и векторами, что делает их легко тестируемыми и переиспользуемыми. Они используются в основном в `placement/services/manual_position_calculator.py`, `via_planner.py` и других модулях расстановки.
+Эти модули **не зависят** от KiCad и адаптера – они оперируют только координатами и векторами, что делает их легко тестируемыми и переиспользуемыми. Они используются в основном в `placement/services/manual_position_calculator.py`, `placement/services/clone_position_calculator.py`, `via_planner.py` и других модулях расстановки.
 
 ---
 
@@ -16,7 +16,8 @@ geometry/
 ├── keepout.py              # Ограничивающие прямоугольники и поиск свободного места
 ├── pad_projection.py       # Предсказание позиции пада после перемещения/поворота
 ├── placement.py            # [УСТАРЕЛ] – оставлен для совместимости, не используется
-├── spoke_layout.py         # Преобразование локальных координат шаблона спицы в глобальные
+├── spoke_layout.py         # Преобразование локальных координат шаблона спицы в глобальные (для ManualSpoke)
+├── clone_geometry.py       # Преобразование локальных координат шаблона для ClonePlacement
 └── thermal_grid.py         # Генерация сетки термовиа под площадкой
 ```
 
@@ -63,9 +64,9 @@ geometry/
 ### `spoke_layout.py`
 
 **Назначение:**  
-Преобразует локальные координаты шаблона спицы (`along`, `across`) в абсолютные координаты платы с учётом сдвига `(shift_x, shift_y)` и поворота `rotation_deg` конкретной спицы. Также вычисляет итоговый угол поворота компонента и генерирует все via (как на уровне спицы, так и на уровне компонента) в виде `ResolvedVia` с абсолютными координатами и цепью.
+Преобразует локальные координаты шаблона спицы (`along`, `across`) в абсолютные координаты платы для `ManualSpoke` (привязка к паду IC) с учётом сдвига `(shift_x, shift_y)` и поворота `rotation_deg` конкретной спицы. Также вычисляет итоговый угол поворота компонента и генерирует все via (как на уровне спицы, так и на уровне компонента) в виде `ResolvedVia` с абсолютными координатами и цепью (если `net` не указан, используется `rule.net`).
 
-Этот модуль является **ключевым** для генерации всей геометрии расстановки.
+Этот модуль является **ключевым** для генерации геометрии расстановки на основе `rules`.
 
 **Основные классы и функции:**
 
@@ -79,6 +80,24 @@ geometry/
 | `apply_spoke_geometry(pad_position, spoke, template, rule_net, role_to_ref)` | Основная функция – принимает позицию пада FPGA, данные спицы (`ManualSpoke`), шаблон (`SpokeTemplate`), цепь правила и сопоставление роль→ref. Возвращает `SpokeLayout` с абсолютными координатами всех элементов. |
 
 **Используется в:** `manual_position_calculator.py` для расчёта позиций компонентов и via.
+
+---
+
+### `clone_geometry.py`
+
+**Назначение:**  
+Аналог `spoke_layout.py`, но для `ClonePlacement` (клонируемых размещений). В отличие от `apply_spoke_geometry`:
+- `origin` задаётся напрямую абсолютными координатами `(origin_x_mm, origin_y_mm)` (не смещение от пада).
+- `net` каждой via **резолвится через** `net_resolution.resolve_net()` с учётом `params` и `net_overrides` (нет дефолтной `rule_net`). Если `via.net` не задан – фатальная ошибка.
+
+**Основные функции:**
+
+| Имя | Описание |
+|-----|----------|
+| `_resolve_clone_via(origin, via, rotation_deg, clone)` | Преобразует `TemplateVia` в `ResolvedVia` с использованием `resolve_net` для цепи. |
+| `apply_clone_geometry(clone, template, role_to_ref)` | Принимает `ClonePlacement`, шаблон и сопоставление роль→ref, возвращает `SpokeLayout` с абсолютными координатами. |
+
+**Используется в:** `clone_position_calculator.py` для расчёта позиций компонентов и via для клонируемых секций.
 
 ---
 
@@ -113,6 +132,7 @@ geometry/
 from .keepout import Rect, build_keepout, find_free_point, point_is_clear
 from .pad_projection import predict_pad_position, local_pad_offset
 from .spoke_layout import apply_spoke_geometry, rotate_local_offset
+from .clone_geometry import apply_clone_geometry
 from .thermal_grid import get_pad_size, compute_thermal_via_grid
 ```
 
@@ -122,7 +142,9 @@ from .thermal_grid import get_pad_size, compute_thermal_via_grid
 
 - `keepout.py` и `thermal_grid.py` используются в `placement/services/via_planner.py`.
 - `pad_projection.py` не используется в текущей версии, но оставлен для будущих нужд.
-- `spoke_layout.py` – ключевой модуль для новой архитектуры; используется в `placement/services/manual_position_calculator.py` и `via_planner.py` (для термовиа).
+- `spoke_layout.py` – ключевой модуль для `ManualSpoke`; используется в `manual_position_calculator.py`.
+- `clone_geometry.py` – ключевой модуль для `ClonePlacement`; используется в `clone_position_calculator.py`.
+- `via_planner.py` использует `keepout` для термовиа и `thermal_grid` для генерации их позиций.
 
 ---
 
@@ -130,4 +152,5 @@ from .thermal_grid import get_pad_size, compute_thermal_via_grid
 
 - Все координаты и размеры во всех функциях ожидаются в **нанометрах**, если не указано иное (поля `_mm` принимают миллиметры и конвертируются внутри с помощью `MM = 1_000_000` из `utils/units.py`).
 - `find_free_point` и `find_free_point_along_line` сейчас используются только для термовиа, так как все остальные via размещаются строго по заданным координатам без поиска.
-- Модуль `spoke_layout.py` полностью независим от зоны и `boundary` – вся геометрия задаётся в локальной системе шаблона, что делает конфигурацию поворотоинвариантной и предсказуемой.
+- Модули `spoke_layout.py` и `clone_geometry.py` полностью независимы от зоны и `boundary` – вся геометрия задаётся в локальной системе шаблона, что делает конфигурацию поворотоинвариантной и предсказуемой.
+- Для `ClonePlacement` цепи via **обязательно** должны быть заданы (либо через `net` в шаблоне, либо через `nets`/`net_overrides` в клоне), так как нет `rule.net` по умолчанию.
