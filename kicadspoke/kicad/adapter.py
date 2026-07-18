@@ -21,7 +21,8 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug("Создание экземпляра kipy.KiCad...")
         self._kicad = kipy.KiCad(timeout_ms=timeout_ms)
         logger.debug("Экземпляр kipy.KiCad создан")
-        self._board = None        
+        self._board = None
+        self._write_risk_checked = False
 
     def refresh_board(self):
         logger.debug("Обновление доски из KiCad")
@@ -158,13 +159,75 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.warning("Откат транзакции")
         self._board.drop_commit(commit)
 
+    def check_write_crash_risk(self):
+        """
+        Проверка перед ПЕРВОЙ мутирующей операцией: KiCad 10.0.4 может
+        упасть целиком на первой API-записи, если в сессии открыт редактор
+        схем и не было ни одной интерактивной правки (null-deref в
+        _eeschema.dll, наш репорт:
+        https://gitlab.com/kicad/code/kicad/-/issues/24966).
+        Крах предотвратить из клиента нельзя — но можно предупредить.
+        Вызывается один раз, повторные вызовы — no-op.
+        """
+        if self._write_risk_checked:
+            return
+        self._write_risk_checked = True
+        try:
+            from kipy.proto.common.types import DocumentType
+            schematics = self._kicad.get_open_documents(DocumentType.DOCTYPE_SCHEMATIC)
+        except Exception as e:
+            logger.debug(f"проверка открытых схем не удалась: {e}")
+            return
+        if schematics:
+            logger.warning(
+                "Открыт редактор схем: если в этой сессии KiCad ещё не было "
+                "интерактивных правок, первая API-запись может уронить KiCad "
+                "(issue #24966). Workaround: подвинуть любой компонент + Ctrl+S "
+                "в pcbnew, либо закрыть окно схемы на время прогона."
+            )
+
+    def _mutating_call(self, op_name: str, fn, retries: int = 2, backoff_s: float = 1.5):
+        """
+        Обёртка мутирующих вызовов: перед первым — check_write_crash_risk,
+        на ApiError 'not ready' — ретрай с паузой (KiCad занят модальным
+        состоянием), на ConnectionError — внятный диагноз вместо голого
+        стектрейса: обрыв пайпа на записи = скорее всего KiCad умер
+        (см. issue #24966).
+        """
+        self.check_write_crash_risk()
+        last_exc = None
+        for attempt in range(1 + retries):
+            try:
+                return fn()
+            except kipy.errors.ApiError as e:
+                if "not ready" in str(e).lower() and attempt < retries:
+                    wait = backoff_s * (attempt + 1)
+                    logger.warning(f"{op_name}: KiCad не готов ответить "
+                                   f"(занят/модальный диалог?), ретрай через {wait:.1f} с "
+                                   f"[{attempt+1}/{retries}]")
+                    time.sleep(wait)
+                    last_exc = e
+                    continue
+                raise
+            except kipy.errors.ConnectionError as e:
+                logger.error(
+                    f"{op_name}: соединение с KiCad оборвалось во время записи — "
+                    f"вероятно, KiCad упал (известный краш на первой API-записи "
+                    f"при открытой схеме: issue #24966; workaround — подвинуть "
+                    f"компонент + Ctrl+S в pcbnew до прогона). Исходная ошибка: {e}"
+                )
+                raise
+        raise last_exc
+
     def update_items(self, items):
         logger.debug(f"Обновление {len(items)} элементов")
-        self._board.update_items(items)
+        return self._mutating_call("update_items",
+                                   lambda: self._board.update_items(items))
 
     def create_items(self, items):
         logger.debug(f"Создание {len(items)} элементов")
-        created = self._board.create_items(items)
+        created = self._mutating_call("create_items",
+                                      lambda: self._board.create_items(items))
         logger.debug(f"Создано {len(created)} элементов")
         return created
 

@@ -5,8 +5,8 @@ clone_placements:
     template: pi_filter
     anchor_ref: IC1
     anchor_pad: '17'
-    origin_x_mm: 50.0
-    origin_y_mm: 50.0
+    origin_x_mm: -10.0
+    origin_y_mm: -10.0
     rotation_deg: 0.0
     enabled: true
     params:

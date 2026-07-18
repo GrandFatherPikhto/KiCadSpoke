@@ -3,10 +3,11 @@ graph TD
     CLI --> Adapter[kicad/adapter.py]
     CLI --> Validation[validation.py]
     CLI --> Planner[placement/planner.py]
-    CLI --> Executor[placement/executor.py]
+    CLI --> Executor[placement/executor/batch_executor.py]
     CLI --> Registry[registry.py]
     CLI --> Extract[template_extraction.py]
     CLI --> Undo[undo.py]
+    CLI --> Constants[constants.py]
 
     Config --> Exceptions[exceptions.py]
     Validation --> Config
@@ -25,4 +26,4 @@ graph TD
     Undo --> Exceptions
 
     NetResolution[net_resolution.py] --> Exceptions
-    NetResolution --> Config (используется ClonePlacement)
+    NetResolution --> Config (использует ClonePlacement)

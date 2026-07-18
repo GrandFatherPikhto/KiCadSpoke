@@ -169,7 +169,7 @@ def cmd_undo(args):
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] not in ['apply', 'undo', 'extract']:
+    if len(sys.argv) > 1 and sys.argv[1] not in ['apply', 'undo', 'extract', 'clone-extract']:
         sys.argv.insert(1, 'apply')
 
     parser = argparse.ArgumentParser(
@@ -197,6 +197,15 @@ def main():
     undo_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
     undo_parser.add_argument("--log-file", help="Файл для сохранения логов")
 
+    clone_extract = subparsers.add_parser(
+        "clone-extract",
+        help="Снимок канала в YAML (файловый клонер, без IPC)")
+    clone_extract.add_argument("--net", required=True, help="Путь к .net")
+    clone_extract.add_argument("--pcb", required=True, help="Путь к .kicad_pcb")
+    clone_extract.add_argument("--channel", required=True, help="Имя канала, напр. Channel_0")
+    clone_extract.add_argument("--output", required=True, help="YAML-файл снимка")
+    clone_extract.add_argument("-v", "--verbose", action="store_true")
+
     extract_parser = subparsers.add_parser("extract", help="Извлечь шаблон спицы из текущего выделения")
     extract_parser.add_argument("--name", required=True, help="Имя шаблона (ключ в templates:)")
     extract_parser.add_argument("--output", required=True, help="Путь к YAML-файлу для записи")
@@ -213,6 +222,12 @@ def main():
             cmd_apply(args)
         elif args.command == "undo":
             cmd_undo(args)
+        elif args.command == "clone-extract":
+            from kicadspoke.cloner.extract import extract_channel
+            d = extract_channel(args.net, args.pcb, args.channel, args.output)
+            s = d['summary']
+            print(f"[{args.channel}] футпринтов: {s['footprints']}, "
+                  f"сегментов: {s['segments']}, виа: {s['vias']} -> {args.output}")
         elif args.command == "extract":
             cmd_extract(args)
         else:
