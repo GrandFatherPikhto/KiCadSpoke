@@ -41,10 +41,10 @@ def _build_cfg(power_via_offset_across=-1.5):
     )
     spoke = ManualSpoke(pad="17", template="t", rotation_deg=0.0)
     return Config(
-        target_ref="IC1", side="back",
+        layer='B.Cu',
         templates={"t": template},
         thermal_via_array=ThermalViaArrayConfig(enabled=False),
-        rules=[Rule(net="+3V3", spokes=[spoke])],
+        rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[spoke])],
     )
 
 
@@ -56,6 +56,7 @@ def test_registry_full_cycle_across_two_runs():
     ic1.definition.items = [_make_pad("17", 50.0, 50.0, "+3V3")]
 
     adapter = MagicMock()
+    adapter.get_footprint.side_effect = lambda ref: ic1 if ref == 'IC1' else None
     adapter.get_pad_by_number.side_effect = lambda fp, num: next(
         (p for p in fp.definition.items if p.number == num), None
     )
@@ -64,7 +65,7 @@ def test_registry_full_cycle_across_two_runs():
     # --- Прогон 1: чистый реестр, via должна быть создана ---
     cfg1 = _build_cfg(power_via_offset_across=-1.5)
     calc1 = ManualPositionCalculator(adapter, cfg1)
-    _, vias1 = calc1.compute_raw_positions(ic1, cfg1.rules, cfg1.side)
+    _, vias1 = calc1.compute_raw_positions(cfg1.rules)
     assert len(vias1) == 1
     key = vias1[0].registry_key
     assert key == "pad:17|t|__spoke__|0"
@@ -76,7 +77,7 @@ def test_registry_full_cycle_across_two_runs():
 
     # --- Прогон 2: тот же конфиг, тот же реестр -- ничего создавать не нужно ---
     calc2 = ManualPositionCalculator(adapter, cfg1)
-    _, vias2 = calc2.compute_raw_positions(ic1, cfg1.rules, cfg1.side)
+    _, vias2 = calc2.compute_raw_positions(cfg1.rules)
     reg2 = PlacementRegistry(adapter, reg_path)
     to_create2 = reg2.reconcile(vias2)
     assert len(to_create2) == 0, "конфиг не менялся -- пересоздавать via не нужно"
@@ -86,7 +87,7 @@ def test_registry_full_cycle_across_two_runs():
     # должна быть удалена по uuid, новая помечена к созданию ---
     cfg3 = _build_cfg(power_via_offset_across=-3.0)  # другое значение!
     calc3 = ManualPositionCalculator(adapter, cfg3)
-    _, vias3 = calc3.compute_raw_positions(ic1, cfg3.rules, cfg3.side)
+    _, vias3 = calc3.compute_raw_positions(cfg3.rules)
     reg3 = PlacementRegistry(adapter, reg_path)
     to_create3 = reg3.reconcile(vias3)
     assert len(to_create3) == 1
@@ -96,11 +97,11 @@ def test_registry_full_cycle_across_two_runs():
     # --- Прогон 4: спицу убрали из конфига вовсе -- prune должен удалить via ---
     adapter.reset_mock()
     cfg4 = Config(
-        target_ref="IC1", side="back", templates={},
+        layer='B.Cu', templates={},
         thermal_via_array=ThermalViaArrayConfig(enabled=False), rules=[],
     )
     calc4 = ManualPositionCalculator(adapter, cfg4)
-    _, vias4 = calc4.compute_raw_positions(ic1, cfg4.rules, cfg4.side)
+    _, vias4 = calc4.compute_raw_positions(cfg4.rules)
     assert vias4 == []
     reg4 = PlacementRegistry(adapter, reg_path)
     to_create4 = reg4.reconcile(vias4)

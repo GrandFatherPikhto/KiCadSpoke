@@ -84,20 +84,68 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone_name: str
     return role_to_ref
 
 
+def _sheet_key(fp) -> str:
+    """
+    Строковый ключ экземпляра листа иерархии для футпринта (для сравнения
+    'соседи ли по листу'). sheet_path доступен с KiCad 9.0.3 / kipy 0.4;
+    при недоступности возвращает '' — фильтр по листу тогда пропускается.
+    """
+    try:
+        return str(fp.sheet_path.proto if hasattr(fp.sheet_path, 'proto') else fp.sheet_path)
+    except Exception:
+        return ''
+
+
 def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacement) -> Dict[str, str]:
-    """Сопоставление по явным/параметризованным цепям (без выделения мышкой)."""
+    """
+    Сопоставление по явным/параметризованным цепям (без выделения мышкой).
+
+    Каскад разрешения неоднозначности (каждая ступень только СУЖАЕТ,
+    ничего не выбирает за человека):
+      0. clone.refs[role] — явный override, минуя поиск вовсе;
+      1. кандидаты = Role-поле совпадает И сидит на ожидаемой цепи;
+      2. если кандидатов несколько — второй проход: оставить только
+         соседей по листу иерархии с уже однозначно разрешёнными ролями
+         ЭТОГО ЖЕ размещения (межканальную неоднозначность на глобальных
+         цепях гасит именно это: FB нашёлся по локальной цепи канала —
+         C1 ищем в его же листе);
+      3. всё ещё несколько — ФАТАЛ: кандидаты электрически неразличимы
+         (типовой случай: три одинаковых фильтра в одном листе с
+         одинаковыми ролями) — человеку предлагается либо развести роли
+         по именам, либо дать явный refs.
+    """
     all_fps = adapter.get_footprints()
     fps_by_role: Dict[str, list] = {}
+    fps_by_ref = {}
     for fp in all_fps:
+        fps_by_ref[fp.reference_field.text.value] = fp
         role = adapter.get_field_value(fp, ROLE_FIELD_NAME)
         if role is not None:
             fps_by_role.setdefault(role, []).append(fp)
 
     role_to_ref: Dict[str, str] = {}
+    resolved_fps: List = []
     problems: List[str] = []
+    ambiguous: List = []   # (role, expected_net, matched) на второй проход
 
+    # --- ступень 0: явные refs ---
+    for role, ref in clone.refs.items():
+        if role not in {s.role for s in template.components}:
+            problems.append(f"refs: роль {role!r} не существует в шаблоне {template.name!r}")
+            continue
+        fp = fps_by_ref.get(ref)
+        if fp is None:
+            problems.append(f"refs: компонент {ref!r} (роль {role!r}) не найден на плате")
+            continue
+        role_to_ref[role] = ref
+        resolved_fps.append(fp)
+        logger.info(f"[{clone.name}] роль {role!r} -> {ref} (явный refs)")
+
+    # --- первый проход: однозначные по Role+цепи ---
     for slot in template.components:
         role = slot.role
+        if role in role_to_ref:
+            continue
 
         if role in clone.nets:
             net_template = clone.nets[role]
@@ -130,11 +178,38 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
                             f"но ни один не сидит на цепи {expected_net!r} — реально они на "
                             f"{found_nets} (проверьте params/имя цепи или подключение на схеме)")
         elif len(matched) > 1:
-            refs = sorted(fp.reference_field.text.value for fp in matched)
-            problems.append(f"роль {role!r}: неоднозначность — несколько компонентов "
-                            f"на цепи {expected_net!r}: {refs}")
+            ambiguous.append((role, expected_net, matched))
         else:
             role_to_ref[role] = matched[0].reference_field.text.value
+            resolved_fps.append(matched[0])
+
+    # --- второй проход: сужение неоднозначных по листу иерархии соседей ---
+    neighbor_sheets = {_sheet_key(fp) for fp in resolved_fps}
+    neighbor_sheets.discard('')
+    for role, expected_net, matched in ambiguous:
+        narrowed = matched
+        if neighbor_sheets:
+            by_sheet = [fp for fp in matched if _sheet_key(fp) in neighbor_sheets]
+            if by_sheet:
+                if len(by_sheet) < len(matched):
+                    logger.info(f"[{clone.name}] роль {role!r}: {len(matched)} кандидатов "
+                                f"сужено до {len(by_sheet)} по листу иерархии уже "
+                                f"разрешённых соседей")
+                narrowed = by_sheet
+        if len(narrowed) == 1:
+            role_to_ref[role] = narrowed[0].reference_field.text.value
+            resolved_fps.append(narrowed[0])
+        else:
+            refs = sorted(fp.reference_field.text.value for fp in narrowed)
+            problems.append(
+                f"роль {role!r}: неоднозначность — {len(narrowed)} компонентов на цепи "
+                f"{expected_net!r}"
+                + (" (уже в одном листе иерархии — кандидаты электрически "
+                   "неразличимы; типовой случай: несколько одинаковых фильтров "
+                   "в одном листе с одинаковыми ролями)" if neighbor_sheets else "")
+                + f": {refs}. Выходы: развести роли по именам в схеме "
+                f"(напр. DAC_PI_3V3_C1 vs DAC_PI_AVDD_C1) ЛИБО указать явно: "
+                f"refs: {{{role}: {refs[0]}}}")
 
     if problems:
         raise ValidationError(format_fatal_error(

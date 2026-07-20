@@ -33,3 +33,6 @@ class PlacedComponentInfo:
     ref: str
     dest: Vector2
     angle_deg: float
+    # Слой ЭТОГО компонента (per-placement side у ClonePlacement).
+    # None = наследовать глобальный target_layer планировщика.
+    layer: Optional[BoardLayer] = None

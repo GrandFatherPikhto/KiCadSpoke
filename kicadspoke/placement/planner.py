@@ -24,14 +24,14 @@ class PlacementPlanner:
         self.cfg = config
         self.position_calc = ManualPositionCalculator(adapter, config)
         self.clone_calc = ClonePositionCalculator(adapter, config)
-        self._target_fp = adapter.get_footprint(config.target_ref)
-        if self._target_fp is None:
-            raise ComponentNotFoundError(f"Целевой компонент {config.target_ref} не найден")
-        self._target_layer = BoardLayer.BL_B_Cu if config.side == "back" else BoardLayer.BL_F_Cu
+        # Глобального target_fp больше нет: якоря — per-rule (Rule.anchor_ref)
+        # и per-tva; резолвятся по месту использования.
+        self._target_layer = BoardLayer.BL_B_Cu if config.layer == 'B.Cu' else BoardLayer.BL_F_Cu
         self._planned = None
         self._planned_vias = None
         self.via_planner = ViaPlanner(adapter, config)
-        logger.info(f"Планировщик инициализирован: target={config.target_ref}, side={config.side}")
+        logger.info(f"Планировщик инициализирован: layer={config.layer}, "
+                    f"якорей в правилах: {len({r.anchor_ref for r in config.rules})}")
 
     # Допуски для проверки "уже на месте" (skip_existing_components) —
     # достаточно грубые, чтобы не реагировать на шум округления при
@@ -59,9 +59,7 @@ class PlacementPlanner:
 
         if self.cfg.place_components and self.cfg.rules:
             placed, planned_vias = self.position_calc.compute_raw_positions(
-                self._target_fp,
-                self.cfg.rules,
-                self.cfg.side
+                self.cfg.rules
             )
             self._planned.extend(placed)
             self._planned_vias.extend(planned_vias)
@@ -95,10 +93,17 @@ class PlacementPlanner:
         return moves
 
     def plan_vias(self) -> List[ViaCommand]:
+        tva = self.cfg.thermal_via_array
+        thermal_anchor_fp = None
+        if tva.enabled:
+            thermal_anchor_fp = self.adapter.get_footprint(tva.anchor_ref)
+            if thermal_anchor_fp is None:
+                raise ComponentNotFoundError(
+                    f"thermal_via_array: якорь {tva.anchor_ref!r} не найден")
         return self.via_planner.plan_vias(
             planned_components=self._planned,
             planned_vias=self._planned_vias,
-            target_fp=self._target_fp,
+            target_fp=thermal_anchor_fp,
             target_layer=self._target_layer
         )
 

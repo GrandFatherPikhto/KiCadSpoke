@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class ThermalViaArrayConfig:
     """Конфигурация массива тепловых via под термопадом IC."""
     enabled: bool = False
-    target_ref: str = ""
+    anchor_ref: str = ""
     pad: str = ""
     net: str = "GND"
     rows: int = 4
@@ -72,6 +72,10 @@ class TemplateComponentSlot:
     angle_deg: float = 0.0
     vias: List[TemplateVia] = field(default_factory=list)
     net_template: Optional[str] = None
+    # Слой слота — ФАКТ, абсолютный: 'F.Cu' | 'B.Cu'. None = наследовать
+    # layer шаблона. Пишется extract'ом только для компонентов,
+    # выбивающихся из слоя шаблона.
+    layer: Optional[str] = None
 
 
 @dataclass
@@ -86,6 +90,11 @@ class SpokeTemplate:
     name: str
     vias: List[TemplateVia] = field(default_factory=list)
     components: List[TemplateComponentSlot] = field(default_factory=list)
+    # Слой шаблона — ФАКТ, абсолютный: 'F.Cu' | 'B.Cu', как снято
+    # экстракцией (пишется автоматически). Компоненты без своего layer
+    # наследуют его. Никакой автоматики сторон: шаблон кладётся буква в
+    # букву; перевернуть целиком — явный mirror у размещения.
+    layer: str = 'F.Cu'
 
 
 @dataclass
@@ -113,8 +122,12 @@ class ManualSpoke:
 
 @dataclass
 class Rule:
+    """Правило: выводок спиц вокруг ОДНОГО якорного компонента.
+    anchor_ref — чей это выводок (пады спиц — его пады); глобального
+    target_ref больше нет, у каждого правила свой якорь."""
     net: str
     spokes: List[ManualSpoke]
+    anchor_ref: str = ''
 
 
 @dataclass
@@ -148,12 +161,24 @@ class ClonePlacement:
     enabled: bool = True
     anchor_ref: Optional[str] = None
     anchor_pad: Optional[str] = None
+    # Слой размещения — ФАКТ: None = слой шаблона (кладём буква в букву).
+    # mirror — ОПЕРАЦИЯ, всегда ручная: перевернуть конструкцию целиком
+    # (геометрия в зеркало, углы 180°−φ, все слои инвертируются).
+    # Противоречие двух твоих же слов — фатал при загрузке: mirror без
+    # смены слоя или смена слоя без mirror не имеют физического смысла.
+    layer: Optional[str] = None
+    mirror: bool = False
+    # Явный override роль -> ref (высший приоритет, минуя поиск по цепям):
+    # последнее средство, когда кандидаты электрически неразличимы
+    # (три одинаковых фильтра в одном листе).
+    refs: Dict[str, str] = field(default_factory=dict)
 
 @dataclass
 class Config:
     """Главный конфигурационный объект."""
-    target_ref: str
-    side: str = "back"
+    # Слой спиц (ManualSpoke-путь): 'F.Cu' | 'B.Cu'. У clone_placements —
+    # свой layer/mirror per-размещение, это поле их не касается.
+    layer: str = 'F.Cu'
     templates: Dict[str, SpokeTemplate] = field(default_factory=dict)
     thermal_via_array: ThermalViaArrayConfig = field(default_factory=ThermalViaArrayConfig)
     rules: List[Rule] = field(default_factory=list)
@@ -167,6 +192,14 @@ class Config:
     via_search_max_radius_mm: float = 3.0
     via_search_n_directions: int = 8
 
+    @property
+    def anchor_refs(self) -> set:
+        """Все якорные ref конфига: правила спиц + термовиа."""
+        out = {r.anchor_ref for r in self.rules if r.anchor_ref}
+        if self.thermal_via_array.enabled and self.thermal_via_array.anchor_ref:
+            out.add(self.thermal_via_array.anchor_ref)
+        return out
+
 
 def _load_template_via(data: Dict[str, Any]) -> TemplateVia:
     return TemplateVia(
@@ -178,7 +211,24 @@ def _load_template_via(data: Dict[str, Any]) -> TemplateVia:
     )
 
 
+def _check_layer_value(value, where: str):
+    if value is not None and value not in ('F.Cu', 'B.Cu'):
+        raise ValidationError(format_fatal_error(
+            f"недопустимый layer={value!r} {where}",
+            ["layer — абсолютный слой, 'F.Cu' или 'B.Cu'"]
+        ))
+
+
 def _load_template_component_slot(data: Dict[str, Any]) -> TemplateComponentSlot:
+    if 'side' in data:
+        raise ValidationError(format_fatal_error(
+            f"устаревшее поле 'side' у слота {data.get('role')!r}",
+            ["относительный side упразднён (см. обсуждение v116): слой теперь "
+             "ФАКТ и абсолютный — напиши layer: F.Cu или layer: B.Cu, либо "
+             "убери поле, чтобы наследовать layer шаблона"]
+        ))
+    layer = data.get('layer')
+    _check_layer_value(layer, f"у слота {data.get('role')!r}")
     return TemplateComponentSlot(
         role=data['role'],
         offset_along_mm=data.get('offset_along_mm', 0.0),
@@ -186,6 +236,7 @@ def _load_template_component_slot(data: Dict[str, Any]) -> TemplateComponentSlot
         angle_deg=data.get('angle_deg', 0.0),
         vias=[_load_template_via(v) for v in data.get('vias', [])],
         net_template=data.get('net_template'),
+        layer=layer,
     )
 
 
@@ -202,10 +253,20 @@ def _load_spoke_template(name: str, data: Dict[str, Any]) -> SpokeTemplate:
              f"в реестре расстановки)" for r in sorted(duplicates)]
         ))
 
+    if 'reference_side' in data:
+        raise ValidationError(format_fatal_error(
+            f"устаревшее поле 'reference_side' в шаблоне {name!r}",
+            ["переименовано (см. обсуждение v116): напиши layer: F.Cu или "
+             "layer: B.Cu — абсолютный слой шаблона, как снято"]
+        ))
+    layer = data.get('layer', 'F.Cu')
+    _check_layer_value(layer, f"в шаблоне {name!r}")
+
     return SpokeTemplate(
         name=name,
         vias=[_load_template_via(v) for v in data.get('vias', [])],
         components=components,
+        layer=layer,
     )
 
 
@@ -242,6 +303,16 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
              f"либо anchor_ref (+ опционально anchor_pad) для привязки к компоненту"]
         ))
 
+    if 'side' in data:
+        raise ValidationError(format_fatal_error(
+            f"устаревшее поле 'side' в clone_placement {name!r}",
+            ["сторона теперь задаётся явной парой: layer: F.Cu|B.Cu (куда "
+             "кладём — факт) + mirror: true (как кладём — операция, только "
+             "при смене слоя относительно шаблона)"]
+        ))
+    layer = data.get('layer')
+    _check_layer_value(layer, f"в clone_placement {name!r}")
+
     return ClonePlacement(
         name=name,
         template=data['template'],
@@ -254,18 +325,42 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
         enabled=data.get('enabled', True),
         anchor_ref=anchor_ref,
         anchor_pad=str(anchor_pad) if anchor_pad is not None else None,
+        layer=layer,
+        mirror=bool(data.get('mirror', False)),
+        refs=data.get('refs', {}) or {},
     )
 
 
 def load_config(path: str) -> Config:
     logger.info(f"Загрузка конфигурации из {path}")
     with open(path, 'r', encoding='utf-8') as f:
-        data = yaml.safe_load(f)
+        data = yaml.safe_load(f) or {}
+
+    if 'target_ref' in data:
+        raise ValidationError(format_fatal_error(
+            "устаревшее поле 'target_ref' в корне конфига",
+            ["глобальный target_ref упразднён (см. обсуждение v117): у каждого "
+             "правила спиц теперь свой якорь — напиши anchor_ref: <ref> внутри "
+             "правила в rules; у thermal_via_array — своё поле anchor_ref"]
+        ))
+    if 'side' in data:
+        raise ValidationError(format_fatal_error(
+            "устаревшее поле 'side' в корне конфига",
+            ["один язык на весь инструмент: напиши layer: F.Cu или layer: B.Cu "
+             "(слой спиц ManualSpoke-пути; back -> B.Cu)"]
+        ))
+    root_layer = data.get('layer', 'F.Cu')
+    _check_layer_value(root_layer, "в корне конфига")
 
     tva_data = data.get('thermal_via_array', {})
+    if 'target_ref' in tva_data:
+        raise ValidationError(format_fatal_error(
+            "устаревшее поле 'target_ref' в thermal_via_array",
+            ["переименовано для единообразия: напиши anchor_ref"]
+        ))
     thermal_via = ThermalViaArrayConfig(
         enabled=tva_data.get('enabled', False),
-        target_ref=tva_data.get('target_ref', data.get('target_ref', '')),
+        anchor_ref=tva_data.get('anchor_ref', ''),
         pad=tva_data.get('pad', ''),
         net=tva_data.get('net', 'GND'),
         rows=tva_data.get('rows', 4),
@@ -281,14 +376,45 @@ def load_config(path: str) -> Config:
 
     rules = []
     for rule_data in data.get('rules', []):
+        anchor_ref = rule_data.get('anchor_ref', '')
+        if not anchor_ref:
+            raise ValidationError(format_fatal_error(
+                f"правило (цепь {rule_data.get('net')!r}) без anchor_ref",
+                ["у правила спиц обязателен anchor_ref: <ref> — компонент, чьи "
+                 "пады перечислены в spokes (раньше это был глобальный target_ref)"]
+            ))
         spokes = [_load_manual_spoke(spoke_data) for spoke_data in rule_data.get('spokes', [])]
-        rules.append(Rule(net=rule_data['net'], spokes=spokes))
+        rules.append(Rule(net=rule_data['net'], spokes=spokes, anchor_ref=anchor_ref))
 
     clone_placements = [_load_clone_placement(cp) for cp in data.get('clone_placements', [])]
 
+    # Перекрёстная валидация layer/mirror: инструмент ничего не решает за
+    # человека, но противоречие двух его же слов — фатал, не молчаливая каша.
+    for cp in clone_placements:
+        tpl = templates.get(cp.template)
+        if tpl is None:
+            continue  # отсутствие шаблона обрабатывается на этапе размещения
+        placement_layer = cp.layer if cp.layer is not None else tpl.layer
+        layer_changed = placement_layer != tpl.layer
+        if cp.mirror and not layer_changed:
+            raise ValidationError(format_fatal_error(
+                f"mirror без смены слоя в clone_placement {cp.name!r}",
+                [f"шаблон {cp.template!r} снят с {tpl.layer}, размещение кладётся "
+                 f"на {placement_layer} — зеркало без смены стороны физически не "
+                 f"существует: либо добавь layer: "
+                 f"{'B.Cu' if tpl.layer == 'F.Cu' else 'F.Cu'}, либо убери mirror"]
+            ))
+        if layer_changed and not cp.mirror:
+            raise ValidationError(format_fatal_error(
+                f"слой сменён без mirror в clone_placement {cp.name!r}",
+                [f"шаблон {cp.template!r} снят с {tpl.layer}, а layer размещения — "
+                 f"{placement_layer}: перевёрнутые футпринты на неперевёрнутых "
+                 f"местах дадут кашу; добавь mirror: true (перевернуть целиком) "
+                 f"или убери layer"]
+            ))
+
     cfg = Config(
-        target_ref=data['target_ref'],
-        side=data.get('side', 'back'),
+        layer=root_layer,
         templates=templates,
         thermal_via_array=thermal_via,
         rules=rules,
@@ -301,7 +427,7 @@ def load_config(path: str) -> Config:
         via_search_n_directions=data.get('via_search_n_directions', 8),
     )
     total_spokes = sum(len(r.spokes) for r in cfg.rules)
-    logger.debug(f"Конфигурация загружена: target={cfg.target_ref}, side={cfg.side}, "
+    logger.debug(f"Конфигурация загружена: layer={cfg.layer}, "
                  f"шаблонов={len(cfg.templates)}, правил={len(cfg.rules)}, спиц={total_spokes}, "
                  f"clone_placements={len(cfg.clone_placements)}")
     return cfg

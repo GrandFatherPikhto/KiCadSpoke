@@ -54,10 +54,10 @@ def test_two_phase_flow_completes_and_via_geometry_is_correct():
     )
     spoke = ManualSpoke(pad="17", template="t", rotation_deg=0.0)
     cfg = Config(
-        target_ref="IC1", side="back",
+        layer='B.Cu',
         templates={"t": template},
         thermal_via_array=ThermalViaArrayConfig(enabled=False),
-        rules=[Rule(net="+3V3", spokes=[spoke])],
+        rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[spoke])],
     )
 
     ic1 = MagicMock()

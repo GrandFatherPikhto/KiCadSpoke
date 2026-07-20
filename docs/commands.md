@@ -275,7 +275,7 @@ python kicadspoke_cli.py extract --name pi_filter_vccint --output pi_filter_vcci
 ### Применение шаблона
 
 ```bash
-python kicadspoke_cli.py apply .\templates\pi_filter_vccio.yaml --clone-placement pi_filter_vccio    
+python kicadspoke_cli.py apply .\templates\pi_filter_vccio.yaml --clone-placement pi_filter_vccio
 ```
 
 ### Тестирование `KiCad` на краши

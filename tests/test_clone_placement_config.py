@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from kicadspoke.config import load_config
 
 YAML_TEXT = """
-target_ref: IC1
+
 templates:
   dac_channel:
     components:
@@ -61,6 +61,6 @@ def test_clone_placements_loaded_with_all_fields(tmp_path):
 
 def test_no_clone_placements_gives_empty_list(tmp_path):
     config_file = tmp_path / "test2.yaml"
-    config_file.write_text("target_ref: IC1\n", encoding="utf-8")
+    config_file.write_text("", encoding="utf-8")
     cfg = load_config(str(config_file))
     assert cfg.clone_placements == []

@@ -23,7 +23,7 @@ from .spoke_layout import local_to_absolute, ResolvedVia, ComponentLayout, Spoke
 
 
 def _resolve_clone_via(origin: Vector2, via: TemplateVia, rotation_deg: float,
-                       clone: ClonePlacement) -> ResolvedVia:
+                       clone: ClonePlacement, mirror: bool = False) -> ResolvedVia:
     if via.net is None:
         raise ValidationError(format_fatal_error(
             f"via без цепи в шаблоне {clone.template!r} ({clone.name!r})",
@@ -31,12 +31,20 @@ def _resolve_clone_via(origin: Vector2, via: TemplateVia, rotation_deg: float,
              f"для ClonePlacement нет цепи правила по умолчанию (в отличие от ManualSpoke), "
              f"net обязателен для каждой via в клонируемом шаблоне"]
         ))
+    pos = local_to_absolute(origin, via.offset_along_mm, via.offset_across_mm, rotation_deg)
+    if mirror:
+        pos = _mirror_x(origin, pos)
     return ResolvedVia(
-        position=local_to_absolute(origin, via.offset_along_mm, via.offset_across_mm, rotation_deg),
+        position=pos,
         net=resolve_net(via.net, clone.params, clone.net_overrides),
         drill_mm=via.drill_mm,
         diameter_mm=via.diameter_mm,
     )
+
+
+def _mirror_x(origin: Vector2, p: Vector2) -> Vector2:
+    """X-зеркало точки относительно вертикальной оси через origin."""
+    return Vector2.from_xy(2 * origin.x - p.x, p.y)
 
 
 def apply_clone_geometry(
@@ -44,6 +52,7 @@ def apply_clone_geometry(
     template: SpokeTemplate,
     role_to_ref: Dict[str, str],
     anchor_position: Optional[Vector2] = None,
+    mirror: bool = False,
 ) -> SpokeLayout:
     """
     Считает абсолютные позиции всего, что есть в шаблоне, для конкретного
@@ -56,6 +65,14 @@ def apply_clone_geometry(
     как ПЛОСКИЙ сдвиг от неё (без поворота, ровно как shift у ManualSpoke);
     rotation_deg крутит только содержимое шаблона. Если None — origin_x/y_mm
     остаются абсолютной точкой платы, как раньше.
+
+    mirror=True — размещение на ОБРАТНОЙ стороне: шаблон считается снятым
+    с front, финальные позиции (после поворота) X-зеркалятся относительно
+    вертикальной оси через origin, углы компонентов -> 180°−φ (конвенция
+    B.Cu из декап-плейсера). Якорный сдвиг origin_x/y_mm НЕ зеркалится —
+    он в координатах платы, как shift у ManualSpoke. Сами футпринты на
+    B.Cu переворачивает FlipManager (executor ставит абсолютный угол
+    ПОСЛЕ флипа, так что +180° от флипа здесь учитывать не надо).
     """
     shift = Vector2.from_xy(int(clone.origin_x_mm * MM), int(clone.origin_y_mm * MM))
     if anchor_position is not None:
@@ -64,8 +81,16 @@ def apply_clone_geometry(
         origin = shift
     rotation_deg = clone.rotation_deg
 
+    def place(along_mm: float, across_mm: float) -> Vector2:
+        p = local_to_absolute(origin, along_mm, across_mm, rotation_deg)
+        return _mirror_x(origin, p) if mirror else p
+
+    def comp_angle(angle_deg: float) -> float:
+        phi = angle_deg + rotation_deg
+        return (180.0 - phi) % 360.0 if mirror else phi
+
     layout = SpokeLayout(origin=origin)
-    layout.vias = [_resolve_clone_via(origin, v, rotation_deg, clone) for v in template.vias]
+    layout.vias = [_resolve_clone_via(origin, v, rotation_deg, clone, mirror) for v in template.vias]
 
     for slot in template.components:
         ref = role_to_ref.get(slot.role)
@@ -74,9 +99,10 @@ def apply_clone_geometry(
         layout.components.append(ComponentLayout(
             ref=ref,
             role=slot.role,
-            position=local_to_absolute(origin, slot.offset_along_mm, slot.offset_across_mm, rotation_deg),
-            angle_deg=slot.angle_deg + rotation_deg,
-            vias=[_resolve_clone_via(origin, v, rotation_deg, clone) for v in slot.vias],
+            position=place(slot.offset_along_mm, slot.offset_across_mm),
+            angle_deg=comp_angle(slot.angle_deg),
+            vias=[_resolve_clone_via(origin, v, rotation_deg, clone, mirror) for v in slot.vias],
+            slot_layer=slot.layer,
         ))
 
     return layout

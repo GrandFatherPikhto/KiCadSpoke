@@ -30,14 +30,16 @@ def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config) -> N
     (было бы легко не заметить опечатку в имени шаблона/номере пада).
     """
     problems = []
-    target_fp = adapter.get_footprint(cfg.target_ref)
-    if target_fp is None:
-        raise ValidationError(format_fatal_error(
-            "целевой компонент не найден",
-            [f"{cfg.target_ref!r} не найден на плате — проверьте target_ref в конфиге"]
-        ))
+    anchors = {}
+    for rule in cfg.rules:
+        if rule.anchor_ref not in anchors:
+            anchors[rule.anchor_ref] = adapter.get_footprint(rule.anchor_ref)
+            if anchors[rule.anchor_ref] is None:
+                problems.append(f"правило (цепь {rule.net!r}): якорь {rule.anchor_ref!r} "
+                                f"не найден на плате")
 
     for rule in cfg.rules:
+        target_fp = anchors.get(rule.anchor_ref)
         for spoke in rule.spokes:
             if not spoke.enabled:
                 continue
@@ -47,11 +49,11 @@ def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config) -> N
                     f"шаблон {spoke.template!r} не найден в templates"
                 )
                 continue
-            pad = adapter.get_pad_by_number(target_fp, spoke.pad)
-            if pad is None:
+            pad = adapter.get_pad_by_number(target_fp, spoke.pad) if target_fp else None
+            if target_fp is not None and pad is None:
                 problems.append(
                     f"спица (шаблон {spoke.template!r}, цепь {rule.net!r}): "
-                    f"у {cfg.target_ref} нет площадки {spoke.pad!r}"
+                    f"у {rule.anchor_ref} нет площадки {spoke.pad!r}"
                 )
 
     if problems:

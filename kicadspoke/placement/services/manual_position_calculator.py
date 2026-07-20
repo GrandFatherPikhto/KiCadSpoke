@@ -2,7 +2,7 @@
 
 import logging
 from typing import List, Tuple
-from kipy.board_types import FootprintInstance
+from kipy.board_types import FootprintInstance, BoardLayer
 
 from ...config import Config, Rule
 from ...kicad.adapter import KiCadBoardAdapter
@@ -40,14 +40,18 @@ class ManualPositionCalculator(IPositionCalculator):
 
     def compute_raw_positions(
         self,
-        target_fp: FootprintInstance,
         rules: List[Rule],
-        side: str
     ) -> Tuple[List[PlacedComponentInfo], List[ViaCommand]]:
         components_result: List[PlacedComponentInfo] = []
         vias_result: List[ViaCommand] = []
 
         for rule in rules:
+            # Якорь правила: чьи пады перечислены в spokes этого правила
+            target_fp = self.adapter.get_footprint(rule.anchor_ref)
+            if target_fp is None:
+                from ...exceptions import ComponentNotFoundError
+                raise ComponentNotFoundError(
+                    f"правило (цепь {rule.net!r}): якорь {rule.anchor_ref!r} не найден на плате")
             # Собираем ВСЕ роли, нужные хоть одной спице этого правила --
             # пул строится один раз на всё правило, не на каждую спицу.
             roles_needed = set()
@@ -72,7 +76,7 @@ class ManualPositionCalculator(IPositionCalculator):
 
                 pad = self.adapter.get_pad_by_number(target_fp, spoke.pad)
                 if pad is None:
-                    logger.warning(f"У {self.cfg.target_ref} нет площадки {spoke.pad}, "
+                    logger.warning(f"У {rule.anchor_ref} нет площадки {spoke.pad}, "
                                    f"спица пропущена")
                     continue
 
@@ -89,13 +93,16 @@ class ManualPositionCalculator(IPositionCalculator):
                 for via_index, via in enumerate(layout.vias):
                     vias_result.append(ViaCommand(
                         position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
-                        net_name=via.net, owner_ref=self.cfg.target_ref,
+                        net_name=via.net, owner_ref=rule.anchor_ref,
                         registry_key=make_registry_key(anchor_id, spoke.template, None, via_index),
                     ))
                     logger.debug(f"  via спицы (пад {spoke.pad}): "
                                 f"({via.position.x/1e6:.3f}, {via.position.y/1e6:.3f}) мм, net={via.net}")
 
                 for comp_layout in layout.components:
+                    # ManualSpoke — легаси-путь с ЕДИНЫМ глобальным side
+                    # (Config.side): per-slot layer здесь сознательно не
+                    # применяется, слой всем назначит планировщик.
                     components_result.append(PlacedComponentInfo(
                         ref=comp_layout.ref, dest=comp_layout.position, angle_deg=comp_layout.angle_deg,
                     ))

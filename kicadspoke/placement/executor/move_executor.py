@@ -36,7 +36,7 @@ class MoveExecutor:
                 }
 
         if check_collisions and moves:
-            ignore_refs = {self.cfg.target_ref}
+            ignore_refs = set(self.cfg.anchor_refs)
             conflicts = detect_collisions(moves, all_fps, self.adapter, ignore_refs, collision_margin_mm)
             if conflicts:
                 logger.warning(f"Обнаружено {len(conflicts)} потенциальных коллизий:")

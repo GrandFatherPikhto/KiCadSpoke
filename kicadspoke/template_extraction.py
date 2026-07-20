@@ -89,19 +89,37 @@ def extract_template_from_selection(adapter: KiCadBoardAdapter, name: str) -> Di
     logger.info(f"Origin (левый нижний угол выделения): "
                f"({origin.x/MM:.3f}, {origin.y/MM:.3f}) мм")
 
+    # Слои — ФАКТЫ, абсолютные: слой шаблона = преобладающий слой выделения,
+    # компоненты на нём наследуют без поля, выбивающиеся получают свой
+    # layer явно. Никаких относительных сторон.
+    from kipy.board_types import BoardLayer
+    back_count = sum(1 for fp in footprints if fp.layer == BoardLayer.BL_B_Cu)
+    tpl_is_back = back_count > len(footprints) / 2
+    tpl_layer_str = 'B.Cu' if tpl_is_back else 'F.Cu'
+    tpl_layer = BoardLayer.BL_B_Cu if tpl_is_back else BoardLayer.BL_F_Cu
+    if 0 < back_count < len(footprints):
+        logger.info(f"Смешанное выделение: {back_count} на B.Cu, "
+                    f"{len(footprints)-back_count} на F.Cu; слой шаблона — "
+                    f"{tpl_layer_str}, у выбивающихся будет явный layer")
+    logger.info(f"Слой шаблона: {tpl_layer_str}")
+
     components = []
     for fp in footprints:
         role = adapter.get_field_value(fp, ROLE_FIELD_NAME)
         along_mm = round((fp.position.x - origin.x) / MM, 4)
         across_mm = round((fp.position.y - origin.y) / MM, 4)
-        components.append({
+        slot = {
             "role": role,
             "offset_along_mm": along_mm,
             "offset_across_mm": across_mm,
             "angle_deg": fp.orientation.degrees,
-        })
+        }
+        if fp.layer != tpl_layer:
+            slot["layer"] = 'F.Cu' if fp.layer == BoardLayer.BL_F_Cu else 'B.Cu'
+        components.append(slot)
         logger.debug(f"  {fp.reference_field.text.value} (роль {role}): "
-                    f"along={along_mm}, across={across_mm}, angle={fp.orientation.degrees}")
+                    f"along={along_mm}, across={across_mm}, angle={fp.orientation.degrees}"
+                    + (f", layer={slot.get('layer')}" if 'layer' in slot else ""))
 
     spoke_vias = []
     for v in vias:
@@ -117,4 +135,5 @@ def extract_template_from_selection(adapter: KiCadBoardAdapter, name: str) -> Di
         logger.debug(f"  via: along={along_mm}, across={across_mm}, net={v.net.name if v.net else None}")
 
     logger.info(f"Извлечён шаблон {name!r}: {len(components)} компонентов, {len(spoke_vias)} via уровня спицы")
-    return {name: {"vias": spoke_vias, "components": components}}
+    result = {"vias": spoke_vias, "components": components, "layer": tpl_layer_str}
+    return {name: result}

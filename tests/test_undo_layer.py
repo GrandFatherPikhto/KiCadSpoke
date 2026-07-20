@@ -58,7 +58,7 @@ class TestOriginalLayerCapture:
 
         cfg = MagicMock()
         cfg.target_ref = "IC1"
-        cfg.side = "back"
+        cfg.layer='B.Cu'
         executor = BatchExecutor(adapter, cfg, batch_size=10)
 
         move = MoveCommand(ref="C39", position=Vector2.from_xy(int(51 * MM), int(51 * MM)),

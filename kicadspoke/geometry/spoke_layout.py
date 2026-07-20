@@ -75,6 +75,7 @@ class ComponentLayout:
     position: Vector2
     angle_deg: float
     vias: List[ResolvedVia] = field(default_factory=list)
+    slot_layer: str = None     # абсолютный слой слота ('F.Cu'/'B.Cu'), None = слой шаблона
 
 
 @dataclass
@@ -117,6 +118,7 @@ def apply_spoke_geometry(
             position=local_to_absolute(origin, slot.offset_along_mm, slot.offset_across_mm, spoke.rotation_deg),
             angle_deg=slot.angle_deg + spoke.rotation_deg,
             vias=[_resolve_via(origin, v, spoke.rotation_deg, rule_net) for v in slot.vias],
+            slot_layer=slot.layer,
         ))
 
     return layout

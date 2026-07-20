@@ -16,7 +16,7 @@ from kicadspoke.placement.services.clone_role_resolver import clone_uses_selecti
 
 def _cfg(clones, templates=None):
     return Config(
-        target_ref="IC1", side="back",
+        layer='B.Cu',
         templates=templates or {"t": SpokeTemplate(name="t")},
         thermal_via_array=ThermalViaArrayConfig(enabled=False),
         rules=[], clone_placements=clones,

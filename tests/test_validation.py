@@ -17,7 +17,7 @@ from kicadspoke.validation import check_templates_and_pads_exist, check_role_poo
 
 def _cfg(rules, templates=None):
     return Config(
-        target_ref="IC1", side="back",
+        layer='B.Cu',
         templates=templates or {"t": SpokeTemplate(name="t", components=[
             TemplateComponentSlot(role="HEAVY"), TemplateComponentSlot(role="LIGHT")
         ])},
@@ -43,24 +43,24 @@ def _adapter_with_pads(pad_numbers):
 
 class TestTemplatesAndPadsExist:
     def test_valid_config_passes(self):
-        cfg = _cfg([Rule(net="+3V3", spokes=[ManualSpoke(pad="17", template="t")])])
+        cfg = _cfg([Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="17", template="t")])])
         adapter = _adapter_with_pads(["17"])
         check_templates_and_pads_exist(adapter, cfg)  # не должно бросить
 
     def test_unknown_template_raises(self):
-        cfg = _cfg([Rule(net="+3V3", spokes=[ManualSpoke(pad="17", template="does_not_exist")])])
+        cfg = _cfg([Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="17", template="does_not_exist")])])
         adapter = _adapter_with_pads(["17"])
         with pytest.raises(ValidationError, match="does_not_exist"):
             check_templates_and_pads_exist(adapter, cfg)
 
     def test_unknown_pad_raises(self):
-        cfg = _cfg([Rule(net="+3V3", spokes=[ManualSpoke(pad="999", template="t")])])
+        cfg = _cfg([Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="999", template="t")])])
         adapter = _adapter_with_pads(["17"])  # 999 не существует
         with pytest.raises(ValidationError, match="999"):
             check_templates_and_pads_exist(adapter, cfg)
 
     def test_target_ref_not_found_raises(self):
-        cfg = _cfg([Rule(net="+3V3", spokes=[ManualSpoke(pad="17", template="t")])])
+        cfg = _cfg([Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="17", template="t")])])
         adapter = MagicMock()
         adapter.get_footprint.return_value = None
         with pytest.raises(ValidationError, match="IC1"):
@@ -68,7 +68,7 @@ class TestTemplatesAndPadsExist:
 
     def test_disabled_spoke_not_checked(self):
         """Выключенная спица (enabled=False) не должна проверяться вовсе."""
-        cfg = _cfg([Rule(net="+3V3", spokes=[
+        cfg = _cfg([Rule(net="+3V3", anchor_ref='IC1', spokes=[
             ManualSpoke(pad="999", template="does_not_exist", enabled=False)
         ])])
         adapter = _adapter_with_pads(["17"])
@@ -94,7 +94,7 @@ class TestRolePoolSufficiency:
         return adapter
 
     def test_sufficient_pool_passes(self):
-        cfg = _cfg([Rule(net="+3V3", spokes=[
+        cfg = _cfg([Rule(net="+3V3", anchor_ref='IC1', spokes=[
             ManualSpoke(pad="17", template="t"),
             ManualSpoke(pad="26", template="t"),
         ])])
@@ -106,7 +106,7 @@ class TestRolePoolSufficiency:
         check_role_pool_sufficiency(adapter, cfg)  # не должно бросить
 
     def test_insufficient_pool_raises_with_exact_counts(self):
-        cfg = _cfg([Rule(net="+3V3", spokes=[
+        cfg = _cfg([Rule(net="+3V3", anchor_ref='IC1', spokes=[
             ManualSpoke(pad="17", template="t"),
             ManualSpoke(pad="26", template="t"),
         ])])
@@ -120,7 +120,7 @@ class TestRolePoolSufficiency:
 
     def test_wrong_net_component_not_counted(self):
         """Компонент с нужной ролью, но НЕ на той цепи -- не должен засчитываться."""
-        cfg = _cfg([Rule(net="+3V3", spokes=[ManualSpoke(pad="17", template="t")])])
+        cfg = _cfg([Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="17", template="t")])])
         adapter = self._adapter_with_pool([
             ("C5", "LIGHT", "+3V3"),
             ("C30", "HEAVY", "+1V2_VCCINT"),  # HEAVY, но не на +3V3!
@@ -133,8 +133,8 @@ class TestRolePoolSufficiency:
         template = SpokeTemplate(name="t", components=[TemplateComponentSlot(role="HEAVY")])
         cfg = _cfg(
             [
-                Rule(net="+3V3", spokes=[ManualSpoke(pad="17", template="t")]),
-                Rule(net="+1V2", spokes=[ManualSpoke(pad="40", template="t")]),
+                Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="17", template="t")]),
+                Rule(net="+1V2", anchor_ref='IC1', spokes=[ManualSpoke(pad="40", template="t")]),
             ],
             templates={"t": template},
         )

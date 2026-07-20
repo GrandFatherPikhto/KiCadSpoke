@@ -52,7 +52,7 @@ def test_clone_placements_only_via_selection():
     clone = ClonePlacement(name="crystal2", template="crystal", origin_x_mm=100.0, origin_y_mm=50.0,
                           rotation_deg=0.0)
     cfg = Config(
-        target_ref="IC1", side="back",
+        layer='B.Cu',
         templates={"crystal": tpl},
         thermal_via_array=ThermalViaArrayConfig(enabled=False),
         rules=[],  # НЕТ rules вовсе
@@ -106,10 +106,10 @@ def test_rules_and_clone_placements_together():
     )
 
     cfg = Config(
-        target_ref="IC1", side="back",
+        layer='B.Cu',
         templates={"cap_single": spoke_tpl, "crystal": clone_tpl},
         thermal_via_array=ThermalViaArrayConfig(enabled=False),
-        rules=[Rule(net="+3V3", spokes=[ManualSpoke(pad="17", template="cap_single")])],
+        rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="17", template="cap_single")])],
         clone_placements=[ClonePlacement(name="xtal1", template="crystal", origin_x_mm=200.0, origin_y_mm=0.0)],
     )
 

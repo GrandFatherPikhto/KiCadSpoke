@@ -53,7 +53,11 @@ def main():
         return
 
     # Строим keepout из падов IC и компонентов (для диагностики)
-    target_fp = adapter.get_footprint(cfg.target_ref)
+    tva = cfg.thermal_via_array
+    target_fp = adapter.get_footprint(tva.anchor_ref) if tva.enabled else None
+    if target_fp is None:
+        logger.info('Термовиа выключены — keepout-диагностика пропущена')
+        return
     keepout_rects = planner.via_planner._build_keepout(target_fp, planned_components)
     # Также можно добавить уже существующие via в keepout? Но для диагностики падов достаточно.
 

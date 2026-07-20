@@ -2,7 +2,7 @@
 
 ## Назначение
 
-Директория `placement/` содержит основную бизнес-логику расстановки компонентов и создания via. Она координирует все этапы процесса:
+Директория `placement/` содержит основную логику расстановки компонентов и создания via. Она координирует все этапы процесса:
 
 1. **Планирование** – расчёт целевых позиций компонентов и via на основе шаблонов спиц для двух типов размещений:
    - **`ManualSpoke`** (правила `rules`) – привязка к падам целевого компонента (IC) с автоматическим подбором refdes через пул ролей (`ComponentPool`).
@@ -44,25 +44,44 @@ placement/
 
 ---
 
-## Подробное описание файлов и модулей
+## Файлы и функции
 
-### `commands.py` – DTO для команд
+### `__init__.py`
 
-Определяет структуры данных, используемые для передачи информации между компонентами.
-
-| Класс | Поля | Описание |
-|-------|------|----------|
-| `MoveCommand` | `ref`, `position`, `angle`, `layer` | Команда перемещения/поворота компонента. |
-| `ViaCommand` | `position`, `drill_mm`, `diameter_mm`, `net_name`, `owner_ref`, `registry_key` | Команда создания переходного отверстия. `registry_key` используется реестром для идемпотентности (см. `registry.py`). |
-| `PlacedComponentInfo` | `ref`, `dest`, `angle_deg` | Информация о размещённом компоненте (передаётся от калькулятора к via-планировщику). |
-
-**Используется в:** `planner.py`, `executor/`, `services/`.
+**Назначение:**  
+Экспортирует публичные классы для удобного импорта из других модулей (например, `from kicadspoke.placement import PlacementPlanner, BatchExecutor`).  
+Обычно содержит:
+```python
+from .executor import BatchExecutor
+from .planner import PlacementPlanner
+from .commands import MoveCommand, ViaCommand, PlacedComponentInfo
+```
 
 ---
 
-### `collision.py` – Проверка коллизий
+### `commands.py`
 
+**Назначение:**  
+Определяет структуры данных (DTO), используемые для передачи информации между компонентами системы.
+
+**Классы:**
+
+| Класс | Поля | Описание |
+|-------|------|----------|
+| `MoveCommand` | `ref: str`, `position: Vector2`, `angle: Angle`, `layer: BoardLayer` | Команда перемещения/поворота компонента. |
+| `ViaCommand` | `position: Vector2`, `drill_mm: float`, `diameter_mm: float`, `net_name: str`, `owner_ref: str`, `registry_key: Optional[str]` | Команда создания переходного отверстия. `registry_key` используется для реестра расстановки (см. `registry.py`). |
+| `PlacedComponentInfo` | `ref: str`, `dest: Vector2`, `angle_deg: float` | Информация о размещённом компоненте (передаётся от калькулятора к via-планировщику). |
+
+**Используется в:** `planner.py`, `executor/`, `manual_position_calculator.py`, `clone_position_calculator.py`, `via_planner.py`, `registry.py`.
+
+---
+
+### `collision.py`
+
+**Назначение:**  
 Упрощённая проверка коллизий между компонентами (по кругам-приближениям). Использует реальные bounding box'ы через адаптер для вычисления радиусов (половина диагонали bbox).
+
+**Основные функции:**
 
 | Функция | Описание |
 |---------|----------|
@@ -75,9 +94,10 @@ placement/
 
 ---
 
-### `interfaces.py` – Абстрактные интерфейсы
+### `interfaces.py`
 
-Определяет интерфейсы для калькуляторов позиций и планировщиков via, что позволяет легко подменять реализации (например, для автоматической геометрии в будущем) и улучшает тестируемость.
+**Назначение:**  
+Определяет абстрактные интерфейсы для калькуляторов позиций и планировщиков via, что позволяет легко подменять реализации (например, для автоматической геометрии в будущем) и улучшает тестируемость.
 
 | Интерфейс | Метод | Описание |
 |-----------|-------|----------|
@@ -88,9 +108,12 @@ placement/
 
 ---
 
-### `planner.py` – Главный планировщик (`PlacementPlanner`)
+### `planner.py`
 
-Координирует расчёт позиций и via для `rules` (через `ManualPositionCalculator`) и `clone_placements` (через `ClonePositionCalculator`). Применяет логику пропуска уже стоящих на месте компонентов (`skip_existing_components`). Разделяет планирование на две фазы: `plan_moves()` и `plan_vias()`.
+**Назначение:**  
+Главный планировщик – координирует расчёт позиций и via для `rules` (через `ManualPositionCalculator`) и `clone_placements` (через `ClonePositionCalculator`). Применяет логику пропуска уже стоящих на месте компонентов (`skip_existing_components`). Разделяет планирование на две фазы: `plan_moves()` и `plan_vias()`.
+
+**Класс `PlacementPlanner`:**
 
 | Метод | Описание |
 |-------|----------|
@@ -104,45 +127,130 @@ placement/
 
 ---
 
-### `executor/` – Исполнители команд
+### `executor/` – Исполнитель команд
 
 Директория `executor/` разбита на несколько модулей для улучшения читаемости и тестируемости.
 
-#### `base.py` – общие утилиты
-`layer_to_str(layer)` преобразует `BoardLayer` в строку `"F.Cu"` или `"B.Cu"`.
+#### `executor/base.py`
 
-#### `operation_logger.py` – логирование операций
-Класс `OperationLogger` записывает JSON-файлы в папку `logs/` для команды `undo`. Метод `write_operation_log(move_log, via_log)` создаёт файл с временной меткой.
+**Назначение:**  
+Содержит общие утилиты, используемые всеми исполнителями.
 
-#### `flip_manager.py` – управление флипом
-Класс `FlipManager` проверяет, какие компоненты требуют флипа (слой отличается от целевого), выполняет флип батчами через `adapter.flip_selected` и возвращает обновлённый словарь `ref->footprint`.
-
-#### `move_executor.py` – исполнение перемещений
-Класс `MoveExecutor` выполняет перемещения, включая проверку коллизий, флип и батчирование. Метод `execute_moves(moves, check_collisions, collision_margin_mm)` возвращает `(failed_refs, move_log)`.
-
-#### `via_executor.py` – создание via
-Класс `ViaExecutor` создаёт via на плате, используя реестр расстановки (если передан) для записи созданных via. Метод `execute_vias(vias, registry)` возвращает `(failed_via_owners, via_log)`.
-
-#### `batch_executor.py` – фасад
-Класс `BatchExecutor` объединяет `MoveExecutor` и `ViaExecutor`, управляет логированием. Сохраняет совместимость со старым интерфейсом. Методы `execute_moves()` и `execute_vias()` вызывают соответствующие исполнители, а затем `OperationLogger` записывает единый JSON-лог.
+| Функция | Описание |
+|---------|----------|
+| `layer_to_str(layer)` | Преобразует `BoardLayer` в строку `"F.Cu"` или `"B.Cu"` (используется для логирования). |
 
 ---
 
-### `services/` – Сервисные классы
+#### `executor/operation_logger.py`
 
-#### `component_pool.py` – пул компонентов для ManualSpoke
-Класс `ComponentPool` подбирает конкретные refdes для ролей шаблона в рамках `ManualSpoke`. Пул строится один раз на каждое правило (`rule.net`) и разбирается спицами этого правила по очереди.
+**Назначение:**  
+Отвечает за запись JSON-логов операций для команды `undo`.
+
+**Класс `OperationLogger`:**
 
 | Метод | Описание |
 |-------|----------|
-| `__init__(adapter, net_name, roles)` | Строит пул: читает все футпринты с полем `Role`, подключённые к `net_name`, сортирует их по естественному числовому порядку (`C5` < `C10`). |
+| `__init__(log_dir)` | Создаёт папку для логов (по умолчанию `logs/`). |
+| `write_operation_log(move_log, via_log)` | Записывает JSON-файл с временной меткой. Возвращает путь к файлу или `None` при ошибке. |
+
+---
+
+#### `executor/flip_manager.py`
+
+**Назначение:**  
+Управляет переворотом (flip) компонентов на другую сторону платы. Использует `adapter.flip_selected` и батчирование.
+
+**Класс `FlipManager`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, batch_size)` | Инициализация с адаптером и размером батча. |
+| `flip_if_needed(moves)` | Проверяет, какие компоненты требуют флипа (слой отличается от целевого), выполняет флип батчами и возвращает обновлённый словарь `ref->footprint`. |
+
+---
+
+#### `executor/move_executor.py`
+
+**Назначение:**  
+Применяет перемещения компонентов к плате. Включает проверку коллизий, флип и батчирование.
+
+**Класс `MoveExecutor`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config, batch_size)` | Инициализация. |
+| `execute_moves(moves, check_collisions, collision_margin_mm)` | Выполняет перемещения. Возвращает `(failed_refs, move_log)`. |
+
+---
+
+#### `executor/via_executor.py`
+
+**Назначение:**  
+Создаёт via на плате. Использует реестр расстановки (если передан) для записи созданных via.
+
+**Класс `ViaExecutor`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config, batch_size)` | Инициализация. |
+| `execute_vias(vias, registry)` | Создаёт via батчами. Возвращает `(failed_via_owners, via_log)`. В случае успеха вызывает `registry.record_created()` для каждой via. |
+
+---
+
+#### `executor/batch_executor.py`
+
+**Назначение:**  
+Фасад, объединяющий `MoveExecutor` и `ViaExecutor`, а также управляющий логированием. Сохраняет совместимость со старым интерфейсом.
+
+**Класс `BatchExecutor`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config, batch_size)` | Инициализация. |
+| `execute_moves(moves, ...)` | Вызывает `MoveExecutor.execute_moves()` и сохраняет лог. |
+| `execute_vias(vias, registry)` | Вызывает `ViaExecutor.execute_vias()` и записывает единый JSON-лог (объединяя move_log и via_log). |
+| `execute(moves, vias, ...)` | Обратно совместимая обёртка (вызывает `execute_moves` и `execute_vias` подряд). Не рекомендуется для боевого использования. |
+
+---
+
+### `services/`
+
+#### `services/__init__.py`
+
+Экспортирует публичные классы сервисов:
+```python
+from .component_pool import ComponentPool
+from .clone_role_resolver import CloneRoleResolver
+from .clone_position_calculator import ClonePositionCalculator
+from .manual_position_calculator import ManualPositionCalculator
+from .via_planner import ViaPlanner
+```
+
+---
+
+#### `services/component_pool.py`
+
+**Назначение:**  
+Подбирает конкретные refdes компонентов для ролей шаблона в рамках `ManualSpoke`. Пул строится один раз на каждое правило (`rule.net`) и разбирается спицами этого правила по очереди.
+
+**Класс `ComponentPool`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, net_name, roles)` | Строит пул для заданной цепи: читает все футпринты, у которых есть поле `Role` и которые подключены к `net_name`. |
+| `_build()` | Внутренний метод, собирает списки refdes по ролям, сортирует их в естественном численном порядке (`C5` < `C10`). |
 | `pop(role, spoke_pad)` | Забирает следующий компонент с указанной ролью. Если пул исчерпан – выбрасывает `ValidationError`. |
 | `remaining_count(role)` | Возвращает количество оставшихся компонентов с данной ролью. |
 
 **Используется в:** `manual_position_calculator.py`.
 
-#### `clone_role_resolver.py` – разрешение ролей для ClonePlacement
-Поддерживает два режима:
+---
+
+#### `services/clone_role_resolver.py`
+
+**Назначение:**  
+Разрешает роли для **клонируемых размещений** (`ClonePlacement`). Поддерживает два режима:
 
 - **Режим «по выделению»** – пользователь выделяет компоненты конкретного экземпляра в PCB-редакторе. Программа считывает поле `Role` у каждого выделенного компонента и сопоставляет с ролями шаблона.
 - **Режим «по цепям»** – для каждого слота роли явно задаётся цепь (через `nets` или `net_template` с плейсхолдерами). Программа ищет компоненты с нужной ролью, подключённые к этой цепи, разрешая имена цепей через `net_resolution` (с поддержкой `params` и `net_overrides`).
@@ -154,26 +262,50 @@ placement/
 
 **Используется в:** `clone_position_calculator.py`.
 
-#### `clone_position_calculator.py` – расчёт для ClonePlacement
-Класс `ClonePositionCalculator` рассчитывает абсолютные позиции компонентов и via для `ClonePlacement`. Не требует `target_fp` или `rules` – использует абсолютные координаты `origin_x_mm/origin_y_mm` (или сдвиг от якоря) и разрешает роли через `clone_role_resolver`.
+---
 
-Метод `compute_raw_positions(clone_placements)` для каждого клона определяет режим, получает `role_to_ref`, вызывает `apply_clone_geometry` и возвращает `(PlacedComponentInfo[], ViaCommand[])` с корректными `registry_key` (anchor_id = `name:{clone.name}`).
+#### `services/clone_position_calculator.py`
+
+**Назначение:**  
+Расчёт абсолютных позиций компонентов и via для `ClonePlacement`. Не требует `target_fp` или `rules` – использует абсолютные координаты `origin_x_mm/origin_y_mm` и разрешает роли через `clone_role_resolver`.
+
+**Класс `ClonePositionCalculator`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config)` | Инициализация. |
+| `compute_raw_positions(clone_placements)` | Для каждого клона определяет режим, получает `role_to_ref`, вызывает `apply_clone_geometry` и возвращает `(PlacedComponentInfo[], ViaCommand[])` с корректными `registry_key` (anchor_id = `name:{clone.name}`). |
 
 **Используется в:** `planner.py`.
 
-#### `manual_position_calculator.py` – расчёт для ManualSpoke
-Реализует интерфейс `IPositionCalculator`. Класс `ManualPositionCalculator` рассчитывает абсолютные позиции компонентов и via для `ManualSpoke` на основе падов IC, шаблонов и пула ролей.
+---
 
-Метод `compute_raw_positions(target_fp, rules, side)` для каждого правила строит `ComponentPool`, затем для каждой спицы вызывает `apply_spoke_geometry` с полученным сопоставлением роль→ref. Возвращает кортеж `(список PlacedComponentInfo, список ViaCommand)` с корректными `registry_key` (anchor_id = `pad:{pad}`).
+#### `services/manual_position_calculator.py`
+
+**Назначение:**  
+Расчёт абсолютных позиций компонентов и via для `ManualSpoke` на основе падов IC, шаблонов и пула ролей. Реализует интерфейс `IPositionCalculator`.
+
+**Класс `ManualPositionCalculator`:**
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config)` | Инициализация с адаптером и конфигом. |
+| `compute_raw_positions(target_fp, rules, side)` | Для каждого правила строит `ComponentPool`, затем для каждой спицы вызывает `apply_spoke_geometry` с полученным сопоставлением роль→ref. Возвращает кортеж `(список PlacedComponentInfo, список ViaCommand)` с корректными `registry_key` (anchor_id = `pad:{pad}`). |
 
 **Используется в:** `planner.py`.
 
-#### `via_planner.py` – планирование via и термовиа
+---
+
+#### `services/via_planner.py`
+
+**Назначение:**  
 Реализует интерфейс `IViaPlanner`. Отвечает только за:
 - Фильтрацию уже существующих via (идемпотентность) для всех via, переданных из калькуляторов (через `skip_existing_components` и реестр).
 - Планирование термовиа (массива под термопадом) с поиском свободных мест через `find_free_point`.
 
 Все остальные via (уровня спицы и уровня компонента) уже рассчитаны в `ManualPositionCalculator` и `ClonePositionCalculator` и передаются готовыми.
+
+**Класс `ViaPlanner`:**
 
 | Метод | Описание |
 |-------|----------|
@@ -202,39 +334,22 @@ placement/
 
 ---
 
-## Рекомендации по использованию
+## Примечания по использованию
 
-### Двухфазный процесс (обязателен для корректного учёта реального состояния платы)
-1. Выполнить `plan_moves()` → `execute_moves()`.
-2. Выполнить `adapter.refresh_board()` (перечитать плату после перемещений).
-3. Выполнить `plan_vias()` → `execute_vias()`.
+- **Двухфазный процесс** (обязателен для корректного учёта реального состояния платы, особенно для термовиа):  
+  1. Выполнить `plan_moves()` → `execute_moves()`.  
+  2. Выполнить `adapter.refresh_board()`.  
+  3. Выполнить `plan_vias()` → `execute_vias()`.  
+  Это реализовано в `kicadspoke_cli.py:cmd_apply()`.
 
-Это реализовано в `kicadspoke_cli.py:cmd_apply()`.
+- **Коллизии** – проверка включена по умолчанию, но может давать ложные срабатывания. Отключается флагом `--no-collision-check`.
 
-### Идемпотентность
-- Включите `skip_existing_components: true` в корне конфига, чтобы пропускать уже стоящие на месте компоненты и via.
-- Реестр расстановки (`registry.py`) автоматически предотвращает дублирование via.
+- **Логирование операции** – сохраняется в `logs/operation_*.json` и используется командой `undo`.
 
-### Клонирование секций
-- Для штучных экземпляров (одна MCU) используйте режим «по выделению» – не задавайте `nets` и `params`, выделите компоненты в KiCad перед запуском.
-- Для многократно повторяющихся блоков (П-фильтры, каналы) задайте `nets` и `params` – программа разрешит роли по цепям, и вы сможете обработать несколько клонов за один прогон.
+- **Dry-run** – отображает и перемещения, и via (кроме термовиа, которые могут слегка отличаться из-за keepout).
 
-### Коллизии
-- Проверка включена по умолчанию, но может давать ложные срабатывания – отключайте флагом `--no-collision-check`.
+- **Идемпотентность** – включение `skip_existing_components: true` позволяет безопасно перезапускать скрипт; реестр расстановки (`registry.py`) предотвращает дублирование via.
 
-### Откат
-- Логи операций сохраняются в `logs/operation_*.json` и используются командой `undo`.
+- **Автоматический подбор refdes** – через `ComponentPool` по полю `Role` в схеме (для `ManualSpoke`). Для `ClonePlacement` используются два режима сопоставления ролей (по выделению или по цепям) с поддержкой плейсхолдеров через `net_resolution` и `net_overrides`.
 
----
-
-## Примечания для разработчиков
-
-- При добавлении нового типа размещения (например, автоматического по зоне) реализуйте соответствующий калькулятор, наследующий `IPositionCalculator`, и зарегистрируйте его в `PlacementPlanner`.
-- Все сервисы должны получать адаптер и конфиг через конструктор (внедрение зависимости).
-- Для тестирования используйте мок-адаптер, реализующий `IBoardAdapter`.
-
----
-
-## Лицензия
-
-Все модули `placement/` распространяются под лицензией MIT, так же как и основной проект.
+- **Клонирование секций** – для многократно повторяющихся шаблонов используйте `clone_placements` с явными цепями (`nets`/`params`) и запускайте без выделения; для штучных экземпляров используйте режим «по выделению» (без `nets` и `params`), выделяя компоненты в KiCad перед запуском.

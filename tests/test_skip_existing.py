@@ -40,10 +40,10 @@ class TestSkipExistingComponents:
         )
         spoke = ManualSpoke(pad="17", template="t", rotation_deg=0.0)
         return Config(
-            target_ref="IC1", side="back",
+            layer='B.Cu',
             templates={"t": template},
             thermal_via_array=ThermalViaArrayConfig(enabled=False),
-            rules=[Rule(net="+3V3", spokes=[spoke])],
+            rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[spoke])],
             skip_existing_components=skip,
         )
 
@@ -115,7 +115,7 @@ class TestSkipExistingComponents:
 class TestSkipExistingVias:
     def _cfg(self, skip: bool):
         return Config(
-            target_ref="IC1", side="back",
+            layer='B.Cu',
             templates={},
             thermal_via_array=ThermalViaArrayConfig(enabled=False),
             rules=[],

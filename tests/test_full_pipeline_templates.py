@@ -76,10 +76,10 @@ def _build_config():
     spoke_62 = ManualSpoke(pad="62", template="cap_pair_standard",
                           shift_x_mm=0.4, shift_y_mm=0.0, rotation_deg=270.0)
     cfg = Config(
-        target_ref="IC1", side="back",
+        layer='B.Cu',
         templates={"cap_pair_standard": template},
         thermal_via_array=ThermalViaArrayConfig(enabled=False),
-        rules=[Rule(net="+1V2_VCCINT", spokes=[spoke_109, spoke_62])],
+        rules=[Rule(net="+1V2_VCCINT", anchor_ref='IC1', spokes=[spoke_109, spoke_62])],
         via_keepout_clearance_mm=0.2, via_search_step_mm=0.1,
         via_search_max_radius_mm=3.0, via_search_n_directions=8,
     )
