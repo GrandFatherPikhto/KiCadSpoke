@@ -54,24 +54,31 @@ def rotate_coords(along: float, across: float, angle_deg: float) -> Tuple[float,
 def find_element(template: Dict[str, Any], origin_element: Dict[str, Any]) -> Optional[Tuple[float, float]]:
     """Находит координаты элемента в исходном шаблоне (до преобразований)."""
     if origin_element.get('type') == 'via':
-        for via in template.get('vias', []):
-            if origin_element.get('index') is not None:
-                idx = origin_element['index']
-                if idx >= 0 and idx < len(template.get('vias', [])):
-                    return via.get('offset_along_mm', 0.0), via.get('offset_across_mm', 0.0)
-            elif origin_element.get('net') is not None:
-                if via.get('net') == origin_element['net']:
+        idx = origin_element.get('index')
+        if idx is not None:
+            vias = template.get('vias', [])
+            if 0 <= idx < len(vias):
+                via = vias[idx]
+                return via.get('offset_along_mm', 0.0), via.get('offset_across_mm', 0.0)
+        net = origin_element.get('net')
+        if net is not None:
+            for via in template.get('vias', []):
+                if via.get('net') == net:
                     return via.get('offset_along_mm', 0.0), via.get('offset_across_mm', 0.0)
     elif origin_element.get('type') == 'component':
-        for comp in template.get('components', []):
-            if origin_element.get('index') is not None:
-                idx = origin_element['index']
-                if idx >= 0 and idx < len(template.get('components', [])):
-                    return comp.get('offset_along_mm', 0.0), comp.get('offset_across_mm', 0.0)
-            elif origin_element.get('role') is not None:
-                if comp.get('role') == origin_element['role']:
+        idx = origin_element.get('index')
+        if idx is not None:
+            comps = template.get('components', [])
+            if 0 <= idx < len(comps):
+                comp = comps[idx]
+                return comp.get('offset_along_mm', 0.0), comp.get('offset_across_mm', 0.0)
+        role = origin_element.get('role')
+        if role is not None:
+            for comp in template.get('components', []):
+                if comp.get('role') == role:
                     return comp.get('offset_along_mm', 0.0), comp.get('offset_across_mm', 0.0)
     return None
+
 
 def apply_transform(template: Dict[str, Any],
                     rotate_deg: float = 0.0,
