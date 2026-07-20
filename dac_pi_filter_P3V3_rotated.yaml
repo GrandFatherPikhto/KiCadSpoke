@@ -1,0 +1,46 @@
+templates:
+  dac_pi_filter_P3V3:
+    layer: B.Cu
+    vias:
+    - offset_along_mm: 1.8125
+      offset_across_mm: -3.1675
+      net: +3V3
+      drill_mm: 0.4
+      diameter_mm: 0.8
+    - offset_along_mm: 4.16
+      offset_across_mm: -0.0075
+      net: GND
+      drill_mm: 0.4
+      diameter_mm: 0.8
+    - offset_along_mm: 3.5375
+      offset_across_mm: -3.1675
+      net: GND
+      drill_mm: 0.4
+      diameter_mm: 0.8
+    - offset_along_mm: -2.2325
+      offset_across_mm: -0.0075
+      net: GND
+      drill_mm: 0.4
+      diameter_mm: 0.8
+    - offset_along_mm: 0.0
+      offset_across_mm: 0.0
+      net: /Channel_0/DAC/+3V3_CLKVDD
+      drill_mm: 0.4
+      diameter_mm: 0.8
+    components:
+    - role: DAC_PI_FILTER_C3
+      offset_along_mm: -1.37
+      offset_across_mm: -1.7275
+      angle_deg: 180.0
+    - role: DAC_PI_FILTER_C2
+      offset_along_mm: 2.38
+      offset_across_mm: -0.0075
+      angle_deg: 0.0
+    - role: DAC_PI_FILTER_FB
+      offset_along_mm: 0.0
+      offset_across_mm: 0.0
+      angle_deg: 180.0
+    - role: DAC_PI_FILTER_C1
+      offset_along_mm: 2.675
+      offset_across_mm: -1.7275
+      angle_deg: 0.0
