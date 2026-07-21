@@ -1,0 +1,65 @@
+templates:
+  pi_filter4:
+    vias:
+    - offset_along_mm: -5.23
+      offset_across_mm: -0.61
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: -7.91
+      offset_across_mm: 1.7
+      net: +1V2
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: -1.03
+      offset_across_mm: 2.18
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 0.0
+      offset_across_mm: 0.0
+      net: '{PWR_OUT}'
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    components:
+    - role: PI_FILTER_C4
+      offset_along_mm: -1.03
+      offset_across_mm: 0.545
+      angle_deg: -90.0
+    - role: PI_FILTER_C1
+      offset_along_mm: -6.64
+      offset_across_mm: 0.84
+      angle_deg: 90.0
+    - role: PI_FILTER_C3
+      offset_along_mm: -2.55
+      offset_across_mm: 0.84
+      angle_deg: -90.0
+    - role: PI_FILTER_FB
+      offset_along_mm: -4.05
+      offset_across_mm: 1.2175
+      angle_deg: 90.0
+    - role: PI_FILTER_C2
+      offset_along_mm: -5.21
+      offset_across_mm: 1.135
+      angle_deg: 90.0
+    layer: B.Cu
+
+clone_placements:
+  # --- Channel_0, питание CLKVDD (пад 11) ---
+  - name: fpga_filter_1v2_vccint
+    template: pi_filter4
+    anchor_ref: IC1
+    anchor_pad: '102'
+    origin_x_mm: -2.0
+    origin_y_mm: 1.5
+    rotation_deg: 0.0
+    enabled: true
+    params:
+      PWR_IN: +1V2
+      PWR_OUT: +1V2_VCCINT
+     nets:
+      PI_FILTER_C1: '{PWR_IN}'
+      PI_FILTER_C2: '{PWR_IN}'
+      PI_FILTER_FB: '{PWR_OUT}'
+      PI_FILTER_C3: '{PWR_OUT}'
+      PI_FILTER_C4: '{PWR_OUT}'

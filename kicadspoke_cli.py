@@ -128,7 +128,27 @@ def cmd_extract(args):
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
     adapter.refresh_board()
 
-    template_dict = extract_template_from_selection(adapter, args.name)
+    params = {}
+    for item in (args.param or []):
+        if "=" not in item:
+            logger.error(f"--param {item!r} — нужен формат KEY=VALUE")
+            sys.exit(1)
+        k, v = item.split("=", 1)
+        params[k] = v
+
+    net_template_map = {}
+    for item in (args.net_template or []):
+        if "=" not in item:
+            logger.error(f"--net-template {item!r} — нужен формат ЛИТЕРАЛ=ПАТТЕРН")
+            sys.exit(1)
+        literal, pattern = item.split("=", 1)
+        net_template_map[literal] = pattern
+
+    template_dict = extract_template_from_selection(
+        adapter, args.name, params=params, net_template_map=net_template_map,
+        origin_via_net=args.origin_by_via_net,
+        origin_component_role=args.origin_by_component_role,
+    )
 
     output_path = Path(args.output)
     existing = {}
@@ -212,6 +232,24 @@ def main():
     extract_parser.add_argument("--timeout-ms", type=int, default=20000, help="Таймаут IPC, мс")
     extract_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
     extract_parser.add_argument("--log-file", help="Файл для сохранения логов")
+    extract_parser.add_argument("--param", action="append", metavar="KEY=VALUE",
+                                help="Параметр для проверки --net-template (напр. channel=1); "
+                                     "можно повторять; в шаблон НЕ пишется, нужен только "
+                                     "для round-trip верификации паттернов")
+    extract_parser.add_argument("--net-template", action="append", metavar="ЛИТЕРАЛ=ПАТТЕРН",
+                                help="Явная карта реальная цепь -> паттерн с {placeholder} "
+                                     "(напр. 'DAC1_DB1=DAC{channel}_DB1'); можно повторять; "
+                                     "заполняет net_template ролей и параметризует via.net "
+                                     "прямо при извлечении, вместо ручной правки YAML")
+    origin_group = extract_parser.add_mutually_exclusive_group()
+    origin_group.add_argument("--origin-by-via-net", metavar="NET",
+                              help="Origin шаблона — позиция via на этой цепи (вместо bbox "
+                                   "выделения); фатально, если такой цепи нет в выделении "
+                                   "или она встречается больше одного раза")
+    origin_group.add_argument("--origin-by-component-role", metavar="ROLE",
+                              help="Origin шаблона — позиция компонента с этой ролью "
+                                   "(вместо bbox выделения); фатально, если роли нет "
+                                   "в выделении")
 
     args = parser.parse_args()
 

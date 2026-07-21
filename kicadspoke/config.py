@@ -202,10 +202,21 @@ class Config:
 
 
 def _load_template_via(data: Dict[str, Any]) -> TemplateVia:
+    net = data.get('net')
+    if net is not None and not isinstance(net, str):
+        raise ValidationError(format_fatal_error(
+            f"via.net должен быть строкой, а не {type(net).__name__}",
+            [f"получено: {net!r} (offset_along_mm={data.get('offset_along_mm')}, "
+             f"offset_across_mm={data.get('offset_across_mm')})",
+             "похоже на сломанный YAML — например, net_overrides случайно "
+             "вложен под net: этой via вместо того, чтобы быть отдельным полем "
+             "верхнего уровня у clone_placements (net_overrides — сосед "
+             "template/params у самого clone_placement, не у via)"]
+        ))
     return TemplateVia(
         offset_along_mm=data.get('offset_along_mm', 0.0),
         offset_across_mm=data.get('offset_across_mm', 0.0),
-        net=data.get('net'),
+        net=net,
         drill_mm=data.get('drill_mm', 0.3),
         diameter_mm=data.get('diameter_mm', 0.6),
     )

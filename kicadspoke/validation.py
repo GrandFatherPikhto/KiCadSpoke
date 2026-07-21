@@ -13,10 +13,12 @@ ValidationError с понятным, собранным сразу по всем
 останавливаться на первой попавшейся спице.
 """
 import logging
+import difflib
 from typing import List, Dict
 from .config import Config
 from .kicad.adapter import KiCadBoardAdapter
 from .exceptions import ValidationError, format_fatal_error
+from .net_resolution import resolve_net
 from .placement.services.component_pool import ComponentPool
 from .placement.services.clone_role_resolver import clone_uses_selection_mode
 
@@ -114,6 +116,59 @@ def check_clone_templates_exist(cfg: Config) -> None:
     logger.debug("Проверка шаблонов clone_placements: все ссылки корректны")
 
 
+def check_clone_nets_exist_on_board(adapter: KiCadBoardAdapter, cfg: Config) -> None:
+    """
+    Резолвит via.net КАЖДОГО clone_placement (и уровня спицы, и вложенных
+    в components[i].vias — см. apply_clone_geometry) и сверяет результат
+    со словарём реальных цепей платы (adapter.get_all_nets()).
+
+    Зачем отдельно от resolve_roles_by_nets: сопоставление роль->ref уже
+    само себя проверяет (кандидат ищется среди реальных падов, несуществующая
+    цепь просто не найдёт кандидатов — фатал есть). А вот via.net идёт в
+    ViaCommand НАПРЯМУЮ, без такой проверки — опечатка в net_overrides
+    или в params, которая всё равно даёт синтаксически валидную строку
+    (например "+3V3_DVD" вместо "+3V3_DVDD"), тихо создаст via на новой,
+    не той цепи, никакой фатал по пути не сработает. Эта проверка — и
+    есть тот самый недостающий словарь.
+
+    via.net=None не проверяется здесь — это уже фатал в clone_geometry.py
+    (у ClonePlacement нет дефолтной цепи), дублировать незачем.
+    """
+    problems = []
+    real_nets = {n.name for n in adapter.get_all_nets()}
+
+    def _check_via(via, clone, where: str):
+        if via.net is None:
+            return
+        try:
+            resolved = resolve_net(via.net, clone.params, clone.net_overrides)
+        except ValidationError:
+            return  # недостающий параметр — уже своя фатальная ошибка выше по стеку
+        if resolved not in real_nets:
+            hint = difflib.get_close_matches(resolved, real_nets, n=1)
+            suggestion = f" — похоже на {hint[0]!r}?" if hint else ""
+            problems.append(f"{clone.name!r}, {where}: via.net {via.net!r} резолвится в "
+                            f"{resolved!r}, а такой цепи на плате нет{suggestion}")
+
+    for clone in cfg.clone_placements:
+        if not clone.enabled:
+            continue
+        template = cfg.templates.get(clone.template)
+        if template is None:
+            continue  # уже поймано check_clone_templates_exist
+        for via in template.vias:
+            _check_via(via, clone, "via уровня спицы")
+        for slot in template.components:
+            for via in slot.vias:
+                _check_via(via, clone, f"via роли {slot.role!r}")
+
+    if problems:
+        raise ValidationError(format_fatal_error(
+            "резолвнутая цепь via ссылается на несуществующую цепь платы", problems
+        ))
+    logger.debug("Проверка via.net clone_placements против реальных цепей платы: всё сходится")
+
+
 def check_single_selection_based_clone(cfg: Config) -> None:
     """
     В KiCad в любой момент активно ТОЛЬКО ОДНО выделение — значит, за один
@@ -141,4 +196,5 @@ def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     check_single_selection_based_clone(cfg)
     check_templates_and_pads_exist(adapter, cfg)
     check_role_pool_sufficiency(adapter, cfg)
+    check_clone_nets_exist_on_board(adapter, cfg)
     logger.info("Все предварительные проверки пройдены")
