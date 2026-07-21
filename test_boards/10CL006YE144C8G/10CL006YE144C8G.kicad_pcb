@@ -418,7 +418,7 @@
 		(property "Reference" "C17"
 			(at 0 -1.16 90)
 			(layer "F.SilkS")
-			(uuid "37e465d1-d214-4f6f-96b5-f7e11e1ba7cb")
+			(uuid "25fc291b-1e2e-4f6a-a331-f2f31809ffe2")
 			(effects
 				(font
 					(size 1 1)
@@ -429,7 +429,7 @@
 		(property "Value" "100 nF"
 			(at 0 1.16 90)
 			(layer "F.Fab")
-			(uuid "1e01a3a6-2c30-45e3-8da4-dfc8dd7965fc")
+			(uuid "5113da3e-449f-4425-acf3-c13006fdfb31")
 			(effects
 				(font
 					(size 1 1)
@@ -441,7 +441,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "bfccb2c1-e0fa-4506-a9f4-921c6344fedb")
+			(uuid "8b45ff90-457e-4eb9-bdb1-73c34c20ccc2")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -452,7 +452,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "2002c01b-a2c1-473e-b17d-feee3cf2e2fc")
+			(uuid "c32a7cfe-f904-468f-8984-c2b005a32e72")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -489,12 +489,6 @@
 		(path "/0f557f29-8539-4d5f-af9c-8ac05c5ca1d3")
 		(sheetname "/")
 		(sheetfile "10CL006YE144C8G.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -569,17 +563,6 @@
 			(uuid "706da382-ffd9-41d3-8750-c2dde6551965")
 		)
 		(embedded_fonts no)
-		(model "${KICAD10_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0402_1005Metric.step"
-			(offset
-				(xyz 0 0 0)
-			)
-			(scale
-				(xyz 1 1 1)
-			)
-			(rotate
-				(xyz 0 0 0)
-			)
-		)
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder"
 		(layer "F.Cu")
@@ -9195,7 +9178,7 @@
 		(property "Reference" "FB1"
 			(at 0 -1.17 90)
 			(layer "F.SilkS")
-			(uuid "bb04283a-e905-4061-92ac-79a98ce7076c")
+			(uuid "b791290f-a26a-4e6b-b337-a51d72ce817b")
 			(effects
 				(font
 					(size 1 1)
@@ -9206,7 +9189,7 @@
 		(property "Value" "BLM15PD121SN1D"
 			(at 0 1.17 90)
 			(layer "F.Fab")
-			(uuid "1d9eef1e-e6b4-4f56-8bf6-fcd81fb322ae")
+			(uuid "bdca9e78-4e4b-45df-ab6f-8c2d1edc6fb4")
 			(effects
 				(font
 					(size 1 1)
@@ -9218,7 +9201,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "d1e435ce-0a2f-4f77-aa09-eda991e2ad5c")
+			(uuid "d2814836-fd52-411a-8180-0690b750aa34")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9229,7 +9212,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "adaee963-8bcc-497a-9e53-409cb0786caf")
+			(uuid "7f91bfba-f0d4-4aa3-a8a0-dbd87263323e")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9253,12 +9236,6 @@
 		(path "/c3c84d90-07b4-4214-b36d-c03bb619ed29")
 		(sheetname "/")
 		(sheetfile "10CL006YE144C8G.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -9313,17 +9290,6 @@
 			(uuid "8ff8146b-acc4-4214-99d5-43d5945ceba3")
 		)
 		(embedded_fonts no)
-		(model "${KICAD10_3DMODEL_DIR}/Inductor_SMD.3dshapes/L_0402_1005Metric.step"
-			(offset
-				(xyz 0 0 0)
-			)
-			(scale
-				(xyz 1 1 1)
-			)
-			(rotate
-				(xyz 0 0 0)
-			)
-		)
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder"
 		(layer "F.Cu")
@@ -13631,7 +13597,7 @@
 		(property "Reference" "C49"
 			(at 0 -1.43 90)
 			(layer "F.SilkS")
-			(uuid "311a9809-9381-42a4-97d5-f466fb320aab")
+			(uuid "ed0e363f-22c0-4775-b39d-1269eba1d8e0")
 			(effects
 				(font
 					(size 1 1)
@@ -13642,7 +13608,7 @@
 		(property "Value" "1uF"
 			(at 0 1.43 90)
 			(layer "F.Fab")
-			(uuid "4a896c78-de2e-4d25-9253-1ac652e286e2")
+			(uuid "c3631f84-f363-46b8-8740-35d2ffd22ca3")
 			(effects
 				(font
 					(size 1 1)
@@ -13654,7 +13620,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "feb39709-f5d4-49fa-ab8a-0284b4853297")
+			(uuid "3784bcf8-9dba-40d8-8458-8bf15caf7d16")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13665,7 +13631,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "ff9c8353-2b1d-43be-bcaa-ba14ab2d975b")
+			(uuid "33a6d387-e866-44b7-a14f-0b2df5e3e712")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13689,12 +13655,6 @@
 		(path "/fbfe2a47-ca10-45d6-975d-aaf8ef1af0db")
 		(sheetname "/")
 		(sheetfile "10CL006YE144C8G.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13769,17 +13729,6 @@
 			(uuid "025c7873-0c8f-482d-94e5-4d3b7afc2b3b")
 		)
 		(embedded_fonts no)
-		(model "${KICAD10_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0603_1608Metric.step"
-			(offset
-				(xyz 0 0 0)
-			)
-			(scale
-				(xyz 1 1 1)
-			)
-			(rotate
-				(xyz 0 0 0)
-			)
-		)
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric_Pad0.72x0.64mm_HandSolder"
 		(layer "F.Cu")
@@ -14900,7 +14849,7 @@
 		(property "Reference" "C1"
 			(at 0 -1.43 90)
 			(layer "F.SilkS")
-			(uuid "2cadaf0e-be3b-402d-9406-b058316bee03")
+			(uuid "49381444-8b32-4b56-ad50-42fb081cf78b")
 			(effects
 				(font
 					(size 1 1)
@@ -14911,7 +14860,7 @@
 		(property "Value" "1uF"
 			(at 0 1.43 90)
 			(layer "F.Fab")
-			(uuid "2a13c476-7869-4158-8108-12ecc299fe4b")
+			(uuid "0f89345b-52ab-4669-ba64-114b0900d162")
 			(effects
 				(font
 					(size 1 1)
@@ -14923,7 +14872,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "0704ec90-ec76-491e-8b68-50e42e8f08a2")
+			(uuid "b4d123dd-7ccc-4d81-ae4e-76dcc09fcbb4")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14934,7 +14883,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "c727b74e-4d57-4575-b703-4fd189320d22")
+			(uuid "219d4741-094e-4f51-871b-6bd707037890")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14958,12 +14907,6 @@
 		(path "/19766c8b-4e59-4bc5-9838-7f3edaaeaf90")
 		(sheetname "/")
 		(sheetfile "10CL006YE144C8G.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15038,17 +14981,6 @@
 			(uuid "e34ffc33-aa7a-41da-a71b-7dd009fa3bef")
 		)
 		(embedded_fonts no)
-		(model "${KICAD10_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0603_1608Metric.step"
-			(offset
-				(xyz 0 0 0)
-			)
-			(scale
-				(xyz 1 1 1)
-			)
-			(rotate
-				(xyz 0 0 0)
-			)
-		)
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder"
 		(layer "F.Cu")
@@ -15364,9 +15296,9 @@
 		(descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal with elongated pad for handsoldering. (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "capacitor handsolder")
 		(property "Reference" "C56"
-			(at 0 -1.16 0)
+			(at 0 -1.16 180)
 			(layer "F.SilkS")
-			(uuid "94be9c5a-5fb3-415c-bd29-e5f9996c1cfd")
+			(uuid "ccefe63e-5b5a-422d-92ca-49c4e9849069")
 			(effects
 				(font
 					(size 1 1)
@@ -15375,9 +15307,9 @@
 			)
 		)
 		(property "Value" "100 nF"
-			(at 0 1.16 0)
+			(at 0 1.16 180)
 			(layer "F.Fab")
-			(uuid "df91d50b-c933-4834-b010-d335a7722ce9")
+			(uuid "f3a90b32-1e18-4692-a7d6-2a613019d924")
 			(effects
 				(font
 					(size 1 1)
@@ -15386,10 +15318,10 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 0 0 0)
+			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "779b671a-bc14-43a2-9c7e-dfa1594d0899")
+			(uuid "c0a6cd05-a73a-444e-a074-13629b3351b0")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15397,10 +15329,10 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 0 0 0)
+			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "eab8b2c5-816a-4486-9b0f-b0b8fdb40682")
+			(uuid "e2f56c5f-1070-4fda-ad35-b133e7df50f7")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15408,7 +15340,7 @@
 			)
 		)
 		(property "TemplateRole" "LIGHT"
-			(at 0 0 0)
+			(at 0 0 360)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -15421,7 +15353,7 @@
 			)
 		)
 		(property "Role" "PI_FILTER_C4"
-			(at 0 0 0)
+			(at 0 0 360)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -15437,17 +15369,11 @@
 		(path "/ed576ba9-4d16-423a-a3cd-04c3f116f5e9")
 		(sheetname "/")
 		(sheetfile "10CL006YE144C8G.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.115835 -0.36)
-			(end 0.115835 -0.36)
+			(start -0.115834 -0.36)
+			(end 0.115834 -0.36)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -15456,8 +15382,8 @@
 			(uuid "399ab975-05e4-424e-8986-00a85c8f66a6")
 		)
 		(fp_line
-			(start -0.115835 0.36)
-			(end 0.115835 0.36)
+			(start -0.115834 0.36)
+			(end 0.115834 0.36)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -15466,8 +15392,8 @@
 			(uuid "b30925b4-06f0-4b1f-b371-d0f4be6c8191")
 		)
 		(fp_rect
-			(start -1.09 -0.46)
-			(end 1.09 0.46)
+			(start -1.09 -0.459999)
+			(end 1.09 0.459999)
 			(stroke
 				(width 0.05)
 				(type solid)
@@ -15477,8 +15403,8 @@
 			(uuid "4c7ff54a-290a-4e7e-8083-568fd52e5736")
 		)
 		(fp_rect
-			(start -0.5 -0.25)
-			(end 0.5 0.25)
+			(start -0.5 -0.249999)
+			(end 0.5 0.249999)
 			(stroke
 				(width 0.1)
 				(type solid)
@@ -15488,7 +15414,7 @@
 			(uuid "0cee822e-525e-4f18-951d-83b0dc41dc52")
 		)
 		(fp_text user "${REFERENCE}"
-			(at 0 0 0)
+			(at 0 0 180)
 			(layer "F.Fab")
 			(uuid "4172c139-d352-46e5-9b5b-7d9f4ccae3cc")
 			(effects
@@ -15517,17 +15443,6 @@
 			(uuid "52978716-92c2-4d88-b5c8-14e9af801e20")
 		)
 		(embedded_fonts no)
-		(model "${KICAD10_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0402_1005Metric.step"
-			(offset
-				(xyz 0 0 0)
-			)
-			(scale
-				(xyz 1 1 1)
-			)
-			(rotate
-				(xyz 0 0 0)
-			)
-		)
 	)
 	(footprint "Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder"
 		(layer "F.Cu")
