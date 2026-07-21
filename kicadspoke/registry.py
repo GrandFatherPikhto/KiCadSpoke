@@ -112,7 +112,8 @@ class PlacementRegistry:
             and abs(live_via.diameter / MM - via.diameter_mm) < 1e-6
         )
 
-    def reconcile(self, planned_vias: List[ViaCommand]) -> List[ViaCommand]:
+    def reconcile(self, planned_vias: List[ViaCommand],
+                 known_clone_names: Optional[set] = None) -> List[ViaCommand]:
         """
         Возвращает подмножество planned_vias, которое РЕАЛЬНО нужно
         создать (уже стоящие правильно — исключены). Удаляет устаревшие
@@ -124,6 +125,17 @@ class PlacementRegistry:
         сохранённые в JSON числа: запись реестра, чей uuid не находится
         среди живых via, считается протухшей и пересоздаётся, как будто
         записи не было вовсе.
+
+        known_clone_names — ПОЛНЫЙ (до всякой --clone-placement
+        фильтрации) набор имён clone_placements из конфига. Без него
+        (None) prune ведёт себя по-старому: всё, чего нет в этом прогоне —
+        устарело. С ним — запись с anchor_id вида "name:X" пропускается
+        (не prune'ится), если X всё ещё есть в known_clone_names, даже
+        если этого X не было среди planned_vias ЭТОГО прогона: значит,
+        его просто отфильтровали через --clone-placement, а не убрали
+        из YAML. Иначе --clone-placement A на одном прогоне и
+        --clone-placement B на следующем взаимно удаляли бы via друг
+        друга — реальный баг, пойманный на практике.
         """
         to_create: List[ViaCommand] = []
         seen_keys = set()
@@ -163,7 +175,17 @@ class PlacementRegistry:
             del self.entries[via.registry_key]
             to_create.append(via)
 
-        stale_keys = set(self.entries.keys()) - seen_keys
+        stale_keys = set()
+        for key in set(self.entries.keys()) - seen_keys:
+            anchor_id = key.split('|', 1)[0]
+            if (known_clone_names is not None and anchor_id.startswith('name:')
+                    and anchor_id[len('name:'):] in known_clone_names):
+                logger.debug(f"  {key}: не обработан в этом прогоне (--clone-placement "
+                            f"отфильтровал {anchor_id!r}), но он есть в конфиге — "
+                            f"НЕ prune'ится")
+                continue
+            stale_keys.add(key)
+
         for key in stale_keys:
             entry = self.entries.pop(key)
             logger.info(f"  prune: {key} больше не встречается в конфиге, удаляю via ({entry.uuid})")

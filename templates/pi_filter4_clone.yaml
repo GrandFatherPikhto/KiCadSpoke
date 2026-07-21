@@ -8,7 +8,7 @@ templates:
       diameter_mm: 0.6
     - offset_along_mm: -7.91
       offset_across_mm: 1.7
-      net: +1V2
+      net: '{PWR_IN}'
       drill_mm: 0.3
       diameter_mm: 0.6
     - offset_along_mm: -1.03
@@ -18,7 +18,7 @@ templates:
       diameter_mm: 0.6
     - offset_along_mm: 0.0
       offset_across_mm: 0.0
-      net: '{PWR_IN}'
+      net: '{PWR_OUT}'
       drill_mm: 0.3
       diameter_mm: 0.6
     components:
@@ -57,6 +57,24 @@ clone_placements:
     params:
       PWR_IN: +1V2
       PWR_OUT: +1V2_VCCINT
+    nets:
+      PI_FILTER_C1: '{PWR_IN}'
+      PI_FILTER_C2: '{PWR_IN}'
+      PI_FILTER_FB: '{PWR_OUT}'
+      PI_FILTER_C3: '{PWR_OUT}'
+      PI_FILTER_C4: '{PWR_OUT}'
+
+  - name: fpga_filter_3v3_vccio
+    template: pi_filter_4
+    anchor_ref: IC1
+    anchor_pad: '26'
+    origin_x_mm: -7.0
+    origin_y_mm: 0.0
+    rotation_deg: 90.0
+    enabled: true
+    params:
+      PWR_IN: +3V3
+      PWR_OUT: +3V3_VCCIO
     nets:
       PI_FILTER_C1: '{PWR_IN}'
       PI_FILTER_C2: '{PWR_IN}'

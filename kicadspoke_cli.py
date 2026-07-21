@@ -1,4 +1,4 @@
-#!.venv/bin/python3
+#!/usr/bin/env python3
 """
 placer.py — главный скрипт для расстановки развязывающих конденсаторов.
 
@@ -52,6 +52,7 @@ def cmd_apply(args):
     logger.info(f"Загрузка конфига: {args.config}")
     cfg = load_config(args.config)
 
+    all_clone_names = {c.name for c in cfg.clone_placements}
     if getattr(args, "clone_placement", None):
         name = args.clone_placement
         matching = [c for c in cfg.clone_placements if c.name == name]
@@ -107,7 +108,7 @@ def cmd_apply(args):
 
     # --- Фаза 2: виа ---
     all_vias = planner.plan_vias()
-    vias_to_create = registry.reconcile(all_vias)
+    vias_to_create = registry.reconcile(all_vias, known_clone_names=all_clone_names)
     logger.info(f"Запланировано виа: {len(all_vias)}, из них реально к созданию "
                f"(реестр отсеял уже стоящие правильно): {len(vias_to_create)}")
     logger.info("Применение виа...")
