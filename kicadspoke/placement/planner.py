@@ -40,11 +40,11 @@ class PlacementPlanner:
     _POSITION_TOLERANCE_NM = POSITION_TOLERANCE_NM
     _ANGLE_TOLERANCE_DEG = ANGLE_TOLERANCE_DEG
 
-    def _already_in_place(self, ref: str, dest: Vector2, angle_deg: float) -> bool:
+    def _already_in_place(self, ref: str, dest: Vector2, angle_deg: float, layer: BoardLayer) -> bool:
         fp = self.adapter.get_footprint(ref)
         if fp is None:
             return False
-        if fp.layer != self._target_layer:
+        if fp.layer != layer:
             return False
         if abs(fp.position.x - dest.x) > self._POSITION_TOLERANCE_NM:
             return False
@@ -77,7 +77,12 @@ class PlacementPlanner:
         moves = []
         skipped = 0
         for info in self._planned:
-            if self.cfg.skip_existing_components and self._already_in_place(info.ref, info.dest, info.angle_deg):
+            # info.layer — per-компонентный (ClonePositionCalculator уже
+            # учёл template.layer/slot.layer/mirror); None — только у
+            # ManualSpoke-пути (manual_position_calculator.py его не
+            # задаёт), тогда наследуем глобальный target_layer конфига.
+            layer = info.layer if info.layer is not None else self._target_layer
+            if self.cfg.skip_existing_components and self._already_in_place(info.ref, info.dest, info.angle_deg, layer):
                 skipped += 1
                 logger.debug(f"  {info.ref}: уже на месте, перемещение пропущено (skip_existing_components)")
                 continue
@@ -85,7 +90,7 @@ class PlacementPlanner:
                 ref=info.ref,
                 position=info.dest,
                 angle=Angle.from_degrees(info.angle_deg),
-                layer=self._target_layer
+                layer=layer
             ))
         if skipped:
             logger.info(f"Пропущено {skipped} компонентов, уже находящихся на целевой позиции")

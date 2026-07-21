@@ -98,22 +98,29 @@ def _sheet_key(fp) -> str:
 
 def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacement) -> Dict[str, str]:
     """
-    Сопоставление по явным/параметризованным цепям (без выделения мышкой).
+    Сопоставление по явным/параметризованным цепям (без выделения мышкой
+    как ОСНОВНОГО механизма — но текущее выделение, если оно есть,
+    участвует как ступень сужения неоднозначности, см. ниже).
 
     Каскад разрешения неоднозначности (каждая ступень только СУЖАЕТ,
     ничего не выбирает за человека):
-      0. clone.refs[role] — явный override, минуя поиск вовсе;
-      1. кандидаты = Role-поле совпадает И сидит на ожидаемой цепи;
-      2. если кандидатов несколько — второй проход: оставить только
-         соседей по листу иерархии с уже однозначно разрешёнными ролями
-         ЭТОГО ЖЕ размещения (межканальную неоднозначность на глобальных
-         цепях гасит именно это: FB нашёлся по локальной цепи канала —
-         C1 ищем в его же листе);
-      3. всё ещё несколько — ФАТАЛ: кандидаты электрически неразличимы
-         (типовой случай: три одинаковых фильтра в одном листе с
-         одинаковыми ролями) — человеку предлагается либо развести роли
-         по именам, либо дать явный refs.
+      0. clone.refs[role] — явный override, минуя поиск вовсе.
+      1. кандидаты = Role-поле совпадает И сидит на ожидаемой цепи.
+      2. если кандидатов несколько — сузить до пересечения с ТЕКУЩИМ
+         выделением на плате, если оно не пусто и сужает хоть что-то
+         (человек руками выделил конкретный экземпляр перед запуском —
+         явный сигнал, приоритетнее эвристики по листу ниже).
+      3. всё ещё несколько — сузить до соседей по листу иерархии с уже
+         однозначно разрешёнными ролями ЭТОГО ЖЕ размещения.
+      4. всё ещё несколько — ФАТАЛ: кандидаты электрически неразличимы,
+         человеку предлагается либо развести роли по именам, либо явный
+         refs, либо (теперь) выделить нужный экземпляр на плате и
+         перезапустить.
     """
+    selected_items = adapter.get_selected_items()
+    selected_refs = {i.reference_field.text.value for i in selected_items
+                     if isinstance(i, FootprintInstance)}
+
     all_fps = adapter.get_footprints()
     fps_by_role: Dict[str, list] = {}
     fps_by_ref = {}
@@ -183,19 +190,29 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
             role_to_ref[role] = matched[0].reference_field.text.value
             resolved_fps.append(matched[0])
 
-    # --- второй проход: сужение неоднозначных по листу иерархии соседей ---
+    # --- сужение неоднозначных: сначала по выделению, потом по листу иерархии ---
     neighbor_sheets = {_sheet_key(fp) for fp in resolved_fps}
     neighbor_sheets.discard('')
     for role, expected_net, matched in ambiguous:
         narrowed = matched
-        if neighbor_sheets:
-            by_sheet = [fp for fp in matched if _sheet_key(fp) in neighbor_sheets]
+
+        if selected_refs:
+            by_selection = [fp for fp in narrowed
+                            if fp.reference_field.text.value in selected_refs]
+            if by_selection and len(by_selection) < len(narrowed):
+                logger.info(f"[{clone.name}] роль {role!r}: {len(narrowed)} кандидатов "
+                            f"сужено до {len(by_selection)} по текущему выделению на плате")
+                narrowed = by_selection
+
+        if len(narrowed) > 1 and neighbor_sheets:
+            by_sheet = [fp for fp in narrowed if _sheet_key(fp) in neighbor_sheets]
             if by_sheet:
-                if len(by_sheet) < len(matched):
-                    logger.info(f"[{clone.name}] роль {role!r}: {len(matched)} кандидатов "
+                if len(by_sheet) < len(narrowed):
+                    logger.info(f"[{clone.name}] роль {role!r}: {len(narrowed)} кандидатов "
                                 f"сужено до {len(by_sheet)} по листу иерархии уже "
                                 f"разрешённых соседей")
                 narrowed = by_sheet
+
         if len(narrowed) == 1:
             role_to_ref[role] = narrowed[0].reference_field.text.value
             resolved_fps.append(narrowed[0])
@@ -207,8 +224,9 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
                 + (" (уже в одном листе иерархии — кандидаты электрически "
                    "неразличимы; типовой случай: несколько одинаковых фильтров "
                    "в одном листе с одинаковыми ролями)" if neighbor_sheets else "")
-                + f": {refs}. Выходы: развести роли по именам в схеме "
-                f"(напр. DAC_PI_3V3_C1 vs DAC_PI_AVDD_C1) ЛИБО указать явно: "
+                + f": {refs}. Выходы: выделите нужный экземпляр целиком на плате перед "
+                f"запуском, ЛИБО разведите роли по именам в схеме "
+                f"(напр. DAC_PI_3V3_C1 vs DAC_PI_AVDD_C1), ЛИБО укажите явно: "
                 f"refs: {{{role}: {refs[0]}}}")
 
     if problems:

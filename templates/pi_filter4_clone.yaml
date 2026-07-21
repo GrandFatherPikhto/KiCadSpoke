@@ -1,5 +1,5 @@
 templates:
-  pi_filter4:
+  pi_filter_4:
     vias:
     - offset_along_mm: -5.23
       offset_across_mm: -0.61
@@ -18,7 +18,7 @@ templates:
       diameter_mm: 0.6
     - offset_along_mm: 0.0
       offset_across_mm: 0.0
-      net: '{PWR_OUT}'
+      net: '{PWR_IN}'
       drill_mm: 0.3
       diameter_mm: 0.6
     components:
@@ -47,7 +47,7 @@ templates:
 clone_placements:
   # --- Channel_0, питание CLKVDD (пад 11) ---
   - name: fpga_filter_1v2_vccint
-    template: pi_filter4
+    template: pi_filter_4
     anchor_ref: IC1
     anchor_pad: '102'
     origin_x_mm: -2.0
@@ -57,7 +57,7 @@ clone_placements:
     params:
       PWR_IN: +1V2
       PWR_OUT: +1V2_VCCINT
-     nets:
+    nets:
       PI_FILTER_C1: '{PWR_IN}'
       PI_FILTER_C2: '{PWR_IN}'
       PI_FILTER_FB: '{PWR_OUT}'
