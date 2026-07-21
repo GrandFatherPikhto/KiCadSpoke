@@ -50,9 +50,9 @@ clone_placements:
     template: pi_filter_4
     anchor_ref: IC1
     anchor_pad: '102'
-    origin_x_mm: 2.0
+    origin_x_mm: 7.0
     origin_y_mm: 0.0
-    rotation_deg: 180.0
+    rotation_deg: 90.0
     enabled: true
     params:
       PWR_IN: +1V2

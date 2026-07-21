@@ -1,153 +1,151 @@
-# KiCadSpoke v1.0.7
+# KiCadSpoke v1.0.10
 
-**KiCadSpoke** — это инструмент командной строки для автоматической расстановки компонентов и переходных отверстий (via) на печатных платах в **KiCad** с использованием **шаблонов спиц** (spokes). Программа подключается к открытому экземпляру KiCad через IPC и выполняет:
+**KiCadSpoke** is a command-line tool for automated placement of components and vias on PCBs in **KiCad** based on **templates** and **roles**. It connects to a running KiCad instance via IPC and performs:
 
-- Перемещение компонентов (конденсаторов, резисторов, кварцев и т.д.) на заданные позиции.
-- Создание via (переходных отверстий) по заданным координатам, с возможностью привязки как к спице в целом, так и к отдельным компонентам.
-- Откат последней операции (undo) с восстановлением исходного состояния платы.
-- Извлечение шаблонов из текущего выделения на плате (команда `extract`).
-- **Клонирование шаблонов** (`ClonePlacement`) – многократное применение одного шаблона в разных местах платы с разными цепями и параметрами.
-
----
-
-## Назначение программы
-
-В основе подхода лежит понятие **спицы** (spoke) — набора компонентов и via, которые физически относятся к одному выводу микросхемы (FPGA, процессора и т.п.) или к произвольной точке на плате (для клонируемых секций). Каждая спица может содержать:
-
-- **Произвольное число компонентов** (например, конденсаторы, резисторы, кварцы).
-- **Произвольное число via** на уровне спицы и на уровне каждого компонента.
-
-Вся геометрия спицы описывается в **локальных координатах (along, across)** в виде **шаблона**. Шаблон можно применить к любому паду микросхемы (задав сдвиг и поворот) или к произвольной точке на плате (для ClonePlacement) – это позволяет использовать один шаблон для всех сторон корпуса или для повторяющихся секций.
-
-**Ключевые особенности:**
-
-- **Автоматический подбор компонентов** — конфигурация не содержит refdes. Вместо них используются **роли** (например, `LIGHT`, `HEAVY`). Компоненты подбираются из пула по полю `Role` в схеме и цепи питания.
-- **Обобщённые via** — via могут быть на уровне спицы и на уровне компонента. Все координаты задаются от нуля спицы, что делает их независимыми от реального положения падов.
-- **Клонирование шаблонов** (`ClonePlacement`) – позволяет многократно применять один шаблон в разных местах платы, с разными цепями и параметрами. Поддерживается два режима сопоставления ролей: **по выделению** (пользователь выделяет компоненты в PCB) и **по цепям** (явное задание цепей для каждой роли, с поддержкой плейсхолдеров).
-- **Идемпотентность** — повторный запуск не создаёт дублирующих via и не перемещает уже стоящие на месте компоненты (через реестр расстановки).
-- **Валидация** конфигурации перед любыми изменениями на плате, включая проверку корректности ClonePlacement.
-- **Откат (undo)** через JSON-логирование операций.
-- **Извлечение шаблонов** (`extract`) — создание шаблона из текущего выделения на плате.
+- Moving components (capacitors, resistors, ferrites, crystals, etc.) to specified positions.
+- Creating vias attached to the spoke as a whole or to individual components.
+- **Cloning** repetitive functional blocks (PI-filters, DAC channels) at different locations on the board.
+- Automatic component selection by **roles** and **nets** without specifying explicit refdes.
+- Idempotency: repeated runs do not duplicate already correctly placed items.
+- Undo of the last operation.
+- Extracting templates from the current selection on the board with net parametrisation and custom origin selection.
+- Snapshotting channels (for hierarchical projects) via a file‑based cloner (`clone-extract`).
+- **Template transformation** (rotation, mirroring, origin shift) using the separate script `transform_template.py`.
 
 ---
 
-## Установка и настройка
+## Key Features
 
-### Требования
+- **Template-based approach** – geometry is described once in local coordinates and can be rotated/translated for each application.
+- **Automatic component selection** – instead of refdes, roles are used (`LIGHT`, `HEAVY`, `PI_FILTER_C1`, etc.). Specific instances are taken from a pool by net and the `Role` field in the schematic.
+- **Section cloning** (`ClonePlacement`) – supports two modes:
+  - **by selection** – for one‑off instances (e.g., a single MCU);
+  - **by nets** – for repeatedly repeated blocks (with net name parametrisation via placeholders and `params`). In this mode, ambiguity is resolved by physical proximity to the anchor (if components are electrically indistinguishable but located close to different anchors).
+- **Generalised vias** – vias can be at the spoke level and at the component level; all coordinates are relative to the spoke origin, making them independent of actual pad positions.
+- **Placement registry** – stores UUIDs of created vias, ensuring idempotency and automatic cleanup of obsolete entries. Now reconciliation is performed against real vias on the board, not only the JSON record, to avoid desynchronisation.
+- **Pre‑validation** – config checks before any board modifications (template/pad existence, component pool sufficiency, clone correctness, and resolved via nets existence on the board).
+- **Diagnostics** – a set of scripts for debugging IPC, geometry, and field reading.
+- **File‑based cloner** (`clone-extract`) – parses `.net` and `.kicad_pcb` without IPC, builds a twin map of channels for hierarchical projects.
+- **Template transformation** – the script `utils/transform_template.py` allows rotating, mirroring, and shifting the origin of existing templates without re‑extracting from the board.
+- **Enhanced `extract`** – when extracting a template, you can set the origin to a specific via or component (instead of the bbox) and parameterise nets (replace literals with patterns containing placeholders).
 
-- Python 3.9 или новее.
-- KiCad 8.0 или новее (с поддержкой IPC).
-- Установленная библиотека `kipy` (KiCad Python IPC).
+---
 
-### Установка зависимостей
+## Installation and Dependencies
 
+### Requirements
+- Python 3.8 or later.
+- KiCad 8.0 or later (with IPC API enabled).
+- The **kipy** library (Python wrapper for KiCad IPC).
+
+### Installation
 ```bash
-pip install kipy pyyaml sexpdata numpy scipy
+pip install kipy pyyaml sexpdata
 ```
+(For diagnostics, `psutil` may be required.)
 
-### Настройка ролей в схеме (Eeschema)
-
-Перед первым запуском необходимо задать роли компонентам в схеме:
-
-1. Откройте символ компонента в Eeschema.
-2. Добавьте новое пользовательское поле:
-   - **Имя:** `Role` (обязательно с заглавной буквы)
-   - **Значение:** например, `LIGHT`, `HEAVY`, `XTAL` (должно совпадать с ролью в шаблоне)
-3. Повторите для всех компонентов, которые должны участвовать в расстановке.
-4. Выполните **Update PCB from Schematic**, чтобы поля перенеслись на плату.
-
-Чтобы проверить, что поле читается, используйте диагностический скрипт:
-
-```bash
-python -m kicadspoke.diagnostics.test_custom_field C5 --field Role
-```
-
-### Структура проекта
-
-```
-kicadspoke/
-├── kicadspoke_cli.py        # Точка входа (CLI)
-├── config.py                # Загрузка конфигурации
-├── exceptions.py            # Иерархия исключений
-├── undo.py                  # Откат операций
-├── validation.py            # Предварительные проверки
-├── registry.py              # Реестр расстановки via
-├── net_resolution.py        # Разрешение цепей для клонирования
-├── template_extraction.py   # Извлечение шаблонов из выделения
-├── constants.py             # Глобальные константы
-├── geometry/                # Геометрические утилиты
-│   ├── keepout.py
-│   ├── pad_projection.py
-│   ├── spoke_layout.py
-│   ├── thermal_grid.py
-│   ├── clone_geometry.py    # Геометрия для ClonePlacement
-│   └── placement.py         # (устарел)
-├── kicad/                   # Адаптер для KiCad
-│   ├── adapter.py
-│   └── interfaces.py
-├── placement/               # Основная логика
-│   ├── planner.py
-│   ├── commands.py
-│   ├── collision.py
-│   ├── executor/            # Исполнитель команд (разбит на модули)
-│   ├── services/            # Сервисные классы
-│   │   ├── component_pool.py
-│   │   ├── clone_role_resolver.py
-│   │   ├── clone_position_calculator.py
-│   │   ├── manual_position_calculator.py
-│   │   └── via_planner.py
-│   └── interfaces.py        # Интерфейсы IPositionCalculator, IViaPlanner
-├── utils/                   # Вспомогательные утилиты
-│   └── units.py
-├── diagnostics/             # Диагностические скрипты
-└── tests/                   # Модульные и интеграционные тесты
-```
+### Setting up Roles in the Schematic (Eeschema)
+Before using the tool, you need to add a custom field `Role` to components that should participate in placement:
+1. Open the symbol in Eeschema.
+2. Add a field named **Role** with a value matching the role in the template (e.g., `LIGHT`, `HEAVY`).
+3. Run **Update PCB from Schematic** to propagate the field to the board.
+4. Verify field readability with the diagnostic script:
+   ```bash
+   python -m kicadspoke.diagnostics.test_custom_field C5 --field Role
+   ```
 
 ---
 
-## Формат конфигурационного файла (YAML)
+## Key Concepts
 
-### Корневые параметры
+### Template (SpokeTemplate)
+A template describes the **local geometry** of one "spoke" – a set of components and vias relative to a local origin (0,0) in the `along/across` coordinate system. It contains:
+- **`vias`** – vias at the spoke level (usually the power net).
+- **`components`** – a list of slots, each with a `role`, local coordinates, angle, and a list of vias (usually to GND).
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `target_ref` | строка | Refdes целевого компонента (микросхемы), относительно падов которого строятся спицы (например, `IC1`). |
-| `side` | строка | Сторона платы: `"back"` (обратная) или `"front"` (лицевая). |
-| `thermal_via_array` | словарь | Настройки массива термовиа под термопадом (опционально). |
-| `templates` | словарь | Набор шаблонов спиц (ключ — имя шаблона). |
-| `rules` | список | Правила расстановки: для каждой цепи питания — список спиц. |
-| `clone_placements` | список | Клонируемые размещения (опционально, для TemplatePlacer). |
-| `place_components` | булево | Если `false` — компоненты не перемещаются, создаются только via. |
-| `skip_existing_components` | булево | Если `true` — компоненты, уже стоящие на целевой позиции, и via, уже существующие в нужной точке, пропускаются. |
+All coordinates are defined **once** at `rotation_deg=0`; when applied, the template is rotated as a whole.
 
-### Шаблон спицы (`templates`)
+#### Template layer (`layer`)
+Each template now has an absolute layer (`F.Cu` or `B.Cu`), which is automatically set during extraction (`extract`). Components lying on a different layer receive an explicit `layer` in their slot.
 
-Шаблон описывает локальную геометрию спицы. Все координаты задаются в системе `(along, across)`, где:
+#### Net parametrisation during extraction
+When extracting a template, you can replace literal net names with patterns containing placeholders using the `--net-template` and `--param` options of the `extract` command. This eliminates manual YAML editing.
 
-- Ось `along` направлена вдоль оси шаблона (при `rotation_deg=0` это соответствует оси X глобальной системы).
-- Ось `across` — перпендикулярна `along` (при `rotation_deg=0` соответствует оси Y).
+### Spoke (ManualSpoke)
+Attaches a template to a specific IC pin:
+- `pad` – pad number of the target component.
+- `shift_x_mm`, `shift_y_mm` – flat shift from the pad centre to the template origin.
+- `rotation_deg` – rotation of the entire template.
 
-Шаблон может содержать:
+**Important:** In new config versions, each rule (`rules`) must have its own `anchor_ref` (anchor component). The global `target_ref` has been removed.
 
-- **`vias`** — список via на уровне спицы. Для каждого via указываются локальные координаты и параметры отверстия.
-- **`components`** — список слотов компонентов. Каждый слот содержит:
-  - `role` — имя роли (например, `LIGHT`, `HEAVY`, `XTAL`). Роли должны быть уникальны внутри одного шаблона.
-  - `offset_along_mm`, `offset_across_mm` — локальные координаты центра компонента.
-  - `angle_deg` — дополнительный угол поворота компонента (прибавляется к углу поворота спицы).
-  - `vias` — список via, привязанных к данному компоненту. Координаты также задаются **от нуля спицы**, а не от пада компонента.
-  - `net_template` — опционально, для ClonePlacement: шаблон цепи с плейсхолдерами (например, `DAC{channel}_DB1`).
+### Roles and Component Pool
+Instead of refdes, **roles** are used in the config. For each net (`rule.net`), a pool of components is built, where each component:
+- Has a `Role` field with the required value.
+- Has at least one pad connected to that net.
 
-#### Пример шаблона
+Components are sorted in natural numeric order (`C5` < `C10`) and consumed in the order of spokes.
+
+### Cloning (ClonePlacement)
+Allows applying a template at an arbitrary point on the board, without tying to IC pads. Supports:
+- **Selection mode** – reads roles from the current selection in the PCB editor.
+- **Net mode** – for each role, a net is specified (via `nets` or `net_template` with placeholders resolved by `params` and `net_overrides`). If multiple candidates are electrically indistinguishable, the tool can pick the one closest to the anchor (if the distance margin is sufficient). This is useful for power filters on a common rail.
+
+### Placement Registry (PlacementRegistry)
+Stores each via's UUID, position, parameters, and net in a JSON file next to the config. On subsequent runs:
+- already correctly placed vias are skipped;
+- those that changed position/parameters are deleted and recreated;
+- obsolete entries (keys not present in the new plan) are removed (prune).
+
+**Important:** Reconciliation now checks against real vias on the board (`adapter.get_vias()`), not only the JSON record, preventing desynchronisation due to manual deletions or crashes between registry write and board commit.
+
+### Net Resolution (`net_resolution`)
+For cloned templates, net names go through a three‑step resolution:
+1. **Literal** – if no placeholders.
+2. **Placeholder** – substitution from `params` (e.g., `{channel}` → `2`).
+3. **net_overrides** – final override of the resolved name (for hierarchical paths).
+
+During extraction, the reverse operation (`--net-template`) is available, turning literals into patterns.
+
+### Template Transformation (`transform_template.py`)
+A separate script for post‑processing templates:
+- **Rotation** by an arbitrary angle.
+- **Mirroring** along the X or Y axis.
+- **Origin shift** to a specified via (by index or net name) or component (by index or role), or explicit offset.
+
+This allows quick adaptation of a template to different orientations without re‑extracting.
+
+---
+
+## Configuration File Format (YAML)
+
+### Root Parameters (new)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `layer` | string | Global layer for ManualSpoke rules: `"F.Cu"` or `"B.Cu"` (replaces deprecated `side`). |
+| `templates` | dict | Named spoke templates. |
+| `rules` | list | Manual spoke rules, each with `anchor_ref`. |
+| `clone_placements` | list | Cloned placements (TemplatePlacer). |
+| `thermal_via_array` | dict | Thermal via settings (optional). |
+| `place_components` | boolean | Enable component moves (default `true`). |
+| `skip_existing_components` | boolean | Skip components and vias already in place. |
+| `via_keepout_clearance_mm`, `via_search_step_mm`, `via_search_max_radius_mm`, `via_search_n_directions` | numbers | Parameters for thermal via placement search. |
+
+**Deprecated fields:** `target_ref` and `side` at the root are no longer supported (fatal error on load).
+
+### Template (`templates`) – now with `layer`
 
 ```yaml
 templates:
   cap_pair_standard:
+    layer: B.Cu       # absolute layer of the template
     vias:
       - offset_along_mm: 0.0
         offset_across_mm: -1.5
         drill_mm: 0.3
         diameter_mm: 0.6
-        # net не указан — будет взят из rule.net (для ManualSpoke) или обязан быть задан через nets (для ClonePlacement)
+        # net omitted – for ManualSpoke uses rule.net, for ClonePlacement must be explicit
     components:
       - role: LIGHT
         offset_along_mm: 1.0
@@ -171,21 +169,12 @@ templates:
             diameter_mm: 0.6
 ```
 
-### Правила (`rules`)
-
-Каждое правило соответствует одной цепи питания. Внутри правила перечисляются спицы (`spokes`). Каждая спица указывает:
-
-- `pad` — номер пада целевого компонента (микросхемы).
-- `template` — имя шаблона из секции `templates`.
-- `shift_x_mm`, `shift_y_mm` — сдвиг нуля шаблона относительно центра пада (в глобальных координатах KiCad).
-- `rotation_deg` — поворот всего шаблона (в градусах). Применяется после сдвига.
-- `enabled` — если `false`, спица игнорируется.
-
-#### Пример правил
+### Manual Spokes (`rules`) – now with `anchor_ref`
 
 ```yaml
 rules:
 - net: +1V2_VCCINT
+  anchor_ref: IC1       # mandatory field – anchor for this rule
   spokes:
   - pad: '109'
     template: cap_pair_standard
@@ -199,213 +188,221 @@ rules:
     rotation_deg: 270.0
 ```
 
-### Клонируемые размещения (`clone_placements`)
-
-Секция `clone_placements` позволяет многократно применять один шаблон в разных местах платы, без привязки к падам IC. Поддерживает два режима сопоставления ролей:
-
-- **Режим «по выделению»** (по умолчанию) – пользователь выделяет компоненты конкретного экземпляра в PCB-редакторе. Программа считывает поле `Role` у каждого выделенного компонента и сопоставляет с ролями шаблона. **Важно:** за один прогон можно обработать только один такой клон (в KiCad активно только одно выделение).
-- **Режим «по цепям»** – для каждого слота роли явно задаётся цепь (через `nets` или `net_template` с плейсхолдерами). Программа ищет компоненты с нужной ролью, подключённые к этой цепи. Это позволяет обрабатывать несколько одинаковых секций за один прогон без выделения.
-
-Поля `ClonePlacement`:
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `name` | строка | Уникальный идентификатор (используется в реестре и логах). |
-| `template` | строка | Имя шаблона из секции `templates`. |
-| `origin_x_mm`, `origin_y_mm` | число | Абсолютные координаты точки привязки шаблона (в мм). |
-| `rotation_deg` | число | Поворот шаблона (градусы). |
-| `params` | словарь | Параметры для подстановки в плейсхолдеры цепей (например, `{channel}`). |
-| `nets` | словарь | Явное сопоставление `роль -> имя_цепи`. Если задано, имеет приоритет над `net_template`. |
-| `net_overrides` | словарь | Подмена итогового имени цепи (после подстановки плейсхолдеров). |
-| `enabled` | булево | Включить/выключить этот клон. |
-
-#### Пример `clone_placements`
+### Cloned Placements (`clone_placements`) – new fields
 
 ```yaml
 clone_placements:
   - name: dac_channel_2
     template: dac_channel
-    origin_x_mm: 80.0
-    origin_y_mm: 40.0
+    anchor_ref: IC1
+    anchor_pad: '17'      # optional
+    origin_x_mm: -10.0
+    origin_y_mm: -10.0
     rotation_deg: 90.0
     params:
       channel: 2
     nets:
       CAP_IN: "GPIO12"
       CAP_OUT: "GPIO12_FILTERED"
-      FERRITE: "GPIO12"
     net_overrides:
       "/STM32F4xx/BOOT0": "/STM32F4xx_2/BOOT0"
+    layer: B.Cu          # explicit placement layer (if different from template layer)
+    mirror: true         # mirror the whole construction (requires layer change)
+    refs:                # explicit role -> ref mapping (last resort)
+      DAC_PI_FILTER_C1: C601
     enabled: true
 ```
 
-### Термовиа (`thermal_via_array`)
+- If `anchor_ref` is set, `origin_x/y` become a **shift** from the anchor.
+- `layer` and `mirror` allow placing the template on the opposite side with mirroring.
 
-Массив отверстий под термопадом задаётся отдельно:
+### Thermal Vias (`thermal_via_array`) – `target_ref` renamed to `anchor_ref`
 
-- `enabled` — включить массив.
-- `target_ref` — refdes компонента с термопадом.
-- `pad` — номер пада термопада.
-- `net` — цепь термовиа (обычно `GND`).
-- `rows`, `cols` — количество рядов и столбцов.
-- `margin_mm` — отступ от края площадки.
-- `pattern` — `grid` или `staggered`.
-- `drill_mm`, `diameter_mm` — параметры via.
+```yaml
+thermal_via_array:
+  enabled: true
+  anchor_ref: IC1       # was target_ref
+  pad: '145'
+  net: GND
+  rows: 4
+  cols: 4
+  margin_mm: 0.5
+  pattern: grid
+  drill_mm: 0.3
+  diameter_mm: 0.5
+```
 
 ---
 
-## Как работает автоматический подбор компонентов (пул)
+## CLI Commands
 
-Для `rules` (ManualSpoke) программа собирает все компоненты на плате, у которых:
-- Есть пользовательское поле `Role` (в Eeschema).
-- Значение поля `Role` совпадает с одной из ролей, указанных в шаблоне.
-- Компонент подключён к цепи `rule.net` (хотя бы один пад).
+All commands are run via `kicadspoke_cli.py`. If the subcommand is omitted, `apply` is assumed.
 
-Компоненты каждой роли сортируются в естественном численном порядке (`C5` < `C10`), и спицы забирают их по очереди.
+### `apply` – apply placement
 
-Для `clone_placements` используются два режима:
-- **По выделению**: программа использует текущее выделение в PCB-редакторе, считывает роли и сопоставляет их с шаблоном.
-- **По цепям**: для каждой роли определяется цепь (из `nets` или `net_template` с подстановкой `params`), затем находятся компоненты с нужной ролью, подключённые к этой цепи.
+```bash
+python kicadspoke_cli.py apply config.yaml [options]
+```
 
-Если компонентов какой-то роли не хватает, программа выдаёт фатальную ошибку **до** изменения платы.
+Options:
+- `--dry-run` – only show the plan, do not apply changes.
+- `--timeout-ms` – IPC timeout in ms (default 20000).
+- `--batch-size` – batch size for commits (default 10).
+- `--verbose` – verbose output (DEBUG).
+- `--log-file` – save logs to a file.
+- `--no-collision-check` – disable collision checking.
+- `--collision-margin` – margin for collision checking in mm (default 0.2).
+- `--clone-placement NAME` – process only the specified clone (useful for debugging).
+
+### `extract` – extract template from selection (enhanced)
+
+```bash
+python kicadspoke_cli.py extract --name template_name --output config.yaml [--verbose] [--log-file] [--param KEY=VALUE] [--net-template LITERAL=PATTERN] [--origin-by-via-net NET] [--origin-by-component-role ROLE]
+```
+
+New options:
+- `--param KEY=VALUE` – sets a parameter for verifying `--net-template` (e.g., `channel=1`). Not written to the template, only used for validation.
+- `--net-template LITERAL=PATTERN` – replaces a real net with a pattern containing a placeholder (e.g., `DAC1_DB1=DAC{channel}_DB1`). Can be repeated.
+- `--origin-by-via-net NET` – sets the template origin to the position of the via with the specified net (instead of the bbox lower-left corner). Fatal if no such via or more than one exists.
+- `--origin-by-component-role ROLE` – sets the origin to the position of the component with the specified role.
+
+Before running, select the desired components and vias in the PCB editor. Roles must be unique.
+
+### `undo` – undo the last operation
+
+```bash
+python kicadspoke_cli.py undo [--verbose] [--log-file]
+```
+
+### `clone-extract` – snapshot a channel (file‑based cloner)
+
+```bash
+python kicadspoke_cli.py clone-extract --net project.net --pcb project.kicad_pcb --channel Channel_0 --output snapshot.yaml [--verbose]
+```
+
+Analyzes a hierarchical project, extracts all components, tracks, and vias belonging to the specified channel, and saves the snapshot in YAML. Useful for studying the channel structure before writing a clone config.
+
+### `transform_template.py` – separate tool for template transformation
+
+This script is located in `utils/` and is used for post‑processing existing YAML templates:
+
+```bash
+python utils/transform_template.py -i input.yaml -o output.yaml --rotate 90 --mirror-x --set-origin-by-via-net "GND"
+```
+
+Options:
+- `--rotate DEG` – rotate counter‑clockwise by angle (degrees).
+- `--mirror-x` – mirror along the X axis (flips `across` sign).
+- `--mirror-y` – mirror along the Y axis (flips `along` sign).
+- `--set-origin-by-via-index N` – shift origin to the via with index N.
+- `--set-origin-by-via-net NET` – shift origin to the via with the given net.
+- `--set-origin-by-component-index N` – shift origin to the component with index N.
+- `--set-origin-by-component-role ROLE` – shift origin to the component with the given role.
+- `--origin-x X --origin-y Y` – explicit origin offset.
+
+Order of application: first origin shift (if set), then rotation and mirroring.
 
 ---
 
-## Реестр расстановки (registry)
+## Usage Examples
 
-Реестр (`registry.py`) обеспечивает идемпотентность расстановки via:
-
-- При первом запуске программа создаёт via и записывает их UUID в JSON-файл рядом с конфигом (`<config>.registry.json`).
-- При повторном запуске программа сверяет запланированные via с реестром:
-  - Если via уже стоит правильно — пропускает.
-  - Если позиция/параметры изменились — удаляет старую via и создаёт новую.
-  - Если ключ из реестра больше не встречается в конфиге — удаляет via (prune).
-
-Реестр создаётся автоматически и не требует ручного управления. Для клонируемых размещений ключи реестра строятся на основе `name` клона, что позволяет различать via разных экземпляров.
-
----
-
-## Параметры командной строки
-
-### Основная команда – применить расстановку (`apply`)
-
+### 1. Standard run
 ```bash
-python kicadspoke_cli.py apply <конфиг.yaml> [--dry-run] [--timeout-ms 20000] [--batch-size 10] [--verbose] [--log-file logs/placer.log] [--no-collision-check] [--collision-margin 0.2] [--clone-placement NAME]
+python kicadspoke_cli.py 10CL006YE144C8G.yaml
 ```
 
-- `<конфиг.yaml>` — путь к YAML-конфигурационному файлу.
-- `--dry-run` — только показать планируемые перемещения и via, ничего не изменять.
-- `--timeout-ms` — таймаут IPC-соединения с KiCad (по умолчанию 20000 мс).
-- `--batch-size` — размер батча для коммитов (число объектов за одну транзакцию, по умолчанию 10).
-- `--verbose` — подробный вывод (DEBUG-уровень логирования).
-- `--log-file` — сохранять логи в указанный файл.
-- `--no-collision-check` — отключить проверку коллизий (если выдаёт ложные предупреждения).
-- `--collision-margin` — дополнительный зазор при проверке коллизий (мм, по умолчанию 0.2).
-- `--clone-placement NAME` — обработать только один клон с указанным именем (полезно для отладки, когда в конфиге несколько клонов в режиме «по выделению»).
-
-### Команда извлечения шаблона (`extract`)
-
+### 2. Dry run (preview only)
 ```bash
-python kicadspoke_cli.py extract --name имя_шаблона --output конфиг.yaml [--verbose] [--log-file logs/extract.log]
+python kicadspoke_cli.py config.yaml --dry-run
 ```
 
-- `--name` — имя шаблона (ключ в секции `templates`).
-- `--output` — путь к YAML-файлу для записи (если файл существует, шаблон добавляется или перезаписывается).
-- `--timeout-ms` — таймаут IPC (по умолчанию 20000 мс).
-- `--verbose` — подробный вывод.
-- `--log-file` — сохранять логи в файл.
-
-**Перед запуском:** выделите нужные компоненты и via в PCB-редакторе KiCad.
-
-### Команда отката (`undo`)
-
+### 3. Process a single clone when multiple clones are in selection mode
 ```bash
-python kicadspoke_cli.py undo [--verbose] [--log-file logs/undo.log]
+python kicadspoke_cli.py config.yaml --clone-placement pi_filter_vccio
 ```
 
-- `--verbose` — подробный вывод.
-- `--log-file` — сохранять логи в файл.
-
-Если команда не указана, подразумевается `apply`.
-
----
-
-## Примеры использования
-
-### 1. Стандартный запуск
-
+### 4. Extract a template with parametrisation and origin by via
+Select elements on the board, then:
 ```bash
-python kicadspoke_cli.py kicadspoke_templates_example.yaml
+python kicadspoke_cli.py extract --name my_filter --output my_config.yaml --net-template "DAC1_DB1=DAC{channel}_DB1" --param channel=1 --origin-by-via-net "/Channel_0/DAC/+3V3_CLKVDD" --verbose
 ```
 
-### 2. С подробным логированием в файл
-
+### 5. Transform a template
 ```bash
-python kicadspoke_cli.py kicadspoke_templates_example.yaml --verbose --log-file logs/placer.log
+python utils/transform_template.py -i my_template.yaml -o my_template_rotated.yaml --rotate 180 --set-origin-by-component-role FB
 ```
 
-### 3. Предварительный просмотр (dry-run)
-
-```bash
-python kicadspoke_cli.py kicadspoke_templates_example.yaml --dry-run
-```
-
-### 4. Отключение проверки коллизий
-
-```bash
-python kicadspoke_cli.py kicadspoke_templates_example.yaml --no-collision-check
-```
-
-### 5. Извлечение шаблона из выделения на плате
-
-Выделите компоненты и via в PCB-редакторе, затем:
-
-```bash
-python kicadspoke_cli.py extract --name my_template --output my_config.yaml --verbose
-```
-
-### 6. Откат последней операции
-
+### 6. Undo
 ```bash
 python kicadspoke_cli.py undo --verbose
 ```
 
-### 7. Обработка только одного клона (при нескольких в режиме «по выделению»)
+---
 
-```bash
-python kicadspoke_cli.py apply config.yaml --clone-placement filter_gpio12
+## Diagnostics and Known Issues
+
+### KiCad Bug #24966 (crash on first write via IPC)
+When the Schematic Editor is open and no interactive edit has been made in the session, calling `Board.update_items()` (even with no changes) can crash KiCad (null pointer in `API_HANDLER_EDITOR::checkForBusy`). The request is dispatched to the schematic handler, which is not initialised.
+
+**Symptoms:** KiCad silently closes, the client receives `ConnectionError: Error receiving reply from KiCad: Timed out`.
+
+**Workaround:** before running `apply`, either close the schematic editor or perform any interactive edit in PCB (move a component and save). The code includes a warning (`check_write_crash_risk`) and retries with backoff, but the crash remains possible – it's a KiCad defect.
+
+### Diagnostic scripts
+The folder `kicadspoke/diagnostics/` contains scripts for debugging:
+- `diagnose_first_write_crash.py` – runs a ladder of reads/writes to localise the crash.
+- `test_custom_fields.py` – checks reading of the `Role` field.
+- `test_move_one_cap.py` – minimal test for moving a component.
+- `test_flip_one_cap.py` – tests flip via GUI action.
+- `test_create_one_via.py` – tests via creation.
+- `test_pad_mirror_convention.py` – empirical check of pad mirroring on flip.
+- `get_selected_component.py` – prints information about selected components.
+
+---
+
+## Project Structure (brief)
+
+```
+kicadspoke/
+├── kicadspoke_cli.py          # CLI entry point
+├── config.py                  # YAML loading → dataclasses
+├── constants.py               # Global constants
+├── exceptions.py              # Exception hierarchy
+├── validation.py              # Pre‑validation checks (including via net existence)
+├── registry.py                # Via registry (reconcile with live vias)
+├── net_resolution.py          # Net resolution for ClonePlacement and reverse parametrisation
+├── template_extraction.py     # Template extraction (with new options)
+├── undo.py                    # Undo operation
+├── geometry/                  # Geometry calculations (spoke_layout, keepout, thermal_grid, pad_projection, clone_geometry)
+├── kicad/                     # KiCad IPC adapter
+├── placement/                 # Planner, executors, services (collision, planner, executor, services)
+│   ├── services/              # Including clone_role_resolver with anchor‑proximity disambiguation
+├── cloner/                    # File‑based cloner (extract, netlist, pcb, models, sexp)
+├── diagnostics/               # Diagnostic scripts
+├── utils/                     # Utilities (units, transform_template.py)
+└── tests/                     # Unit and integration tests
 ```
 
 ---
 
-## Логирование и откат (undo)
+## 📚 Technical Documentation
 
-- При каждом успешном выполнении программы в папку `logs/` записывается JSON-файл с именем `operation_YYYYMMDD_HHMMSS.json`.
-- Он содержит полную информацию о перемещениях (исходные и новые позиции, углы, слои) и всех созданных via (включая UUID).
-- Команда `undo` читает последний такой файл и восстанавливает плату в исходное состояние, удаляя созданные via и возвращая компоненты на их места.
+Detailed descriptions of architecture, modules, and API are in the `docs/` folder:
+
+- [Project architecture](./docs/architect.md)
+- [CLI commands](./docs/commands.md)
+- [Diagnostics](./docs/diagnostics.md)
+- [Geometry utilities](./docs/geometry.md)
+- [KiCad adapter](./docs/kicad.md)
+- [Using kipy](./docs/kipy.md)
+- [Placement planning and execution](./docs/placement.md)
+- [Tests](./docs/tests.md)
+- [Top‑level modules](./docs/uplevel_modules.md)
+- [File‑based cloner](./docs/cloner.md)
+- [Template transformation](./docs/rotate_template.md) (new)
 
 ---
 
-## Примечания
+## License
 
-- Программа требует **открытого экземпляра KiCad** с активной платой.
-- Все координаты в конфигурации задаются в **миллиметрах**, углы — в **градусах**.
-- В режиме `--dry-run` via показываются (в отличие от предыдущих версий), так как они теперь вычисляются по геометрии шаблона, а не по реальным падам. Исключение — термовиа, они могут слегка отличаться из-за keepout.
-- Проверка коллизий может давать ложные срабатывания; в таких случаях используйте `--no-collision-check`.
-- Если вы изменяете конфиг и хотите, чтобы уже расставленные компоненты не перемещались, включите `skip_existing_components: true` в корне конфига.
-
----
-
-## Техническая документация:
-
-* [Архитектура проекта](./docs/architect.md)
-* [Модули верхнего уровня](./docs/uplevel_modules.md)
-* [Модули низкоуровневых геометрических функций](./docs/geometry.md)
-* [Адаптер для взаимодействия с KiCad через IPC](./docs/kicad.md)
-* [Полный список используемых kipy функций (включая недокументированные)](./docs/kipy.md)
-* [Диагностические скрипты](./docs/diagnostics.md)
-* [Тесты](./docs/tests.md)
-
-## Лицензия
-
-Проект распространяется под лицензией MIT.
+This project is distributed under the **MIT** license. See the `LICENSE` file for details.
