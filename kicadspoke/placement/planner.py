@@ -12,7 +12,7 @@ from .services.via_planner import ViaPlanner
 from .services.manual_position_calculator import ManualPositionCalculator
 from .services.clone_position_calculator import ClonePositionCalculator
 from ..exceptions import ComponentNotFoundError
-from .commands import MoveCommand, ViaCommand
+from .commands import MoveCommand, ViaCommand, TrackCommand
 
 from ..constants import POSITION_TOLERANCE_NM, ANGLE_TOLERANCE_DEG
 
@@ -29,6 +29,7 @@ class PlacementPlanner:
         self._target_layer = BoardLayer.BL_B_Cu if config.layer == 'B.Cu' else BoardLayer.BL_F_Cu
         self._planned = None
         self._planned_vias = None
+        self._planned_tracks = None
         self.via_planner = ViaPlanner(adapter, config)
         logger.info(f"Планировщик инициализирован: layer={config.layer}, "
                     f"якорей в правилах: {len({r.anchor_ref for r in config.rules})}")
@@ -56,6 +57,7 @@ class PlacementPlanner:
     def plan_moves(self) -> List[MoveCommand]:
         self._planned = []
         self._planned_vias = []
+        self._planned_tracks = []
 
         if self.cfg.place_components and self.cfg.rules:
             placed, planned_vias = self.position_calc.compute_raw_positions(
@@ -69,10 +71,12 @@ class PlacementPlanner:
             logger.info("place_components=False – перемещения конденсаторов не планируются")
 
         if self.cfg.clone_placements:
-            clone_placed, clone_vias = self.clone_calc.compute_raw_positions(self.cfg.clone_placements)
+            clone_placed, clone_vias, clone_tracks = self.clone_calc.compute_raw_positions(self.cfg.clone_placements)
             self._planned.extend(clone_placed)
             self._planned_vias.extend(clone_vias)
-            logger.info(f"ClonePlacement: {len(clone_placed)} компонентов, {len(clone_vias)} via")
+            self._planned_tracks.extend(clone_tracks)
+            logger.info(f"ClonePlacement: {len(clone_placed)} компонентов, {len(clone_vias)} via, "
+                       f"{len(clone_tracks)} треков")
 
         moves = []
         skipped = 0
@@ -112,7 +116,19 @@ class PlacementPlanner:
             target_layer=self._target_layer
         )
 
-    def plan(self) -> Tuple[List[MoveCommand], List[ViaCommand]]:
+    def plan_tracks(self) -> List[TrackCommand]:
+        """
+        Треки планируются только у ClonePlacement (ManualSpoke их не
+        поддерживает вообще — см. TemplateTrack в config.py). Никакого
+        keepout/термо-планирования, в отличие от plan_vias — треки не
+        двигаются под коллизии, коллизии для протяжённой геометрии
+        сознательно не проверяем сами (см. обсуждение), полагаемся на DRC
+        самого KiCad.
+        """
+        return list(self._planned_tracks or [])
+
+    def plan(self) -> Tuple[List[MoveCommand], List[ViaCommand], List[TrackCommand]]:
         moves = self.plan_moves()
         vias = self.plan_vias()
-        return moves, vias
+        tracks = self.plan_tracks()
+        return moves, vias, tracks

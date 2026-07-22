@@ -79,6 +79,39 @@ class TemplateComponentSlot:
 
 
 @dataclass
+class TemplateTrack:
+    """
+    Прямой отрезок медной дорожки в шаблоне — та же локальная система
+    координат (along/across от нуля СПИЦЫ), что и у TemplateVia. Никакой
+    привязки к ролям/падам: как и via, дорожка не имеет пользовательских
+    полей, "чья" она — определить нельзя, доверяем геометрии (все
+    элементы шаблона двигаются/крутятся/зеркалятся одной и той же
+    формулой, см. geometry/clone_geometry.py).
+
+    Ломаная дорожка — это просто НЕСКОЛЬКО TemplateTrack подряд,
+    стыкующихся концами (ровно так kipy.board_types.Track хранит их и
+    внутри самого KiCad — нет отдельной сущности "полилиния"). Дуги
+    (ArcTrack) сознательно не поддержаны — не нужны для П-фильтров,
+    отдельное расширение при необходимости.
+
+    Коллизии (не пересекает ли дорожка чужую медь/компонент на новом
+    месте) НЕ проверяются этим инструментом вообще — сознательное
+    решение (см. обсуждение в чате): полагаемся на DRC самого KiCad
+    после расстановки, а не строим свою geometry-проверку отрезок-против-
+    отрезка.
+    """
+    start_along_mm: float = 0.0
+    start_across_mm: float = 0.0
+    end_along_mm: float = 0.0
+    end_across_mm: float = 0.0
+    width_mm: float = 0.25
+    net: Optional[str] = None
+    # Слой — тот же паттерн, что у TemplateComponentSlot.layer: None =
+    # наследовать layer шаблона, при mirror инвертируется той же строкой.
+    layer: Optional[str] = None
+
+
+@dataclass
 class SpokeTemplate:
     """
     Шаблон спицы — вся геометрия локальная и поворотоинвариантная:
@@ -90,6 +123,7 @@ class SpokeTemplate:
     name: str
     vias: List[TemplateVia] = field(default_factory=list)
     components: List[TemplateComponentSlot] = field(default_factory=list)
+    tracks: List[TemplateTrack] = field(default_factory=list)
     # Слой шаблона — ФАКТ, абсолютный: 'F.Cu' | 'B.Cu', как снято
     # экстракцией (пишется автоматически). Компоненты без своего layer
     # наследуют его. Никакой автоматики сторон: шаблон кладётся буква в
@@ -222,6 +256,30 @@ def _load_template_via(data: Dict[str, Any]) -> TemplateVia:
     )
 
 
+def _load_template_track(data: Dict[str, Any]) -> TemplateTrack:
+    net = data.get('net')
+    if net is not None and not isinstance(net, str):
+        raise ValidationError(format_fatal_error(
+            f"track.net должен быть строкой, а не {type(net).__name__}",
+            [f"получено: {net!r} (start_along_mm={data.get('start_along_mm')}, "
+             f"start_across_mm={data.get('start_across_mm')})",
+             "похоже на сломанный YAML — например, плейсхолдер вида {NET} без "
+             "кавычек: YAML читает его как flow-mapping, а не строку, бери в "
+             "кавычки: net: '{NET}'"]
+        ))
+    layer = data.get('layer')
+    _check_layer_value(layer, "у track")
+    return TemplateTrack(
+        start_along_mm=data.get('start_along_mm', 0.0),
+        start_across_mm=data.get('start_across_mm', 0.0),
+        end_along_mm=data.get('end_along_mm', 0.0),
+        end_across_mm=data.get('end_across_mm', 0.0),
+        width_mm=data.get('width_mm', 0.25),
+        net=net,
+        layer=layer,
+    )
+
+
 def _check_layer_value(value, where: str):
     if value is not None and value not in ('F.Cu', 'B.Cu'):
         raise ValidationError(format_fatal_error(
@@ -277,6 +335,7 @@ def _load_spoke_template(name: str, data: Dict[str, Any]) -> SpokeTemplate:
         name=name,
         vias=[_load_template_via(v) for v in data.get('vias', [])],
         components=components,
+        tracks=[_load_template_track(t) for t in data.get('tracks', [])],
         layer=layer,
     )
 

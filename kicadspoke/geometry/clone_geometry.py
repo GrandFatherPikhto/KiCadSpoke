@@ -15,11 +15,11 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 from kipy.geometry import Vector2, Angle
 
-from ..config import ClonePlacement, SpokeTemplate, TemplateVia
+from ..config import ClonePlacement, SpokeTemplate, TemplateVia, TemplateTrack
 from ..exceptions import ValidationError, format_fatal_error
 from ..net_resolution import resolve_net
 from ..utils.units import MM
-from .spoke_layout import local_to_absolute, ResolvedVia, ComponentLayout, SpokeLayout
+from .spoke_layout import local_to_absolute, ResolvedVia, ResolvedTrack, ComponentLayout, SpokeLayout
 
 
 def _resolve_clone_via(origin: Vector2, via: TemplateVia, rotation_deg: float,
@@ -39,6 +39,32 @@ def _resolve_clone_via(origin: Vector2, via: TemplateVia, rotation_deg: float,
         net=resolve_net(via.net, clone.params, clone.net_overrides),
         drill_mm=via.drill_mm,
         diameter_mm=via.diameter_mm,
+    )
+
+
+def _resolve_clone_track(origin: Vector2, track: TemplateTrack, rotation_deg: float,
+                         clone: ClonePlacement, tpl_layer: str,
+                         mirror: bool = False) -> ResolvedTrack:
+    if track.net is None:
+        raise ValidationError(format_fatal_error(
+            f"track без цепи в шаблоне {clone.template!r} ({clone.name!r})",
+            [f"track (along={track.start_along_mm},{track.start_across_mm} -> "
+             f"{track.end_along_mm},{track.end_across_mm}) не имеет net — "
+             f"net обязателен для каждого track в клонируемом шаблоне, как и у via"]
+        ))
+    start = local_to_absolute(origin, track.start_along_mm, track.start_across_mm, rotation_deg)
+    end = local_to_absolute(origin, track.end_along_mm, track.end_across_mm, rotation_deg)
+    layer = track.layer or tpl_layer
+    if mirror:
+        start = _mirror_x(origin, start)
+        end = _mirror_x(origin, end)
+        layer = 'F.Cu' if layer == 'B.Cu' else 'B.Cu'
+    return ResolvedTrack(
+        start=start,
+        end=end,
+        width_mm=track.width_mm,
+        net=resolve_net(track.net, clone.params, clone.net_overrides),
+        layer=layer,
     )
 
 
@@ -91,6 +117,8 @@ def apply_clone_geometry(
 
     layout = SpokeLayout(origin=origin)
     layout.vias = [_resolve_clone_via(origin, v, rotation_deg, clone, mirror) for v in template.vias]
+    layout.tracks = [_resolve_clone_track(origin, t, rotation_deg, clone, template.layer, mirror)
+                     for t in template.tracks]
 
     for slot in template.components:
         ref = role_to_ref.get(slot.role)

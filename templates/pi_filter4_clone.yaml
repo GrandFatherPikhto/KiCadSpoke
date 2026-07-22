@@ -81,3 +81,39 @@ clone_placements:
       PI_FILTER_FB: '{PWR_OUT}'
       PI_FILTER_C3: '{PWR_OUT}'
       PI_FILTER_C4: '{PWR_OUT}'
+
+  - name: fpga_filter_1v2_vccd_pll
+    template: pi_filter_4
+    anchor_ref: IC1
+    anchor_pad: '37'
+    origin_x_mm: 0.0
+    origin_y_mm: 7.0
+    rotation_deg: 0.0
+    enabled: true
+    params:
+      PWR_IN: +1V2
+      PWR_OUT: +1V2_VCCD_PLL
+    nets:
+      PI_FILTER_C1: '{PWR_IN}'
+      PI_FILTER_C2: '{PWR_IN}'
+      PI_FILTER_FB: '{PWR_OUT}'
+      PI_FILTER_C3: '{PWR_OUT}'
+      PI_FILTER_C4: '{PWR_OUT}'
+
+  - name: fpga_filter_2v5_vcca
+    template: pi_filter_4
+    anchor_ref: IC1
+    anchor_pad: '107'
+    origin_x_mm: 8.0
+    origin_y_mm: 0.0
+    rotation_deg: 270.0
+    enabled: true
+    params:
+      PWR_IN: +2V5
+      PWR_OUT: +2V5_VCCA
+    nets:
+      PI_FILTER_C1: '{PWR_IN}'
+      PI_FILTER_C2: '{PWR_IN}'
+      PI_FILTER_FB: '{PWR_OUT}'
+      PI_FILTER_C3: '{PWR_OUT}'
+      PI_FILTER_C4: '{PWR_OUT}'

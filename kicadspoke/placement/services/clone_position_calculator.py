@@ -16,7 +16,7 @@ from ...exceptions import ValidationError, format_fatal_error
 from ...kicad.adapter import KiCadBoardAdapter
 from ...geometry.clone_geometry import apply_clone_geometry
 from ...registry import make_registry_key
-from ..commands import PlacedComponentInfo, ViaCommand
+from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand
 from .clone_role_resolver import resolve_roles_by_selection, resolve_roles_by_nets, clone_uses_selection_mode
 
 logger = logging.getLogger(__name__)
@@ -61,9 +61,10 @@ class ClonePositionCalculator:
     def compute_raw_positions(
         self,
         clone_placements: List[ClonePlacement],
-    ) -> Tuple[List[PlacedComponentInfo], List[ViaCommand]]:
+    ) -> Tuple[List[PlacedComponentInfo], List[ViaCommand], List[TrackCommand]]:
         components_result: List[PlacedComponentInfo] = []
         vias_result: List[ViaCommand] = []
+        tracks_result: List[TrackCommand] = []
 
         for clone in clone_placements:
             if not clone.enabled:
@@ -73,13 +74,19 @@ class ClonePositionCalculator:
                 logger.warning(f"{clone.name}: шаблон {clone.template!r} не найден в templates, пропуск")
                 continue
 
+            # Якорь считаем ДО резолва ролей — нужен для сужения физической
+            # близостью (resolve_roles_by_nets), и тот же самый потом идёт
+            # в apply_clone_geometry (не считаем дважды).
+            anchor_position = self._resolve_anchor(clone)
+
             # Режим "по цепям", если заданы nets ИЛИ params -- иначе "по
             # выделению". Явное решение снаружи, не автоматика внутри
             # самого резолвера (см. clone_role_resolver.py).
             if clone_uses_selection_mode(clone):
                 role_to_ref = resolve_roles_by_selection(self.adapter, template, clone.name)
             else:
-                role_to_ref = resolve_roles_by_nets(self.adapter, template, clone)
+                role_to_ref = resolve_roles_by_nets(self.adapter, template, clone,
+                                                    anchor_position=anchor_position)
 
             # Сторона размещения: своя у клона или глобальная из конфига.
             # mirror — явная ручная операция; корректность пары layer/mirror
@@ -87,7 +94,7 @@ class ClonePositionCalculator:
             mirror = clone.mirror
             # Шаблон снят с front; back = зеркало (см. apply_clone_geometry)
             layout = apply_clone_geometry(clone, template, role_to_ref,
-                                          anchor_position=self._resolve_anchor(clone),
+                                          anchor_position=anchor_position,
                                           mirror=mirror)
             logger.info(f"  [{clone.name}] шаблон {template.name!r} на {template.layer}"
                         + (" -> mirror: перевёрнут целиком" if mirror else " -> как записан"))
@@ -101,6 +108,18 @@ class ClonePositionCalculator:
                 ))
                 logger.debug(f"  [{clone.name}] via спицы: "
                             f"({via.position.x/1e6:.3f}, {via.position.y/1e6:.3f}) мм, net={via.net}")
+
+            for track_index, track in enumerate(layout.tracks):
+                track_layer = BoardLayer.BL_B_Cu if track.layer == 'B.Cu' else BoardLayer.BL_F_Cu
+                tracks_result.append(TrackCommand(
+                    start=track.start, end=track.end, width_mm=track.width_mm,
+                    net_name=track.net, layer=track_layer, owner_ref=clone.name,
+                    registry_key=make_registry_key(anchor_id, clone.template, None, track_index),
+                ))
+                logger.debug(f"  [{clone.name}] track: "
+                            f"({track.start.x/1e6:.3f}, {track.start.y/1e6:.3f}) -> "
+                            f"({track.end.x/1e6:.3f}, {track.end.y/1e6:.3f}) мм, "
+                            f"net={track.net}, layer={track.layer}")
 
             for comp_layout in layout.components:
                 # Слой слота: свой абсолютный или наследованный от шаблона;
@@ -126,4 +145,4 @@ class ClonePositionCalculator:
                         registry_key=make_registry_key(anchor_id, clone.template, comp_layout.role, via_index),
                     ))
 
-        return components_result, vias_result
+        return components_result, vias_result, tracks_result

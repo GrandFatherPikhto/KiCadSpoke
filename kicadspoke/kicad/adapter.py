@@ -4,7 +4,7 @@ import time
 import logging
 from typing import List, Optional, Any
 import kipy
-from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, BoardLayer, Pad, Field, Group
+from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, Track, BoardLayer, Pad, Field, Group
 from kipy.geometry import Vector2, Box2, Angle
 
 from .interfaces import IBoardAdapter
@@ -50,6 +50,12 @@ class KiCadBoardAdapter(IBoardAdapter):
         vias = list(self._board.get_vias())
         logger.debug(f"Получено {len(vias)} виа")
         return vias
+
+    def get_tracks(self) -> List[Track]:
+        """Все существующие на плате прямые дорожки (для идемпотентности реестра)."""
+        tracks = list(self._board.get_tracks())
+        logger.debug(f"Получено {len(tracks)} дорожек")
+        return tracks
 
     def get_selected_items(self) -> List[Any]:
         """
@@ -286,6 +292,18 @@ class KiCadBoardAdapter(IBoardAdapter):
         via.diameter = int(diameter_mm * MM)
         return via
 
+    def create_track(self, start: Vector2, end: Vector2, width_mm: float,
+                     net: Net, layer: BoardLayer) -> Track:
+        logger.debug(f"Создание трека ({start.x/MM:.3f}, {start.y/MM:.3f}) -> "
+                    f"({end.x/MM:.3f}, {end.y/MM:.3f}) мм, net={net.name}")
+        track = Track()
+        track.start = start
+        track.end = end
+        track.width = int(width_mm * MM)
+        track.net = net
+        track.layer = layer
+        return track
+
     def remove_by_id(self, uuid_str: str) -> bool:
         """
         Удаляет объект (виа или любой другой) по его id (строка uuid) —
@@ -304,4 +322,3 @@ class KiCadBoardAdapter(IBoardAdapter):
         except Exception as e:
             logger.warning(f"Не удалось удалить объект {uuid_str}: {type(e).__name__}: {e}")
             return False
-

@@ -14,15 +14,18 @@ class OperationLogger:
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
 
-    def write_operation_log(self, move_log: List[Dict], via_log: List[Dict]) -> Optional[Path]:
-        if not move_log and not via_log:
+    def write_operation_log(self, move_log: List[Dict], via_log: List[Dict],
+                            track_log: Optional[List[Dict]] = None) -> Optional[Path]:
+        track_log = track_log or []
+        if not move_log and not via_log and not track_log:
             return None
         try:
             self.log_dir.mkdir(exist_ok=True)
             log_data = {
                 'timestamp': datetime.now().isoformat(),
                 'moves': move_log,
-                'created_vias': via_log
+                'created_vias': via_log,
+                'created_tracks': track_log
             }
             filename = self.log_dir / f"operation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
             with open(filename, 'w', encoding='utf-8') as f:

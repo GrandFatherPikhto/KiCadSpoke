@@ -69,6 +69,21 @@ def undo_last_operation(json_path: Path) -> bool:
             except Exception as e:
                 logger.warning(f"Не удалось удалить via {uuid_str}: {e}")
 
+    # 2b. Удалить созданные треки (по UUID) — треки не двигались, им,
+    # в отличие от компонентов, восстанавливать нечего, только удалить,
+    # ровно как via.
+    for track_data in data.get('created_tracks', []):
+        uuid_str = track_data.get('uuid')
+        if uuid_str:
+            try:
+                from kipy.proto.common.types import base_types_pb2 as common_types_pb2
+                kiid = common_types_pb2.KIID()
+                kiid.value = uuid_str
+                board.remove_items_by_id([kiid])
+                logger.debug(f"Удалён трек с UUID {uuid_str}")
+            except Exception as e:
+                logger.warning(f"Не удалось удалить трек {uuid_str}: {e}")
+
     # 3. Удалить файл операции (чтобы не откатывать дважды)
     try:
         json_path.unlink()

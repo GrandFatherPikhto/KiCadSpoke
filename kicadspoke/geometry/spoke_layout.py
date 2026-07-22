@@ -69,6 +69,16 @@ def _resolve_via(origin: Vector2, via: TemplateVia, rotation_deg: float, rule_ne
 
 
 @dataclass
+class ResolvedTrack:
+    """Полностью разрешённый прямой отрезок дорожки — обе точки уже абсолютные, net уже не None."""
+    start: Vector2
+    end: Vector2
+    width_mm: float
+    net: str
+    layer: str  # 'F.Cu' | 'B.Cu', абсолютный — уже разрешён (свой или слоя шаблона, с учётом mirror)
+
+
+@dataclass
 class ComponentLayout:
     ref: str
     role: str
@@ -83,6 +93,7 @@ class SpokeLayout:
     origin: Vector2                                  # ноль спицы (после shift, до поворота)
     vias: List[ResolvedVia] = field(default_factory=list)     # via уровня спицы (была power_via)
     components: List[ComponentLayout] = field(default_factory=list)
+    tracks: List[ResolvedTrack] = field(default_factory=list)  # только у ClonePlacement (clone_geometry.py); ManualSpoke не заполняет
 
 
 def apply_spoke_geometry(

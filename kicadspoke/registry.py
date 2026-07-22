@@ -35,7 +35,8 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .placement.commands import ViaCommand
+from kipy.board_types import BoardLayer
+from .placement.commands import ViaCommand, TrackCommand
 from .utils.units import MM
 
 from .constants import POSITION_TOLERANCE_MM, SPOKE_LEVEL_ROLE_PLACEHOLDER
@@ -44,6 +45,13 @@ logger = logging.getLogger(__name__)
 
 _POSITION_TOLERANCE_MM = POSITION_TOLERANCE_MM
 _SPOKE_LEVEL_ROLE_PLACEHOLDER = SPOKE_LEVEL_ROLE_PLACEHOLDER
+
+
+def _layer_to_str(layer: BoardLayer) -> str:
+    """BoardLayer -> 'F.Cu'/'B.Cu' — локальная копия (не тянем сюда
+    .placement.executor.base, чтобы не рисковать циклом импортов ради
+    одной строки, см. историю с manual_position_calculator.py)."""
+    return "B.Cu" if layer == BoardLayer.BL_B_Cu else "F.Cu"
 
 def make_registry_key(anchor_id: str, template_name: str, role: Optional[str], via_index: int) -> str:
     role_part = role if role is not None else _SPOKE_LEVEL_ROLE_PLACEHOLDER
@@ -54,6 +62,13 @@ def registry_path_for_config(config_path: str) -> str:
     """<config>.yaml -> <config>.registry.json, рядом с самим конфигом."""
     p = Path(config_path)
     return str(p.with_suffix("").with_suffix(".registry.json"))
+
+
+def track_registry_path_for_config(config_path: str) -> str:
+    """<config>.yaml -> <config>.tracks.registry.json — отдельный файл от via,
+    схема записи другая (две точки+ширина+слой, не drill/diameter)."""
+    p = Path(config_path)
+    return str(p.with_suffix("").with_suffix(".tracks.registry.json"))
 
 
 @dataclass
@@ -80,6 +95,38 @@ def load_registry(path: str) -> Dict[str, RegistryEntry]:
 
 
 def save_registry(path: str, entries: Dict[str, RegistryEntry]) -> None:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    data = {k: asdict(v) for k, v in entries.items()}
+    p.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+@dataclass
+class TrackRegistryEntry:
+    uuid: str
+    start_x_mm: float
+    start_y_mm: float
+    end_x_mm: float
+    end_y_mm: float
+    width_mm: float
+    net: str
+    layer: str
+
+
+def load_track_registry(path: str) -> Dict[str, TrackRegistryEntry]:
+    p = Path(path)
+    if not p.exists():
+        return {}
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8"))
+        return {k: TrackRegistryEntry(**v) for k, v in raw.items()}
+    except Exception as e:
+        logger.warning(f"Не удалось прочитать реестр треков {path}: {type(e).__name__}: {e} — "
+                       f"считаю реестр пустым (все треки будут созданы заново)")
+        return {}
+
+
+def save_track_registry(path: str, entries: Dict[str, TrackRegistryEntry]) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     data = {k: asdict(v) for k, v in entries.items()}
@@ -207,3 +254,112 @@ class PlacementRegistry:
             diameter_mm=via_cmd.diameter_mm,
         )
         save_registry(self.path, self.entries)
+
+
+class TrackRegistry:
+    """
+    Реестр расстановки треков между прогонами — та же самая логика, что и
+    PlacementRegistry (см. её докстринг: live-плата как источник истины,
+    JSON только индекс key->uuid, prune с учётом known_clone_names), но
+    сверка "совпадает ли" идёт по двум точкам + ширине + слою вместо
+    позиции+drill+diameter. Отдельный класс и отдельный файл на диске
+    (track_registry_path_for_config), а не расширение PlacementRegistry —
+    схема записи слишком разная, совмещать в одной таблице/классе только
+    ради экономии кода не стоит (яснее читать порознь).
+    """
+
+    def __init__(self, adapter, path: str):
+        self.adapter = adapter
+        self.path = path
+        self.entries: Dict[str, TrackRegistryEntry] = load_track_registry(path)
+
+    def _live_matches(self, live_track, track: TrackCommand) -> bool:
+        """Сверка ПЛАНИРУЕМОГО трека с РЕАЛЬНЫМ треком на плате (не с записью в JSON)."""
+        start_x_mm, start_y_mm = track.start.x / MM, track.start.y / MM
+        end_x_mm, end_y_mm = track.end.x / MM, track.end.y / MM
+        live_start_x_mm, live_start_y_mm = live_track.start.x / MM, live_track.start.y / MM
+        live_end_x_mm, live_end_y_mm = live_track.end.x / MM, live_track.end.y / MM
+        live_net = live_track.net.name if live_track.net else None
+        return (
+            abs(live_start_x_mm - start_x_mm) <= _POSITION_TOLERANCE_MM
+            and abs(live_start_y_mm - start_y_mm) <= _POSITION_TOLERANCE_MM
+            and abs(live_end_x_mm - end_x_mm) <= _POSITION_TOLERANCE_MM
+            and abs(live_end_y_mm - end_y_mm) <= _POSITION_TOLERANCE_MM
+            and live_net == track.net_name
+            and abs(live_track.width / MM - track.width_mm) < 1e-6
+            and _layer_to_str(live_track.layer) == _layer_to_str(track.layer)
+        )
+
+    def reconcile(self, planned_tracks: List[TrackCommand],
+                 known_clone_names: Optional[set] = None) -> List[TrackCommand]:
+        """См. PlacementRegistry.reconcile — логика идентична один в один,
+        отличаются только поля сверки (см. _live_matches здесь)."""
+        to_create: List[TrackCommand] = []
+        seen_keys = set()
+        live_by_uuid = {str(t.id.value): t for t in self.adapter.get_tracks()}
+
+        for track in planned_tracks:
+            if track.registry_key is None:
+                to_create.append(track)
+                continue
+            seen_keys.add(track.registry_key)
+
+            existing = self.entries.get(track.registry_key)
+            if existing is None:
+                to_create.append(track)
+                continue
+
+            live_track = live_by_uuid.get(existing.uuid)
+            if live_track is None:
+                logger.warning(f"  {track.registry_key}: в реестре треков есть запись (uuid "
+                               f"{existing.uuid}), но такого трека на плате НЕТ — реестр "
+                               f"рассинхронизирован; пересоздаю как будто записи не было")
+                del self.entries[track.registry_key]
+                to_create.append(track)
+                continue
+
+            if self._live_matches(live_track, track):
+                logger.debug(f"  {track.registry_key}: уже стоит правильно (проверено "
+                            f"по живому треку {existing.uuid}), пропуск")
+                continue
+
+            logger.info(f"  {track.registry_key}: геометрия/параметры изменились, "
+                       f"удаляю старый трек ({existing.uuid}) и создаю новый")
+            self.adapter.remove_by_id(existing.uuid)
+            del self.entries[track.registry_key]
+            to_create.append(track)
+
+        stale_keys = set()
+        for key in set(self.entries.keys()) - seen_keys:
+            anchor_id = key.split('|', 1)[0]
+            if (known_clone_names is not None and anchor_id.startswith('name:')
+                    and anchor_id[len('name:'):] in known_clone_names):
+                logger.debug(f"  {key}: не обработан в этом прогоне (--clone-placement "
+                            f"отфильтровал {anchor_id!r}), но он есть в конфиге — "
+                            f"НЕ prune'ится")
+                continue
+            stale_keys.add(key)
+
+        for key in stale_keys:
+            entry = self.entries.pop(key)
+            logger.info(f"  prune: {key} больше не встречается в конфиге, удаляю трек ({entry.uuid})")
+            self.adapter.remove_by_id(entry.uuid)
+
+        save_track_registry(self.path, self.entries)
+        return to_create
+
+    def record_created(self, track_cmd: TrackCommand, created_uuid: str) -> None:
+        """Вызывается TrackExecutor'ом сразу после успешного создания конкретного трека."""
+        if track_cmd.registry_key is None:
+            return
+        self.entries[track_cmd.registry_key] = TrackRegistryEntry(
+            uuid=created_uuid,
+            start_x_mm=track_cmd.start.x / MM,
+            start_y_mm=track_cmd.start.y / MM,
+            end_x_mm=track_cmd.end.x / MM,
+            end_y_mm=track_cmd.end.y / MM,
+            width_mm=track_cmd.width_mm,
+            net=track_cmd.net_name,
+            layer=_layer_to_str(track_cmd.layer),
+        )
+        save_track_registry(self.path, self.entries)

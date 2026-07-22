@@ -21,6 +21,16 @@ class ViaCommand:
     registry_key: Optional[str] = None  # см. registry.py — None означает "не участвует в реестре"
 
 @dataclass
+class TrackCommand:
+    start: Vector2
+    end: Vector2
+    width_mm: float
+    net_name: str
+    layer: BoardLayer
+    owner_ref: str
+    registry_key: Optional[str] = None  # см. registry.py — None означает "не участвует в реестре"
+
+@dataclass
 class PlacedComponentInfo:
     """
     Информация об одном размещённом компоненте — переносится из planner.py

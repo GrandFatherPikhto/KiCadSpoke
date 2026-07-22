@@ -67,12 +67,14 @@ kicadspoke\utils\__init__.py
 kicadspoke\utils\units.py
 kicadspoke\validation.py
 kicadspoke_cli.py
+kicadspoke_templates_example.yaml
 requirements.txt
 tests\integration_tests\conftest.py
 tests\integration_tests\test_component_ops.py
 tests\integration_tests\test_connection.py
 tests\integration_tests\test_extract.py
 tests\integration_tests\test_registry.py
+tests\integration_tests\test_track_ops.py
 tests\integration_tests\test_via_ops.py
 tests\test_clone_geometry.py
 tests\test_clone_placement_config.py
