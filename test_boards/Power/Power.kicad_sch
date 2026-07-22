@@ -4012,6 +4012,17 @@
 				)
 			)
 		)
+		(property "Role" "C_ADJ_BYPASS"
+			(at 210.82 53.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "a7405221-dc13-49a9-9daf-0f9a80dd883d")
 		)
@@ -4550,7 +4561,7 @@
 				)
 			)
 		)
-		(property "Role" "C_OUT_BYPASS"
+		(property "Role" "C_OUT_BULK"
 			(at 118.11 146.05 0)
 			(hide yes)
 			(show_name no)
@@ -4855,6 +4866,17 @@
 			)
 		)
 		(property "Sim.Pins" "1=K 2=A"
+			(at 132.08 66.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PWR_LED"
 			(at 132.08 66.04 0)
 			(hide yes)
 			(show_name no)
@@ -5255,7 +5277,7 @@
 				)
 			)
 		)
-		(property "Role" "C_OUT_BYPASS"
+		(property "Role" "C_OUT_BULK"
 			(at 118.11 120.65 0)
 			(hide yes)
 			(show_name no)
@@ -5344,6 +5366,17 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 240.03 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "R_LED"
 			(at 240.03 140.97 0)
 			(hide yes)
 			(show_name no)
@@ -6351,6 +6384,17 @@
 				)
 			)
 		)
+		(property "Role" "PWR_LED"
+			(at 241.3 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "bad886c5-ed93-499a-9970-ee66bf911671")
 		)
@@ -6539,6 +6583,17 @@
 			)
 		)
 		(property "Sim.Pins" "1=K 2=A"
+			(at 132.08 99.06 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PWR_LED"
 			(at 132.08 99.06 0)
 			(hide yes)
 			(show_name no)
@@ -7127,6 +7182,17 @@
 				)
 			)
 		)
+		(property "Role" "R_LED"
+			(at 241.3 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "9ad95450-65e1-4500-aad0-178b912ed112")
 		)
@@ -7215,6 +7281,17 @@
 				)
 			)
 		)
+		(property "Role" "R_LED"
+			(at 132.08 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "24c5d40c-faa3-40ca-a7b4-e0cf228f0aa8")
 		)
@@ -7293,6 +7370,17 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 222.25 43.18 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "R_FB_TOP"
 			(at 222.25 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -7475,6 +7563,17 @@
 				)
 			)
 		)
+		(property "Role" "R_FB_BOT"
+			(at 201.93 53.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "ff66d638-b1c2-40f2-906d-973141642b1c")
 		)
@@ -7637,6 +7736,17 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 203.2 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "R_FB_TOP"
 			(at 203.2 97.79 0)
 			(hide yes)
 			(show_name no)
@@ -8692,6 +8802,17 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 132.08 87.63 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "R_LED"
 			(at 132.08 87.63 0)
 			(hide yes)
 			(show_name no)
@@ -9760,6 +9881,17 @@
 				)
 			)
 		)
+		(property "Role" "R_FB_TOP"
+			(at 224.79 109.22 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "28c7576b-e1ee-495d-bf86-9f29ac873e59")
 		)
@@ -9859,6 +9991,17 @@
 				)
 			)
 		)
+		(property "Role" "PWR_LED"
+			(at 148.59 158.75 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "d990e2cc-8321-4482-9298-e8888ff78bb7")
 		)
@@ -9936,6 +10079,17 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 213.36 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "C_ADJ_BYPASS"
 			(at 213.36 97.79 0)
 			(hide yes)
 			(show_name no)
@@ -12147,6 +12301,17 @@
 				)
 			)
 		)
+		(property "Role" "C_IN_BYPASS"
+			(at 185.42 113.03 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "17c60e70-db9a-4c57-a3d1-30fd221ec43d")
 		)
@@ -12309,6 +12474,17 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 148.59 146.05 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "R_LED"
 			(at 148.59 146.05 0)
 			(hide yes)
 			(show_name no)
@@ -13657,6 +13833,17 @@
 				)
 			)
 		)
+		(property "Role" "C_IN_BYPASS"
+			(at 182.88 38.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "6afb597b-2239-4f7e-8d73-6113db8df771")
 		)
@@ -13830,6 +14017,17 @@
 			)
 		)
 		(property "Sim.Pins" "1=K 2=A"
+			(at 240.03 152.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "PWR_LED"
 			(at 240.03 152.4 0)
 			(hide yes)
 			(show_name no)

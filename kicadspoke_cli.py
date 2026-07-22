@@ -11,6 +11,7 @@ import argparse
 import sys
 import logging
 import json
+from typing import Dict, Any
 import yaml
 from pathlib import Path
 
@@ -143,6 +144,27 @@ def cmd_apply(args):
         logger.warning("⚠️ Некоторые операции завершились с ошибками – проверьте лог.")
 
 
+def load_profile(profiles_path: str, top_key: str, profile_name: str) -> Dict[str, Any]:
+    """
+    Общий загрузчик именованных профилей CLI-аргументов (для extract и
+    clone-extract — обе команды многословные, обе используют один и тот
+    же механизм). top_key разный для разных команд (extract_profiles /
+    clone_profiles) — так один YAML-файл может держать профили
+    обеих команд сразу, без коллизии имён.
+    """
+    p = Path(profiles_path)
+    if not p.exists():
+        sys.exit(f"[ошибка] файл профилей {profiles_path!r} не найден")
+    with open(p, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    profiles = data.get(top_key, {})
+    if profile_name not in profiles:
+        available = list(profiles.keys())
+        sys.exit(f"[ошибка] профиль {profile_name!r} не найден в {top_key!r} файла "
+                 f"{profiles_path!r}. Доступные: {available}")
+    return profiles[profile_name]
+
+
 def cmd_extract(args):
     """Извлекает шаблон спицы из текущего выделения на плате в YAML."""
     logger = logging.getLogger(__name__)
@@ -150,36 +172,63 @@ def cmd_extract(args):
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
     adapter.refresh_board()
 
-    params = {}
-    for item in (args.param or []):
-        if "=" not in item:
-            logger.error(f"--param {item!r} — нужен формат KEY=VALUE")
-            sys.exit(1)
-        k, v = item.split("=", 1)
-        params[k] = v
+    direct_args_given = bool(args.name or args.output or args.param or args.net_template
+                             or args.origin_by_via_net or args.origin_by_component_role)
+    if args.profile and direct_args_given:
+        sys.exit("[ошибка] --profile нельзя сочетать с --name/--output/--param/--net-template/"
+                 "--origin-by-*: либо всё из профиля, либо всё явными флагами, не вперемешку")
 
-    net_template_map = {}
-    for item in (args.net_template or []):
-        if "=" not in item:
-            logger.error(f"--net-template {item!r} — нужен формат ЛИТЕРАЛ=ПАТТЕРН")
-            sys.exit(1)
-        literal, pattern = item.split("=", 1)
-        net_template_map[literal] = pattern
+    if args.profile:
+        if not args.profiles:
+            sys.exit("[ошибка] --profile указан без --profiles (файла профилей)")
+        prof = load_profile(args.profiles, "extract_profiles", args.profile)
+        for required in ("name", "output"):
+            if required not in prof:
+                sys.exit(f"[ошибка] в профиле {args.profile!r} нет обязательного поля {required!r}")
+        name = prof["name"]
+        output = prof["output"]
+        params = dict(prof.get("param", {}) or {})
+        net_template_map = dict(prof.get("net_template", {}) or {})
+        origin_via_net = prof.get("origin_by_via_net")
+        origin_component_role = prof.get("origin_by_component_role")
+        logger.info(f"Профиль {args.profile!r} из {args.profiles}: name={name}, output={output}")
+    else:
+        name = args.name
+        output = args.output
+        if not name or not output:
+            sys.exit("[ошибка] нужны --name и --output (или --profiles/--profile вместо них)")
+        params = {}
+        for item in (args.param or []):
+            if "=" not in item:
+                logger.error(f"--param {item!r} — нужен формат KEY=VALUE")
+                sys.exit(1)
+            k, v = item.split("=", 1)
+            params[k] = v
+
+        net_template_map = {}
+        for item in (args.net_template or []):
+            if "=" not in item:
+                logger.error(f"--net-template {item!r} — нужен формат ЛИТЕРАЛ=ПАТТЕРН")
+                sys.exit(1)
+            literal, pattern = item.split("=", 1)
+            net_template_map[literal] = pattern
+        origin_via_net = args.origin_by_via_net
+        origin_component_role = args.origin_by_component_role
 
     template_dict = extract_template_from_selection(
-        adapter, args.name, params=params, net_template_map=net_template_map,
-        origin_via_net=args.origin_by_via_net,
-        origin_component_role=args.origin_by_component_role,
+        adapter, name, params=params, net_template_map=net_template_map,
+        origin_via_net=origin_via_net,
+        origin_component_role=origin_component_role,
     )
 
-    output_path = Path(args.output)
+    output_path = Path(output)
     is_json = output_path.suffix.lower() == '.json'
     existing = {}
     if output_path.exists():
         with open(output_path, "r", encoding="utf-8") as f:
             existing = (json.load(f) if is_json else yaml.safe_load(f)) or {}
-        if args.name in existing:
-            logger.warning(f"Шаблон {args.name!r} уже есть в {output_path} — будет перезаписан")
+        if name in existing:
+            logger.warning(f"Шаблон {name!r} уже есть в {output_path} — будет перезаписан")
 
     existing.update(template_dict)
 
@@ -246,15 +295,26 @@ def main():
     clone_extract = subparsers.add_parser(
         "clone-extract",
         help="Снимок канала в YAML (файловый клонер, без IPC)")
-    clone_extract.add_argument("--net", required=True, help="Путь к .net")
-    clone_extract.add_argument("--pcb", required=True, help="Путь к .kicad_pcb")
-    clone_extract.add_argument("--channel", required=True, help="Имя канала, напр. Channel_0")
-    clone_extract.add_argument("--output", required=True, help="YAML-файл снимка")
+    clone_extract.add_argument("--net", help="Путь к .net")
+    clone_extract.add_argument("--pcb", help="Путь к .kicad_pcb")
+    clone_extract.add_argument("--channel", help="Имя канала, напр. Channel_0")
+    clone_extract.add_argument("--output", help="YAML-файл снимка")
+    clone_extract.add_argument("--profiles", metavar="FILE",
+                               help="YAML-файл именованных профилей clone-extract")
+    clone_extract.add_argument("--profile", metavar="NAME",
+                               help="Взять net/pcb/channel/output из профиля NAME в файле "
+                                    "--profiles, вместо явных флагов (нельзя сочетать с ними)")
     clone_extract.add_argument("-v", "--verbose", action="store_true")
 
     extract_parser = subparsers.add_parser("extract", help="Извлечь шаблон спицы из текущего выделения")
-    extract_parser.add_argument("--name", required=True, help="Имя шаблона (ключ в templates:)")
-    extract_parser.add_argument("--output", required=True, help="Путь к YAML-файлу для записи")
+    extract_parser.add_argument("--name", help="Имя шаблона (ключ в templates:)")
+    extract_parser.add_argument("--output", help="Путь к YAML/JSON-файлу для записи")
+    extract_parser.add_argument("--profiles", metavar="FILE",
+                                help="YAML-файл именованных профилей extract (см. --profile)")
+    extract_parser.add_argument("--profile", metavar="NAME",
+                                help="Взять name/output/param/net-template/origin-by-* из "
+                                     "профиля NAME в файле --profiles, вместо явных флагов "
+                                     "(нельзя сочетать с --name и остальными явными флагами)")
     extract_parser.add_argument("--timeout-ms", type=int, default=20000, help="Таймаут IPC, мс")
     extract_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
     extract_parser.add_argument("--log-file", help="Файл для сохранения логов")
@@ -287,11 +347,26 @@ def main():
         elif args.command == "undo":
             cmd_undo(args)
         elif args.command == "clone-extract":
+            direct_given = bool(args.net or args.pcb or args.channel or args.output)
+            if args.profile and direct_given:
+                sys.exit("[ошибка] --profile нельзя сочетать с --net/--pcb/--channel/--output")
+            if args.profile:
+                if not args.profiles:
+                    sys.exit("[ошибка] --profile указан без --profiles (файла профилей)")
+                prof = load_profile(args.profiles, "clone_profiles", args.profile)
+                for required in ("net", "pcb", "channel", "output"):
+                    if required not in prof:
+                        sys.exit(f"[ошибка] в профиле {args.profile!r} нет обязательного поля {required!r}")
+                net_path, pcb_path, channel, output = prof["net"], prof["pcb"], prof["channel"], prof["output"]
+            else:
+                if not (args.net and args.pcb and args.channel and args.output):
+                    sys.exit("[ошибка] нужны --net/--pcb/--channel/--output (или --profiles/--profile)")
+                net_path, pcb_path, channel, output = args.net, args.pcb, args.channel, args.output
             from kicadspoke.cloner.extract import extract_channel
-            d = extract_channel(args.net, args.pcb, args.channel, args.output)
+            d = extract_channel(net_path, pcb_path, channel, output)
             s = d['summary']
-            print(f"[{args.channel}] футпринтов: {s['footprints']}, "
-                  f"сегментов: {s['segments']}, виа: {s['vias']} -> {args.output}")
+            print(f"[{channel}] футпринтов: {s['footprints']}, "
+                  f"сегментов: {s['segments']}, виа: {s['vias']} -> {output}")
         elif args.command == "extract":
             cmd_extract(args)
         else:
