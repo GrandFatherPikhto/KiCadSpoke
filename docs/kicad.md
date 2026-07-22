@@ -1,161 +1,190 @@
-# `kicadspoke/kicad` – Адаптер для взаимодействия с KiCad через IPC
+# `kicadspoke/kicad` – Adapter for KiCad IPC Interaction
 
-## Назначение
+## Purpose
 
-Модули в директории `kicad/` предоставляют унифицированный интерфейс для работы с платой в KiCad через библиотеку `kipy` (KiCad Python IPC). Они скрывают детали низкоуровневого протокола, обеспечивают устойчивость к сбоям связи (повторные попытки при ошибках «KiCad is busy»), упрощают выполнение транзакций (commit/rollback) и доступ к объектам платы.
+The modules in the `kicad/` directory provide a unified interface for interacting with the board in KiCad via the `kipy` library (KiCad Python IPC). They hide low‑level protocol details, ensure resilience to communication failures (retries on “KiCad is busy” errors and connection drops), simplify transaction handling (commit/rollback), and provide convenient access to board objects.
 
-В текущей версии **KiCadSpoke** адаптер расширен новыми методами, необходимыми для:
-- **Реестра расстановки via** – получение существующих via, удаление по UUID.
-- **Извлечения шаблонов** (`extract`) – чтение текущего выделения с учётом групп (Group).
-- **Автоматического подбора компонентов** – чтение пользовательского поля `Role`.
+**Key capabilities of the adapter:**
 
-Ключевые возможности:
-- Поиск компонентов (футпринтов), падов, зон, цепей, via.
-- Чтение пользовательских полей компонентов.
-- Получение bounding box'ов объектов (для keepout и коллизий).
-- Транзакционное обновление и создание объектов.
-- Переворот компонентов на другую сторону (flip) через GUI-действие.
-- Чтение текущего выделения с учётом групп.
-- Удаление объектов по UUID (для реестра).
+- Searching for components (footprints), pads, zones, nets, vias, and **tracks**.
+- Reading custom component fields (e.g., `Role` for automatic selection).
+- Getting bounding boxes of objects (for keepout and collision detection) in a single batch request.
+- Transactional updates and creation of objects with automatic rollback on errors.
+- Flipping components to the opposite side via a GUI action (the only way to get correct mirroring of pads and silkscreen).
+- Reading the current selection with group expansion.
+- Deleting objects by UUID (for via and track placement registries).
+- Creating vias **and tracks** (straight copper segments).
+- **Diagnostic and workaround for the known KiCad bug #24966** – crash on the first IPC write when the schematic editor is open.
 
 ---
 
-## Структура
+## Structure
 
 ```
 kicad/
-├── __init__.py        # Экспорт публичного API
-├── interfaces.py      # Абстрактный интерфейс IBoardAdapter
-└── adapter.py         # Реализация KiCadBoardAdapter
+├── __init__.py        # Public API export
+├── interfaces.py      # Abstract IBoardAdapter interface
+└── adapter.py         # KiCadBoardAdapter implementation
 ```
 
 ---
 
-## Файлы и функции
+## `interfaces.py` – Abstract Interface
 
-### `interfaces.py`
+Defines the abstract base class `IBoardAdapter`, which describes the contract for all board adapters. This allows easy substitution of implementations (e.g., for testing with mocks) and ensures that all necessary methods are present.
 
-**Назначение:**  
-Определяет абстрактный базовый класс `IBoardAdapter`, который описывает контракт для всех адаптеров к плате. Это позволяет легко подменять реализацию (например, для тестирования с моками) и гарантирует наличие всех необходимых методов в адаптере.
+**Full list of interface methods:**
 
-**Методы интерфейса (полный список):**
-
-| Метод | Описание |
-|-------|----------|
-| `refresh_board()` | Обновить данные платы из KiCad (перечитать все объекты). |
-| `get_footprint(ref)` | Получить футпринт по референсу (например, `IC1`). |
-| `get_footprints()` | Получить все футпринты платы. |
-| `get_vias()` | Получить все существующие переходные отверстия (via). |
-| `get_selected_items()` | Получить текущее выделение (с учётом групп). |
-| `get_field_value(fp, field_name)` | Прочитать значение пользовательского поля компонента (например, `Role`). |
-| `get_footprint_pads(fp)` | Получить площадки (пады) футпринта. |
-| `get_pad_by_number(fp, number)` | Найти площадку по номеру (например, `'1'`, `'145'`). |
-| `get_zone_by_name(name)` | Найти зону по имени (Rule Area). |
-| `get_net_by_name(name)` | Найти цепь по имени. |
-| `get_bounding_boxes(items)` | Получить ограничивающие прямоугольники (Box2) для списка объектов (батч-запрос). |
-| `begin_commit()` | Начать транзакцию. |
-| `push_commit(commit, description)` | Применить транзакцию. |
-| `drop_commit(commit)` | Откатить транзакцию. |
-| `update_items(items)` | Обновить существующие объекты на плате. |
-| `create_items(items)` | Создать новые объекты на плате. |
-| `flip_selected(footprints)` | Перевернуть выделенные футпринты (зеркалирование на другую сторону). |
-| `commit_with_retry(description, work_fn, retries)` | Выполнить работу в транзакции с автоматическим повторением при ошибках IPC. |
-| `create_via(position, net, drill_mm, diameter_mm)` | Создать объект `Via` (но не добавлять на плату – для добавления нужен `create_items`). |
-| `remove_by_id(uuid_str)` | Удалить объект по UUID (для реестра). |
-
----
-
-### `adapter.py`
-
-**Назначение:**  
-Реализация `KiCadBoardAdapter`, наследующего `IBoardAdapter`. Подключается к KiCad через `kipy.KiCad` и предоставляет все методы интерфейса, а также дополнительные внутренние утилиты.
-
-**Особенности реализации:**
-
-- **Устойчивость к сбоям:** все методы чтения (`get_*`) используют повторные попытки при возникновении `ApiError` с сообщением «KiCad is busy».
-- **Батч-запросы:** `get_bounding_boxes()` принимает список объектов и возвращает Box2 для всех одним запросом (экономит вызовы IPC).
-- **Транзакции:** `commit_with_retry` оборачивает произвольную функцию в транзакцию с автоматическим откатом при ошибке.
-- **Чтение пользовательских полей:** `get_field_value()` фильтрует `texts_and_fields` по типу `Field` (а не `BoardText`) и возвращает значение поля с указанным именем.
-- **Флип:** `flip_selected` использует GUI-действие `pcbnew.InteractiveEdit.flip` для реального переворота компонента (зеркалирование площадок и шелкографии). После вызова необходимо перечитать футпринты через `refresh_board()`.
-- **Создание via:** `create_via` заполняет объект `Via` (тип, позиция, цепь, диаметры) – объект не добавляется на плату, пока не будет передан в `create_items`.
-- **Чтение выделения:** `get_selected_items()` корректно обрабатывает группы (`Group`), так как у них свойство `.items` всегда пустое, а реальные участники лежат в `.proto.items`.
-- **Удаление по UUID:** `remove_by_id()` создаёт объект `KIID` и вызывает `board.remove_items_by_id()`.
-- **Централизованные константы:** таймаут по умолчанию `DEFAULT_TIMEOUT_MS` берётся из `constants.py`, что упрощает глобальную настройку.
-
-**Ключевые методы (дополнительно к интерфейсу):**
-
-| Метод | Описание |
-|-------|----------|
-| `refresh_board()` | Перечитывает плату из KiCad. Обязательно вызывать после операций, изменяющих плату «в обход» `update_items` (например, после `flip_selected`). |
-| `get_bounding_boxes(items)` | Оптимизированный батч-запрос для получения Box2 для нескольких элементов. |
-| `get_field_value(footprint, field_name)` | Ищет в `footprint.texts_and_fields` объект типа `Field` с именем `field_name` и возвращает его значение (или `None`). |
-| `get_selected_items()` | Возвращает список объектов, выделенных в PCB-редакторе. Группы разворачиваются в их участников. |
-| `remove_by_id(uuid_str)` | Удаляет объект по UUID (используется в реестре). Возвращает `True` при успехе, `False` при ошибке. |
+| Method | Description |
+|--------|-------------|
+| `refresh_board()` | Reload board data from KiCad (re‑read all objects). |
+| `get_footprint(ref)` | Get a footprint by reference (e.g., `IC1`). |
+| `get_footprints()` | Get all footprints on the board. |
+| `get_vias()` | Get all existing vias. |
+| `get_tracks()` | Get all existing tracks (copper segments). |
+| `get_selected_items()` | Get the current selection (expanding groups). |
+| `get_field_value(fp, field_name)` | Read a custom field value from a component (e.g., `Role`). |
+| `get_footprint_pads(fp)` | Get pads of a footprint. |
+| `get_pad_by_number(fp, number)` | Find a pad by number (e.g., `'1'`, `'145'`). |
+| `get_zone_by_name(name)` | Find a zone by name (Rule Area). |
+| `get_net_by_name(name)` | Find a net by name. |
+| `get_all_nets()` | Get all nets on the board. |
+| `get_bounding_boxes(items)` | Get bounding boxes (Box2) for a list of objects (batch request). |
+| `begin_commit()` | Start a transaction. |
+| `push_commit(commit, description)` | Commit the transaction. |
+| `drop_commit(commit)` | Roll back the transaction. |
+| `update_items(items)` | Update existing objects on the board. |
+| `create_items(items)` | Create new objects on the board. |
+| `flip_selected(footprints)` | Flip selected footprints to the opposite side. |
+| `commit_with_retry(description, work_fn, retries)` | Execute work within a transaction with automatic retries on IPC errors. |
+| `create_via(position, net, drill_mm, diameter_mm)` | Create a `Via` object (not yet added to the board). |
+| `create_track(start, end, width_mm, net, layer)` | Create a `Track` object (not yet added). |
+| `remove_by_id(uuid_str)` | Delete an object by UUID (used by registries). |
 
 ---
 
-### `__init__.py`
+## `adapter.py` – `KiCadBoardAdapter` Implementation
 
-**Назначение:**  
-Экспортирует публичные классы для удобного импорта из других модулей.
+This is the main implementation of the interface, encapsulating all `kipy` calls. It adds internal logic for reliability, diagnostics, and convenience.
 
-```python
-from .adapter import KiCadBoardAdapter
-from .interfaces import IBoardAdapter
-```
+### Key Features
+
+#### 1. Resilience to IPC Failures
+
+- **Retries on “KiCad is busy”** – all mutating operations are wrapped in `_mutating_call()`, which retries on `ApiError` with the message "not ready" with increasing delays (up to 3 attempts).
+- **Handling connection drops** – on `ConnectionError` (usually meaning KiCad crashed), it raises a clear message pointing to the known bug #24966 and suggests a workaround.
+- **`commit_with_retry`** – a wrapper for arbitrary work within a transaction, with automatic rollback and retries on any exception.
+
+#### 2. Workaround for KiCad Bug #24966
+
+Known defect in KiCad 10.0.4: the first write via IPC (`update_items` or `create_items`) can crash the entire process if the schematic editor is open and no interactive edit has been made in the session. The adapter includes:
+
+- **`check_write_crash_risk()`** – called before the first mutating operation. It checks via `get_open_documents()` whether the schematic is open and, if so, logs a warning recommending either closing the schematic or making an interactive edit in PCB.
+- **`_mutating_call()` wrapper** – catches `ConnectionError` and logs it as a probable KiCad crash, providing the user with a clear instruction.
+
+Thus, the adapter does not prevent the crash (impossible from the client side) but gives a clear diagnosis and workaround.
+
+#### 3. Batch Requests
+
+`get_bounding_boxes(items)` takes a list of objects and returns a list of `Box2` in a single call to `board.get_item_bounding_box()`. This significantly reduces the number of IPC calls when building keepout areas and checking collisions.
+
+#### 4. Correct Handling of Selection and Groups
+
+`get_selected_items()` does not simply return `list(board.get_selection())`; it additionally expands groups (`Group`) because their `.items` property is always empty, while the actual members are in `.proto.items`. It scans all footprints and vias on the board, matching their UUIDs against the UUIDs in `proto.items` of groups. This is critical for the `extract` command and for cloning‑by‑selection mode.
+
+#### 5. Reading Custom Fields
+
+`get_field_value(footprint, field_name)` filters `footprint.texts_and_fields` by type `Field` (rather than just checking for the `name` attribute), because it can also contain `BoardText` objects (plain text on silkscreen). This ensures we read only the field added in Eeschema.
+
+#### 6. Flip via GUI Action
+
+`flip_selected(footprints)` uses `kicad.run_action("pcbnew.InteractiveEdit.flip")` – the only way to perform a true flip with pad and silkscreen mirroring. Simply assigning `fp.layer = BoardLayer.BL_B_Cu` changes only the layer, not the geometry. After the call, the board must be reloaded via `refresh_board()`.
+
+#### 7. Creating Vias and Tracks
+
+- **`create_via(position, net, drill_mm, diameter_mm)`** – creates a `Via` object with filled fields (type, position, net, diameters) but **does not add** it to the board – it must be passed to `create_items` inside a transaction.
+- **`create_track(start, end, width_mm, net, layer)`** – similarly creates a `Track` object (straight copper segment) with filled parameters. It is not added until `create_items` is called.
+
+#### 8. Deletion by UUID
+
+`remove_by_id(uuid_str)` is used by registries to delete obsolete vias and tracks. It creates a `KIID` object and calls `board.remove_items_by_id()`. If the object no longer exists, it returns `False` and logs a warning, but does not raise an exception – allowing graceful handling of manually deleted objects.
+
+#### 9. Retrieving Existing Tracks
+
+`get_tracks()` returns all straight tracks on the board. Used by the `TrackRegistry` to reconcile against real objects on subsequent runs, ensuring idempotency.
+
+#### 10. Internal Constants and Settings
+
+- Default timeout is `DEFAULT_TIMEOUT_MS` from `constants.py` (20000 ms).
+- The timeout can be overridden via the `timeout_ms` parameter in the constructor.
+- Logging is done via the `logging` module with DEBUG/INFO levels.
 
 ---
 
-## Взаимосвязи с другими модулями
+## Relationships with Other Modules
 
-Адаптер используется во всех частях проекта, которые взаимодействуют с KiCad:
+The adapter is used throughout the project wherever KiCad interaction is needed:
 
-- **`placement/planner.py`** – для получения целевого компонента (IC) и его падов.
-- **`placement/executor.py`** – для выполнения перемещений, флипа и создания via (включая логирование и undo).
-- **`placement/services/manual_position_calculator.py`** – для поиска футпринтов по refdes.
-- **`placement/services/clone_position_calculator.py`** – для поиска футпринтов при клонировании.
-- **`placement/services/via_planner.py`** – для чтения падов и создания термовиа.
-- **`placement/services/component_pool.py`** – для построения пула компонентов по полю `Role` и цепи.
-- **`validation.py`** – для проверки существования падов и шаблонов.
-- **`registry.py`** – для проверки существующих via, удаления устаревших по UUID.
-- **`template_extraction.py`** – для чтения текущего выделения и извлечения шаблонов.
-- **`diagnostics/`** – для диагностических скриптов (получение bbox, отладка).
+| Module | Usage |
+|--------|-------|
+| `placement/planner.py` | Getting the target component (IC) and its pads. |
+| `placement/executor/move_executor.py` | Moving and flipping components. |
+| `placement/executor/via_executor.py` | Creating vias and registering them. |
+| `placement/executor/track_executor.py` | Creating tracks and registering them. |
+| `placement/services/manual_position_calculator.py` | Looking up footprints by refdes. |
+| `placement/services/clone_position_calculator.py` | Looking up footprints during cloning. |
+| `placement/services/via_planner.py` | Reading pads and creating thermal vias. |
+| `placement/services/component_pool.py` | Building the component pool by `Role` and net. |
+| `validation.py` | Checking pad/template existence and via/track net validity. |
+| `registry.py` | Checking existing vias/tracks, deleting obsolete ones by UUID. |
+| `template_extraction.py` | Reading the current selection and extracting templates (including tracks). |
+| `diagnostics/*.py` | Getting bboxes, debugging, testing. |
 
-Благодаря интерфейсу `IBoardAdapter`, код не зависит от конкретной реализации и может быть легко протестирован с мок-объектами.
-
----
-
-## Примечания по использованию
-
-- Все координаты и размеры в адаптере ожидаются в **нанометрах** (внутренние единицы KiCad). Для перевода из мм в нм используется константа `MM = 1_000_000` из `utils/units.py`.
-- В транзакциях важно перехватывать исключения и корректно откатывать `commit`, чтобы не оставлять незавершённых изменений.
-- Метод `flip_selected` не обновляет локальный объект футпринта – после его вызова необходимо перечитать футпринт через `refresh_board()` и повторно получить объект.
-- При чтении пользовательских полей через IPC важно, чтобы поле было добавлено в схеме (Eeschema) и перенесено на плату через **Update PCB from Schematic**.
-- Метод `get_selected_items()` требует, чтобы в KiCad было что-то выделено. Если выделена группа, она корректно разворачивается в участников.
-- Адаптер использует таймаут по умолчанию `DEFAULT_TIMEOUT_MS` из `constants.py` (20000 мс). При необходимости его можно переопределить через параметр `timeout_ms` при создании экземпляра.
-- Метод `remove_by_id()` используется реестром для удаления устаревших via; если объект с таким UUID уже не существует, метод возвращает `False` и логирует предупреждение, но не вызывает исключения.
+Thanks to the `IBoardAdapter` interface, the code does not depend on a specific implementation and can be easily tested with mocks.
 
 ---
 
-## Нестабильные и недокументированные API
+## Usage Notes
 
-В адаптере используются следующие элементы, которые выходят за пределы стабильного публичного API:
-
-| Элемент | Статус | Причина |
-|---------|--------|---------|
-| `run_action("pcbnew.InteractiveEdit.flip")` | **Нестабильный** | GUI-действия могут меняться между версиями KiCad. |
-| `Group.proto.items` | **Недокументированный** | Внутреннее поле protobuf, необходимое для получения участников группы. |
-| `footprint.texts_and_fields` | **Недокументированный** | Используется для чтения пользовательских полей (`Field`). |
-| `footprint.definition.items` | **Недокументированный** | Используется для получения падов компонента. |
-| `remove_items_by_id()` | **Новый, потенциально нестабильный** | Добавлен недавно (июль 2025), может измениться. |
-
-Все эти места **документированы** в коде и проверяются модульными тестами, что позволяет заранее узнать о поломке при обновлении KiCad или `kipy`.
+- All coordinates and sizes in the adapter are expected in **nanometres** (KiCad's internal units). To convert from mm to nm, use the constant `MM = 1_000_000` from `utils/units.py`.
+- In transactions, it is important to catch exceptions and roll back the commit properly to avoid leaving incomplete changes.
+- `flip_selected` does not update the local footprint object – after calling it, you must reload the board via `refresh_board()` and re‑fetch the footprint.
+- When reading custom fields via IPC, the field must be added in the schematic (Eeschema) and propagated to the board via **Update PCB from Schematic**.
+- `get_selected_items()` requires that something is selected in KiCad. If a group is selected, it is correctly expanded into its members.
+- The adapter uses the default timeout `DEFAULT_TIMEOUT_MS` from `constants.py` (20000 ms). It can be overridden via the `timeout_ms` parameter when instantiating.
+- `remove_by_id()` is used by registries to delete obsolete vias/tracks; if the object with that UUID no longer exists, it returns `False` and logs a warning, but does not raise an exception.
 
 ---
 
-## Зависимости
+## Unstable and Undocumented APIs
 
-- `kipy` – официальная Python-библиотека для IPC KiCad (устанавливается отдельно).
-- `kipy.board_types` – типы данных KiCad (FootprintInstance, Pad, Via, Net, Field, Group и др.).
-- `kipy.geometry` – геометрические примитивы (Vector2, Box2, Angle).
-- `kipy.errors.ApiError` – для обработки ошибок IPC.
+The adapter uses the following elements that go beyond the stable public API of KiCad/kipy:
+
+| Element | Status | Reason |
+|---------|--------|--------|
+| `run_action("pcbnew.InteractiveEdit.flip")` | **Unstable** | GUI actions may change between KiCad versions. |
+| `Group.proto.items` | **Undocumented** | Internal protobuf field needed to obtain group members. |
+| `footprint.texts_and_fields` | **Undocumented** | Used to read custom fields (`Field`). |
+| `footprint.definition.items` | **Undocumented** | Used to obtain component pads. |
+| `board.remove_items_by_id()` | **New, potentially unstable** | Added recently (July 2025), may change. |
+| `board.get_tracks()` | **Undocumented** | Used to retrieve all tracks on the board for registry reconciliation. |
+| `board.get_item_bounding_box(list)` | **Undocumented** | Used for batch bounding‑box requests. |
+| `kicad.get_open_documents()` | **Official but rarely used** | Used to check if the schematic is open (crash warning). |
+
+All such places are **documented** in the code and covered by unit tests, allowing early detection of breakage when updating KiCad or `kipy`.
+
+---
+
+## Dependencies
+
+- `kipy` – official Python library for KiCad IPC (installed separately, version 0.7.1 or newer).
+- `kipy.board_types` – KiCad data types (FootprintInstance, Pad, Via, Track, Net, Field, Group, BoardLayer, etc.).
+- `kipy.geometry` – geometric primitives (Vector2, Box2, Angle).
+- `kipy.errors.ApiError`, `kipy.errors.ConnectionError` – for IPC error handling.
+- Standard Python packages: `logging`, `time`, `typing`.
+
+---
+
+## License
+
+The entire `kicad/` module is distributed under the MIT license, the same as the main project.

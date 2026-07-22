@@ -1,75 +1,75 @@
-# Команды KiCadSpoke (CLI)
+# KiCadSpoke Commands (CLI)
 
-Этот документ содержит полный справочник по командам и флагам `kicadspoke_cli.py`, а также практические примеры для типовых сценариев.
-
----
-
-## Базовый синтаксис
-
-```bash
-python kicadspoke_cli.py <команда> [параметры]
-```
-
-Если команда не указана, по умолчанию подразумевается `apply`.
+This document provides a complete reference for `kicadspoke_cli.py` commands and flags, along with practical examples for typical scenarios. Valid for **v1.20.0** and above.
 
 ---
 
-## Команда `apply` – применить расстановку
-
-Загружает конфиг, подключается к KiCad, выполняет валидацию, планирование и двухфазное исполнение (перемещения → via).
-
-### Синтаксис
+## Basic Syntax
 
 ```bash
-python kicadspoke_cli.py apply <путь_к_конфигу.yaml> [опции]
+python kicadspoke_cli.py <command> [options]
 ```
 
-### Опции
+If no command is given, `apply` is assumed.
 
-| Флаг | Описание |
-|------|----------|
-| `--dry-run` | Только распечатать план (перемещения и via), не применять изменения. |
-| `--timeout-ms` | Таймаут IPC-соединения с KiCad (мс). По умолчанию `20000`. |
-| `--batch-size` | Количество объектов в одной транзакции. По умолчанию `10`. |
-| `--verbose` | Включить подробный вывод (DEBUG). |
-| `--log-file` | Сохранять логи в указанный файл. |
-| `--no-collision-check` | Отключить проверку коллизий (если даёт ложные срабатывания). |
-| `--collision-margin` | Дополнительный зазор при проверке коллизий (мм). По умолчанию `0.2`. |
-| `--clone-placement NAME` | Обработать только один клон с указанным именем. Полезно, когда в конфиге несколько клонов в режиме «по выделению» (в KiCad активно только одно выделение). |
+---
 
-### Примеры
+## `apply` – apply placement
 
-#### Стандартный запуск (расстановка компонентов и via)
+Loads the configuration, connects to KiCad, performs validation, planning, and **three‑phase execution** (moves → vias → tracks).
+
+### Syntax
+
+```bash
+python kicadspoke_cli.py apply <config.yaml> [options]
+```
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Only print the plan (moves, vias, tracks), do not apply changes. |
+| `--timeout-ms` | IPC timeout in milliseconds (default: `20000`). |
+| `--batch-size` | Number of objects per transaction (default: `10`). |
+| `--verbose` | Enable verbose output (DEBUG). |
+| `--log-file` | Save logs to the specified file. |
+| `--no-collision-check` | Disable collision checking (if false positives occur). |
+| `--collision-margin` | Extra clearance for collision checking in mm (default: `0.2`). |
+| `--clone-placement NAME` | Process only the specified clone by name. Useful when multiple clones are in selection mode (only one selection can be active in KiCad at a time). |
+
+### Examples
+
+#### Standard run (place components, vias, and tracks)
 
 ```bash
 python kicadspoke_cli.py apply 10CL006YE144C8G.yaml
 ```
 
-#### Запуск с подробным логированием в файл
+#### Run with verbose logging to a file
 
 ```bash
 python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --verbose --log-file logs/placer.log
 ```
 
-#### Предварительный просмотр (dry-run) – ничего не меняет
+#### Preview (dry‑run) – does not modify the board
 
 ```bash
 python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --dry-run
 ```
 
-#### Обработка только одного клона (например, для отладки)
+#### Process only one clone (e.g., for debugging)
 
 ```bash
 python kicadspoke_cli.py apply templates\pi_filter_vccio.yaml --clone-placement pi_filter_vccio
 ```
 
-#### Отключение проверки коллизий
+#### Disable collision checking
 
 ```bash
 python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --no-collision-check
 ```
 
-#### Увеличение таймаута для медленного KiCad
+#### Increase timeout for slow KiCad sessions
 
 ```bash
 python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --timeout-ms 30000
@@ -77,17 +77,17 @@ python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --timeout-ms 30000
 
 ---
 
-## Команда `undo` – откат последней операции
+## `undo` – undo the last operation
 
-Находит последний JSON-лог в папке `logs/` и восстанавливает состояние платы (возвращает компоненты на исходные позиции и слои, удаляет созданные via).
+Finds the most recent JSON log in the `logs/` folder and restores the board (moves components back to their original positions and layers, removes created vias **and tracks**).
 
-### Синтаксис
+### Syntax
 
 ```bash
 python kicadspoke_cli.py undo [--verbose] [--log-file]
 ```
 
-### Пример
+### Example
 
 ```bash
 python kicadspoke_cli.py undo --verbose
@@ -95,116 +95,191 @@ python kicadspoke_cli.py undo --verbose
 
 ---
 
-## Команда `extract` – извлечение шаблона из выделения
+## `extract` – extract a template from the current selection
 
-Создаёт шаблон спицы из текущего выделения в PCB-редакторе KiCad. Требуется, чтобы у каждого выделенного компонента было поле `Role`, причём роли должны быть уникальны.
+Creates a spoke template from the current selection in the PCB editor. Each selected component must have a unique `Role` field. Supports extraction of **tracks** together with components and vias.
 
-### Синтаксис
-
-```bash
-python kicadspoke_cli.py extract --name <имя_шаблона> --output <файл.yaml> [--timeout-ms] [--verbose] [--log-file]
-```
-
-### Примеры
-
-#### Извлечение шаблона в новый файл
+### Syntax
 
 ```bash
-python kicadspoke_cli.py extract --name pi_filter_vccint --output pi_filter_vccint.yaml --verbose
+python kicadspoke_cli.py extract --name <template_name> --output <file> [--timeout-ms] [--verbose] [--log-file] [--param KEY=VALUE] [--net-template LITERAL=PATTERN] [--origin-by-via-net NET] [--origin-by-component-role ROLE]
 ```
 
-#### Добавление шаблона в существующий конфиг
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `--name` | Name of the template (key in the `templates` section). |
+| `--output` | Output file path. The extension determines the format: `.json` → JSON (flat dictionary), otherwise YAML. |
+| `--timeout-ms` | IPC timeout in milliseconds (default: `20000`). |
+| `--verbose` | Enable verbose output. |
+| `--log-file` | Save logs to a file. |
+| `--param KEY=VALUE` | Sets a parameter for verifying `--net-template` (e.g., `channel=1`). Not written to the template, only used for round‑trip validation. Can be repeated. |
+| `--net-template LITERAL=PATTERN` | Replaces a real net name with a pattern containing placeholders (e.g., `DAC1_DB1=DAC{channel}_DB1`). Can be repeated. |
+| `--origin-by-via-net NET` | Sets the template origin to the position of the via with the specified net (instead of the bbox lower‑left corner). Fatal if no such via exists or if there is more than one. |
+| `--origin-by-component-role ROLE` | Sets the origin to the position of the component with the specified role. |
+
+**Important:** Before running, select the desired components, vias, and tracks in the PCB editor. Roles must be unique. When saving as JSON, the file is written **without a `templates:` wrapper**, making it directly usable as a `templates_file` in the main configuration.
+
+### Examples
+
+#### Extract a template to JSON with net parametrisation and origin by via
+
+```bash
+python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
+  --origin-by-via-net '+3V3_VCCIO' \
+  --param PWR_IN='+3V3' --param PWR_OUT='+3V3_VCCIO' \
+  --net-template '+3V3_VCCIO={PWR_OUT}' --net-template '+3V3={PWR_IN}' \
+  --verbose
+```
+
+#### Extract a template to YAML (no parametrisation)
+
+```bash
+python kicadspoke_cli.py extract --name my_filter --output my_filter.yaml --verbose
+```
+
+#### Add a template to an existing config (YAML)
 
 ```bash
 python kicadspoke_cli.py extract --name my_filter --output 10CL006YE144C8G.yaml --verbose
 ```
 
-Примечание: если шаблон с таким именем уже существует, он будет перезаписан.
+Note: if a template with the same name already exists, it will be overwritten.
 
 ---
 
-## Команда `clone-extract` – снятие снимка канала (файловый клонер)
+## `clone-extract` – snapshot a channel (file‑based cloner)
 
-Анализирует иерархический проект (без подключения к KiCad), извлекает все компоненты, дорожки и via, принадлежащие указанному каналу, и сохраняет снимок в YAML. Полезно для изучения структуры канала перед созданием конфигурации для `ClonePlacement`.
+Analyzes a hierarchical project (without IPC) and extracts all components, tracks, and vias belonging to the specified channel, saving the snapshot as YAML. Useful for studying the channel structure before writing a ClonePlacement configuration.
 
-### Синтаксис
+### Syntax
 
 ```bash
-python kicadspoke_cli.py clone-extract --net <файл.net> --pcb <файл.kicad_pcb> --channel <имя_канала> --output <файл.yaml> [--verbose]
+python kicadspoke_cli.py clone-extract --net <file.net> --pcb <file.kicad_pcb> --channel <channel_name> --output <file.yaml> [--verbose]
 ```
 
-### Пример
+### Example
 
 ```bash
 python kicadspoke_cli.py clone-extract --net my_project.net --pcb my_project.kicad_pcb --channel Channel_0 --output snapshot.yaml --verbose
 ```
 
-После выполнения вы получите YAML-файл с информацией о канале, который можно использовать для написания шаблона и `ClonePlacement`.
+The resulting YAML file contains a complete overview of the channel, which can be used to create a template and ClonePlacement entries.
 
 ---
 
-## Диагностические команды (для отладки и тестирования)
+## `transform_template.py` – template transformation utility
 
-Эти команды вызывают диагностические скрипты из папки `kicadspoke/diagnostics/`. Они помогают проверить работу IPC, геометрию, чтение полей, флип и т.д.
+A separate script for post‑processing existing templates (YAML or JSON). It allows rotating, mirroring, and shifting the origin without re‑extracting from the board.
 
-### Проверка чтения пользовательского поля `Role`
+### Syntax
+
+```bash
+python utils/transform_template.py -i <input_file> -o <output_file> [options]
+```
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `-i, --input` | Input YAML/JSON template file. |
+| `-o, --output` | Output file (format determined by extension). |
+| `--rotate DEG` | Rotate counter‑clockwise by angle (degrees). |
+| `--mirror-x` | Mirror along X axis (flips `across` sign). |
+| `--mirror-y` | Mirror along Y axis (flips `along` sign). |
+| `--set-origin-by-via-index N` | Shift origin to the via at index N (0‑based). |
+| `--set-origin-by-via-net NET` | Shift origin to the via with the given net. |
+| `--set-origin-by-component-index N` | Shift origin to the component at index N. |
+| `--set-origin-by-component-role ROLE` | Shift origin to the component with the given role. |
+| `--origin-x X --origin-y Y` | Explicit origin offset in mm. |
+
+**Order of application:** first origin shift (if specified), then rotation and mirroring. This ensures that the target element ends up at (0,0) after all transformations.
+
+### Examples
+
+#### Rotate 180° and shift origin to the via with net "GND"
+
+```bash
+python utils/transform_template.py -i template.yaml -o template_rotated.yaml --rotate 180 --set-origin-by-via-net "GND"
+```
+
+#### Mirror along X and shift origin to the component with role "FB"
+
+```bash
+python utils/transform_template.py -i template.yaml -o template_mirrored.yaml --mirror-x --set-origin-by-component-role FB
+```
+
+#### Explicit origin shift
+
+```bash
+python utils/transform_template.py -i template.yaml -o template_shifted.yaml --origin-x 1.5 --origin-y -2.0
+```
+
+---
+
+## Diagnostic commands (debugging and testing)
+
+These commands execute diagnostic scripts located in `kicadspoke/diagnostics/`. They help test IPC, geometry, field reading, flipping, etc.
+
+### Check reading of the `Role` custom field
 
 ```bash
 python -m kicadspoke.diagnostics.test_custom_fields C5 --field Role --verbose
 ```
 
-### Тест перемещения одного компонента
+### Test moving a single component
 
 ```bash
-# Сдвинуть на +1 мм по X
+# Shift by +1 mm along X
 python -m kicadspoke.diagnostics.test_move_one_cap C5 --delta-mm 1.0
 
-# Вернуть обратно
+# Revert the shift
 python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
 ```
 
-### Тест флипа компонента
+### Test component flip
 
 ```bash
 python -m kicadspoke.diagnostics.test_flip_one_cap C6
 ```
 
-### Тест создания одной via
+### Test creating a single via
 
 ```bash
-# Создать via рядом с C5
+# Create a via next to C5
 python -m kicadspoke.diagnostics.test_create_one_via C5 --offset-mm 1.2
 
-# Удалить последнюю созданную via
+# Remove the last created via
 python -m kicadspoke.diagnostics.test_create_one_via --remove
 ```
 
-### Тест на краш KiCad при первой записи (issue #24966)
+### Test for KiCad crash on first write (issue #24966)
 
 ```bash
-# Только чтения (без записи) – безопасно, если KiCad открыт
+# Read‑only (no writes) – safe if KiCad is open
 python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8
 
-# Полный тест (чтения → запись) – может вызвать краш KiCad (используйте осторожно)
+# Full test (reads + write) – may crash KiCad (use with caution)
 python -m kicadspoke.diagnostics.diagnose_first_write_crash
 
-# Тест с паузой 30 секунд перед записью (проверка гипотезы о гонке)
+# Test with a 30‑second pause before the write (checks the race hypothesis)
 python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
 ```
 
-### Вывод информации о выделенных компонентах
+### Display information about selected components
 
 ```bash
 python -m kicadspoke.diagnostics.get_selected_component
 ```
 
-### Получение bounding box пада
+### Get a pad's bounding box
 
 ```bash
 python -m kicadspoke.diagnostics.get_pad_bbox --ref IC1 --pad 17
 ```
 
-### Анализ keepout и позиций via
+### Analyze keepout and via positions
 
 ```bash
 python -m kicadspoke.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
@@ -212,20 +287,20 @@ python -m kicadspoke.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
 
 ---
 
-## Рекомендации по использованию
+## Usage recommendations
 
-1. **Перед первым запуском** выполните `extract` на существующем правильном экземпляре, чтобы получить шаблон.
-2. **Проверяйте конфигурацию** через `dry-run`, чтобы убедиться, что позиции и via расставляются так, как вы ожидаете.
-3. **Для отладки** используйте `--verbose` и сохраняйте лог в файл.
-4. **При обработке нескольких клонов** в режиме «по выделению» используйте `--clone-placement`, чтобы обрабатывать их по одному.
-5. **Если KiCad падает** при первом запуске, закройте редактор схем или сделайте интерактивную правку в PCB перед запуском (обход issue #24966).
-6. **Для изучения иерархических проектов** перед написанием `ClonePlacement` используйте `clone-extract` – это даст вам точные имена цепей и refdes близнецов.
+1. **Before the first run** – use `extract` on a correctly placed instance to obtain a template. Use JSON format for convenient `templates_file` integration.
+2. **Check your configuration** with `--dry-run` to verify positions, vias, and tracks.
+3. **For debugging** – enable `--verbose` and log to a file.
+4. **When handling multiple clones in selection mode** – use `--clone-placement` to process them one at a time.
+5. **If KiCad crashes** on the first run – close the schematic editor or make an interactive edit in PCB before launching (workaround for issue #24966).
+6. **For hierarchical projects** – use `clone-extract` before writing ClonePlacement to get exact net names and twin refdes.
+7. **Store templates separately** – use `templates_file: templates.json` in the main config to keep geometry out of the main file.
+8. **Transform templates** with `transform_template.py` instead of manual coordinate recalculation.
 
 ---
 
-## Справка по всем командам
-
-Встроенная справка:
+## Built‑in help
 
 ```bash
 python kicadspoke_cli.py --help
@@ -237,67 +312,71 @@ python kicadspoke_cli.py clone-extract --help
 
 ---
 
-## Возможные ошибки и их решение
+## Common errors and solutions
 
-| Ошибка | Возможная причина | Решение |
-|--------|-------------------|---------|
-| `BoardNotFoundError` | KiCad не запущен или плата не открыта. | Откройте проект в KiCad и выполните `adapter.refresh_board()`. |
-| `ComponentNotFoundError` | Указанный `target_ref` не найден на плате. | Проверьте refdes в конфиге. |
-| `ValidationError: не хватает компонентов для ролей` | Недостаточно компонентов с полем `Role` для данной цепи. | Добавьте поле `Role` на нужные компоненты в схеме и выполните Update PCB. |
-| `ConnectionError` при записи | KiCad упал (известный баг #24966) или завис. | Закройте редактор схем или сделайте интерактивную правку в PCB, затем перезапустите. |
-| `Крах KiCad при первом запуске` | Открыт редактор схем и не было интерактивных правок. | Workaround: закройте схему или подвиньте компонент в PCB и сохраните. |
-| `Не удаётся найти via` при undo | Via была удалена вручную. | Не страшно; undo продолжит работу для остальных объектов. |
+| Error | Possible cause | Solution |
+|-------|----------------|----------|
+| `BoardNotFoundError` | KiCad is not running or no board is open. | Open the project in KiCad and call `adapter.refresh_board()`. |
+| `ComponentNotFoundError` | The specified `anchor_ref` is not found on the board. | Check the refdes in your config. |
+| `ValidationError: not enough components for roles` | Not enough components with the `Role` field for the given net. | Add the `Role` field to the required components in the schematic and run Update PCB. |
+| `ValidationError: resolved via net not found` | Typo in `params` or `net_overrides`. | Verify net names in the config against the schematic. |
+| `ConnectionError` during write | KiCad crashed (known issue #24966) or is stuck. | Close the schematic editor or make an interactive edit in PCB, then restart. |
+| `KiCad crash on first launch` | Schematic editor open and no interactive edits made. | Workaround: close the schematic or move a component in PCB and save. |
+| `Cannot find via/track` during undo | The object was manually deleted. | Undo skips missing objects and continues. |
 
 ---
 
-## Набор актуальных комманд
+## Quick command examples
 
-### Расстановка конденсаторов питания для 10CL006Y3144C8G
+### Place decoupling capacitors for an FPGA
 
 ```bash
-python kicadspoke_cli.py .\10CL006YE144C8G.yaml --verbose --log-file logs/placer.log --verbose
+python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --verbose --log-file logs/placer.log
 ```
 
-### Отмена расстановки
+### Undo placement
 
 ```bash
 python kicadspoke_cli.py undo --verbose
 ```
 
-### Клонирование и применение шаблонов
-
-### Чтение шаблона
+### Extract a template to JSON (recommended format)
 
 ```bash
-python kicadspoke_cli.py extract --name pi_filter_vccint --output pi_filter_vccint.yaml --verbose
+python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
+  --origin-by-via-net '+3V3_VCCIO' \
+  --param PWR_IN='+3V3' --param PWR_OUT='+3V3_VCCIO' \
+  --net-template '+3V3_VCCIO={PWR_OUT}' --net-template '+3V3={PWR_IN}' \
+  --verbose
 ```
 
-### Применение шаблона
+### Apply a clone using an external template file
 
 ```bash
-python kicadspoke_cli.py apply .\templates\pi_filter_vccio.yaml --clone-placement pi_filter_vccio
+python kicadspoke_cli.py apply config_with_templates_file.yaml --clone-placement fpga_filter_1v2_vccint
 ```
 
-### Тестирование `KiCad` на краши
-
-#### Тест на чтение
+### Transform a template
 
 ```bash
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8 
+python utils/transform_template.py -i templates/pi_filter_4.json -o templates/pi_filter_4_rotated.json --rotate 180 --set-origin-by-via-net '+3V3_VCCIO'
 ```
 
-#### Тест на чтение/запись
+### Test KiCad for crashes
 
 ```bash
+# Read‑only
+python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8
+
+# Full test (reads + write)
 python -m kicadspoke.diagnostics.diagnose_first_write_crash
-```
 
-#### Тест гипотезы гонки
-
-```bash
+# With a 30‑second pause before write
 python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
 ```
 
-## Лицензия
+---
 
-Все примеры распространяются под лицензией MIT, так же как и основной проект.
+## License
+
+All examples are distributed under the MIT license, the same as the main project.

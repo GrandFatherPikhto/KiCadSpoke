@@ -1,0 +1,276 @@
+# `kicadspoke/placement` – Планирование и исполнение расстановки
+
+## Назначение
+
+Директория `placement/` содержит основную логику расстановки компонентов, создания via и дорожек (треков). Она координирует все этапы процесса:
+
+1. **Планирование** – расчёт целевых позиций компонентов, via и треков на основе шаблонов спиц для двух типов размещений:
+   - **`ManualSpoke`** (правила `rules`) – привязка к падам целевого компонента (IC) с автоматическим подбором refdes через пул ролей (`ComponentPool`). Треки в этом режиме **не поддерживаются**.
+   - **`ClonePlacement`** (клонируемые секции) – многократное применение шаблона в разных местах платы с разрешением ролей по выделению или по явным цепям (`CloneRoleResolver`). Поддерживает **треки** (дорожки) в составе шаблона.
+2. **Исполнение** – применение перемещений, создание via и треков на плате через адаптер KiCad, с разделением на **три фазы** (сначала перемещения, затем via, затем треки) и обязательным перечитыванием платы между фазами.
+3. **Логирование и откат** – сохранение информации об операции в JSON для команды `undo` (включая треки).
+4. **Проверка коллизий** – упрощённая проверка перекрытий компонентов (опционально); коллизии треков **не проверяются** (полагаемся на DRC KiCad).
+5. **Идемпотентность** – пропуск уже существующих via, треков и компонентов, уже стоящих на целевых позициях (через `skip_existing_components` и реестры расстановки для via и треков).
+
+Все сервисы используют адаптер `kicad/adapter.py`, геометрические утилиты `geometry/` и конфигурацию `config.py`.
+
+---
+
+## Структура
+
+```
+placement/
+├── __init__.py                 # Экспорт публичных компонентов
+├── collision.py                # Проверка коллизий компонентов (упрощённая)
+├── commands.py                 # Структуры данных для команд и информации о компонентах
+├── planner.py                  # Главный планировщик (с поддержкой треков)
+├── interfaces.py               # Интерфейсы IPositionCalculator и IViaPlanner
+├── executor/                   # Исполнитель команд (разбит на модули)
+│   ├── __init__.py
+│   ├── base.py                 # Утилиты (layer_to_str)
+│   ├── batch_executor.py       # Фасад, объединяющий перемещения, via и треки
+│   ├── move_executor.py        # Исполнение перемещений
+│   ├── via_executor.py         # Исполнение создания via
+│   ├── track_executor.py       # Исполнение создания треков
+│   ├── flip_manager.py         # Управление флипом компонентов
+│   └── operation_logger.py     # Логирование операций в JSON (включая треки)
+└── services/                   # Сервисные классы
+    ├── __init__.py
+    ├── component_pool.py       # Подбор компонентов по ролям и цепи (для ManualSpoke)
+    ├── clone_role_resolver.py  # Разрешение ролей для ClonePlacement (с учётом близости к якорю)
+    ├── clone_position_calculator.py # Расчёт позиций, via и треков для ClonePlacement
+    ├── manual_position_calculator.py   # Расчёт позиций и via для ManualSpoke (без треков)
+    └── via_planner.py          # Планирование термовиа и фильтрация via через реестр
+```
+
+---
+
+## Файлы и функции
+
+### `__init__.py`
+
+Экспортирует публичные классы для удобного импорта:
+```python
+from .executor import BatchExecutor
+from .planner import PlacementPlanner
+from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
+```
+
+---
+
+### `commands.py`
+
+Определяет структуры данных (DTO) для передачи информации между компонентами.
+
+| Класс | Поля | Описание |
+|-------|------|----------|
+| `MoveCommand` | `ref`, `position`, `angle`, `layer` | Команда перемещения/поворота компонента. |
+| `ViaCommand` | `position`, `drill_mm`, `diameter_mm`, `net_name`, `owner_ref`, `registry_key` | Команда создания переходного отверстия. `registry_key` – для реестра (см. `registry.py`). |
+| `TrackCommand` | `start`, `end`, `width_mm`, `net_name`, `layer`, `owner_ref`, `registry_key` | Команда создания прямого отрезка дорожки. `registry_key` – для реестра треков (`TrackRegistry`). |
+| `PlacedComponentInfo` | `ref`, `dest`, `angle_deg`, `layer` | Информация о размещённом компоненте. `layer` может быть `None` (наследуется глобальный). |
+
+**Используются в:** `planner.py`, `executor/`, `manual_position_calculator.py`, `clone_position_calculator.py`, `via_planner.py`, `registry.py`.
+
+---
+
+### `collision.py`
+
+Упрощённая проверка коллизий между компонентами (по кругам-приближениям). Использует реальные bounding box'ы через адаптер для вычисления радиусов (половина диагонали bbox). **Коллизии треков не проверяются** – это сознательное решение (полагаемся на DRC KiCad).
+
+| Функция | Описание |
+|---------|----------|
+| `compute_radii(footprints, adapter)` | Вычисляет радиусы для списка футпринтов (батч-запрос через адаптер). |
+| `footprints_overlap(pos1, r1, pos2, r2, margin_mm)` | Проверяет перекрытие двух кругов с запасом. |
+| `check_collisions(moves, all_footprints, adapter, ignore_refs, margin_mm)` | Проверяет коллизии между перемещаемыми компонентами и остальными. Возвращает список конфликтных пар (ref1, ref2, расстояние). |
+
+**Используется в:** `executor/move_executor.py` (опционально, при включённой проверке).  
+**Примечание:** может давать ложные срабатывания, отключается флагом `--no-collision-check`.
+
+---
+
+### `interfaces.py`
+
+Определяет абстрактные интерфейсы для калькуляторов позиций и планировщиков via.
+
+| Интерфейс | Метод | Описание |
+|-----------|-------|----------|
+| `IPositionCalculator` | `compute_raw_positions(target_fp, rules, side)` | Расчёт позиций компонентов и via для `ManualSpoke` (на основе падов IC). |
+| `IViaPlanner` | `plan_vias(planned_components, planned_vias, target_fp, target_layer)` | Планирование via (термовиа + фильтрация через реестр). |
+
+**Используются в:** `planner.py`, `manual_position_calculator.py`, `via_planner.py`.
+
+---
+
+### `planner.py`
+
+**Класс `PlacementPlanner`** – главный координатор. Координирует расчёт позиций и via для `rules` (через `ManualPositionCalculator`) и `clone_placements` (через `ClonePositionCalculator`). Применяет логику пропуска уже стоящих на месте компонентов (`skip_existing_components`). Разделяет планирование на три фазы: `plan_moves()`, `plan_vias()`, `plan_tracks()`.
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config)` | Инициализация, определение глобального слоя для ManualSpoke. |
+| `_already_in_place(ref, dest, angle_deg, layer)` | Проверяет, находится ли компонент уже на целевой позиции (с учётом слоя, позиции и угла). Допуски: 0.01 мм по координатам, 0.1° по углу. |
+| `plan_moves()` | Вызывает `ManualPositionCalculator.compute_raw_positions()` для `rules` и `ClonePositionCalculator.compute_raw_positions()` для `clone_placements`, объединяет результаты. Применяет `skip_existing_components` к компонентам. Сохраняет `_planned`, `_planned_vias`, `_planned_tracks` для последующих фаз. Возвращает `MoveCommand[]`. |
+| `plan_vias()` | Вызывает `ViaPlanner.plan_vias()` с сохранёнными данными. Возвращает `ViaCommand[]`. |
+| `plan_tracks()` | Возвращает сохранённые `_planned_tracks` (без дополнительной обработки; коллизии не проверяются). |
+| `plan()` | Обратно совместимая обёртка (вызывает все три фазы подряд). Не рекомендуется для боевого использования. |
+
+**Используется в:** `kicadspoke_cli.py` для получения плана.
+
+---
+
+### `executor/` – Исполнитель команд
+
+Директория `executor/` разбита на модули для улучшения читаемости и тестируемости.
+
+#### `executor/base.py`
+Содержит общие утилиты:
+- `layer_to_str(layer)` – преобразует `BoardLayer` в строку `"F.Cu"` или `"B.Cu"`.
+
+#### `executor/operation_logger.py`
+Отвечает за запись JSON-логов операций для `undo`.
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(log_dir)` | Создаёт папку `logs/`. |
+| `write_operation_log(move_log, via_log, track_log)` | Записывает JSON-файл с временной меткой, включая треки. |
+
+#### `executor/flip_manager.py`
+Управляет переворотом (flip) компонентов через `adapter.flip_selected` с батчированием.
+
+| Метод | Описание |
+|-------|----------|
+| `flip_if_needed(moves)` | Проверяет, какие компоненты требуют флипа, выполняет его батчами и возвращает обновлённый словарь `ref->footprint`. |
+
+#### `executor/move_executor.py`
+Применяет перемещения компонентов. Включает проверку коллизий, флип и батчирование.
+
+| Метод | Описание |
+|-------|----------|
+| `execute_moves(moves, check_collisions, collision_margin_mm)` | Выполняет перемещения. Возвращает `(failed_refs, move_log)`. |
+
+#### `executor/via_executor.py`
+Создаёт via на плате. Использует реестр via для записи созданных via (`registry.record_created`).
+
+| Метод | Описание |
+|-------|----------|
+| `execute_vias(vias, registry)` | Создаёт via батчами. Возвращает `(failed_via_owners, via_log)`. |
+
+#### `executor/track_executor.py`
+Создаёт треки на плате. Использует реестр треков (`TrackRegistry`).
+
+| Метод | Описание |
+|-------|----------|
+| `execute_tracks(tracks, registry)` | Создаёт треки батчами. Возвращает `(failed_track_owners, track_log)`. |
+
+#### `executor/batch_executor.py`
+Фасад, объединяющий все фазы исполнения и управляющий логированием.
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, config, batch_size)` | Инициализация. |
+| `execute_moves(moves, ...)` | Вызывает `MoveExecutor.execute_moves()` и сохраняет лог. |
+| `execute_vias(vias, registry)` | Вызывает `ViaExecutor.execute_vias()` и сохраняет лог via. |
+| `execute_tracks(tracks, registry)` | Вызывает `TrackExecutor.execute_tracks()` и записывает единый JSON-лог (объединяя перемещения, via и треки). |
+| `execute(moves, vias, tracks, ...)` | Обратно совместимая обёртка (вызывает все фазы подряд). Не рекомендуется для боевого использования. |
+
+---
+
+### `services/`
+
+#### `services/component_pool.py`
+**Класс `ComponentPool`** – подбирает refdes для ролей в `ManualSpoke`. Строится один раз на правило (`rule.net`) и разбирается спицами по очереди.
+
+| Метод | Описание |
+|-------|----------|
+| `__init__(adapter, net_name, roles)` | Строит пул: читает все футпринты с полем `Role`, подключённые к `net_name`, сортирует по естественному числовому порядку. |
+| `pop(role, spoke_pad)` | Забирает следующий компонент с ролью. Если пул исчерпан – `ValidationError`. |
+| `remaining_count(role)` | Возвращает количество оставшихся компонентов. |
+
+**Используется в:** `manual_position_calculator.py`.
+
+#### `services/clone_role_resolver.py`
+Разрешает роли для `ClonePlacement`. Поддерживает два режима:
+- **по выделению** – считывает роли из выделенных компонентов.
+- **по цепям** – ищет компоненты по ожидаемой цепи (с плейсхолдерами). В случае неоднозначности использует каскадное сужение: выделение → лист иерархии → **физическая близость к якорю** (если отрыв по расстоянию достаточен, выбирается ближайший кандидат).
+
+Функции:
+- `clone_uses_selection_mode(clone)` – определяет режим.
+- `resolve_roles_by_selection(adapter, template, clone_name)` – по выделению.
+- `resolve_roles_by_nets(adapter, template, clone, anchor_position)` – по цепям с учётом близости к якорю.
+
+**Используется в:** `clone_position_calculator.py`.
+
+#### `services/clone_position_calculator.py`
+**Класс `ClonePositionCalculator`** – расчёт абсолютных позиций компонентов, via и треков для `ClonePlacement`. Использует `apply_clone_geometry` и `clone_role_resolver`.
+
+| Метод | Описание |
+|-------|----------|
+| `_resolve_anchor(clone)` | Возвращает абсолютную точку якоря (центр пада или футпринта) или `None`. |
+| `compute_raw_positions(clone_placements)` | Для каждого клона определяет режим, получает `role_to_ref`, вызывает `apply_clone_geometry`, возвращает `(PlacedComponentInfo[], ViaCommand[], TrackCommand[])` с корректными `registry_key`. |
+
+**Используется в:** `planner.py`.
+
+#### `services/manual_position_calculator.py`
+**Класс `ManualPositionCalculator`** – расчёт позиций компонентов и via для `ManualSpoke` на основе падов IC. Реализует `IPositionCalculator`. Треки **не поддерживаются**.
+
+| Метод | Описание |
+|-------|----------|
+| `compute_raw_positions(rules)` | Для каждого правила строит `ComponentPool`, для каждой спицы вызывает `apply_spoke_geometry`, возвращает `(PlacedComponentInfo[], ViaCommand[])`. |
+
+**Используется в:** `planner.py`.
+
+#### `services/via_planner.py`
+**Класс `ViaPlanner`** – реализует `IViaPlanner`. Отвечает за:
+- Фильтрацию существующих via через реестр (сверка с реальными via на плате, `adapter.get_vias()`).
+- Планирование термовиа (массив под термопадом) с поиском свободных мест через `find_free_point`.
+
+| Метод | Описание |
+|-------|----------|
+| `_via_already_exists(existing_vias, position, net_name)` | Проверяет существование via с заданной цепью и позицией (допуск 0.01 мм). |
+| `plan_vias(planned_components, planned_vias, target_fp, target_layer)` | Фильтрует `planned_vias` через `skip_existing_components` и реестр, строит keepout, вызывает `_plan_thermal_vias`. |
+| `_build_keepout(target_fp, planned, exclude)` | Строит keepout из падов IC и компонентов. |
+| `_plan_thermal_vias(planned, target_fp, keepout, existing_vias)` | Генерирует термовиа с поиском свободных мест. |
+
+**Используется в:** `planner.py` (после перемещений).
+
+---
+
+## Взаимосвязи с другими модулями
+
+- **`kicad/adapter.py`** – операции с платой (чтение, запись, транзакции, создание via и треков).
+- **`geometry/spoke_layout.py`** – преобразование шаблона для `ManualSpoke` (via, без треков).
+- **`geometry/clone_geometry.py`** – преобразование для `ClonePlacement` (via и треки, с mirror).
+- **`geometry/thermal_grid.py`** и **`geometry/keepout.py`** – для термовиа и keepout.
+- **`config.py`** – структуры данных (Config, SpokeTemplate, ManualSpoke, ClonePlacement и т.д.).
+- **`validation.py`** – предварительные проверки (включая цепей via и треков).
+- **`registry.py`** – реестры via и треков (с живой сверкой).
+- **`net_resolution.py`** – разрешение цепей с плейсхолдерами.
+- **`constants.py`** – допуски, имена полей, таймауты.
+- **`utils/units.py`** – `MM` для перевода единиц.
+
+---
+
+## Примечания по использованию
+
+- **Трёхфазный процесс** (обязателен для корректного учёта термовиа и идемпотентности):
+  1. Выполнить `plan_moves()` → `execute_moves()`.
+  2. Выполнить `adapter.refresh_board()`.
+  3. Выполнить `plan_vias()` → `execute_vias()` (с реестром).
+  4. Выполнить `plan_tracks()` → `execute_tracks()` (с реестром треков).
+  Это реализовано в `kicadspoke_cli.py:cmd_apply()`.
+
+- **Коллизии** – проверяются только для компонентов (опционально); треки не проверяются (полагаемся на DRC KiCad). Отключается флагом `--no-collision-check`.
+
+- **Логирование операции** – сохраняется в `logs/operation_*.json` и используется `undo` (включая треки).
+
+- **Dry-run** – отображает перемещения, via и треки. Термовиа могут слегка отличаться из-за keepout, но это нормально.
+
+- **Идемпотентность** – включение `skip_existing_components: true` позволяет безопасно перезапускать скрипт. Реестры via и треков предотвращают дублирование (сверка с реальными объектами на плате).
+
+- **Автоматический подбор refdes** – для `ManualSpoke` через `ComponentPool` по полю `Role`. Для `ClonePlacement` – два режима (выделение или цепи) с разрешением неоднозначности по близости к якорю.
+
+- **Клонирование секций** – для многократно повторяющихся шаблонов используйте `clone_placements` с явными цепями (`nets`/`params`) и запускайте без выделения; для штучных экземпляров – режим «по выделению» (без `nets` и `params`), выделяя компоненты в KiCad перед запуском.
+
+- **Треки** – поддерживаются только в `ClonePlacement`. При извлечении шаблона (`extract`) треки попадают в шаблон автоматически (если выделены). При клонировании они создаются вместе с компонентами и via.
+
+- **Слой размещения** – для каждого компонента может быть свой (per‑placement), для `ManualSpoke` используется глобальный `layer` из конфига. При зеркалировании (`mirror`) слои инвертируются.

@@ -1,285 +1,338 @@
-# Архитектура KiCadSpoke
+# KiCadSpoke Architecture (Current Version)
 
-## 1. Общее описание
+## 1. Overview
 
-**KiCadSpoke** — это инструмент командной строки для автоматической расстановки компонентов (конденсаторов, резисторов, кварцев и т.д.) и переходных отверстий (via) на печатных платах в среде **KiCad** с использованием **шаблонов спиц**.
+**KiCadSpoke** is a command‑line tool for automated placement of components, vias, and tracks on PCBs in **KiCad 8/10** using **spoke templates**. It is an advanced script‑based alternative to the KiCad Replicate Layout plugin, designed for complex multi‑channel projects and automated design reuse via the IPC API.
 
-Программа подключается к открытому экземпляру KiCad через IPC (библиотека `kipy`) и выполняет:
+The tool connects to a running KiCad instance via IPC (the `kipy` library) and performs:
 
-- Перемещение компонентов на заданные позиции согласно шаблонам спиц.
-- Создание via на уровне спицы и на уровне компонента.
-- Откат последней операции (undo) с восстановлением исходного состояния платы.
-- Извлечение шаблонов из выделения на плате (команда `extract`).
-- **Клонирование шаблонов** (`ClonePlacement`) – многократное применение одного шаблона в разных местах платы с разными цепями и параметрами.
+- Moving components to specified positions according to spoke templates.
+- Creating vias at the spoke level and at the component level.
+- **Creating tracks** (straight copper segments) that are part of the template – they are cloned together with components and vias.
+- Undo of the last operation (restores the board to its original state).
+- Extracting templates from the current PCB selection (command `extract`) with support for JSON output and net parametrisation.
+- **Template cloning** (`ClonePlacement`) – reusing a single template at multiple board locations with different nets and parameters.
+- **Template transformation** (rotation, mirroring, origin shift) using the separate `utils/transform_template.py` script.
+- **Disambiguation** of component selection by physical proximity to the anchor.
 
-В основе подхода лежит понятие **спицы** (spoke) — набора компонентов и via, физически относящихся к одному выводу микросхемы (FPGA, процессора) или к произвольной точке на плате (для клонируемых секций). Вся геометрия спицы описывается в **локальных координатах (along, across)** в виде **шаблона**, который можно применить к любому паду микросхемы (задав сдвиг и поворот) или к произвольной точке на плате (для ClonePlacement).
-
----
-
-## 2. Принципы архитектуры
-
-| Принцип | Описание |
-|---------|----------|
-| **Разделение ответственности** | Чёткое разделение на слои: CLI, конфигурация, валидация, геометрия, адаптер к KiCad, бизнес-логика, реестр, логирование, откат. |
-| **Инкапсуляция сложности IPC** | Все вызовы к KiCad сосредоточены в адаптере, предоставляющем унифицированный интерфейс `IBoardAdapter`. |
-| **Расширяемость** | Новые типы via, ролей или шаблонов легко добавляются за счёт модульной структуры. |
-| **Безопасность** | Двухфазное выполнение (сначала перемещения, потом via) с промежуточным перечитыванием платы; валидация перед любыми изменениями; логирование и откат. |
-| **Идемпотентность** | Повторный запуск не создаёт дублирующих via и не перемещает уже стоящие на месте компоненты (через реестр расстановки). |
-| **Детерминизм** | Автоматический подбор компонентов из пула по ролям и цепям, сортировка по естественному числовому порядку. |
+The core concept is a **spoke** – a set of components, vias, and tracks that belong to a single IC pin or to an arbitrary point on the board (for cloned sections). The entire geometry of a spoke is described in **local coordinates (along, across)** as a **template**, which can be applied to any pad of the target IC (with shift and rotation) or to any board location (for ClonePlacement).
 
 ---
 
-## 3. Структура проекта
+## 2. Architecture Principles
+
+| Principle | Description |
+|-----------|-------------|
+| **Separation of concerns** | Clear layering: CLI, configuration, validation, geometry, KiCad adapter, business logic, registry, logging, undo. |
+| **Separation of data and logic** | Templates (geometry) are machine‑generated data (only via `extract`); placement (cloning logic) is human‑written Python or YAML. Templates are stored separately (`templates_file`). |
+| **Encapsulation of IPC complexity** | All KiCad calls are concentrated in the adapter, which exposes a uniform `IBoardAdapter` interface. |
+| **Extensibility** | New via types, roles, templates, and tracks can be added easily thanks to the modular structure. |
+| **Safety** | Two‑phase (moves first, then vias/tracks) with intermediate board reload; pre‑validation before any modifications; logging and undo. |
+| **Idempotency** | Repeated runs do not duplicate already correctly placed items (via registry reconciliation against live board objects). |
+| **Determinism** | Automatic component selection from pools by role and net, sorted by natural numeric order; disambiguation by anchor proximity. |
+| **Physical IR** | The internal model stores only physical facts (coordinates, pad geometry); semantics (banks, roles) are stored as tags/metadata, not baked into the structure. |
+
+---
+
+## 3. Project Structure
 
 ```
 kicadspoke/
-├── kicadspoke_cli.py                 # Точка входа (CLI)
-├── config.py                         # Загрузка и хранение конфигурации
-├── exceptions.py                     # Иерархия исключений
-├── undo.py                           # Откат операций
-├── validation.py                     # Предварительные проверки
-├── registry.py                       # Реестр расстановки via
-├── net_resolution.py                 # Разрешение цепей для клонирования
-├── template_extraction.py            # Извлечение шаблонов из выделения
-├── constants.py                      # Глобальные константы
-├── geometry/                         # Геометрические утилиты (независимые от KiCad)
-│   ├── keepout.py                    # Ограничивающие прямоугольники и поиск свободного места
-│   ├── pad_projection.py             # Предсказание позиции пада
-│   ├── spoke_layout.py               # Преобразование локальных координат шаблона в глобальные (для ManualSpoke)
-│   ├── clone_geometry.py             # Преобразование локальных координат шаблона для ClonePlacement
-│   ├── thermal_grid.py               # Генерация сетки термовиа
-│   └── placement.py                  # (устарел)
-├── kicad/                            # Адаптер для KiCad
-│   ├── adapter.py                    # Реализация KiCadBoardAdapter
-│   └── interfaces.py                 # Абстрактный интерфейс IBoardAdapter
-├── placement/                        # Основная логика
-│   ├── planner.py                    # Главный планировщик
-│   ├── commands.py                   # Структуры данных (MoveCommand, ViaCommand, PlacedComponentInfo)
-│   ├── collision.py                  # Проверка коллизий
-│   ├── interfaces.py                 # Интерфейсы IPositionCalculator, IViaPlanner
-│   ├── executor/                     # Исполнитель команд (разбит на модули)
-│   │   ├── batch_executor.py         # Фасад, объединяющий перемещения и via
-│   │   ├── move_executor.py          # Исполнение перемещений
-│   │   ├── via_executor.py           # Исполнение создания via
-│   │   ├── flip_manager.py           # Управление флипом компонентов
-│   │   ├── operation_logger.py       # Логирование операций в JSON
-│   │   └── base.py                   # Общие утилиты (layer_to_str)
-│   └── services/                     # Сервисные классы
-│       ├── component_pool.py         # Подбор компонентов по ролям и цепи (для ManualSpoke)
-│       ├── clone_role_resolver.py    # Разрешение ролей для ClonePlacement (по выделению или по цепям)
-│       ├── clone_position_calculator.py # Расчёт позиций и via для ClonePlacement
-│       ├── manual_position_calculator.py  # Расчёт позиций и via для ManualSpoke
-│       └── via_planner.py            # Планирование термовиа и фильтрация via через реестр
-├── utils/                            # Вспомогательные утилиты
-│   └── units.py                      # Константа MM для перевода единиц
-├── diagnostics/                      # Диагностические скрипты (для отладки)
-└── tests/                            # Модульные и интеграционные тесты
-    ├── integration_tests/            # Тесты с реальным KiCad
-    └── ...                           # Модульные тесты (без KiCad)
+├── kicadspoke_cli.py                 # CLI entry point
+├── config.py                         # Config loading (supports templates_file)
+├── exceptions.py                     # Exception hierarchy
+├── undo.py                           # Undo operations
+├── validation.py                     # Pre‑validation checks
+├── registry.py                       # Registry for vias and tracks (with live reconciliation)
+├── net_resolution.py                 # Net resolution for cloning (and reverse parametrisation)
+├── template_extraction.py            # Template extraction (supports tracks, JSON, net parametrisation)
+├── constants.py                      # Global constants
+├── geometry/                         # Geometry utilities (KiCad‑independent)
+│   ├── keepout.py                    # Keepout rectangles and free‑space search
+│   ├── pad_projection.py             # Pad position prediction after move/rotate/flip
+│   ├── spoke_layout.py               # Local‑to‑global transformation for ManualSpoke
+│   ├── clone_geometry.py             # Transformation for ClonePlacement (supports tracks and mirror)
+│   ├── thermal_grid.py               # Thermal via grid generation
+│   └── placement.py                  # (deprecated)
+├── kicad/                            # KiCad adapter
+│   ├── adapter.py                    # KiCadBoardAdapter implementation (supports tracks)
+│   └── interfaces.py                 # IBoardAdapter abstraction
+├── placement/                        # Core placement logic
+│   ├── planner.py                    # Main orchestrator (plan_moves, plan_vias, plan_tracks)
+│   ├── commands.py                   # DTOs (MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo)
+│   ├── collision.py                  # Collision checking
+│   ├── interfaces.py                 # IPositionCalculator, IViaPlanner
+│   ├── executor/                     # Command executors
+│   │   ├── batch_executor.py         # Façade combining moves, vias, tracks
+│   │   ├── move_executor.py          # Move execution
+│   │   ├── via_executor.py           # Via creation
+│   │   ├── track_executor.py         # Track creation
+│   │   ├── flip_manager.py           # Component flip management
+│   │   ├── operation_logger.py       # JSON logging (includes tracks)
+│   │   └── base.py                   # Utilities (layer_to_str)
+│   └── services/                     # Service classes
+│       ├── component_pool.py         # Component pool by role and net (for ManualSpoke)
+│       ├── clone_role_resolver.py    # Role resolution for ClonePlacement (with anchor‑proximity disambiguation)
+│       ├── clone_position_calculator.py # Position/via/track calculation for ClonePlacement
+│       ├── manual_position_calculator.py  # Position/via calculation for ManualSpoke
+│       └── via_planner.py            # Thermal via planning and registry filtering
+├── cloner/                           # File‑based cloner (no IPC)
+│   ├── extract.py
+│   ├── models.py
+│   ├── netlist.py
+│   ├── pcb.py
+│   └── sexp.py
+├── diagnostics/                      # Diagnostic scripts
+├── utils/                            # Utilities
+│   ├── units.py                      # MM constant
+│   ├── transform_template.py         # Template transformation (rotate, mirror, shift)
+│   └── generate_10cl006.py           # Example config generator for FPGA
+└── tests/                            # Unit and integration tests
 ```
 
 ---
 
-## 4. Слои архитектуры (снизу вверх)
+## 4. Architecture Layers (bottom‑up)
 
-### 4.1. Уровень доступа к KiCad (`kicad/`)
+### 4.1. KiCad Access Layer (`kicad/`)
 
-- **`adapter.py`** – реализует `KiCadBoardAdapter`, инкапсулирующий все вызовы к `kipy`. Предоставляет методы для поиска компонентов, падов, зон, цепей, получения bounding box'ов, транзакций (commit/rollback), создания via, выполнения флипа, чтения пользовательских полей, получения выделения с учётом групп и удаления объектов по UUID.
-- **`interfaces.py`** – определяет абстрактный интерфейс `IBoardAdapter`, позволяющий легко подменять адаптер (например, для тестирования с моками).
+- **`adapter.py`** – implements `KiCadBoardAdapter`, encapsulating all `kipy` calls. Provides methods for searching components, pads, zones, nets; getting bounding boxes; transactions (commit/rollback); creating vias **and tracks**; executing flips; reading user fields; retrieving selection with group expansion; deleting objects by UUID.
+- **`interfaces.py`** – defines the abstract `IBoardAdapter` interface, enabling easy substitution (e.g., for testing with mocks).
 
-### 4.2. Геометрические утилиты (`geometry/`)
+### 4.2. Geometry Utilities (`geometry/`)
 
-Модули, работающие с координатами, не зависящие от KiCad:
+Modules that work with coordinates, independent of KiCad:
 
-- **`keepout.py`** – класс `Rect` (AABB-прямоугольник) и функции для построения keepout-областей, проверки точек на занятость, поиска свободного места.
-- **`pad_projection.py`** – предсказание позиции пада после перемещения и поворота компонента с учётом флипа.
-- **`spoke_layout.py`** – преобразование локальных координат шаблона (`along/across`) в абсолютные координаты платы для `ManualSpoke` (привязка к паду IC, сдвиг и поворот). Генерирует via (уровня спицы и компонента) с использованием `rule.net` как цепи по умолчанию.
-- **`clone_geometry.py`** – аналогичное преобразование для `ClonePlacement`, но без привязки к паду IC: используется абсолютная точка `(origin_x, origin_y)`, и цепи via резолвятся через `net_resolution` (с поддержкой плейсхолдеров).
-- **`thermal_grid.py`** – генерация сетки термовиа под площадкой.
-- **`placement.py`** – устаревший модуль, оставлен для обратной совместимости.
+- **`keepout.py`** – `Rect` (AABB) class and functions for building keepout areas, checking point clearance, finding free positions.
+- **`pad_projection.py`** – predicts pad position after moving/rotating the component, accounting for flipping.
+- **`spoke_layout.py`** – transforms template local coordinates (`along/across`) to absolute board coordinates for `ManualSpoke` (pad‑based). Generates vias and **tracks** using `rule.net` as default net.
+- **`clone_geometry.py`** – similar transformation for `ClonePlacement`, but without pad binding: uses an absolute origin `(origin_x, origin_y)`, resolves via/track nets via `net_resolution` (with placeholder support). Supports mirroring.
+- **`thermal_grid.py`** – generates thermal via grids under pads.
+- **`placement.py`** – deprecated, kept for backward compatibility.
 
-### 4.3. Бизнес-логика (`placement/`)
+### 4.3. Business Logic (`placement/`)
 
-- **`planner.py`** – класс `PlacementPlanner`, главный координатор. Вызывает `ManualPositionCalculator` для расчёта позиций компонентов и via на основе `rules`, и `ClonePositionCalculator` для `clone_placements`. Затем формирует команды для перемещения и создания via. Содержит логику пропуска уже стоящих на месте компонентов.
-- **`executor/`** – разбит на модули для улучшения читаемости и тестируемости:
-  - `FlipManager` – управление флипом.
-  - `MoveExecutor` – исполнение перемещений.
-  - `ViaExecutor` – исполнение создания via.
-  - `OperationLogger` – запись JSON-логов.
-  - `BatchExecutor` – фасад, объединяющий перемещения и via, управляющий логированием.
-- **`interfaces.py`** – определяет абстрактные интерфейсы `IPositionCalculator` (для расчёта позиций) и `IViaPlanner` (для планирования via), что позволяет легко подменять реализации.
+- **`planner.py`** – `PlacementPlanner` is the main orchestrator. It calls `ManualPositionCalculator` for `rules` and `ClonePositionCalculator` for `clone_placements` (which also returns tracks). Then it builds move, via, and track commands. Implements skipping already‑placed components.
+- **`executor/`** – split into modules for readability and testability:
+  - `FlipManager` – flip management.
+  - `MoveExecutor` – move execution.
+  - `ViaExecutor` – via creation.
+  - `TrackExecutor` – track creation.
+  - `OperationLogger` – writes JSON logs (including tracks).
+  - `BatchExecutor` – façade orchestrating all phases and logging.
+- **`interfaces.py`** – defines `IPositionCalculator` and `IViaPlanner` to allow easy replacement of implementations.
 - **`services/`**:
-  - `ComponentPool` – сбор компонентов по ролям (`Role`) и цепи, сортировка, раздача спицам (для `ManualSpoke`).
-  - `CloneRoleResolver` – разрешение ролей для `ClonePlacement` двумя режимами: «по выделению» (считывание ролей из выделенных компонентов) и «по цепям» (явное задание цепей с поддержкой плейсхолдеров через `net_resolution`).
-  - `ManualPositionCalculator` – реализует `IPositionCalculator` для `rules`: строит пул, применяет `apply_spoke_geometry`, возвращает `PlacedComponentInfo` и `ViaCommand`.
-  - `ClonePositionCalculator` – реализует аналогичный расчёт для `clone_placements`, используя `apply_clone_geometry` и `clone_role_resolver`.
-  - `ViaPlanner` – реализует `IViaPlanner`: отвечает только за термовиа и фильтрацию существующих via через реестр (skip_existing_components).
+  - `ComponentPool` – collects components by `Role` field and net, sorts them, assigns to spokes (for `ManualSpoke`).
+  - `CloneRoleResolver` – resolves roles for `ClonePlacement` in two modes: by selection (reads roles from selected components) and by nets (explicit net assignment with placeholders via `net_resolution`). In net mode, **disambiguation** is performed by physical proximity to the anchor (if multiple candidates exist, the closest one is chosen if the distance margin is sufficient).
+  - `ManualPositionCalculator` – implements `IPositionCalculator` for `rules`: builds a pool, applies `apply_spoke_geometry`, returns `PlacedComponentInfo` and `ViaCommand`.
+  - `ClonePositionCalculator` – implements calculation for `clone_placements`, using `apply_clone_geometry` and `clone_role_resolver`, returns components, vias, and tracks.
+  - `ViaPlanner` – implements `IViaPlanner`: handles only thermal vias and existing‑via filtering via the registry (`skip_existing_components`).
 
-### 4.4. Конфигурация и валидация
+### 4.4. Configuration and Validation
 
-- **`config.py`** – определяет датаклассы для всех структур конфига (`Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `TemplateVia`, `TemplateComponentSlot` и т.д.) и функцию `load_config()` для загрузки YAML.
-- **`validation.py`** – предварительные проверки: существование шаблонов и падов, достаточность компонентов в пуле по ролям, корректность `clone_placements` (не более одного клона в режиме «по выделению» за прогон). Бросает `ValidationError` с понятным списком проблем.
+- **`config.py`** – defines dataclasses for all config structures (`Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, etc.) and the `load_config()` function. Supports **`templates_file`** – an external JSON/YAML template file that is loaded and merged with inline `templates`. This allows moving heavy geometry out of the main config.
+- **`validation.py`** – pre‑validation checks: template/pad existence, component pool sufficiency, clone correctness (no more than one selection‑based clone per run), **and resolution of via/track nets against actual board nets**. Throws `ValidationError` with a clear list of issues.
 
-### 4.5. Реестр расстановки (`registry.py`)
+### 4.5. Placement Registry (`registry.py`)
 
-- Обеспечивает идемпотентность via между прогонами.
-- Сохраняет в JSON-файл информацию о созданных via (UUID, позиция, цепь, параметры) с составными ключами `anchor_id|template_name|role|via_index`.
-- Для `ManualSpoke` anchor_id = `pad:{pad}`, для `ClonePlacement` anchor_id = `name:{clone.name}`.
-- При повторном запуске сверяет запланированные via с реестром, удаляет устаревшие via (prune), создаёт только новые или изменившие позицию.
+- Ensures idempotency of vias and tracks across runs.
+- Stores via/track information (UUID, position, net, parameters for vias; start/end, width, layer for tracks) in JSON files with composite keys `anchor_id|template_name|role|via_index` (and similar for tracks).
+- For `ManualSpoke`, `anchor_id = pad:{pad}`; for `ClonePlacement`, `anchor_id = name:{clone.name}`.
+- On subsequent runs, **compares planned vias/tracks with real objects on the board** (`adapter.get_vias()`, `adapter.get_tracks()`) rather than only the JSON record. This prevents desynchronisation due to manual deletions or crashes.
+- Removes obsolete vias/tracks (prune) and creates only those that are new or have changed position/parameters.
 
-### 4.6. Разрешение цепей для клонирования (`net_resolution.py`)
+### 4.6. Net Resolution for Cloning (`net_resolution.py`)
 
-- Реализует трёхслойное разрешение имени цепи для `ClonePlacement`: литерал → подстановка плейсхолдеров из `params` → применение `net_overrides`.
+- Implements three‑step net name resolution for `ClonePlacement`: literal → placeholder substitution from `params` → `net_overrides`.
+- Also provides **reverse parametrisation** (`parametrize_net`) for `extract`: given a literal net name and a `net_template_map`, it reconstructs the placeholder pattern and verifies round‑trip.
 
-### 4.7. Извлечение шаблонов (`template_extraction.py`)
+### 4.7. Template Extraction (`template_extraction.py`)
 
-- Реализует команду `extract`: из текущего выделения в PCB-редакторе извлекает шаблон спицы (компоненты + via) и формирует YAML-секцию `templates`.
+- Implements the `extract` command: from the current PCB selection, extracts a spoke template (components, vias, and **tracks**) and builds a structure ready for serialisation.
+- Supports **JSON output** (when extension is `.json`) – writes a flat dictionary `{template_name: {...}}` without the `templates:` wrapper, making it convenient for use as `templates_file`.
+- Supports **net parametrisation** via `--net-template` and `--param`: replaces literal net names with placeholder patterns.
+- Supports **choosing origin** not by bbox but by a specific via or component (`--origin-by-via-net`, `--origin-by-component-role`).
+- Automatically determines the template layer and sets explicit layers for elements lying on other layers.
 
-### 4.8. Откат операций (`undo.py`)
+### 4.8. Template Transformation (`utils/transform_template.py`)
 
-- Функция `undo_last_operation()` читает последний JSON-лог и восстанавливает плату (возвращает компоненты на исходные позиции и слой, удаляет созданные via).
+- A separate script for post‑processing existing templates (YAML or JSON).
+- Allows **rotation**, **mirroring** (X or Y), and **origin shift** to a specified via (by index or net) or component (by index or role), or explicit offset.
+- Order: first origin shift (if any), then rotation and mirroring – ensuring the target element ends up at (0,0) after all transformations.
 
-### 4.9. Пользовательский интерфейс (CLI)
+### 4.9. Undo (`undo.py`)
 
-- **`kicadspoke_cli.py`** – главный исполняемый файл, обрабатывающий аргументы командной строки, вызывающий загрузку конфига, подключение к KiCad, валидацию, планирование и выполнение, а также команды `undo`, `extract` и опциональный флаг `--clone-placement` для обработки только одного клона.
+- `undo_last_operation()` reads the latest JSON log and restores the board (moves components back to original positions/layers, removes created vias and tracks).
+
+### 4.10. User Interface (CLI)
+
+- **`kicadspoke_cli.py`** – the main executable, handling argument parsing, config loading, KiCad connection, validation, planning, and execution (three phases: moves → vias → tracks), plus `undo`, `extract`, `clone-extract`, and the optional `--clone-placement` flag for processing a single clone.
 
 ---
 
-## 5. Взаимодействие модулей (последовательность работы)
+## 5. Module Interaction (Workflow)
 
 ```
-1. Запуск CLI (kicadspoke_cli.py)
+1. CLI start (kicadspoke_cli.py)
    │
-   ├── Разбор аргументов (argparse)
-   ├── Настройка логирования
+   ├── Parse arguments (argparse)
+   ├── Setup logging
    │
-2. Загрузка конфига (load_config)
+2. Config loading (load_config)
    │
-   ├── Чтение YAML
-   ├── Проверка уникальности ролей в шаблонах
-   ├── Создание объекта Config
+   ├── Read YAML
+   ├── Load external template file (templates_file) if specified
+   ├── Merge with inline templates
+   ├── Check role uniqueness in templates
+   ├── Build Config object
    │
-3. Подключение к KiCad
+3. Connect to KiCad
    │
-   ├── Создание KiCadBoardAdapter
-   ├── adapter.refresh_board() — получение платы
+   ├── Create KiCadBoardAdapter
+   ├── adapter.refresh_board() — retrieve board
    │
-4. Валидация (run_all_checks)
+4. Validation (run_all_checks)
    │
    ├── check_clone_templates_exist()
    ├── check_single_selection_based_clone()
    ├── check_templates_and_pads_exist()
    ├── check_role_pool_sufficiency()
+   ├── check_clone_nets_exist_on_board()  # resolves via/track nets against real nets
    │
-5. Планирование (PlacementPlanner)
+5. Planning (PlacementPlanner)
    │
    ├── plan_moves()
-   │   ├── Для каждого правила (rules):
-   │   │   ├── Строит ComponentPool
-   │   │   ├── Для каждой спицы:
-   │   │   │   ├── pop() — берёт refdes для каждой роли
-   │   │   │   ├── apply_spoke_geometry() — вычисляет позиции
-   │   │   │   └── генерирует ViaCommand и PlacedComponentInfo
+   │   ├── For each rule:
+   │   │   ├── Build ComponentPool
+   │   │   ├── For each spoke:
+   │   │   │   ├── pop() – get refdes for each role
+   │   │   │   ├── apply_spoke_geometry() – compute positions (and vias)
+   │   │   │   └── generate ViaCommand and PlacedComponentInfo
    │   │
-   │   ├── Для каждого clone_placements:
-   │   │   ├── Определяет режим (по выделению или по цепям)
-   │   │   ├── Вызывает clone_role_resolver для получения role_to_ref
-   │   │   ├── apply_clone_geometry() — вычисляет позиции
-   │   │   └── генерирует ViaCommand и PlacedComponentInfo
+   │   ├── For each clone_placement:
+   │   │   ├── Determine mode (selection or nets)
+   │   │   ├── Call clone_role_resolver to get role_to_ref (with anchor proximity)
+   │   │   ├── apply_clone_geometry() – compute positions, vias, tracks
+   │   │   └── generate PlacedComponentInfo, ViaCommand, TrackCommand
    │   │
-   │   └── Возвращает списки MoveCommand и ViaCommand
+   │   └── Return lists of MoveCommand, ViaCommand, TrackCommand
    │
-   ├── (Если --dry-run — вывод плана и выход)
+   ├── (If --dry-run – print plan and exit)
    │
-6. Исполнение (двухфазное)
+6. Execution (three phases)
    │
-   ├── Фаза 1: перемещения
+   ├── Phase 1: Moves
    │   ├── executor.execute_moves()
-   │   │   ├── Сбор исходных состояний (для undo)
-   │   │   ├── Проверка коллизий (опционально)
-   │   │   ├── Флип (если слой изменился)
-   │   │   ├── Перемещение батчами через commit_with_retry
-   │   │   └── Сохранение лога перемещений
+   │   │   ├── Collect original states (for undo)
+   │   │   ├── Check collisions (optional)
+   │   │   ├── Flip if layer changed
+   │   │   ├── Move in batches via commit_with_retry
+   │   │   └── Save move log
    │   │
-   │   ├── adapter.refresh_board() — перечитываем плату
+   │   ├── adapter.refresh_board() – reload board
    │   │
-   ├── Фаза 2: via
-   │   ├── planner.plan_vias()
-   │   │   ├── ViaPlanner фильтрует via через реестр (skip_existing_components)
-   │   │   ├── Генерация термовиа (с поиском свободных мест)
-   │   │   └── Возвращает итоговый список ViaCommand
-   │   │
+   ├── Phase 2: Vias
+   │   ├── planner.plan_vias() – apply registry filtering
    │   ├── executor.execute_vias()
-   │   │   ├── Создание via батчами через commit_with_retry
-   │   │   ├── Сбор UUID созданных via (для undo и реестра)
-   │   │   └── Запись единого JSON-лога операции
+   │   │   ├── Create vias in batches
+   │   │   ├── Collect UUIDs (for undo and registry)
+   │   │   └── Record in registry (record_created)
    │   │
-   └── Вывод результата (успех/ошибки)
+   ├── Phase 3: Tracks
+   │   ├── planner.plan_tracks() – simply return planned tracks (no keepout)
+   │   ├── executor.execute_tracks()
+   │   │   ├── Create tracks in batches
+   │   │   ├── Collect UUIDs (for undo and registry)
+   │   │   └── Record in track registry
+   │   │
+   └── Write single JSON operation log (including moves, vias, tracks)
+       └── Print result (success/errors)
 ```
 
 ---
 
-## 6. Ключевые архитектурные решения
+## 6. Key Architectural Decisions
 
-| Решение | Обоснование |
+| Decision | Rationale |
+|----------|-----------|
+| **Decouple vias/tracks from live board** | All vias and tracks (except thermal vias) are computed solely from template geometry. This makes them independent of the current board state and allows planning before moves. |
+| **Three‑phase execution** | Required for correct thermal via handling and for idempotency (vias/tracks are created after moves to check their existence in final positions). |
+| **Idempotency via live‑board reconciliation** | The registry stores UUIDs, but on subsequent runs it compares against real vias/tracks on the board, not just the JSON. Prevents desynchronisation after manual edits or crashes. |
+| **Automatic refdes selection by roles** | Eliminates the need to write component names in the config, making it compact and resilient to re‑annotation. |
+| **Disambiguation by anchor proximity** | In net mode, if multiple candidates exist for a role, the closest to the anchor is chosen (if the distance margin is sufficient). Solves the common issue of power filters sharing a common rail. |
+| **Template cloning with tracks** | Copies not only components and vias but also routing segments, preserving connectivity and reducing manual rerouting. |
+| **External template files (`templates_file`)** | Heavy geometry (especially tracks) is moved out of the main config, keeping it readable. Templates are generated by `extract` and never edited manually. |
+| **JSON format for templates** | Simplifies serialisation and eliminates YAML quoting/indentation issues. |
+| **Template transformation** | Allows adapting a template to different orientations without re‑extracting. |
+| **Logging and undo** | Every operation is saved as JSON, enabling rollback (including deletion of tracks). |
+| **Modular and integration tests** | Unit tests with mocks protect against regressions; integration tests with real KiCad validate end‑to‑end operation. |
+
+---
+
+## 7. Design Patterns Used
+
+| Pattern | Application |
 |---------|-------------|
-| **Отказ от зависимости via от живой платы** | Все via (кроме термовиа) вычисляются исключительно по геометрии шаблона. Это делает их независимыми от текущего состояния платы и позволяет планировать их до перемещений. |
-| **Двухфазное выполнение** | Необходимо для термовиа (чтобы не мешать перемещениям) и для корректности `skip_existing_components` (via создаются после перемещений, чтобы проверить их наличие в финальных позициях). |
-| **Идемпотентность через реестр** | Реестр хранит UUID созданных via, что позволяет при повторном запуске пропускать уже существующие, удалять устаревшие (при изменении позиции или prune). |
-| **Автоматический подбор refdes по ролям** | Устраняет необходимость вручную прописывать имена компонентов в конфиге, делая его компактным и устойчивым к изменениям нумерации. |
-| **Клонирование шаблонов (ClonePlacement)** | Позволяет многократно применять один шаблон в разных местах платы с разными цепями и параметрами, поддерживая два режима сопоставления ролей (по выделению и по цепям). |
-| **Извлечение шаблонов из выделения** | Позволяет создавать шаблоны визуально, без ручного вычисления координат. |
-| **Логирование и undo** | Каждая операция сохраняется в JSON, что позволяет откатить изменения. |
-| **Модульные и интеграционные тесты** | Модульные тесты на моках защищают от регрессий; интеграционные тесты с реальным KiCad проверяют сквозную работу. |
+| **Adapter** | `KiCadBoardAdapter` provides a unified interface for `kipy`. |
+| **Command** | `MoveCommand`, `ViaCommand`, `TrackCommand`, `PlacedComponentInfo` encapsulate actions. |
+| **Builder** | `apply_spoke_geometry` and `apply_clone_geometry` build `SpokeLayout` from parts (vias, components, tracks). |
+| **Memento** | JSON logs store state for undo. |
+| **Template Method** | `BatchExecutor` uses a common template for moves, vias, and tracks (batches, transactions). |
+| **Dependency Injection** | All services receive `adapter` and `config` via constructor. |
+| **DTO** | Dataclasses in `config.py` and `commands.py` are pure DTOs. |
+| **Strategy** | Two role‑resolution strategies in `clone_role_resolver` (selection vs nets). |
+| **Factory** | `load_config` creates config objects; `create_via`, `create_track` in the adapter. |
 
 ---
 
-## 7. Используемые шаблоны проектирования
+## 8. Use of Unstable and Undocumented APIs
 
-| Шаблон | Применение |
-|--------|------------|
-| **Адаптер** | `KiCadBoardAdapter` предоставляет унифицированный интерфейс для `kipy`. |
-| **Команда** | `MoveCommand`, `ViaCommand`, `PlacedComponentInfo` инкапсулируют действия. |
-| **Фабрика** | `OptimizerFactory` (устаревший, но структура позволяет добавлять новые оптимизаторы). |
-| **Строитель** | `apply_spoke_geometry` и `apply_clone_geometry` собирают `SpokeLayout` из частей (via, компоненты). |
-| **Хранитель (Memento)** | JSON-логи хранят состояние для undo. |
-| **Шаблонный метод** | `BatchExecutor` использует единый шаблон для перемещений и via (батчи, транзакции). |
-| **Внедрение зависимости** | Все сервисы получают `adapter` и `config` через конструктор. |
-| **Data Transfer Object (DTO)** | Dataclass'ы из `config.py` и `commands.py` — чистые DTO. |
-| **Стратегия** | Два режима сопоставления ролей в `clone_role_resolver` (по выделению или по цепям). |
+| Element | Status | Reason |
+|---------|--------|--------|
+| `kicad.run_action("pcbnew.InteractiveEdit.flip")` | **Unstable** | The only way to perform a true flip with pad and silk‑screen mirroring. |
+| `Group.proto.items` | **Undocumented** | Needed to get group members (`.items` is always empty). |
+| `footprint.texts_and_fields` | **Undocumented** | Used to read user fields (`Field`). |
+| `footprint.definition.items` | **Undocumented** | Used to obtain component pads. |
+| `board.remove_items_by_id()` | **New, potentially unstable** | Added recently (July 2025), used in the registry to delete vias and tracks. |
+| `board.get_tracks()` | **Undocumented** | Used to retrieve all tracks on the board for registry reconciliation. |
 
----
-
-## 8. Использование нестабильных и недокументированных API
-
-| Элемент | Статус | Причина использования |
-|---------|--------|------------------------|
-| `kicad.run_action("pcbnew.InteractiveEdit.flip")` | **Нестабильный** | Единственный способ выполнить «настоящий» переворот компонента с зеркалированием площадок и шелкографии. |
-| `Group.proto.items` | **Недокументированный** | Для получения участников группы (свойство `.items` всегда пустое). |
-| `footprint.texts_and_fields` | **Недокументированный** | Используется для чтения пользовательских полей (`Field`). |
-| `footprint.definition.items` | **Недокументированный** | Используется для получения падов компонента. |
-| `board.remove_items_by_id()` | **Новый, потенциально нестабильный** | Добавлен недавно (июль 2025), используется в реестре для удаления via. |
-
-Все эти места **документированы** в коде и проверяются модульными тестами.
+All such uses are **documented in the code** and covered by unit tests.
 
 ---
 
-## 9. Зависимости и требования
+## 9. Dependencies and Requirements
 
-- **Python 3.9+**
-- **KiCad 8.0+** с включённым IPC-сервером.
-- **Библиотека `kipy`** – официальный Python-клиент для IPC KiCad.
-- Дополнительные пакеты: `pyyaml`, `sexpdata`, `numpy`, `scipy` (для тестов и диагностики).
+- **Python 3.8+** (recommended 3.9+).
+- **KiCad 8.0+** (tested on 10.0.4) with IPC API enabled.
+- **`kipy`** – official Python client for KiCad IPC (version 0.7.1 or newer).
+- Additional packages: `pyyaml`, `sexpdata`, `json5` (optional), `tomli` (optional).
 
 ---
 
-## 10. Заключение
+## 10. Architecture Evolution (Discussion Summary)
 
-Архитектура KiCadSpoke обеспечивает:
+During the architectural discussions (May–July 2026), the following decisions were reached and are now reflected in the current architecture:
 
-- **Гибкость** – легко добавлять новые шаблоны, роли и типы via, а также клонируемые секции.
-- **Надёжность** – двухфазное выполнение, валидация, идемпотентность, реестр и undo.
-- **Удобство использования** – конфигурация без явных refdes, автоматический подбор компонентов, извлечение шаблонов из выделения, клонирование повторяющихся секций.
-- **Тестируемость** – чёткое разделение слоёв, интерфейсы, модульные и интеграционные тесты.
+1. **Separation of templates and placement** – templates (geometry) are moved to separate files; placement logic is written in Python or YAML referencing the external template files.
+2. **Rejection of lock‑file** – replaced by a `diff` command (plan) and explicit `plan`/`apply` distinction (planned for the future).
+3. **Physical IR** – the internal model stores only coordinates and geometry; semantics (roles, banks) are stored as tags/metadata.
+4. **Support for tracks** – added as part of templates to preserve connectivity when cloning.
+5. **Disambiguation by anchor proximity** – implemented in `clone_role_resolver`.
+6. **JSON for templates** – `extract` can save templates in JSON, simplifying serialisation and integration with `templates_file`.
+7. **Template transformation** – a separate script for post‑processing without re‑extracting.
 
-Это делает инструмент пригодным для использования в реальных проектах по разработке печатных плат.
+These decisions ensure flexibility, reliability, and ease of use for complex projects.
+
+---
+
+## 11. Conclusion
+
+The architecture of KiCadSpoke provides:
+
+- **Flexibility** – easy addition of new templates, roles, via/track types, and cloned sections.
+- **Reliability** – three‑phase execution, validation, idempotency with live‑board reconciliation, registry, and undo.
+- **Usability** – configuration without explicit refdes, automatic component selection, template extraction from selection, cloning of repeated sections including tracks.
+- **Testability** – clear layering, interfaces, unit and integration tests.
+- **Scalability** – external template files, JSON support, template transformation.
+
+This makes the tool suitable for real‑world PCB development projects, especially in multi‑channel systems with high repetition rates.

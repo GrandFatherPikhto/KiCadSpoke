@@ -1,145 +1,139 @@
-Отлично! Файловый клонер — это, по сути, «глаза» проекта для анализа иерархических проектов без необходимости подключаться к KiCad через IPC. Он позволяет заглянуть в структуру каналов и понять, как они устроены, до того как вы начнёте писать конфиг для `ClonePlacement`.
+# `kicadspoke/cloner` – File‑Based Cloner (Channel Analysis Without IPC)
 
-Вот полностью готовый документ **`cloner.md`**, который органично вписывается в вашу документацию.
+## Purpose
 
----
+The `cloner/` module provides the `clone-extract` command for offline (no‑IPC) analysis of hierarchical KiCad projects. It is designed for:
 
-# `kicadspoke/cloner` – Файловый клонер (анализ каналов без IPC)
+- **Taking channel snapshots** – extracting all components, tracks, and vias belonging to a specific channel instance (e.g., `Channel_0`) into a readable YAML file.
+- **Building a twin map** – automatically determining the correspondence of components and nets between different instances of the same hierarchical sheet (template).
+- **Visualising “foreign” copper** – identifying global nets (power, ground) that pass through the channel boundaries, so that the designer can consciously handle them when cloning.
 
-## Назначение
-
-Модуль `cloner/` предоставляет инструмент командной строки `clone-extract` для автономного (без IPC) анализа иерархических проектов KiCad. Он предназначен для:
-
-- **Снятия снимков каналов** – извлечения всей меди (компоненты, дорожки, via) и иерархической структуры, относящейся к конкретному экземпляру канала (например, `Channel_0`), в читаемый YAML-файл.
-- **Построения карты близнецов** – автоматического определения соответствия компонентов и цепей между разными экземплярами одного и того же иерархического листа (шаблона).
-- **Визуализации «чужой» меди** – выявления глобальных цепей (питание, земля), проходящих через границы канала, чтобы разработчик мог осознанно подойти к их подключению при клонировании.
-
-**Ключевое отличие** от остальной части KiCadSpoke: он **не требует** запущенного KiCad и работает исключительно с файлами проекта (`.net` и `.kicad_pcb`). Это делает его идеальным для предварительного анализа, изучения существующей разводки и подготовки конфигурации для `ClonePlacement`.
+**Key difference** from the rest of KiCadSpoke: it **does not require** a running KiCad instance and works exclusively with project files (`.net` and `.kicad_pcb`). This makes it ideal for preliminary analysis, studying existing layouts, and preparing `ClonePlacement` configurations.
 
 ---
 
-## Структура
+## Module Structure
 
 ```
 cloner/
-├── __init__.py           # Экспорт публичного API
-├── extract.py            # Основная точка входа – извлечение канала в YAML
-├── models.py             # Dataclass'ы для всех сущностей (компоненты, сегменты, виа, карта близнецов)
-├── netlist.py            # Парсинг .net-файла, построение карты близнецов
-├── pcb.py                # Парсинг .kicad_pcb-файла, выборка данных канала
-└── sexp.py               # Тонкие утилиты для работы с S-выражениями поверх sexpdata
+├── __init__.py           # Public API export
+├── extract.py            # Main entry point – channel extraction to YAML
+├── models.py             # Dataclasses for all entities (components, segments, vias, twin map)
+├── netlist.py            # .net file parsing, twin map construction
+├── pcb.py                # .kicad_pcb parsing, channel data extraction
+└── sexp.py               # Utilities for S‑expressions on top of sexpdata
 ```
 
 ---
 
-## Модули и их функции
+## Modules and Their Functions
 
-### `sexp.py` – Утилиты для S-выражений
+### `sexp.py` – S‑Expression Utilities
 
-**Назначение:**  
-Предоставляет легковесные вспомогательные функции для навигации по синтаксическим деревьям, возвращаемым библиотекой `sexpdata`. Выбор `sexpdata` вместо специализированных парсеров (например, `kinparse`) обусловлен его устойчивостью к новым токенам и синтаксическим расширениям KiCad (формат стабилен с версии 6, а `kinparse` спотыкается о нетлист KiCad 10).
+**Purpose:**  
+Provides lightweight helper functions for navigating the syntax trees returned by the `sexpdata` library. `sexpdata` was chosen over specialised parsers (e.g., `kinparse`) because it is more resilient to new tokens and syntactic extensions in KiCad (the format has been stable since version 6, while `kinparse` stumbles on KiCad 10 netlists).
 
-**Ключевые функции:**
+**Key Functions:**
 
-| Функция | Описание |
-|---------|----------|
-| `sval(x)` | Извлекает строковое значение из `sexpdata.Symbol`, иначе возвращает `x` как есть. |
-| `is_node(n, key)` | Проверяет, является ли узел списком с первым элементом `key`. |
-| `children(node, key)` | Возвращает все дочерние узлы с заданным ключом. |
-| `child(node, key, default)` | Возвращает первый дочерний узел с ключом или `default`. |
-| `atom(node, key, default)` | Возвращает значение второго элемента первого дочернего узла (атом). |
-| `load_file(path)` | Загружает S-выражение из файла. |
-
----
-
-### `models.py` – Модели данных
-
-**Назначение:**  
-Определяет dataclass'ы для хранения информации из нетлиста и платы, а также для представления карты близнецов и снимка канала.
-
-**Ключевые модели:**
-
-| Класс | Описание |
-|-------|----------|
-| `NetlistComponent` | Компонент из нетлиста: `ref`, `value`, `footprint`, `sheet_names`, `sheet_tstamps`, `uuid`. Содержит свойства `channel` (извлечение имени канала из пути) и `inner_key` (уникальный ключ для поиска близнецов: `{внутренний_путь}#{uuid}`). |
-| `ChannelInfo` | Информация об экземпляре канала: имя, UUID листа, список компонентов по `inner_key`, локальные цепи. |
-| `TwinMap` | Карта близнецов: словарь `channels` (имя → `ChannelInfo`) и `components` (`inner_key` → словарь `{имя_канала: ref}`). Содержит методы `twin_ref(ref, src_ch, dst_ch)` для поиска ref близнеца и `twin_net(net, src_ch, dst_ch)` для преобразования локального имени цепи. |
-| `PcbFootprint` | Футпринт с платы: `uuid`, `ref`, `lib_id`, `path` (иерархический путь), координаты, поворот, слой. Свойство `channel_uuid` извлекает первый сегмент пути. |
-| `PcbSegment` | Сегмент дорожки: UUID, координаты начала/конца, ширина, слой, цепь. |
-| `PcbVia` | Переходное отверстие: UUID, позиция, размеры, слои, цепь. |
-| `ChannelPcbSnapshot` | Снимок канала: список футпринтов, сегментов, via, принадлежащих каналу, а также отдельные списки `foreign_segments` и `foreign_vias` (глобальные цепи внутри bbox канала). Имеет метод `bbox_mm()` для вычисления ограничивающего прямоугольника. |
+| Function | Description |
+|----------|-------------|
+| `sval(x)` | Extracts a string value from a `sexpdata.Symbol`; otherwise returns `x` as‑is. |
+| `is_node(n, key)` | Checks if a node is a list whose first element is `key`. |
+| `children(node, key)` | Returns all child nodes with the given key. |
+| `child(node, key, default)` | Returns the first child node with the key, or `default`. |
+| `atom(node, key, default)` | Returns the value of the second element of the first child node (an atom). |
+| `load_file(path)` | Loads an S‑expression from a file. |
 
 ---
 
-### `netlist.py` – Парсинг нетлиста и карта близнецов
+### `models.py` – Data Models
 
-**Назначение:**  
-Разбирает `.net`-файл, извлекает все компоненты с их иерархическими путями, определяет экземпляры каналов и строит карту близнецов (`TwinMap`).
+**Purpose:**  
+Defines dataclasses for storing information from the netlist and the board, as well as for representing the twin map and channel snapshot.
 
-**Алгоритм построения близнецов:**
+**Key Models:**
 
-1.  Для каждого компонента из нетлиста определяется имя канала (первый сегмент пути, например, `Channel_0`).
-2.  Вычисляется `inner_key` = `{внутренний_путь_внутри_канала}#{uuid_символа_в_шаблоне}`.
-3.  Компоненты с одинаковым `inner_key` в разных каналах считаются близнецами.
-4.  Группы, в которых компонент присутствует не во всех каналах, считаются «неполными» и логируются как предупреждение (эти компоненты не будут клонироваться по маппингу).
-
-**Ключевые функции:**
-
-| Функция | Описание |
-|---------|----------|
-| `parse_netlist(net_path)` | Парсит нетлист, фильтрует `unconnected`-цепи, возвращает список компонентов, локальные цепи по каналам и глобальные цепи. |
-| `build_twin_map(comps, local_by_ch)` | Строит `TwinMap` на основе списка компонентов и локальных цепей. Логирует неполные группы. |
-
-**Почему не по refdes?**  
-Нумерация компонентов между каналами может быть нелинейной (например, `FB602` → `FB1602` → `FB1102`). Использование `inner_key` (путь + UUID) гарантирует точное сопоставление, независимое от порядка нумерации.
+| Class | Description |
+|-------|-------------|
+| `NetlistComponent` | Component from the netlist: `ref`, `value`, `footprint`, `sheet_names`, `sheet_tstamps`, `uuid`. Includes properties `channel` (extracts channel name from the path) and `inner_key` (a unique twin‑search key: `{inner_path}#{uuid}`). |
+| `ChannelInfo` | Channel instance information: name, sheet UUID, component list by `inner_key`, and local nets. |
+| `TwinMap` | Twin map: dictionary `channels` (name → `ChannelInfo`) and `components` (`inner_key` → dictionary `{channel_name: ref}`). Includes methods `twin_ref(ref, src_ch, dst_ch)` to find a twin ref, and `twin_net(net, src_ch, dst_ch)` to translate a local net name. |
+| `PcbFootprint` | Footprint from the board: `uuid`, `ref`, `lib_id`, `path` (hierarchical path), coordinates, rotation, layer. Property `channel_uuid` extracts the first segment of the path. |
+| `PcbSegment` | Track segment: UUID, start/end coordinates, width, layer, net. |
+| `PcbVia` | Via: UUID, position, dimensions, layers, net. |
+| `ChannelPcbSnapshot` | Channel snapshot: lists of footprints, segments, and vias belonging to the channel, plus separate lists `foreign_segments` and `foreign_vias` (global nets inside the channel’s bounding box). Has a `bbox_mm()` method to compute the bounding rectangle. |
 
 ---
 
-### `pcb.py` – Парсинг платы и выборка канала
+### `netlist.py` – Netlist Parsing and Twin Map Construction
 
-**Назначение:**  
-Разбирает `.kicad_pcb`-файл, извлекает все футпринты, сегменты и via, а затем фильтрует их по принадлежности к указанному каналу.
+**Purpose:**  
+Parses the `.net` file, extracts all components with their hierarchical paths, identifies channel instances, and builds the twin map (`TwinMap`).
 
-**Критерии принадлежности каналу:**
+**Twin‑building algorithm:**
 
-- **Футпринты:** первый сегмент их иерархического `path` должен совпадать с UUID листа канала (из нетлиста). **Сопоставление по имени не используется**, только по UUID.
-- **Сегменты и via:** их цепь должна начинаться с префикса `/Channel_N/`. Это означает, что цепь является локальной для данного канала.
-- **«Чужие» (foreign) элементы:** сегменты и via глобальных цепей (например, `GND`, `+3V3`), которые физически находятся внутри ограничивающего прямоугольника канала (bbox с запасом 1 мм), собираются в отдельные списки `foreign_segments` и `foreign_vias`. Они не включаются в клон, но о них важно знать для ручного подключения питания/земли.
+1. For each component in the netlist, determine the channel name (the first segment of the path, e.g., `Channel_0`).
+2. Compute `inner_key = {inner_path_inside_channel}#{symbol_uuid_in_template}`.
+3. Components with the same `inner_key` in different channels are considered twins.
+4. Groups where a component is not present in all channels are marked as “incomplete” and logged as a warning (these components will not be cloned via mapping).
 
-**Ключевые классы и методы:**
+**Key Functions:**
 
-| Класс/Метод | Описание |
-|-------------|----------|
-| `PcbDocument` | Представляет загруженную плату. В конструкторе парсит и сохраняет таблицу цепей, футпринты, сегменты и via. |
-| `_net_ref(node)` | Извлекает цепь из узла, поддерживая как числовые ID (старый формат), так и строковые имена (новый формат KiCad 10). |
-| `snapshot_channel(channel_name, channel_uuid, bbox_margin_mm=1.0)` | Выполняет фильтрацию по UUID и префиксам цепей, вычисляет bbox и возвращает `ChannelPcbSnapshot`. |
+| Function | Description |
+|----------|-------------|
+| `parse_netlist(net_path)` | Parses the netlist, filters out `unconnected` nets, and returns components, local nets per channel, and global nets. |
+| `build_twin_map(comps, local_by_ch)` | Builds a `TwinMap` from the component list and local nets. Logs incomplete groups. |
 
----
-
-### `extract.py` – Оркестрация и сериализация
-
-**Назначение:**  
-Связывает нетлист и плату, строит снимок канала и сериализует его в YAML. Это главная точка входа для команды `clone-extract`.
-
-**Алгоритм:**
-
-1.  Парсит нетлист (`parse_netlist`) и строит карту близнецов (`build_twin_map`).
-2.  Проверяет, существует ли запрошенный канал в карте.
-3.  Загружает плату (`PcbDocument`) и получает снимок канала (`snapshot_channel`).
-4.  Для каждого футпринта в снимке вычисляет refdes близнецов в других каналах (через `TwinMap.twin_ref`).
-5.  Преобразует снимок и карту близнецов в словарь Python, готовый для YAML (с округлением координат до 4 знаков).
-6.  Записывает результат в выходной файл.
-
-**Функции:**
-
-| Функция | Описание |
-|---------|----------|
-| `snapshot_to_dict(snap, twin)` | Сериализует `ChannelPcbSnapshot` и `TwinMap` в словарь, добавляя `twins` для каждого компонента. |
-| `extract_channel(net_path, pcb_path, channel, output_yaml)` | Основная функция, вызываемая из CLI. Выполняет все шаги и возвращает словарь с результатом. |
+**Why not by refdes?**  
+Component numbering between channels can be non‑linear (e.g., `FB602` → `FB1602` → `FB1102`). Using `inner_key` (path + UUID) guarantees exact matching independent of numbering order.
 
 ---
 
-## Формат выходного YAML-снимка
+### `pcb.py` – Board Parsing and Channel Selection
+
+**Purpose:**  
+Parses the `.kicad_pcb` file, extracts all footprints, segments, and vias, and then filters them by channel membership.
+
+**Channel membership criteria:**
+
+- **Footprints:** the first segment of their hierarchical `path` must match the channel sheet UUID (from the netlist). **Name‑based matching is not used** – only UUID.
+- **Segments and vias:** their net must start with the prefix `/Channel_N/`. This indicates a net local to that channel.
+- **Foreign elements:** segments and vias of global nets (e.g., `GND`, `+3V3`) that physically lie inside the channel’s bounding box (bbox with a 1 mm margin) are collected into separate `foreign_segments` and `foreign_vias` lists. They are not included in the clone but are important to know for manual power/ground connections.
+
+**Key Classes and Methods:**
+
+| Class/Method | Description |
+|--------------|-------------|
+| `PcbDocument` | Represents the loaded board. In the constructor, it parses and stores the net table, footprints, segments, and vias. |
+| `_net_ref(node)` | Extracts the net from a node, supporting both numeric IDs (old format) and string names (new KiCad 10 format). |
+| `snapshot_channel(channel_name, channel_uuid, bbox_margin_mm=1.0)` | Filters by UUID and net prefixes, computes the bbox, and returns a `ChannelPcbSnapshot`. |
+
+---
+
+### `extract.py` – Orchestration and Serialisation
+
+**Purpose:**  
+Ties together the netlist and board, builds the channel snapshot, and serialises it to YAML. This is the main entry point for the `clone-extract` command.
+
+**Algorithm:**
+
+1. Parse the netlist (`parse_netlist`) and build the twin map (`build_twin_map`).
+2. Check that the requested channel exists in the map.
+3. Load the board (`PcbDocument`) and obtain the channel snapshot (`snapshot_channel`).
+4. For each footprint in the snapshot, compute twin refdes in other channels (via `TwinMap.twin_ref`).
+5. Convert the snapshot and twin map into a Python dictionary ready for YAML (coordinates rounded to 4 decimals).
+6. Write the result to the output file.
+
+**Functions:**
+
+| Function | Description |
+|----------|-------------|
+| `snapshot_to_dict(snap, twin)` | Serialises `ChannelPcbSnapshot` and `TwinMap` into a dictionary, adding `twins` for each component. |
+| `extract_channel(net_path, pcb_path, channel, output_yaml)` | The main function called from the CLI. Performs all steps and returns the result dictionary. |
+
+---
+
+## Output YAML Snapshot Format
 
 ```yaml
 channel: Channel_0
@@ -185,66 +179,67 @@ vias:
     uuid: "ghi-789..."
 
 foreign_in_bbox:
-  note: "медь ГЛОБАЛЬНЫХ цепей в границах канала: в клон не входит, подключение каналов к общим рельсам делается осознанно"
+  note: "Global net copper inside the channel boundaries: not included in the clone; channel connections to global rails should be handled deliberately."
   segment_nets: [GND, +3V3]
   via_nets: [GND]
 ```
 
 ---
 
-## Взаимосвязи с другими модулями
+## Relationships with Other Modules
 
-Модуль `cloner/` является **автономным** и не зависит от `kicad/adapter.py`, `placement/` или `geometry/`. Он используется только в `kicadspoke_cli.py` через команду `clone-extract`.
+The `cloner/` module is **self‑contained** and does not depend on `kicad/adapter.py`, `placement/`, or `geometry/`. It is used only in `kicadspoke_cli.py` via the `clone-extract` command.
 
-Его выходные данные (YAML-снимки) предназначены для **ручного анализа** разработчиком. На основе этих снимков пишутся конфигурации для `ClonePlacement` с указанием параметров `params` и `nets`.
+Its output (YAML snapshots) is intended for **manual analysis** by the developer. Based on these snapshots, configurations for `ClonePlacement` are written, specifying `params` and `nets`; they can also be used to create parameterised templates with `--net-template` and `--param` during extraction (see the `extract` command).
 
 ---
 
-## Использование в CLI
+## CLI Usage
 
 ```bash
 python kicadspoke_cli.py clone-extract --net project.net --pcb project.kicad_pcb --channel Channel_0 --output snapshot.yaml
 ```
 
-**Параметры:**
+**Parameters:**
 
-| Параметр | Описание |
-|----------|----------|
-| `--net` | Путь к файлу `.net` (экспортированному из Eeschema). |
-| `--pcb` | Путь к файлу `.kicad_pcb`. |
-| `--channel` | Имя канала для извлечения (например, `Channel_0`). |
-| `--output` | Путь к выходному YAML-файлу. |
-| `-v, --verbose` | Подробный вывод (логирование). |
+| Parameter | Description |
+|-----------|-------------|
+| `--net` | Path to the `.net` file (exported from Eeschema). |
+| `--pcb` | Path to the `.kicad_pcb` file. |
+| `--channel` | Channel name to extract (e.g., `Channel_0`). |
+| `--output` | Path to the output YAML file. |
+| `-v, --verbose` | Verbose logging. |
 
-**Пример вывода:**
+**Example output:**
 
 ```
-[Channel_0] футпринтов: 42, сегментов: 156, виа: 38 -> snapshot.yaml
+[Channel_0] footprints: 42, segments: 156, vias: 38 -> snapshot.yaml
 ```
 
 ---
 
-## Практический пример использования
+## Practical Usage Example
 
-1.  **Экспорт нетлиста** из Eeschema (`File → Export → Netlist...`), выберите формат `KiCad`.
-2.  Убедитесь, что у вас есть файл платы (`.kicad_pcb`).
-3.  Запустите `clone-extract` для одного из каналов, чтобы увидеть, какие компоненты и цепи в нём находятся, а также кто является их близнецами в других каналах.
-4.  Изучите полученный YAML:
-    - Проверьте, что все компоненты имеют близнецов во всех каналах (если есть неполные группы, они будут отмечены в логах).
-    - Обратите внимание на `foreign_in_bbox` – это подсказка, какие глобальные цепи проходят через этот канал и их нужно будет подключить в клоне осознанно (через via на спице или отдельные компоненты).
-5.  На основе снимка напишите шаблон (`templates`) в вашем конфигурационном файле и укажите `nets` для каждой роли, используя имена цепей из снимка (с учётом иерархических путей).
-
----
-
-## Примечания для разработчиков
-
-- **Отказ от `kinparse`:** `sexpdata` был выбран, потому что он более устойчив к изменениям формата KiCad. Нетлист KiCad 10 содержит синтаксические конструкции, с которыми `kinparse` не справляется.
-- **Поддержка KiCad 10:** В `pcb.py` реализована обработка цепей, которые в `.kicad_pcb` могут быть представлены либо числовым ID, либо строковым именем. Это обеспечивает совместимость с новым форматом.
-- **Обработка неполных групп:** Если в карте близнецов обнаруживается компонент, отсутствующий в одном из каналов, он логируется как предупреждение. Это означает, что этот компонент не будет клонироваться автоматически, и его нужно будет добавить вручную или исключить из шаблона.
-- **Чужие элементы (foreign):** Отбираются только те глобальные сегменты и via, которые находятся внутри bbox канала с запасом 1 мм. Это позволяет не засорять снимок элементами, проходящими далеко от канала, и сосредоточиться только на потенциально конфликтующих.
+1. **Export the netlist** from Eeschema (`File → Export → Netlist...`) and choose the `KiCad` format.
+2. Ensure you have the board file (`.kicad_pcb`).
+3. Run `clone-extract` for one of the channels to see which components and nets are present and who their twins are in other channels.
+4. Examine the resulting YAML:
+   - Verify that all components have twins in all channels (incomplete groups will be logged as warnings).
+   - Pay attention to `foreign_in_bbox` – this indicates which global nets pass through this channel and will need to be consciously connected in the clone (via spoke vias or separate components).
+5. Based on the snapshot, write a template (`templates`) in your configuration file and specify `nets` for each role, using net names from the snapshot (taking hierarchical paths into account). If needed, use `--net-template` and `--param` to parameterise nets directly during extraction (see the `extract` command).
 
 ---
 
-## Лицензия
+## Developer Notes
 
-Модуль `cloner/` распространяется под лицензией MIT, так же как и основной проект.
+- **Avoiding `kinparse`:** `sexpdata` was chosen because it is more robust to KiCad format changes. The KiCad 10 netlist contains syntactic constructs that `kinparse` cannot handle.
+- **KiCad 10 support:** In `pcb.py`, nets can be either numeric IDs or string names; the code handles both, ensuring compatibility with the new format.
+- **Incomplete groups:** If a component is missing from one of the channels, it is logged as a warning. Such components will not be cloned automatically and must be added manually or excluded from the template.
+- **Foreign elements:** Only global segments and vias lying inside the channel’s bbox (with a 1 mm margin) are collected. This avoids cluttering the snapshot with distant elements and focuses on potentially conflicting ones.
+- **No dependency on live KiCad:** All operations are offline, making `clone-extract` safe and fast for preliminary analysis.
+
+---
+
+## License
+
+The `cloner/` module is distributed under the MIT license, the same as the main project.

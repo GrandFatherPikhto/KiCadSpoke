@@ -34,5 +34,5 @@ graph TD
     Undo --> Exceptions
 
     NetResolution[net_resolution.py] --> Exceptions
-    NetResolution --> Config (used by ClonePlacement)
+    NetResolution --> Config (используется ClonePlacement)
     NetResolution --> Extract (parametrize_net)
