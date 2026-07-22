@@ -1,4 +1,4 @@
-# KiCadSpoke v1.20.0
+# KiCadSpoke v1.22.0
 
 **KiCadSpoke** is a command‑line **PCB cloning and layout automation** tool for **KiCad 8/10**, designed as an advanced script‑based alternative to the traditional **KiCad Replicate Layout** plugin. It enables automated **block replication**, component placement, and routing of complex multi‑channel designs using **templates**, **roles**, and the IPC API.
 
