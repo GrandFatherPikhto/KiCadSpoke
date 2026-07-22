@@ -10,6 +10,7 @@ placer.py — главный скрипт для расстановки разв
 import argparse
 import sys
 import logging
+import json
 import yaml
 from pathlib import Path
 
@@ -172,17 +173,21 @@ def cmd_extract(args):
     )
 
     output_path = Path(args.output)
+    is_json = output_path.suffix.lower() == '.json'
     existing = {}
     if output_path.exists():
         with open(output_path, "r", encoding="utf-8") as f:
-            existing = yaml.safe_load(f) or {}
-        if args.name in existing.get("templates", {}):
+            existing = (json.load(f) if is_json else yaml.safe_load(f)) or {}
+        if args.name in existing:
             logger.warning(f"Шаблон {args.name!r} уже есть в {output_path} — будет перезаписан")
 
-    existing.setdefault("templates", {}).update(template_dict)
+    existing.update(template_dict)
 
     with open(output_path, "w", encoding="utf-8") as f:
-        yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
+        if is_json:
+            json.dump(existing, f, indent=2, ensure_ascii=False)
+        else:
+            yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
     logger.info(f"✅ Шаблон {args.name!r} записан в {output_path}")
 

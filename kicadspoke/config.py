@@ -1,6 +1,8 @@
 # kicadspoke/config.py
 
 import logging
+import json
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 import yaml
@@ -441,7 +443,30 @@ def load_config(path: str) -> Config:
         diameter_mm=tva_data.get('diameter_mm', 0.5),
     )
 
-    templates_data = data.get('templates', {})
+    templates_data = dict(data.get('templates', {}) or {})
+    templates_file = data.get('templates_file')
+    if templates_file:
+        templates_path = Path(path).parent / templates_file
+        if not templates_path.exists():
+            raise ValidationError(format_fatal_error(
+                f"templates_file {templates_file!r} не найден",
+                [f"ожидался по пути {templates_path} (относительно самого конфига "
+                 f"{path!r}) — путь пишется относительно расположения ЭТОГО YAML, "
+                 f"не текущей директории запуска"]
+            ))
+        with open(templates_path, 'r', encoding='utf-8') as f:
+            if templates_path.suffix.lower() == '.json':
+                external_templates = json.load(f)
+            else:
+                external_templates = yaml.safe_load(f) or {}
+        # Инлайновые templates: (если есть) дополняют/переопределяют внешний
+        # файл, а не наоборот — библиотека как базовый слой, локальные правки
+        # (если вдруг понадобятся) поверх, явно видно в самом конфиге.
+        merged = dict(external_templates)
+        merged.update(templates_data)
+        templates_data = merged
+        logger.info(f"Шаблоны из {templates_file}: {len(external_templates)}, "
+                   f"плюс инлайновых в самом конфиге: {len(data.get('templates', {}) or {})}")
     templates = {name: _load_spoke_template(name, tdata) for name, tdata in templates_data.items()}
 
     rules = []
