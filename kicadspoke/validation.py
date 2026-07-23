@@ -116,6 +116,46 @@ def check_clone_templates_exist(cfg: Config) -> None:
     logger.debug("Проверка шаблонов clone_placements: все ссылки корректны")
 
 
+def check_no_duplicate_clone_anchors(cfg: Config) -> None:
+    """
+    Чисто конфиговая проверка (живой платы не требует):
+      1. Имена clone_placements[].name должны быть уникальны — это теперь
+         единственный идентификатор для anchor-less размещений (см.
+         clone_anchor_id) и в любом случае годная гигиена конфига.
+      2. (template, anchor_ref, anchor_pad) среди clone_placements С
+         заданным anchor_ref должен быть уникален — это ровно та
+         identity, по которой теперь живёт реестр (registry.py); если
+         два разных clone_placement случайно указывают один и тот же
+         физический якорь под одним шаблоном, реестр не сможет их
+         различить и будет путать via/треки одного с другим. Совпадение
+         почти наверняка copy-paste опечатка (забыли поменять anchor_pad
+         во втором блоке), а не осознанное намерение.
+    """
+    problems = []
+    seen_names = {}
+    seen_anchors = {}
+    for clone in cfg.clone_placements:
+        if not clone.enabled:
+            continue
+        if clone.name in seen_names:
+            problems.append(f"имя {clone.name!r} встречается дважды в clone_placements — "
+                            f"имена должны быть уникальны")
+        seen_names[clone.name] = True
+
+        if clone.anchor_ref is not None:
+            key = (clone.template, clone.anchor_ref, clone.anchor_pad)
+            if key in seen_anchors:
+                problems.append(f"{clone.name!r} и {seen_anchors[key]!r}: оба указывают один и тот же "
+                                f"якорь (template={clone.template!r}, anchor_ref={clone.anchor_ref!r}, "
+                                f"anchor_pad={clone.anchor_pad!r}) — реестр не сможет различить их via/"
+                                f"треки; похоже на copy-paste опечатку (забыли поменять anchor_pad)")
+            seen_anchors[key] = clone.name
+
+    if problems:
+        raise ValidationError(format_fatal_error("clone_placements с неоднозначной identity", problems))
+    logger.debug("Проверка на дубликаты имён/якорей clone_placements: всё сходится")
+
+
 def check_clone_nets_exist_on_board(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     """
     Резолвит via.net КАЖДОГО clone_placement (и уровня спицы, и вложенных
@@ -193,6 +233,7 @@ def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     """Запускает все проверки по порядку — от дешёвых к более полным."""
     logger.info("Предварительные проверки конфигурации...")
     check_clone_templates_exist(cfg)
+    check_no_duplicate_clone_anchors(cfg)
     check_single_selection_based_clone(cfg)
     check_templates_and_pads_exist(adapter, cfg)
     check_role_pool_sufficiency(adapter, cfg)

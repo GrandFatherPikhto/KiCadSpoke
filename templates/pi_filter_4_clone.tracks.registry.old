@@ -1,0 +1,232 @@
+{
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|0": {
+    "uuid": "057587ba-097a-428f-9592-f8949018928e",
+    "start_x_mm": 60.1353,
+    "start_y_mm": 81.210499,
+    "end_x_mm": 60.7253,
+    "end_y_mm": 81.800499,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|1": {
+    "uuid": "914fd344-5069-4868-a14d-3eab336380c9",
+    "start_x_mm": 59.0787,
+    "start_y_mm": 79.0663,
+    "end_x_mm": 59.407,
+    "end_y_mm": 78.738,
+    "width_mm": 0.65,
+    "net": "+3V3",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|2": {
+    "uuid": "7945d4e5-3f46-455e-90f6-6416d869ffd4",
+    "start_x_mm": 58.4887,
+    "start_y_mm": 81.800499,
+    "end_x_mm": 59.0787,
+    "end_y_mm": 81.210499,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|3": {
+    "uuid": "062e32f6-dd51-4a86-b225-2315c4eb2174",
+    "start_x_mm": 59.0787,
+    "start_y_mm": 81.210499,
+    "end_x_mm": 60.1353,
+    "end_y_mm": 81.210499,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|4": {
+    "uuid": "71529426-f5d6-45b0-9900-af5202b82f72",
+    "start_x_mm": 59.0787,
+    "start_y_mm": 80.0755,
+    "end_x_mm": 59.0787,
+    "end_y_mm": 79.0663,
+    "width_mm": 0.65,
+    "net": "+3V3",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|5": {
+    "uuid": "6a4ad471-e87f-4d87-a887-9b811c7f3f83",
+    "start_x_mm": 57.432,
+    "start_y_mm": 81.800499,
+    "end_x_mm": 58.4887,
+    "end_y_mm": 81.800499,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|6": {
+    "uuid": "ee8e91c4-c805-4a9d-9380-47b3e1d4c584",
+    "start_x_mm": 60.377001,
+    "start_y_mm": 78.738,
+    "end_x_mm": 60.7253,
+    "end_y_mm": 79.0863,
+    "width_mm": 0.65,
+    "net": "+3V3_VCCIO",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|7": {
+    "uuid": "f4362418-0990-4e84-9f42-d349f1f69d00",
+    "start_x_mm": 60.7253,
+    "start_y_mm": 80.0755,
+    "end_x_mm": 62.372,
+    "end_y_mm": 80.0755,
+    "width_mm": 0.65,
+    "net": "+3V3_VCCIO",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|8": {
+    "uuid": "d6824a11-9fad-4ba8-96c0-694040ea31a1",
+    "start_x_mm": 62.372,
+    "start_y_mm": 81.210499,
+    "end_x_mm": 63.1045,
+    "end_y_mm": 81.2105,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|9": {
+    "uuid": "e0a57450-d23b-4e7e-8223-c8cb615f02b5",
+    "start_x_mm": 60.7253,
+    "start_y_mm": 79.0863,
+    "end_x_mm": 60.7253,
+    "end_y_mm": 80.0755,
+    "width_mm": 0.65,
+    "net": "+3V3_VCCIO",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|10": {
+    "uuid": "119316c6-8618-4105-963f-3238dd9cb857",
+    "start_x_mm": 57.432,
+    "start_y_mm": 81.800499,
+    "end_x_mm": 57.432,
+    "end_y_mm": 83.067999,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|11": {
+    "uuid": "c4666bf8-a0f6-4ade-a265-27116b7d200e",
+    "start_x_mm": 63.679501,
+    "start_y_mm": 80.0755,
+    "end_x_mm": 63.682,
+    "end_y_mm": 80.078,
+    "width_mm": 0.65,
+    "net": "+3V3_VCCIO",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|12": {
+    "uuid": "56d432b4-1628-4327-b86f-25848cac4a48",
+    "start_x_mm": 60.7253,
+    "start_y_mm": 81.800499,
+    "end_x_mm": 61.782,
+    "end_y_mm": 81.800499,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|13": {
+    "uuid": "4d84e51f-8f90-4dd1-9b3b-69791d274358",
+    "start_x_mm": 60.7253,
+    "start_y_mm": 81.800499,
+    "end_x_mm": 60.7253,
+    "end_y_mm": 83.111299,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|14": {
+    "uuid": "539780dd-dcf8-439c-89e4-d4d01eece435",
+    "start_x_mm": 63.1045,
+    "start_y_mm": 81.2105,
+    "end_x_mm": 63.332,
+    "end_y_mm": 81.438,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|15": {
+    "uuid": "37ef9c39-a21c-4e99-b779-6117a8f40124",
+    "start_x_mm": 62.372,
+    "start_y_mm": 80.0755,
+    "end_x_mm": 63.679501,
+    "end_y_mm": 80.0755,
+    "width_mm": 0.65,
+    "net": "+3V3_VCCIO",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|16": {
+    "uuid": "ce2e5dd4-6151-4293-b4fa-1fd680064f83",
+    "start_x_mm": 59.0787,
+    "start_y_mm": 81.210499,
+    "end_x_mm": 59.0787,
+    "end_y_mm": 82.384699,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|17": {
+    "uuid": "7672190f-5b1f-447e-84c9-25fc4b5d2544",
+    "start_x_mm": 57.432,
+    "start_y_mm": 80.0755,
+    "end_x_mm": 57.432,
+    "end_y_mm": 78.398,
+    "width_mm": 0.65,
+    "net": "+3V3",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|18": {
+    "uuid": "cfb20f71-bb87-4ba8-bd1c-c9877f37e90a",
+    "start_x_mm": 59.0787,
+    "start_y_mm": 82.384699,
+    "end_x_mm": 59.082,
+    "end_y_mm": 82.387999,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|19": {
+    "uuid": "518b9a26-3c68-4e6c-9fcd-3f8bd7358330",
+    "start_x_mm": 57.432,
+    "start_y_mm": 78.398,
+    "end_x_mm": 57.422,
+    "end_y_mm": 78.388,
+    "width_mm": 0.65,
+    "net": "+3V3",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|20": {
+    "uuid": "03e5e067-3d3f-4ad8-bdc9-7c11ac52b45e",
+    "start_x_mm": 61.782,
+    "start_y_mm": 81.800499,
+    "end_x_mm": 62.372,
+    "end_y_mm": 81.210499,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|21": {
+    "uuid": "ce56f84f-cf2f-4335-ab9e-018033f96867",
+    "start_x_mm": 57.432,
+    "start_y_mm": 80.0755,
+    "end_x_mm": 59.0787,
+    "end_y_mm": 80.0755,
+    "width_mm": 0.65,
+    "net": "+3V3",
+    "layer": "B.Cu"
+  },
+  "name:fpga_filter_3v3_vccio|pi_filter_4|__spoke__|22": {
+    "uuid": "758c8dd6-b88f-4bcd-b872-4a32f933d353",
+    "start_x_mm": 60.7253,
+    "start_y_mm": 83.111299,
+    "end_x_mm": 60.732,
+    "end_y_mm": 83.117999,
+    "width_mm": 0.65,
+    "net": "GND",
+    "layer": "B.Cu"
+  }
+}

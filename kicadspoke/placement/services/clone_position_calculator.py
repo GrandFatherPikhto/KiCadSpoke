@@ -3,9 +3,15 @@
 clone_position_calculator.py — аналог manual_position_calculator.py, но
 для ClonePlacement (TemplatePlacer). Не реализует IPositionCalculator —
 тот интерфейс сделан специально под pad-привязанную модель ManualSpoke
-(target_fp/rules/side); ClonePlacement работает принципиально иначе —
-якорь это просто имя (anchor_id = f"name:{clone.name}"), не номер пада
-какого-то одного целевого компонента.
+(target_fp/rules/side); ClonePlacement работает принципиально иначе.
+
+anchor_id для реестра (см. registry.py) строится из ФИЗИЧЕСКОЙ привязки
+(anchor_ref/anchor_pad), а не из clone.name — по той же причине, по
+которой refdes не годится ключом канала: имя произвольно и меняется
+(переименование clone_placement не должно тереть via/треки, если якорь
+физически тот же). Только если anchor_ref вообще не задан (режим
+абсолютных координат, редкий случай) — деваться некуда, используем
+clone.name, единственный доступный идентификатор в этом режиме.
 """
 import logging
 from typing import List, Tuple, Optional
@@ -20,6 +26,20 @@ from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand
 from .clone_role_resolver import resolve_roles_by_selection, resolve_roles_by_nets, clone_uses_selection_mode
 
 logger = logging.getLogger(__name__)
+
+
+def clone_anchor_id(clone: ClonePlacement) -> str:
+    """
+    Идентичность clone_placement для реестра — физическая привязка, не
+    имя. anchor_ref задан -> "anchor:{ref}:{pad}" (pad может быть пустым,
+    если привязка к центру компонента, не к конкретному паду). anchor_ref
+    не задан (абсолютные координаты) -> "name:{clone.name}", единственный
+    доступный идентификатор в этом режиме — переименование в нём всё ещё
+    сотрёт историю, но деваться некуда.
+    """
+    if clone.anchor_ref is not None:
+        return f"anchor:{clone.anchor_ref}:{clone.anchor_pad or ''}"
+    return f"name:{clone.name}"
 
 
 class ClonePositionCalculator:
@@ -98,7 +118,7 @@ class ClonePositionCalculator:
                                           mirror=mirror)
             logger.info(f"  [{clone.name}] шаблон {template.name!r} на {template.layer}"
                         + (" -> mirror: перевёрнут целиком" if mirror else " -> как записан"))
-            anchor_id = f"name:{clone.name}"
+            anchor_id = clone_anchor_id(clone)
 
             for via_index, via in enumerate(layout.vias):
                 vias_result.append(ViaCommand(

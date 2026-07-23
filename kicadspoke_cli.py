@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from kicadspoke.config import load_config
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner
+from kicadspoke.placement.services.clone_position_calculator import clone_anchor_id
 from kicadspoke.placement.executor import BatchExecutor   # <-- новый путь
 from kicadspoke.exceptions import PlacerError
 from kicadspoke.undo import undo_last_operation
@@ -55,7 +56,7 @@ def cmd_apply(args):
     logger.info(f"Загрузка конфига: {args.config}")
     cfg = load_config(args.config)
 
-    all_clone_names = {c.name for c in cfg.clone_placements}
+    all_anchor_ids = {clone_anchor_id(c) for c in cfg.clone_placements}
     if getattr(args, "clone_placement", None):
         name = args.clone_placement
         matching = [c for c in cfg.clone_placements if c.name == name]
@@ -120,7 +121,7 @@ def cmd_apply(args):
 
     # --- Фаза 2: виа ---
     all_vias = planner.plan_vias()
-    vias_to_create = registry.reconcile(all_vias, known_clone_names=all_clone_names)
+    vias_to_create = registry.reconcile(all_vias, known_anchor_ids=all_anchor_ids)
     logger.info(f"Запланировано виа: {len(all_vias)}, из них реально к созданию "
                f"(реестр отсеял уже стоящие правильно): {len(vias_to_create)}")
     logger.info("Применение виа...")
@@ -130,7 +131,7 @@ def cmd_apply(args):
 
     # --- Фаза 3: треки ---
     all_tracks = planner.plan_tracks()
-    tracks_to_create = track_registry.reconcile(all_tracks, known_clone_names=all_clone_names)
+    tracks_to_create = track_registry.reconcile(all_tracks, known_anchor_ids=all_anchor_ids)
     logger.info(f"Запланировано треков: {len(all_tracks)}, из них реально к созданию "
                f"(реестр отсеял уже стоящие правильно): {len(tracks_to_create)}")
     logger.info("Применение треков...")

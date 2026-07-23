@@ -8,9 +8,21 @@ extract_profiles:
 
   pm5v_pi_filter:
     name: pm5v_pi_filter
-    output: templates/pm5v_pi_filter_template.yaml
+    output: templates/power_board_templates.yaml
     origin_by_via_net: "+5V_DIRTY"
     param: {PWR_IN: "+5V_DIRTY", PWR_OUT: "+5V"}
+
+  1v2_pi_filter:
+    name: pi_filter
+    output: templates/power_board_templates.yaml
+    origin_by_via_net: "+1V2_DIRTY"
+    param: {PWR_IN: "+1V2_DIRTY", PWR_OUT: "+1V2"}
+
+  p2v5_ldo:
+    name: p2v5_ldo
+    output: templates/power_board_templates.yaml
+    origin_by_via_net: "+5V"
+    param: {PWR_IN: "+5V", PWR_OUT: "+2V5_DIRTY"}
 
 clone_profiles:
   channel_0:

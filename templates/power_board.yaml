@@ -1,4 +1,4 @@
-templates_file: pm5v_pi_filter_template.yaml
+templates_file: power_board_templates.yaml
 
 clone_placements:
   - name: p5v_pi_filter
@@ -30,6 +30,60 @@ clone_placements:
     params:
       PWR_IN: -5V_DIRTY
       PWR_OUT: -5V
+    nets:
+      C_IN_BULK: '{PWR_IN}'
+      C_IN_BYPASS: '{PWR_IN}'
+      C_OUT_BULK: '{PWR_OUT}'
+      C_OUT_BYPASS: '{PWR_OUT}'
+      PI_FILTER_FB: '{PWR_OUT}'
+
+  - name: 1v2_pi_filter
+    template: pi_filter
+    anchor_ref: U1
+    anchor_pad: '2'
+    origin_x_mm: 10.0
+    origin_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+    params:
+      PWR_IN: +1V2_DIRTY
+      PWR_OUT: +1V2
+    nets:
+      C_IN_BULK: '{PWR_IN}'
+      C_IN_BYPASS: '{PWR_IN}'
+      C_OUT_BULK: '{PWR_OUT}'
+      C_OUT_BYPASS: '{PWR_OUT}'
+      PI_FILTER_FB: '{PWR_OUT}'
+
+  - name: 1v2_pi_filter
+    template: pi_filter
+    anchor_ref: U2
+    anchor_pad: '2'
+    origin_x_mm: 10.0
+    origin_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+    params:
+      PWR_IN: +1V2_DIRTY
+      PWR_OUT: +1V2
+    nets:
+      C_IN_BULK: '{PWR_IN}'
+      C_IN_BYPASS: '{PWR_IN}'
+      C_OUT_BULK: '{PWR_OUT}'
+      C_OUT_BYPASS: '{PWR_OUT}'
+      PI_FILTER_FB: '{PWR_OUT}'
+
+  - name: 3v3_pi_filter
+    template: pi_filter
+    anchor_ref: U2
+    anchor_pad: '2'
+    origin_x_mm: 12.0
+    origin_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+    params:
+      PWR_IN: +3V3_DIRTY
+      PWR_OUT: +3V3
     nets:
       C_IN_BULK: '{PWR_IN}'
       C_IN_BYPASS: '{PWR_IN}'
