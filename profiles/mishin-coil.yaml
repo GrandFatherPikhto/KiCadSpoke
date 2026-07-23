@@ -1,0 +1,35 @@
+templates_file: templates/mishin-coil.yaml
+schematic_dir: D:/Projects/KiCad/Mishin-Coil/mishin-coil-gen-v1
+
+extract_profiles:
+  dac_pi_filter:
+    name: dac_pi_filter
+    output: profiles/templates/mishin-coil.yaml
+    param:
+      PWR_IN: '+3V3'
+      PWR_OUT: '+3V3_CLKVDD'
+      channel: 1   # <-- добавить параметр для канала
+    net_template:
+      'Channel_1/DAC/+3V3_CLKVDD': '/Channel_{channel}/DAC/+3V3_CLKVDD'
+      '+3V3': '{PWR_IN}'
+    origin_by_via_net: '/Channel_1/DAC/+3V3_CLKVDD'
+
+clone_placements:
+  - name: dac1_clkvdd_pi_filter
+    template: dac_pi_filter
+    anchor_role: AD_DAC
+    anchor_pad: '11'
+    anchor_sheet: 'Channel_1'
+    origin_x_mm: 0.0
+    origin_y_mm: 5.0
+    rotation_deg: 0.0
+    enabled: true
+    params:
+      PWR_IN: +3V3
+      PWR_OUT: '/Channel_1/DAC/+3V3_CLKVDD'
+    nets:
+      C_IN_BULK: '{PWR_IN}'
+      C_IN_BYPASS: '{PWR_IN}'
+      C_OUT_BULK: '{PWR_OUT}'
+      PI_FILTER_FB: '{PWR_OUT}'
+

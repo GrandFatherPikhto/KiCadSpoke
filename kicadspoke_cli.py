@@ -24,6 +24,7 @@ from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.placement.services.clone_position_calculator import clone_anchor_id
 from kicadspoke.placement.executor import BatchExecutor   # <-- новый путь
 from kicadspoke.exceptions import PlacerError
+from kipy.errors import ApiError, ApiStatusCode
 from kicadspoke.undo import undo_last_operation
 from kicadspoke.validation import run_all_checks
 from kicadspoke.registry import (PlacementRegistry, registry_path_for_config,
@@ -375,6 +376,18 @@ def main():
             sys.exit(1)
     except PlacerError as e:
         logging.error(f"Ошибка: {e}")
+        sys.exit(1)
+    except ApiError as e:
+        if e.code == ApiStatusCode.AS_BUSY:
+            logging.error(
+                "KiCad занят и не может ответить на запрос прямо сейчас. Обычно "
+                "это значит, что в интерфейсе активен незавершённый инструмент "
+                "(простановка размеров, интерактивная трассировка, перемещение "
+                "мышкой и т.п.) — заверши его (Esc или клик правой кнопкой -> "
+                "Cancel) и запусти команду ещё раз. Плата не тронута."
+            )
+        else:
+            logging.error(f"KiCad вернул ошибку API: {e}")
         sys.exit(1)
     except Exception as e:
         logging.exception("Неожиданная ошибка")

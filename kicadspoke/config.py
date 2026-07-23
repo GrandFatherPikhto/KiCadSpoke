@@ -2,6 +2,7 @@
 
 import logging
 import json
+import difflib
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
@@ -391,8 +392,39 @@ def _load_manual_spoke(data: Dict[str, Any]) -> ManualSpoke:
     )
 
 
+_CLONE_PLACEMENT_KNOWN_KEYS = {
+    'name', 'template', 'origin_x_mm', 'origin_y_mm', 'rotation_deg',
+    'nets', 'params', 'net_overrides', 'enabled',
+    'anchor_ref', 'anchor_pad', 'anchor_role', 'anchor_sheet',
+    'layer', 'mirror', 'refs', 'by_selection',
+    'side',  # устаревшее — распознаётся отдельно ниже, только чтобы дать
+             # осмысленное сообщение про миграцию, а не "неизвестный ключ"
+}
+
+
 def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
-    name = data['name']
+    name = data.get('name', '?')
+    unknown = set(data.keys()) - _CLONE_PLACEMENT_KNOWN_KEYS
+    if unknown:
+        problems = []
+        for key in sorted(unknown):
+            close = difflib.get_close_matches(key, _CLONE_PLACEMENT_KNOWN_KEYS, n=1)
+            if not close:
+                # difflib не считает 'pad' похожим на 'anchor_pad' (соотношение
+                # длин слишком разное) — а это самый частый случай именно тут
+                # (anchor_ref/anchor_pad/anchor_role/anchor_sheet все с общим
+                # префиксом anchor_). Добавляем отдельно: подстрока в любую сторону.
+                close = [k for k in sorted(_CLONE_PLACEMENT_KNOWN_KEYS)
+                        if key in k or k in key]
+            hint = f" — не имел(а) ли в виду {close[0]!r}?" if close else ""
+            problems.append(f"{key!r}{hint}")
+        raise ValidationError(format_fatal_error(
+            f"неизвестные поля в clone_placement {name!r}",
+            [f"незнакомый ключ молча игнорируется, а не падает — типичный "
+             f"источник тихой ошибки (например, anchor_pad не сработает, "
+             f"если написать просто pad): {', '.join(problems)}"]
+        ))
+
     anchor_ref = data.get('anchor_ref')
     anchor_pad = data.get('anchor_pad')
     anchor_role = data.get('anchor_role')

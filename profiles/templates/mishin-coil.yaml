@@ -1,0 +1,133 @@
+dac_pi_filter:
+  vias:
+  - offset_along_mm: 1.725
+    offset_across_mm: 5.81
+    net: GND
+    drill_mm: 0.4
+    diameter_mm: 0.8
+  - offset_along_mm: 1.725
+    offset_across_mm: 0.0
+    net: GND
+    drill_mm: 0.4
+    diameter_mm: 0.8
+  - offset_along_mm: 2.6
+    offset_across_mm: 2.91
+    net: GND
+    drill_mm: 0.4
+    diameter_mm: 0.8
+  - offset_along_mm: 0.0
+    offset_across_mm: 5.81
+    net: '{PWR_IN}'
+    drill_mm: 0.4
+    diameter_mm: 0.8
+  - offset_along_mm: 0.0
+    offset_across_mm: 0.0
+    net: /Channel_1/DAC/+3V3_CLKVDD
+    drill_mm: 0.4
+    diameter_mm: 0.8
+  components:
+  - role: C_OUT_BULK
+    offset_along_mm: 0.8625
+    offset_across_mm: 1.43
+    angle_deg: 0.0
+  - role: PI_FILTER_FB
+    offset_along_mm: -1.45
+    offset_across_mm: 2.445
+    angle_deg: 90.0
+    net_template: '{PWR_IN}'
+  - role: C_IN_BYPASS
+    offset_along_mm: 0.5675
+    offset_across_mm: 2.93
+    angle_deg: 0.0
+    net_template: '{PWR_IN}'
+  - role: C_IN_BULK
+    offset_along_mm: 0.8625
+    offset_across_mm: 4.5
+    angle_deg: 0.0
+    net_template: '{PWR_IN}'
+  tracks:
+  - start_along_mm: 1.725
+    start_across_mm: 1.43
+    end_along_mm: 1.725
+    end_across_mm: 0.0
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 1.135
+    start_across_mm: 2.02
+    end_along_mm: 1.725
+    end_across_mm: 1.43
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: -1.45
+    start_across_mm: 1.96
+    end_along_mm: -0.53
+    end_across_mm: 1.96
+    width_mm: 0.65
+    net: /Channel_1/DAC/+3V3_CLKVDD
+  - start_along_mm: 1.135
+    start_across_mm: 2.93
+    end_along_mm: 1.135
+    end_across_mm: 2.02
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 1.725
+    start_across_mm: 3.52
+    end_along_mm: 1.135
+    end_across_mm: 2.93
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 1.725
+    start_across_mm: 4.5
+    end_along_mm: 1.725
+    end_across_mm: 3.52
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 0.0
+    start_across_mm: 1.43
+    end_along_mm: 0.0
+    end_across_mm: 0.0
+    width_mm: 0.65
+    net: /Channel_1/DAC/+3V3_CLKVDD
+  - start_along_mm: -0.53
+    start_across_mm: 1.96
+    end_along_mm: 0.0
+    end_across_mm: 1.43
+    width_mm: 0.65
+    net: /Channel_1/DAC/+3V3_CLKVDD
+  - start_along_mm: 0.0
+    start_across_mm: 2.93
+    end_along_mm: -1.45
+    end_across_mm: 2.93
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  - start_along_mm: 0.0
+    start_across_mm: 4.5
+    end_along_mm: 0.0
+    end_across_mm: 2.93
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  - start_along_mm: 0.0
+    start_across_mm: 4.5
+    end_along_mm: 0.0
+    end_across_mm: 5.81
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  - start_along_mm: 2.58
+    start_across_mm: 2.93
+    end_along_mm: 2.6
+    end_across_mm: 2.91
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 1.135
+    start_across_mm: 2.93
+    end_along_mm: 2.58
+    end_across_mm: 2.93
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 1.725
+    start_across_mm: 4.5
+    end_along_mm: 1.725
+    end_across_mm: 5.81
+    width_mm: 0.8
+    net: GND
+  layer: B.Cu
