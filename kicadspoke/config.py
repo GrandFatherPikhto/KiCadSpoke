@@ -197,6 +197,16 @@ class ClonePlacement:
     enabled: bool = True
     anchor_ref: Optional[str] = None
     anchor_pad: Optional[str] = None
+    # Альтернатива anchor_ref — якорь по полю Role на плате, а не по
+    # refdes (переживает реаннотацию/перенумерацию — refdes для этого не
+    # надёжен, см. обсуждение). Взаимоисключающе с anchor_ref (фатал при
+    # обоих сразу — см. _check_anchor_fields в load_config). anchor_sheet —
+    # ТОЛЬКО сужение неоднозначности при 2+ кандидатах с одним anchor_role
+    # (сравнение по префиксу имени ЛОКАЛЬНОЙ иерархической цепи вида
+    # '/Channel_0/...' — НЕ через sheet_path/UUID, это эмпирически не
+    # сработало, см. пробные скрипты в чате). Без смысла без anchor_role.
+    anchor_role: Optional[str] = None
+    anchor_sheet: Optional[str] = None
     # Слой размещения — ФАКТ: None = слой шаблона (кладём буква в букву).
     # mirror — ОПЕРАЦИЯ, всегда ручная: перевернуть конструкцию целиком
     # (геометрия в зеркало, углы 180°−φ, все слои инвертируются).
@@ -208,6 +218,17 @@ class ClonePlacement:
     # последнее средство, когда кандидаты электрически неразличимы
     # (три одинаковых фильтра в одном листе).
     refs: Dict[str, str] = field(default_factory=dict)
+    # Явный запрос режима "по выделению" — НЕ выводится из отсутствия
+    # nets/params (это старое, implicit-поведение остаётся дефолтом для
+    # обратной совместимости, см. clone_uses_selection_mode). Нужен
+    # отдельно от implicit-режима потому, что params используется ТАКЖЕ
+    # для резолва плейсхолдеров via/track (apply_clone_geometry вызывает
+    # resolve_net независимо от режима ролей) — без этого флага заданный
+    # params для одной лишь via молча и незаметно переключал бы весь
+    # clone_placement в режим "по цепям", ломая роли, резолвящиеся по
+    # выделению. by_selection: true + непустой nets — фатал при загрузке
+    # (противоречие: nets вообще не имеет смысла в режиме "по выделению").
+    by_selection: bool = False
 
 @dataclass
 class Config:
@@ -357,22 +378,42 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
     name = data['name']
     anchor_ref = data.get('anchor_ref')
     anchor_pad = data.get('anchor_pad')
+    anchor_role = data.get('anchor_role')
+    anchor_sheet = data.get('anchor_sheet')
 
-    if anchor_pad is not None and anchor_ref is None:
+    if anchor_ref is not None and anchor_role is not None:
         raise ValidationError(format_fatal_error(
-            f"anchor_pad без anchor_ref в clone_placement {name!r}",
-            [f"anchor_pad={anchor_pad!r} задан, но anchor_ref отсутствует — "
-             f"пад сам по себе ничего не значит, укажи чей он (anchor_ref: IC1)"]
+            f"anchor_ref и anchor_role одновременно в clone_placement {name!r}",
+            [f"это два взаимоисключающих способа задать якорь — либо по refdes "
+             f"(anchor_ref), либо по полю Role (anchor_role), не оба сразу"]
         ))
+
+    if anchor_sheet is not None and anchor_role is None:
+        raise ValidationError(format_fatal_error(
+            f"anchor_sheet без anchor_role в clone_placement {name!r}",
+            [f"anchor_sheet={anchor_sheet!r} задан, но anchor_role отсутствует — "
+             f"anchor_sheet только сужает неоднозначность anchor_role, сам по "
+             f"себе якорем не является"]
+        ))
+
+    if anchor_pad is not None and anchor_ref is None and anchor_role is None:
+        raise ValidationError(format_fatal_error(
+            f"anchor_pad без anchor_ref/anchor_role в clone_placement {name!r}",
+            [f"anchor_pad={anchor_pad!r} задан, но не указано, чей он — "
+             f"anchor_ref: IC1 или anchor_role: SOME_ROLE"]
+        ))
+
+    has_anchor = anchor_ref is not None or anchor_role is not None
 
     # В якорном режиме origin_x/y — необязательный сдвиг от якоря (0.0 по
     # умолчанию, как shift у ManualSpoke). Без якоря — обязательная
     # абсолютная точка, как раньше.
-    if anchor_ref is None and ('origin_x_mm' not in data or 'origin_y_mm' not in data):
+    if not has_anchor and ('origin_x_mm' not in data or 'origin_y_mm' not in data):
         raise ValidationError(format_fatal_error(
             f"нет ни якоря, ни абсолютных координат в clone_placement {name!r}",
             [f"укажи либо origin_x_mm/origin_y_mm (абсолютная точка на плате), "
-             f"либо anchor_ref (+ опционально anchor_pad) для привязки к компоненту"]
+             f"либо anchor_ref/anchor_role (+ опционально anchor_pad) для "
+             f"привязки к компоненту"]
         ))
 
     if 'side' in data:
@@ -382,6 +423,16 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
              "кладём — факт) + mirror: true (как кладём — операция, только "
              "при смене слоя относительно шаблона)"]
         ))
+    by_selection = bool(data.get('by_selection', False))
+    nets = data.get('nets', {}) or {}
+    if by_selection and nets:
+        raise ValidationError(format_fatal_error(
+            f"by_selection: true вместе с непустым nets в clone_placement {name!r}",
+            [f"nets — это явная карта роль->цепь для режима «по цепям», в режиме "
+             f"«по выделению» роли резолвятся мышкой, а не по цепям — nets тут "
+             f"бессмысленен. Убери nets, либо убери by_selection: true"]
+        ))
+
     layer = data.get('layer')
     _check_layer_value(layer, f"в clone_placement {name!r}")
 
@@ -391,15 +442,18 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
         origin_x_mm=data.get('origin_x_mm', 0.0),
         origin_y_mm=data.get('origin_y_mm', 0.0),
         rotation_deg=data.get('rotation_deg', 0.0),
-        nets=data.get('nets', {}) or {},
+        nets=nets,
         params=data.get('params', {}) or {},
         net_overrides=data.get('net_overrides', {}) or {},
         enabled=data.get('enabled', True),
         anchor_ref=anchor_ref,
         anchor_pad=str(anchor_pad) if anchor_pad is not None else None,
+        anchor_role=anchor_role,
+        anchor_sheet=anchor_sheet,
         layer=layer,
         mirror=bool(data.get('mirror', False)),
         refs=data.get('refs', {}) or {},
+        by_selection=by_selection,
     )
 
 

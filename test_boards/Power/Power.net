@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "D:\\Projects\\Python\\KiCadSpoke\\test_boards\\Power\\Power.kicad_sch")
-		(date "2026-07-22T14:48:34")
+		(date "2026-07-23T12:25:09")
 		(tool "Eeschema 10.0.4")
 		(sheet
 			(number "1")
@@ -55,11 +55,13 @@
 	)
 	(components
 		(comp
-			(ref "C201")
+			(ref "C1")
 			(value "TAJD107K016RNJ")
 			(footprint "Capacitor_Tantalum_SMD:CP_EIA-7343-20_Kemet-V_HandSolder")
 			(description "100 uF 16V")
 			(fields
+				(field
+					(name "Role") "C_IN_BULK")
 				(field
 					(name "Footprint") "Capacitor_Tantalum_SMD:CP_EIA-7343-20_Kemet-V_HandSolder")
 				(field
@@ -72,6 +74,10 @@
 				(lib "Device")
 				(part "C_Polarized")
 				(description "Polarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -109,11 +115,13 @@
 			)
 		)
 		(comp
-			(ref "C202")
+			(ref "C2")
 			(value "TAJD107K016RNJ")
 			(footprint "Capacitor_Tantalum_SMD:CP_EIA-7343-20_Kemet-V_HandSolder")
 			(description "100 uF 16V")
 			(fields
+				(field
+					(name "Role") "C_IN_BULK")
 				(field
 					(name "Footprint") "Capacitor_Tantalum_SMD:CP_EIA-7343-20_Kemet-V_HandSolder")
 				(field
@@ -126,6 +134,10 @@
 				(lib "Device")
 				(part "C_Polarized")
 				(description "Polarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -163,11 +175,13 @@
 			)
 		)
 		(comp
-			(ref "C203")
+			(ref "C3")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_IN_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -180,6 +194,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -217,11 +235,13 @@
 			)
 		)
 		(comp
-			(ref "C204")
+			(ref "C4")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_IN_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -234,6 +254,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -271,11 +295,13 @@
 			)
 		)
 		(comp
-			(ref "C205")
+			(ref "C5")
 			(value "TAJB476K010UNJ")
 			(footprint "Capacitor_Tantalum_SMD:CP_EIA-3528-12_Kemet-T_HandSolder")
 			(description "Polarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_IN_BULK")
 				(field
 					(name "Footprint") "Capacitor_Tantalum_SMD:CP_EIA-3528-12_Kemet-T_HandSolder")
 				(field
@@ -288,6 +314,10 @@
 				(lib "Device")
 				(part "C_Polarized")
 				(description "Polarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -325,11 +355,13 @@
 			)
 		)
 		(comp
-			(ref "C206")
+			(ref "C6")
 			(value "TAJB476K010UNJ")
 			(footprint "Capacitor_Tantalum_SMD:CP_EIA-3528-12_Kemet-T_HandSolder")
 			(description "Polarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_IN_BULK")
 				(field
 					(name "Footprint") "Capacitor_Tantalum_SMD:CP_EIA-3528-12_Kemet-T_HandSolder")
 				(field
@@ -342,6 +374,10 @@
 				(lib "Device")
 				(part "C_Polarized")
 				(description "Polarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -379,11 +415,13 @@
 			)
 		)
 		(comp
-			(ref "C207")
+			(ref "C7")
 			(value "1 uF")
 			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_OUT_BULK")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
 				(field
@@ -396,6 +434,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -433,11 +475,13 @@
 			)
 		)
 		(comp
-			(ref "C208")
+			(ref "C8")
 			(value "1 uF")
 			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_OUT_BULK")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
 				(field
@@ -450,6 +494,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -487,119 +535,13 @@
 			)
 		)
 		(comp
-			(ref "C209")
-			(value "1 uF")
-			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "Корневой лист")
-			)
-			(property
-				(name "Sheetfile")
-				(value "Power.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "69acea12-98ac-46b5-afea-cb3e99317029")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C210")
-			(value "1 uF")
-			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
-			(description "Unpolarized capacitor")
-			(fields
-				(field
-					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(libsource
-				(lib "Device")
-				(part "C")
-				(description "Unpolarized capacitor")
-			)
-			(property
-				(name "Sheetname")
-				(value "Корневой лист")
-			)
-			(property
-				(name "Sheetfile")
-				(value "Power.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "cap capacitor")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "C_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "2a8a1d08-eb5a-4ecf-ae7d-136f36621c9a")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "C211")
+			(ref "C9")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_OUT_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -612,6 +554,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -649,11 +595,13 @@
 			)
 		)
 		(comp
-			(ref "C212")
-			(value "100 nF")
+			(ref "C10")
+			(value "1 uF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_IN_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -666,6 +614,130 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BYPASS")
+			)
+			(property
+				(name "Sheetname")
+				(value "Корневой лист")
+			)
+			(property
+				(name "Sheetfile")
+				(value "Power.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "69acea12-98ac-46b5-afea-cb3e99317029")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C11")
+			(value "1 uF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Role") "C_IN_BYPASS")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BYPASS")
+			)
+			(property
+				(name "Sheetname")
+				(value "Корневой лист")
+			)
+			(property
+				(name "Sheetfile")
+				(value "Power.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "2a8a1d08-eb5a-4ecf-ae7d-136f36621c9a")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C12")
+			(value "100 nF")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Role") "C_OUT_BYPASS")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -703,13 +775,15 @@
 			)
 		)
 		(comp
-			(ref "C213")
+			(ref "C13")
 			(value "1 uF")
-			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+					(name "Role") "C_OUT_BULK")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -720,6 +794,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -757,13 +835,15 @@
 			)
 		)
 		(comp
-			(ref "C214")
+			(ref "C14")
 			(value "1 uF")
-			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+					(name "Role") "C_OUT_BULK")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -774,6 +854,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -811,11 +895,13 @@
 			)
 		)
 		(comp
-			(ref "C215")
+			(ref "C15")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_OUT_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -828,6 +914,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -865,11 +955,13 @@
 			)
 		)
 		(comp
-			(ref "C216")
+			(ref "C16")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_OUT_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -882,6 +974,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -919,11 +1015,13 @@
 			)
 		)
 		(comp
-			(ref "C217")
+			(ref "C17")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_IN_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -936,6 +1034,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -973,11 +1075,13 @@
 			)
 		)
 		(comp
-			(ref "C218")
+			(ref "C18")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_IN_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -990,6 +1094,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -1027,11 +1135,13 @@
 			)
 		)
 		(comp
-			(ref "C219")
+			(ref "C19")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_IN_BULK")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1044,6 +1154,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -1081,11 +1195,13 @@
 			)
 		)
 		(comp
-			(ref "C220")
+			(ref "C20")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_IN_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1098,6 +1214,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_IN_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -1135,13 +1255,15 @@
 			)
 		)
 		(comp
-			(ref "C221")
+			(ref "C21")
 			(value "1 uF")
-			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+					(name "Role") "C_OUT_BULK")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -1152,6 +1274,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -1189,13 +1315,15 @@
 			)
 		)
 		(comp
-			(ref "C222")
+			(ref "C22")
 			(value "1 uF")
-			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+					(name "Role") "C_OUT_BULK")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -1206,6 +1334,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BULK")
 			)
 			(property
 				(name "Sheetname")
@@ -1243,13 +1375,15 @@
 			)
 		)
 		(comp
-			(ref "C223")
+			(ref "C23")
 			(value "10 uF")
-			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+			(footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+					(name "Role") "C_ADJ_BYPASS")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -1260,6 +1394,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_ADJ_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -1297,13 +1435,15 @@
 			)
 		)
 		(comp
-			(ref "C224")
+			(ref "C24")
 			(value "10 uF")
-			(footprint "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+			(footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder")
+					(name "Role") "C_ADJ_BYPASS")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
 				(field
 					(name "Datasheet")
 				)
@@ -1314,6 +1454,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_ADJ_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -1351,11 +1495,13 @@
 			)
 		)
 		(comp
-			(ref "C225")
+			(ref "C25")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_OUT_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1368,6 +1514,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -1405,11 +1555,13 @@
 			)
 		)
 		(comp
-			(ref "C226")
+			(ref "C26")
 			(value "100 nF")
 			(footprint "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "Role") "C_OUT_BYPASS")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder")
 				(field
@@ -1422,6 +1574,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Role")
+				(value "C_OUT_BYPASS")
 			)
 			(property
 				(name "Sheetname")
@@ -1459,13 +1615,15 @@
 			)
 		)
 		(comp
-			(ref "D201")
+			(ref "D1")
 			(value "LED")
 			(footprint "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 			(description "Light emitting diode")
 			(fields
 				(field
 					(name "Sim.Pins") "1=K 2=A")
+				(field
+					(name "Role") "PWR_LED")
 				(field
 					(name "Footprint") "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 				(field
@@ -1482,6 +1640,10 @@
 			(property
 				(name "Sim.Pins")
 				(value "1=K 2=A")
+			)
+			(property
+				(name "Role")
+				(value "PWR_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -1519,13 +1681,15 @@
 			)
 		)
 		(comp
-			(ref "D202")
+			(ref "D2")
 			(value "LED")
 			(footprint "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 			(description "Light emitting diode")
 			(fields
 				(field
 					(name "Sim.Pins") "1=K 2=A")
+				(field
+					(name "Role") "PWR_LED")
 				(field
 					(name "Footprint") "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 				(field
@@ -1542,6 +1706,10 @@
 			(property
 				(name "Sim.Pins")
 				(value "1=K 2=A")
+			)
+			(property
+				(name "Role")
+				(value "PWR_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -1579,13 +1747,15 @@
 			)
 		)
 		(comp
-			(ref "D203")
+			(ref "D3")
 			(value "LED")
 			(footprint "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 			(description "Light emitting diode")
 			(fields
 				(field
 					(name "Sim.Pins") "1=K 2=A")
+				(field
+					(name "Role") "PWR_LED")
 				(field
 					(name "Footprint") "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 				(field
@@ -1602,6 +1772,10 @@
 			(property
 				(name "Sim.Pins")
 				(value "1=K 2=A")
+			)
+			(property
+				(name "Role")
+				(value "PWR_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -1639,7 +1813,7 @@
 			)
 		)
 		(comp
-			(ref "D204")
+			(ref "D4")
 			(value "D")
 			(footprint "Diode_SMD:D_SMA_Handsoldering")
 			(description "Diode")
@@ -1648,6 +1822,8 @@
 					(name "Sim.Device") "D")
 				(field
 					(name "Sim.Pins") "1=K 2=A")
+				(field
+					(name "Role") "D_PROT_BACK")
 				(field
 					(name "Footprint") "Diode_SMD:D_SMA_Handsoldering")
 				(field
@@ -1668,6 +1844,10 @@
 			(property
 				(name "Sim.Pins")
 				(value "1=K 2=A")
+			)
+			(property
+				(name "Role")
+				(value "D_PROT_BACK")
 			)
 			(property
 				(name "Sheetname")
@@ -1705,7 +1885,7 @@
 			)
 		)
 		(comp
-			(ref "D205")
+			(ref "D5")
 			(value "D")
 			(footprint "Diode_SMD:D_SMA_Handsoldering")
 			(description "Diode")
@@ -1714,6 +1894,8 @@
 					(name "Sim.Device") "D")
 				(field
 					(name "Sim.Pins") "1=K 2=A")
+				(field
+					(name "Role") "D_PROT_BACK")
 				(field
 					(name "Footprint") "Diode_SMD:D_SMA_Handsoldering")
 				(field
@@ -1734,6 +1916,10 @@
 			(property
 				(name "Sim.Pins")
 				(value "1=K 2=A")
+			)
+			(property
+				(name "Role")
+				(value "D_PROT_BACK")
 			)
 			(property
 				(name "Sheetname")
@@ -1771,7 +1957,7 @@
 			)
 		)
 		(comp
-			(ref "D206")
+			(ref "D6")
 			(value "D")
 			(footprint "Diode_SMD:D_SMA_Handsoldering")
 			(description "Diode")
@@ -1780,6 +1966,8 @@
 					(name "Sim.Device") "D")
 				(field
 					(name "Sim.Pins") "1=K 2=A")
+				(field
+					(name "Role") "D_PROT_ADJ")
 				(field
 					(name "Footprint") "Diode_SMD:D_SMA_Handsoldering")
 				(field
@@ -1800,6 +1988,10 @@
 			(property
 				(name "Sim.Pins")
 				(value "1=K 2=A")
+			)
+			(property
+				(name "Role")
+				(value "D_PROT_ADJ")
 			)
 			(property
 				(name "Sheetname")
@@ -1837,7 +2029,7 @@
 			)
 		)
 		(comp
-			(ref "D207")
+			(ref "D7")
 			(value "D")
 			(footprint "Diode_SMD:D_SMA_Handsoldering")
 			(description "Diode")
@@ -1846,6 +2038,8 @@
 					(name "Sim.Device") "D")
 				(field
 					(name "Sim.Pins") "1=K 2=A")
+				(field
+					(name "Role") "D_PROT_ADJ")
 				(field
 					(name "Footprint") "Diode_SMD:D_SMA_Handsoldering")
 				(field
@@ -1866,6 +2060,10 @@
 			(property
 				(name "Sim.Pins")
 				(value "1=K 2=A")
+			)
+			(property
+				(name "Role")
+				(value "D_PROT_ADJ")
 			)
 			(property
 				(name "Sheetname")
@@ -1903,13 +2101,15 @@
 			)
 		)
 		(comp
-			(ref "D208")
+			(ref "D8")
 			(value "LED")
 			(footprint "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 			(description "Light emitting diode")
 			(fields
 				(field
 					(name "Sim.Pins") "1=K 2=A")
+				(field
+					(name "Role") "PWR_LED")
 				(field
 					(name "Footprint") "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 				(field
@@ -1926,6 +2126,10 @@
 			(property
 				(name "Sim.Pins")
 				(value "1=K 2=A")
+			)
+			(property
+				(name "Role")
+				(value "PWR_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -1963,13 +2167,15 @@
 			)
 		)
 		(comp
-			(ref "D209")
+			(ref "D9")
 			(value "LED")
 			(footprint "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 			(description "Light emitting diode")
 			(fields
 				(field
 					(name "Sim.Pins") "1=K 2=A")
+				(field
+					(name "Role") "PWR_LED")
 				(field
 					(name "Footprint") "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
 				(field
@@ -1986,6 +2192,10 @@
 			(property
 				(name "Sim.Pins")
 				(value "1=K 2=A")
+			)
+			(property
+				(name "Role")
+				(value "PWR_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -2023,11 +2233,13 @@
 			)
 		)
 		(comp
-			(ref "FB201")
+			(ref "FB1")
 			(value "BLM21PG121SN1D")
 			(footprint "Inductor_SMD:L_0805_2012Metric")
 			(description "Ferrite bead")
 			(fields
+				(field
+					(name "Role") "PI_FILTER_FB")
 				(field
 					(name "Footprint") "Inductor_SMD:L_0805_2012Metric")
 				(field
@@ -2040,6 +2252,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM21PG121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -2077,11 +2293,13 @@
 			)
 		)
 		(comp
-			(ref "FB202")
+			(ref "FB2")
 			(value "BLM21PG121SN1D")
 			(footprint "Inductor_SMD:L_0805_2012Metric")
 			(description "Ferrite bead")
 			(fields
+				(field
+					(name "Role") "PI_FILTER_FB")
 				(field
 					(name "Footprint") "Inductor_SMD:L_0805_2012Metric")
 				(field
@@ -2094,6 +2312,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM21PG121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -2131,11 +2353,13 @@
 			)
 		)
 		(comp
-			(ref "FB203")
+			(ref "FB3")
 			(value "BLM15PD121SN1D")
 			(footprint "Inductor_SMD:L_0402_1005Metric")
 			(description "Ferrite bead")
 			(fields
+				(field
+					(name "Role") "PI_FILTER_FB")
 				(field
 					(name "Footprint") "Inductor_SMD:L_0402_1005Metric")
 				(field
@@ -2148,6 +2372,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM15PD121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -2185,11 +2413,13 @@
 			)
 		)
 		(comp
-			(ref "FB204")
+			(ref "FB4")
 			(value "BLM15PD121SN1D")
 			(footprint "Inductor_SMD:L_0402_1005Metric")
 			(description "Ferrite bead")
 			(fields
+				(field
+					(name "Role") "PI_FILTER_FB")
 				(field
 					(name "Footprint") "Inductor_SMD:L_0402_1005Metric")
 				(field
@@ -2202,6 +2432,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM15PD121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -2239,11 +2473,13 @@
 			)
 		)
 		(comp
-			(ref "FB205")
+			(ref "FB5")
 			(value "BLM15PD121SN1D")
 			(footprint "Inductor_SMD:L_0402_1005Metric")
 			(description "Ferrite bead")
 			(fields
+				(field
+					(name "Role") "PI_FILTER_FB")
 				(field
 					(name "Footprint") "Inductor_SMD:L_0402_1005Metric")
 				(field
@@ -2256,6 +2492,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM15PD121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -2293,11 +2533,13 @@
 			)
 		)
 		(comp
-			(ref "FB206")
+			(ref "FB6")
 			(value "BLM15PD121SN1D")
 			(footprint "Inductor_SMD:L_0402_1005Metric")
 			(description "Ferrite bead")
 			(fields
+				(field
+					(name "Role") "PI_FILTER_FB")
 				(field
 					(name "Footprint") "Inductor_SMD:L_0402_1005Metric")
 				(field
@@ -2310,6 +2552,10 @@
 				(lib "Custom_FerriteBead")
 				(part "BLM15PD121SN1D")
 				(description "Ferrite bead")
+			)
+			(property
+				(name "Role")
+				(value "PI_FILTER_FB")
 			)
 			(property
 				(name "Sheetname")
@@ -2347,14 +2593,13 @@
 			)
 		)
 		(comp
-			(ref "J201")
+			(ref "J1")
 			(value "±5V In")
 			(footprint "Connector_JST:JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical")
 			(description "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)")
 			(fields
 				(field
-					(name "Field5")
-				)
+					(name "Role") "CONN_PWR_IN")
 				(field
 					(name "Footprint") "Connector_JST:JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical")
 				(field
@@ -2369,8 +2614,8 @@
 				(description "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)")
 			)
 			(property
-				(name "Field5")
-				(value "")
+				(name "Role")
+				(value "CONN_PWR_IN")
 			)
 			(property
 				(name "Sheetname")
@@ -2411,11 +2656,13 @@
 			)
 		)
 		(comp
-			(ref "R203")
+			(ref "R1")
 			(value "470")
 			(footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 			(description "Resistor")
 			(fields
+				(field
+					(name "Role") "R_LED")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 				(field
@@ -2428,6 +2675,10 @@
 				(lib "Device")
 				(part "R")
 				(description "Resistor")
+			)
+			(property
+				(name "Role")
+				(value "R_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -2465,11 +2716,13 @@
 			)
 		)
 		(comp
-			(ref "R204")
+			(ref "R2")
 			(value "470")
 			(footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 			(description "Resistor")
 			(fields
+				(field
+					(name "Role") "R_LED")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 				(field
@@ -2482,6 +2735,10 @@
 				(lib "Device")
 				(part "R")
 				(description "Resistor")
+			)
+			(property
+				(name "Role")
+				(value "R_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -2519,11 +2776,13 @@
 			)
 		)
 		(comp
-			(ref "R205")
+			(ref "R3")
 			(value "330")
 			(footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 			(description "Resistor")
 			(fields
+				(field
+					(name "Role") "R_LED")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 				(field
@@ -2536,6 +2795,10 @@
 				(lib "Device")
 				(part "R")
 				(description "Resistor")
+			)
+			(property
+				(name "Role")
+				(value "R_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -2573,11 +2836,13 @@
 			)
 		)
 		(comp
-			(ref "R206")
+			(ref "R4")
 			(value "240")
 			(footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 			(description "Resistor")
 			(fields
+				(field
+					(name "Role") "R_FB_BOT")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 				(field
@@ -2590,6 +2855,10 @@
 				(lib "Device")
 				(part "R")
 				(description "Resistor")
+			)
+			(property
+				(name "Role")
+				(value "R_FB_BOT")
 			)
 			(property
 				(name "Sheetname")
@@ -2627,11 +2896,13 @@
 			)
 		)
 		(comp
-			(ref "R207")
+			(ref "R5")
 			(value "240")
 			(footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 			(description "Resistor")
 			(fields
+				(field
+					(name "Role") "R_FB_TOP")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 				(field
@@ -2644,6 +2915,10 @@
 				(lib "Device")
 				(part "R")
 				(description "Resistor")
+			)
+			(property
+				(name "Role")
+				(value "R_FB_TOP")
 			)
 			(property
 				(name "Sheetname")
@@ -2681,11 +2956,13 @@
 			)
 		)
 		(comp
-			(ref "R208")
+			(ref "R6")
 			(value "240")
 			(footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 			(description "Resistor")
 			(fields
+				(field
+					(name "Role") "R_FB_TOP")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 				(field
@@ -2698,6 +2975,10 @@
 				(lib "Device")
 				(part "R")
 				(description "Resistor")
+			)
+			(property
+				(name "Role")
+				(value "R_FB_TOP")
 			)
 			(property
 				(name "Sheetname")
@@ -2735,11 +3016,13 @@
 			)
 		)
 		(comp
-			(ref "R209")
+			(ref "R7")
 			(value "240")
 			(footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 			(description "Resistor")
 			(fields
+				(field
+					(name "Role") "R_FB_TOP")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 				(field
@@ -2752,6 +3035,10 @@
 				(lib "Device")
 				(part "R")
 				(description "Resistor")
+			)
+			(property
+				(name "Role")
+				(value "R_FB_TOP")
 			)
 			(property
 				(name "Sheetname")
@@ -2789,11 +3076,13 @@
 			)
 		)
 		(comp
-			(ref "R210")
+			(ref "R8")
 			(value "220")
 			(footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 			(description "Resistor")
 			(fields
+				(field
+					(name "Role") "R_LED")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 				(field
@@ -2806,6 +3095,10 @@
 				(lib "Device")
 				(part "R")
 				(description "Resistor")
+			)
+			(property
+				(name "Role")
+				(value "R_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -2843,11 +3136,13 @@
 			)
 		)
 		(comp
-			(ref "R211")
+			(ref "R9")
 			(value "220")
 			(footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 			(description "Resistor")
 			(fields
+				(field
+					(name "Role") "R_LED")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
 				(field
@@ -2860,6 +3155,10 @@
 				(lib "Device")
 				(part "R")
 				(description "Resistor")
+			)
+			(property
+				(name "Role")
+				(value "R_LED")
 			)
 			(property
 				(name "Sheetname")
@@ -2897,12 +3196,14 @@
 			)
 		)
 		(comp
-			(ref "U201")
+			(ref "U1")
 			(value "AMS1117-1.2")
 			(footprint "Package_TO_SOT_SMD:SOT-223-3_TabPin2")
 			(datasheet "http://www.advanced-monolithic.com/pdf/ds1117.pdf")
 			(description "1A Low Dropout regulator, positive, 1.5V fixed output, SOT-223")
 			(fields
+				(field
+					(name "Role") "LDO_REG")
 				(field
 					(name "Footprint") "Package_TO_SOT_SMD:SOT-223-3_TabPin2")
 				(field
@@ -2914,6 +3215,10 @@
 				(lib "Regulator_Linear")
 				(part "AMS1117-1.5")
 				(description "1A Low Dropout regulator, positive, 1.5V fixed output, SOT-223")
+			)
+			(property
+				(name "Role")
+				(value "LDO_REG")
 			)
 			(property
 				(name "Sheetname")
@@ -2954,12 +3259,14 @@
 			)
 		)
 		(comp
-			(ref "U202")
+			(ref "U2")
 			(value "AMS1117CD-3.3")
 			(footprint "Package_TO_SOT_SMD:TO-252-3_TabPin2")
 			(datasheet "http://www.advanced-monolithic.com/pdf/ds1117.pdf")
 			(description "1A Low Dropout regulator, positive, 3.3V fixed output, TO-252")
 			(fields
+				(field
+					(name "Role") "LDO_REG")
 				(field
 					(name "Footprint") "Package_TO_SOT_SMD:TO-252-3_TabPin2")
 				(field
@@ -2971,6 +3278,10 @@
 				(lib "Regulator_Linear")
 				(part "AMS1117CD-3.3")
 				(description "1A Low Dropout regulator, positive, 3.3V fixed output, TO-252")
+			)
+			(property
+				(name "Role")
+				(value "LDO_REG")
 			)
 			(property
 				(name "Sheetname")
@@ -3011,12 +3322,14 @@
 			)
 		)
 		(comp
-			(ref "U203")
+			(ref "U3")
 			(value "LM317_TO-252")
 			(footprint "Package_TO_SOT_SMD:TO-252-2")
 			(datasheet "http://www.ti.com/lit/ds/snvs774n/snvs774n.pdf")
 			(description "1.5A 35V Adjustable Linear Regulator, TO-252")
 			(fields
+				(field
+					(name "Role") "ADJ_REG")
 				(field
 					(name "Footprint") "Package_TO_SOT_SMD:TO-252-2")
 				(field
@@ -3028,6 +3341,10 @@
 				(lib "Regulator_Linear")
 				(part "LM317_TO-252")
 				(description "1.5A 35V Adjustable Linear Regulator, TO-252")
+			)
+			(property
+				(name "Role")
+				(value "ADJ_REG")
 			)
 			(property
 				(name "Sheetname")
@@ -3068,12 +3385,14 @@
 			)
 		)
 		(comp
-			(ref "U204")
+			(ref "U4")
 			(value "LM337_TO252")
 			(footprint "Package_TO_SOT_SMD:TO-252-2")
 			(datasheet "http://www.farnell.com/datasheets/1636957.pdf")
 			(description "Negative 1A 35V Adjustable Linear Regulator, TO-252(DPAK)")
 			(fields
+				(field
+					(name "Role") "ADJ_REG")
 				(field
 					(name "Footprint") "Package_TO_SOT_SMD:TO-252-2")
 				(field
@@ -3085,6 +3404,10 @@
 				(lib "Regulator_Linear")
 				(part "LM337_TO252")
 				(description "Negative 1A 35V Adjustable Linear Regulator, TO-252(DPAK)")
+			)
+			(property
+				(name "Role")
+				(value "ADJ_REG")
 			)
 			(property
 				(name "Sheetname")
@@ -3595,17 +3918,17 @@
 			(name "+1V2")
 			(class "Default")
 			(node
-				(ref "C213")
+				(ref "C13")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C215")
+				(ref "C15")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB203")
+				(ref "FB3")
 				(pin "2")
 				(pintype "passive")
 			)
@@ -3615,22 +3938,22 @@
 			(name "+1V2_DIRTY")
 			(class "Default")
 			(node
-				(ref "C205")
+				(ref "C10")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C209")
+				(ref "C5")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB203")
+				(ref "FB3")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "U201")
+				(ref "U1")
 				(pin "2")
 				(pinfunction "VO_2")
 				(pintype "power_out")
@@ -3641,22 +3964,22 @@
 			(name "+2V5")
 			(class "Default")
 			(node
-				(ref "C221")
+				(ref "C21")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C225")
+				(ref "C25")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB205")
+				(ref "FB5")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R211")
+				(ref "R9")
 				(pin "2")
 				(pintype "passive")
 			)
@@ -3666,34 +3989,34 @@
 			(name "+2V5_DIRTY")
 			(class "Default")
 			(node
-				(ref "C218")
+				(ref "C18")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "D204")
+				(ref "D4")
 				(pin "2")
 				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "D206")
+				(ref "D6")
 				(pin "1")
 				(pinfunction "K_1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB205")
+				(ref "FB5")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "R208")
+				(ref "R6")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "U203")
+				(ref "U3")
 				(pin "2")
 				(pinfunction "VO_2")
 				(pintype "power_out")
@@ -3704,22 +4027,22 @@
 			(name "+3V3")
 			(class "Default")
 			(node
-				(ref "C214")
+				(ref "C14")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C216")
+				(ref "C16")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB204")
+				(ref "FB4")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R205")
+				(ref "R3")
 				(pin "2")
 				(pintype "passive")
 			)
@@ -3729,22 +4052,22 @@
 			(name "+3V3_DIRTY")
 			(class "Default")
 			(node
-				(ref "C206")
+				(ref "C11")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C210")
+				(ref "C6")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB204")
+				(ref "FB4")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "U202")
+				(ref "U2")
 				(pin "2")
 				(pinfunction "VO_2")
 				(pintype "power_out")
@@ -3755,50 +4078,50 @@
 			(name "+5V")
 			(class "Default")
 			(node
-				(ref "C207")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C211")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C217")
+				(ref "C17")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "D204")
+				(ref "C7")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C9")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "D4")
 				(pin "1")
 				(pinfunction "K_1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB201")
+				(ref "FB1")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R203")
+				(ref "R1")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "U201")
+				(ref "U1")
 				(pin "3")
 				(pinfunction "VI_3")
 				(pintype "power_in")
 			)
 			(node
-				(ref "U202")
+				(ref "U2")
 				(pin "3")
 				(pinfunction "VI_3")
 				(pintype "power_in")
 			)
 			(node
-				(ref "U203")
+				(ref "U3")
 				(pin "3")
 				(pinfunction "VI_3")
 				(pintype "power_in")
@@ -3809,22 +4132,22 @@
 			(name "+5V_DIRTY")
 			(class "Default")
 			(node
-				(ref "C201")
+				(ref "C1")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C203")
+				(ref "C3")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB201")
+				(ref "FB1")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "J201")
+				(ref "J1")
 				(pin "1")
 				(pinfunction "Pin_1_1")
 				(pintype "passive")
@@ -3835,22 +4158,22 @@
 			(name "-2V5")
 			(class "Default")
 			(node
-				(ref "C222")
+				(ref "C22")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C226")
+				(ref "C26")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB206")
+				(ref "FB6")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R210")
+				(ref "R8")
 				(pin "2")
 				(pintype "passive")
 			)
@@ -3860,34 +4183,34 @@
 			(name "-2V5_DIRTY")
 			(class "Default")
 			(node
-				(ref "C219")
+				(ref "C19")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "D205")
+				(ref "D5")
 				(pin "2")
 				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "D207")
+				(ref "D7")
 				(pin "1")
 				(pinfunction "K_1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB206")
+				(ref "FB6")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "R209")
+				(ref "R7")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "U204")
+				(ref "U4")
 				(pin "3")
 				(pinfunction "VO_3")
 				(pintype "power_out")
@@ -3898,38 +4221,38 @@
 			(name "-5V")
 			(class "Default")
 			(node
-				(ref "C208")
+				(ref "C12")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C212")
+				(ref "C20")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C220")
+				(ref "C8")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "D205")
+				(ref "D5")
 				(pin "1")
 				(pinfunction "K_1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB202")
+				(ref "FB2")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R204")
+				(ref "R2")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "U204")
+				(ref "U4")
 				(pin "2")
 				(pinfunction "VI_2")
 				(pintype "power_in")
@@ -3940,22 +4263,22 @@
 			(name "-5V_DIRTY")
 			(class "Default")
 			(node
-				(ref "C202")
+				(ref "C2")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C204")
+				(ref "C4")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "FB202")
+				(ref "FB2")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "J201")
+				(ref "J1")
 				(pin "3")
 				(pinfunction "Pin_3_3")
 				(pintype "passive")
@@ -3966,28 +4289,28 @@
 			(name "/+2V5_ADJ")
 			(class "Default")
 			(node
-				(ref "C223")
+				(ref "C23")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "D206")
+				(ref "D6")
 				(pin "2")
 				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R206")
+				(ref "R4")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "R208")
+				(ref "R6")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "U203")
+				(ref "U3")
 				(pin "1")
 				(pinfunction "ADJ_1")
 				(pintype "input")
@@ -3998,13 +4321,13 @@
 			(name "/+2V5_LED")
 			(class "Default")
 			(node
-				(ref "D209")
+				(ref "D9")
 				(pin "2")
 				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R211")
+				(ref "R9")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -4014,13 +4337,13 @@
 			(name "/+3V3_LED")
 			(class "Default")
 			(node
-				(ref "D203")
+				(ref "D3")
 				(pin "2")
 				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R205")
+				(ref "R3")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -4030,13 +4353,13 @@
 			(name "/+5V_LED")
 			(class "Default")
 			(node
-				(ref "D201")
+				(ref "D1")
 				(pin "2")
 				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R203")
+				(ref "R1")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -4046,28 +4369,28 @@
 			(name "/-2V5_ADJ")
 			(class "Default")
 			(node
-				(ref "C224")
+				(ref "C24")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "D207")
+				(ref "D7")
 				(pin "2")
 				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R207")
+				(ref "R5")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R209")
+				(ref "R7")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "U204")
+				(ref "U4")
 				(pin "1")
 				(pinfunction "ADJ_1")
 				(pintype "input")
@@ -4078,13 +4401,13 @@
 			(name "/-2V5_LED")
 			(class "Default")
 			(node
-				(ref "D208")
+				(ref "D8")
 				(pin "2")
 				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R210")
+				(ref "R8")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -4094,13 +4417,13 @@
 			(name "/-5V_LED")
 			(class "Default")
 			(node
-				(ref "D202")
+				(ref "D2")
 				(pin "2")
 				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R204")
+				(ref "R2")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -4110,189 +4433,189 @@
 			(name "GND")
 			(class "Default")
 			(node
-				(ref "C201")
+				(ref "C1")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C202")
+				(ref "C10")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C203")
+				(ref "C11")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C204")
+				(ref "C12")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C205")
+				(ref "C13")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C206")
+				(ref "C14")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C207")
+				(ref "C15")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C208")
+				(ref "C16")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C209")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
-				(ref "C210")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
-				(ref "C211")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
-				(ref "C212")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
-				(ref "C213")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
-				(ref "C214")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
-				(ref "C215")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
-				(ref "C216")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
-				(ref "C217")
+				(ref "C17")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C218")
+				(ref "C18")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C219")
+				(ref "C19")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C220")
+				(ref "C2")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C221")
+				(ref "C20")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C222")
+				(ref "C21")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C223")
+				(ref "C22")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C224")
+				(ref "C23")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C24")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "C225")
+				(ref "C25")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "C226")
+				(ref "C26")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "D201")
-				(pin "1")
-				(pinfunction "K_1")
+				(ref "C3")
+				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "D202")
+				(ref "C4")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C5")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C6")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C7")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C8")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C9")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "D1")
 				(pin "1")
 				(pinfunction "K_1")
 				(pintype "passive")
 			)
 			(node
-				(ref "D203")
+				(ref "D2")
 				(pin "1")
 				(pinfunction "K_1")
 				(pintype "passive")
 			)
 			(node
-				(ref "D208")
+				(ref "D3")
 				(pin "1")
 				(pinfunction "K_1")
 				(pintype "passive")
 			)
 			(node
-				(ref "D209")
+				(ref "D8")
 				(pin "1")
 				(pinfunction "K_1")
 				(pintype "passive")
 			)
 			(node
-				(ref "J201")
+				(ref "D9")
+				(pin "1")
+				(pinfunction "K_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "J1")
 				(pin "2")
 				(pinfunction "Pin_2_2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R206")
+				(ref "R4")
 				(pin "2")
 				(pintype "passive")
 			)
 			(node
-				(ref "R207")
+				(ref "R5")
 				(pin "1")
 				(pintype "passive")
 			)
 			(node
-				(ref "U201")
+				(ref "U1")
 				(pin "1")
 				(pinfunction "GND_1")
 				(pintype "power_in")
 			)
 			(node
-				(ref "U202")
+				(ref "U2")
 				(pin "1")
 				(pinfunction "GND_1")
 				(pintype "power_in")

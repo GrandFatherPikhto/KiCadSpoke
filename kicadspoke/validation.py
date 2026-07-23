@@ -133,7 +133,8 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
     """
     problems = []
     seen_names = {}
-    seen_anchors = {}
+    seen_ref_anchors = {}
+    seen_role_anchors = {}
     for clone in cfg.clone_placements:
         if not clone.enabled:
             continue
@@ -144,12 +145,22 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
 
         if clone.anchor_ref is not None:
             key = (clone.template, clone.anchor_ref, clone.anchor_pad)
-            if key in seen_anchors:
-                problems.append(f"{clone.name!r} и {seen_anchors[key]!r}: оба указывают один и тот же "
+            if key in seen_ref_anchors:
+                problems.append(f"{clone.name!r} и {seen_ref_anchors[key]!r}: оба указывают один и тот же "
                                 f"якорь (template={clone.template!r}, anchor_ref={clone.anchor_ref!r}, "
                                 f"anchor_pad={clone.anchor_pad!r}) — реестр не сможет различить их via/"
                                 f"треки; похоже на copy-paste опечатку (забыли поменять anchor_pad)")
-            seen_anchors[key] = clone.name
+            seen_ref_anchors[key] = clone.name
+
+        if clone.anchor_role is not None:
+            key = (clone.template, clone.anchor_role, clone.anchor_sheet, clone.anchor_pad)
+            if key in seen_role_anchors:
+                problems.append(f"{clone.name!r} и {seen_role_anchors[key]!r}: оба указывают один и тот же "
+                                f"якорь (template={clone.template!r}, anchor_role={clone.anchor_role!r}, "
+                                f"anchor_sheet={clone.anchor_sheet!r}, anchor_pad={clone.anchor_pad!r}) — "
+                                f"реестр не сможет различить их via/треки; похоже на copy-paste опечатку "
+                                f"(забыли поменять anchor_sheet/anchor_pad)")
+            seen_role_anchors[key] = clone.name
 
     if problems:
         raise ValidationError(format_fatal_error("clone_placements с неоднозначной identity", problems))

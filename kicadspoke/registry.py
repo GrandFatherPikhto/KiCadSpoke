@@ -229,7 +229,7 @@ class PlacementRegistry:
         for key in set(self.entries.keys()) - seen_keys:
             anchor_id = key.split('|', 1)[0]
             if (known_anchor_ids is not None
-                    and (anchor_id.startswith('anchor:') or anchor_id.startswith('name:'))
+                    and (anchor_id.startswith(('anchor:', 'role:', 'name:')))
                     and anchor_id in known_anchor_ids):
                 logger.debug(f"  {key}: не обработан в этом прогоне (--clone-placement "
                             f"отфильтровал {anchor_id!r}), но он есть в конфиге — "
@@ -337,7 +337,7 @@ class TrackRegistry:
         for key in set(self.entries.keys()) - seen_keys:
             anchor_id = key.split('|', 1)[0]
             if (known_anchor_ids is not None
-                    and (anchor_id.startswith('anchor:') or anchor_id.startswith('name:'))
+                    and (anchor_id.startswith(('anchor:', 'role:', 'name:')))
                     and anchor_id in known_anchor_ids):
                 logger.debug(f"  {key}: не обработан в этом прогоне (--clone-placement "
                             f"отфильтровал {anchor_id!r}), но он есть в конфиге — "

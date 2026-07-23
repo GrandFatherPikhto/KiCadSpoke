@@ -40,11 +40,20 @@ logger = logging.getLogger(__name__)
 
 def clone_uses_selection_mode(clone: ClonePlacement) -> bool:
     """
-    Режим "по выделению", если не заданы ни nets, ни params — иначе "по
-    цепям". Единственное место, где принимается это решение — и
+    Режим "по выделению", если:
+      - явно задан by_selection: true (приоритетно — см. ClonePlacement.
+        by_selection: нужен отдельно от implicit-вывода, потому что params
+        используется ТАКЖЕ для резолва плейсхолдеров via/track независимо
+        от режима ролей — без явного флага заданный ради одной лишь via
+        params молча переключил бы режим ролей на "по цепям"), ИЛИ
+      - не заданы ни nets, ни params (старое implicit-поведение, дефолт
+        для обратной совместимости).
+    Единственное место, где принимается это решение — и
     ClonePositionCalculator, и validation.py должны спрашивать именно
     здесь, а не дублировать правило у себя.
     """
+    if clone.by_selection:
+        return True
     return not (clone.nets or clone.params)
 
 
@@ -271,3 +280,80 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
 
     logger.info(f"[{clone.name}] сопоставлено по цепям: {len(role_to_ref)} ролей")
     return role_to_ref
+
+
+def _pad_on_sheet(adapter, fp, anchor_sheet: str) -> bool:
+    """
+    Хоть один пад fp сидит на локальной (иерархической) цепи, начинающейся
+    с '/{anchor_sheet}/' — точный префикс по сегментам пути, не подстрока
+    (см. обсуждение: '/Channel_0/' не должен совпасть с '/Channel_01/').
+    Работает ТОЛЬКО через имя цепи — попытка сопоставить по sheet_path
+    (UUID-цепочка) была эмпирически опровергнута (см. пробные скрипты в
+    чате: UUID уникален per-компонент, группировки по листу нет вовсе).
+    """
+    prefix = f"/{anchor_sheet}/"
+    for pad in adapter.get_footprint_pads(fp):
+        if pad.net and (pad.net.name == f"/{anchor_sheet}" or pad.net.name.startswith(prefix)):
+            return True
+    return False
+
+
+def resolve_anchor_by_role(adapter, clone: ClonePlacement) -> FootprintInstance:
+    """
+    Резолв якорного компонента clone_placement по anchor_role (поле Role
+    на плате, НЕ роль шаблона — это разные вещи: тут ищем сам якорь среди
+    ВСЕХ футпринтов платы, а не роли внутри клонируемого шаблона). Тот же
+    каскад сужения неоднозначности, что и у ролей шаблона:
+
+      1. кандидаты = все футпринты с Role == clone.anchor_role.
+      2. несколько — сузить до anchor_sheet (если задан): хоть один пад
+         на локальной цепи с этим префиксом (см. _pad_on_sheet).
+      3. всё ещё несколько — сузить до текущего выделения на плате.
+      4. всё ещё несколько, или 0 — ФАТАЛ со списком кандидатов и
+         подсказкой (anchor_sheet/выделение/явный anchor_ref).
+    """
+    all_fps = adapter.get_footprints()
+    candidates = [fp for fp in all_fps
+                  if adapter.get_field_value(fp, ROLE_FIELD_NAME) == clone.anchor_role]
+
+    if not candidates:
+        raise ValidationError(format_fatal_error(
+            f"{clone.name}: anchor_role {clone.anchor_role!r} не найден ни на одном компоненте платы",
+            [f"проверь, что поле Role проставлено в схеме и долетело до PCB "
+             f"(Update PCB from Schematic)"]
+        ))
+
+    narrowed = candidates
+    if len(narrowed) > 1 and clone.anchor_sheet:
+        by_sheet = [fp for fp in narrowed if _pad_on_sheet(adapter, fp, clone.anchor_sheet)]
+        if by_sheet:
+            if len(by_sheet) < len(narrowed):
+                logger.info(f"[{clone.name}] anchor_role {clone.anchor_role!r}: "
+                            f"{len(narrowed)} кандидатов сужено до {len(by_sheet)} "
+                            f"по anchor_sheet {clone.anchor_sheet!r}")
+            narrowed = by_sheet
+
+    if len(narrowed) > 1:
+        selected_items = adapter.get_selected_items()
+        selected_refs = {i.reference_field.text.value for i in selected_items
+                         if isinstance(i, FootprintInstance)}
+        if selected_refs:
+            by_selection = [fp for fp in narrowed
+                            if fp.reference_field.text.value in selected_refs]
+            if by_selection and len(by_selection) < len(narrowed):
+                logger.info(f"[{clone.name}] anchor_role {clone.anchor_role!r}: "
+                            f"{len(narrowed)} кандидатов сужено до {len(by_selection)} "
+                            f"по текущему выделению на плате")
+                narrowed = by_selection
+
+    if len(narrowed) == 1:
+        return narrowed[0]
+
+    refs = sorted(fp.reference_field.text.value for fp in narrowed)
+    raise ValidationError(format_fatal_error(
+        f"{clone.name}: anchor_role {clone.anchor_role!r} неоднозначен",
+        [f"кандидатов: {len(narrowed)}: {refs}. Выходы: уточни anchor_sheet "
+         f"(если у кандидатов есть локальные цепи разных листов), ЛИБО выдели "
+         f"нужный экземпляр на плате перед запуском, ЛИБО укажи явно anchor_ref "
+         f"вместо anchor_role: {refs[0]!r}"]
+    ))
