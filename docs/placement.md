@@ -37,10 +37,10 @@ placement/
 └── services/                   # Service classes
     ├── __init__.py
     ├── component_pool.py       # Component selection by role and net (for ManualSpoke)
-    ├── clone_role_resolver.py  # Role resolution for ClonePlacement (with anchor proximity)
-    ├── clone_position_calculator.py # Position/via/track calculation for ClonePlacement
+    ├── clone_role_resolver.py  # Role resolution for ClonePlacement (with anchor proximity, by_selection, refs)
+    ├── clone_position_calculator.py # Position/via/track calculation for ClonePlacement (with physical anchor)
     ├── manual_position_calculator.py   # Position/via calculation for ManualSpoke (no tracks)
-    └── via_planner.py          # Thermal via planning and via filtering via registry
+    └── via_planner.py          # Thermal via planning and via filtering via registry (live reconciliation)
 ```
 
 ---
@@ -149,7 +149,7 @@ Applies component moves. Includes collision checking, flipping, and batching.
 | `execute_moves(moves, check_collisions, collision_margin_mm)` | Executes moves. Returns `(failed_refs, move_log)`. |
 
 #### `executor/via_executor.py`
-Creates vias on the board. Uses the via registry to record created vias (`registry.record_created`).
+Creates vias on the board. Uses the via registry (`PlacementRegistry`) to record created vias (`registry.record_created`).
 
 | Method | Description |
 |-------|-------------|
@@ -168,10 +168,12 @@ A façade combining all execution phases and managing logging.
 | Method | Description |
 |-------|-------------|
 | `__init__(adapter, config, batch_size)` | Initialisation. |
-| `execute_moves(moves, ...)` | Calls `MoveExecutor.execute_moves()` and stores the log. |
-| `execute_vias(vias, registry)` | Calls `ViaExecutor.execute_vias()` and stores via log. |
-| `execute_tracks(tracks, registry)` | Calls `TrackExecutor.execute_tracks()` and writes a single JSON log (combining moves, vias, tracks). |
+| `execute_moves(moves, ...)` | Calls `MoveExecutor.execute_moves()` and stores the move log in an internal buffer. |
+| `execute_vias(vias, registry)` | Calls `ViaExecutor.execute_vias()` and stores the via log in an internal buffer. |
+| `execute_tracks(tracks, registry)` | Calls `TrackExecutor.execute_tracks()` and **writes a single JSON log** (combining moves, vias, tracks). |
 | `execute(moves, vias, tracks, ...)` | Backward‑compatible wrapper (calls all phases). Not recommended for production. |
+
+**Important:** The operation log is written only after `execute_tracks()` is called (since tracks are the final phase). If there are no tracks, call `execute_tracks([])` to finalise logging.
 
 ---
 
@@ -190,13 +192,14 @@ A façade combining all execution phases and managing logging.
 
 #### `services/clone_role_resolver.py`
 Resolves roles for `ClonePlacement`. Supports two modes:
-- **by selection** – reads roles from selected components.
-- **by nets** – finds components by expected net (with placeholders). In case of ambiguity, uses cascading narrowing: selection → sheet hierarchy → **physical proximity to the anchor** (if the distance gap is sufficient, the closest candidate is chosen).
+- **by selection** – reads roles from selected components. Only one such clone can be processed per run (due to KiCad's single‑selection limitation).
+- **by nets** – finds components by expected net (with placeholders). In case of ambiguity, uses cascading narrowing: explicit `refs` → selection → sheet hierarchy → **physical proximity to the anchor** (if the distance gap is sufficient, the closest candidate is chosen). This allows distinguishing electrically identical filters on a common rail.
 
 Functions:
-- `clone_uses_selection_mode(clone)` – determines the mode.
+- `clone_uses_selection_mode(clone)` – determines the mode (considers `by_selection`, `nets`, `params`).
 - `resolve_roles_by_selection(adapter, template, clone_name)` – by selection.
 - `resolve_roles_by_nets(adapter, template, clone, anchor_position)` – by nets with anchor proximity.
+- `resolve_anchor_by_role(adapter, clone)` – finds the anchor by the `Role` field (alternative to `anchor_ref`).
 
 **Used in:** `clone_position_calculator.py`.
 
@@ -205,8 +208,8 @@ Functions:
 
 | Method | Description |
 |-------|-------------|
-| `_resolve_anchor(clone)` | Returns the absolute anchor point (pad centre or footprint centre) or `None`. |
-| `compute_raw_positions(clone_placements)` | For each clone, determines the mode, obtains `role_to_ref`, calls `apply_clone_geometry`, returns `(PlacedComponentInfo[], ViaCommand[], TrackCommand[])` with correct `registry_key`. |
+| `_resolve_anchor(clone)` | Returns the absolute anchor point (pad centre or footprint centre) or `None`. Handles `anchor_ref`/`anchor_pad` and `anchor_role`/`anchor_sheet`. |
+| `compute_raw_positions(clone_placements)` | For each clone, determines the mode, obtains `role_to_ref`, calls `apply_clone_geometry` (respecting `mirror`), returns `(PlacedComponentInfo[], ViaCommand[], TrackCommand[])` with correct `registry_key` (anchor_id is based on physical binding). |
 
 **Used in:** `planner.py`.
 
@@ -227,7 +230,7 @@ Functions:
 | Method | Description |
 |-------|-------------|
 | `_via_already_exists(existing_vias, position, net_name)` | Checks if a via with the given net and position exists (tolerance 0.01 mm). |
-| `plan_vias(planned_components, planned_vias, target_fp, target_layer)` | Filters `planned_vias` via `skip_existing_components` and the registry, builds keepout, calls `_plan_thermal_vias`. |
+| `plan_vias(planned_components, planned_vias, target_fp, target_layer)` | Filters `planned_vias` via `skip_existing_components` (compares against real vias on the board), builds keepout, calls `_plan_thermal_vias`. |
 | `_build_keepout(target_fp, planned, exclude)` | Builds keepout from pads of the IC and components. |
 | `_plan_thermal_vias(planned, target_fp, keepout, existing_vias)` | Generates thermal vias with free‑space search. |
 
@@ -243,7 +246,7 @@ Functions:
 - **`geometry/thermal_grid.py`** and **`geometry/keepout.py`** – thermal vias and keepout.
 - **`config.py`** – data structures (Config, SpokeTemplate, ManualSpoke, ClonePlacement, etc.).
 - **`validation.py`** – pre‑validation (including via/track nets).
-- **`registry.py`** – via and track registries (with live reconciliation).
+- **`registry.py`** – via (`PlacementRegistry`) and track (`TrackRegistry`) registries with live reconciliation.
 - **`net_resolution.py`** – net resolution with placeholders.
 - **`constants.py`** – tolerances, field names, timeouts.
 - **`utils/units.py`** – `MM` constant for unit conversion.
@@ -255,22 +258,26 @@ Functions:
 - **Three‑phase process** (mandatory for correct thermal via handling and idempotency):
   1. Execute `plan_moves()` → `execute_moves()`.
   2. Execute `adapter.refresh_board()`.
-  3. Execute `plan_vias()` → `execute_vias()` (with registry).
+  3. Execute `plan_vias()` → `execute_vias()` (with via registry).
   4. Execute `plan_tracks()` → `execute_tracks()` (with track registry).
   This is implemented in `kicadspoke_cli.py:cmd_apply()`.
 
 - **Collisions** – checked only for components (optional); tracks are not checked (rely on KiCad DRC). Disable with `--no-collision-check`.
 
-- **Operation logging** – saved to `logs/operation_*.json` and used by `undo` (including tracks).
+- **Operation logging** – saved to `logs/operation_*.json` and used by `undo` (including tracks). The log is written after `execute_tracks()` is called.
 
 - **Dry‑run** – shows moves, vias, and tracks. Thermal vias may differ slightly due to keepout, which is normal.
 
 - **Idempotency** – enabling `skip_existing_components: true` allows safe re‑runs. The via and track registries prevent duplication (reconciling with real objects on the board).
 
-- **Automatic refdes selection** – for `ManualSpoke` via `ComponentPool` using the `Role` field. For `ClonePlacement` – two modes (selection or nets) with disambiguation by anchor proximity.
+- **Automatic refdes selection** – for `ManualSpoke` via `ComponentPool` using the `Role` field. For `ClonePlacement` – two modes (selection or nets) with disambiguation by anchor proximity (including `refs` for extreme cases).
 
-- **Section cloning** – for repeated templates, use `clone_placements` with explicit nets (`nets`/`params`) and run without selection; for one‑off instances, use selection mode (no `nets`/`params`) and select components in KiCad before running.
+- **Section cloning** – for repeated templates, use `clone_placements` with explicit nets (`nets`/`params`) and run without selection; for one‑off instances, use selection mode (no `nets`/`params`, or with `by_selection: true`) and select components in KiCad before running.
 
 - **Tracks** – only supported in `ClonePlacement`. When extracting a template (`extract`), tracks are automatically included (if selected). When cloning, they are created together with components and vias.
 
 - **Layer placement** – each component may have its own layer (per‑placement); for `ManualSpoke`, the global `layer` from the config is used. When mirroring (`mirror`), layers are inverted.
+
+- **Anchor by role** – instead of `anchor_ref`, you can use `anchor_role` (the `Role` field of the anchor component). This survives re‑annotation. You can further narrow the search with `anchor_sheet` (local net prefix) or `anchor_pad`.
+
+- **Explicit refs** – in `ClonePlacement`, you can specify `refs: {role: refdes}` as a last resort when candidates are indistinguishable by nets, selection, or proximity.

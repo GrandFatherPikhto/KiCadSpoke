@@ -240,3 +240,19 @@ class TestResolveRolesByNets:
         assert "PI_FILTER_C2" in msg
         assert "PI_FILTER_FB" in msg and "C99" in msg and "+3V3" in msg
         assert "FB_FILTER_C3" not in msg  # эта роль резолвилась успешно, в проблемах её быть не должно
+
+    # ---------- Новый тест на refs (явный override) ----------
+    def test_explicit_refs_override_all_other_resolution(self):
+        """refs в ClonePlacement должен иметь высший приоритет, минуя поиск по цепям."""
+        tpl = SpokeTemplate(name="t", components=[TemplateComponentSlot(role="X")])
+        # Есть два кандидата на одной цепи, но refs указывает конкретный
+        fps = [_make_fp("A", "X", ["NET1"]), _make_fp("B", "X", ["NET1"])]
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = fps
+        adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprint_pads.side_effect = _get_pads
+
+        clone = ClonePlacement(name="c", template="t", origin_x_mm=0, origin_y_mm=0,
+                               nets={"X": "NET1"}, refs={"X": "B"})
+        result = resolve_roles_by_nets(adapter, tpl, clone)
+        assert result == {"X": "B"}  # Должен взять B, несмотря на неоднозначность

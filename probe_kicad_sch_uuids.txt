@@ -1,0 +1,35 @@
+--- Шаг 1: сканирую *.kicad_sch в D:\Projects\KiCad\Mishin-Coil\mishin-coil-gen-v1\ ---
+
+Найдено (sheet ...) блоков с uuid: 14
+
+  fb16a0a4-f706-49de-9d7e-e9bca2583031  ->  'Channel_0'  (в файле mishin-coil-gen-v1.kicad_sch)
+  37fadcfc-2053-465b-a57f-61f3ae87f57a  ->  'Channel_1'  (в файле mishin-coil-gen-v1.kicad_sch)
+  6b018f07-dde5-4cc8-ba46-360bc68cf3d3  ->  'Channel_2'  (в файле mishin-coil-gen-v1.kicad_sch)
+  54907477-d61a-436e-accc-8163cba76fe3  ->  'DAC'  (в файле channel_tpl.kicad_sch)
+  d42c8f9e-ca38-4689-a3ff-f18f1b2713d0  ->  'DAC Sheet'  (в файле channel.kicad_sch)
+  a49990ef-0acf-4623-aebb-07783deb8795  ->  'FPGA'  (в файле mishin-coil-gen-v1.kicad_sch)
+  946f3b70-3e91-410c-9ab8-56896ff295fa  ->  'OpAmp'  (в файле channel_tpl.kicad_sch)
+  8e948621-31a2-4f8b-97ff-6a0f68a3802c  ->  'OpAmp Sheet'  (в файле channel.kicad_sch)
+  f0f029e2-aa73-4d43-9475-f78bf5f02acc  ->  'Power'  (в файле mishin-coil-gen-v1.kicad_sch)
+  b92eea1b-aee8-4238-ad4b-98478f39afa8  ->  'Power Amplifier Sheet'  (в файле channel.kicad_sch)
+  3a866c32-4da3-4a32-919e-3045212ce483  ->  'Power Amplifier Sheet'  (в файле channel_tpl.kicad_sch)
+  1e5ef2d5-403e-4249-9e10-59c2a2eeeae0  ->  'Power ±18V'  (в файле mishin-coil-gen-v1.kicad_sch)
+  e05f13f1-9ed3-475d-a9dc-b8a3b23e875e  ->  'TFL'  (в файле channel.kicad_sch)
+  5aaff5b5-4f08-4c6b-b668-79f4c527a860  ->  'TFL'  (в файле channel_tpl.kicad_sch)
+
+--- Шаг 2: сверяю с sheet_path.path через kipy ---
+
+Всего уникальных UUID во всех sheet_path.path: 221
+Из них совпало со словарём из .kicad_sch: 10
+
+Совпавшие (первые 10):
+  6b018f07-dde5-4cc8-ba46-360bc68cf3d3 -> ('Channel_2', 'mishin-coil-gen-v1.kicad_sch')
+  37fadcfc-2053-465b-a57f-61f3ae87f57a -> ('Channel_1', 'mishin-coil-gen-v1.kicad_sch')
+  f0f029e2-aa73-4d43-9475-f78bf5f02acc -> ('Power', 'mishin-coil-gen-v1.kicad_sch')
+  1e5ef2d5-403e-4249-9e10-59c2a2eeeae0 -> ('Power ±18V', 'mishin-coil-gen-v1.kicad_sch')
+  5aaff5b5-4f08-4c6b-b668-79f4c527a860 -> ('TFL', 'channel_tpl.kicad_sch')
+  3a866c32-4da3-4a32-919e-3045212ce483 -> ('Power Amplifier Sheet', 'channel_tpl.kicad_sch')
+  946f3b70-3e91-410c-9ab8-56896ff295fa -> ('OpAmp', 'channel_tpl.kicad_sch')
+  a49990ef-0acf-4623-aebb-07783deb8795 -> ('FPGA', 'mishin-coil-gen-v1.kicad_sch')
+  fb16a0a4-f706-49de-9d7e-e9bca2583031 -> ('Channel_0', 'mishin-coil-gen-v1.kicad_sch')
+  54907477-d61a-436e-accc-8163cba76fe3 -> ('DAC', 'channel_tpl.kicad_sch')

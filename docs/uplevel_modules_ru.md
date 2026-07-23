@@ -15,7 +15,7 @@
 |---------|----------|
 | `setup_logging(verbose, log_file)` | Настраивает логирование: уровень (INFO/DEBUG), вывод в консоль и/или файл. |
 | `cmd_apply(args)` | Команда `apply`: загружает конфиг, подключается к KiCad, запускает валидацию, планирование и **трёхфазное** исполнение (перемещения → refresh → via → треки). Поддерживает `--dry-run` и `--clone-placement` для обработки одного клона. |
-| `cmd_extract(args)` | Команда `extract`: извлекает шаблон из текущего выделения на плате (включая **треки**) и записывает его в JSON или YAML. Поддерживает `--param`, `--net-template`, `--origin-by-via-net`, `--origin-by-component-role`. Формат определяется расширением файла; при `.json` файл записывается как плоский словарь без обёртки `templates:`. |
+| `cmd_extract(args)` | Команда `extract`: извлекает шаблон из текущего выделения на плате (включая **треки**) и записывает его в JSON или YAML. Поддерживает `--param`, `--net-template`, `--origin-by-via-net`, `--origin-by-component-role`, а также **профили** (`--profiles`, `--profile`) для удобного переиспользования параметров. Формат определяется расширением файла; при `.json` файл записывается как плоский словарь без обёртки `templates:`. |
 | `cmd_undo(args)` | Команда `undo`: находит последний JSON-лог в папке `logs/`, вызывает `undo_last_operation()` (удаляет созданные via **и треки**, восстанавливает компоненты). |
 | `main()` | Парсит аргументы (поддерживает неявный `apply`), настраивает логирование, вызывает соответствующую команду, перехватывает исключения. |
 
@@ -25,8 +25,8 @@
 **Особенности:**  
 - Поддерживает четыре команды: `apply`, `undo`, `extract`, `clone-extract`.
 - В режиме `apply` выполняет трёхфазный процесс: перемещения → via → треки (с промежуточным перечитыванием платы).
-- Флаг `--clone-placement NAME` позволяет обработать только один клон в режиме «по выделению» (полезно для отладки).
-- В режиме `extract` использует выделение в PCB-редакторе для создания шаблона; извлекает компоненты, via и треки.
+- Флаг `--clone-placement NAME` позволяет обработать только один клон в режиме «по выделению» (полезно для отладки) или при необходимости обработать один из нескольких клонов.
+- В режиме `extract` использует выделение в PCB-редакторе для создания шаблона; извлекает компоненты, via и треки. Поддерживает профили, которые хранят параметры (`name`, `output`, `param`, `net_template`, `origin_by_via_net`, `origin_by_component_role`) в отдельном YAML-файле.
 - Все исключения перехватываются и логируются; пользовательские (`PlacerError`) выводятся без стека.
 
 ---
@@ -47,26 +47,26 @@
 | `SpokeTemplate` | Полный шаблон спицы: имя, список via, список треков, список слотов компонентов, абсолютный `layer`. |
 | `ManualSpoke` | Конкретная спица: пад, шаблон, сдвиг, поворот, флаг `enabled`. |
 | `Rule` | Правило для одной цепи: имя цепи, список спиц, `anchor_ref` (обязательное поле). |
-| `ClonePlacement` | Клонируемое размещение: имя, шаблон, абсолютная точка или сдвиг от якоря, угол, словари `nets`, `params`, `net_overrides`, `layer`, `mirror`, `refs`. |
+| `ClonePlacement` | Клонируемое размещение: имя, шаблон, абсолютная точка или сдвиг от якоря, угол, словари `nets`, `params`, `net_overrides`, `layer`, `mirror`, `refs`, `by_selection`, `anchor_role`, `anchor_sheet`, `anchor_pad`. |
 | `Config` | Главный объект: глобальный `layer`, шаблоны, термовиа, правила, клонирования, флаги. |
 
 **Основные функции:**
 
 | Функция | Описание |
 |---------|----------|
-| `load_config(path)` | Читает YAML, загружает внешний файл шаблонов (`templates_file`), если указан, и объединяет с инлайновыми `templates` (инлайновые имеют приоритет). Парсит все секции, возвращает объект `Config`. Проверяет уникальность ролей в шаблонах и корректность `layer`/`mirror` в `ClonePlacement`. |
+| `load_config(path)` | Читает YAML, загружает внешний файл шаблонов (`templates_file`), если указан, и объединяет с инлайновыми `templates` (инлайновые имеют приоритет). Парсит все секции, возвращает объект `Config`. Проверяет уникальность ролей в шаблонах, корректность `layer`/`mirror` в `ClonePlacement`, наличие якоря при использовании `anchor_pad`, уникальность имён и физических якорей (`anchor_ref`/`anchor_role`) среди `clone_placements`. |
 | `_load_template_via(data)` | Загружает `TemplateVia`. Проверяет, что `net` — строка (защита от случайного вложения `net_overrides`). |
 | `_load_template_track(data)` | Загружает `TemplateTrack`. Проверяет, что `net` — строка. |
 | `_load_template_component_slot(data)` | Загружает `TemplateComponentSlot`. |
 | `_load_spoke_template(name, data)` | Загружает `SpokeTemplate` с проверкой уникальности ролей. |
 | `_load_manual_spoke(data)` | Загружает `ManualSpoke`. |
-| `_load_clone_placement(data)` | Загружает `ClonePlacement`. Проверяет наличие `anchor_ref` для `anchor_pad` и обязательность координат при отсутствии якоря. |
+| `_load_clone_placement(data)` | Загружает `ClonePlacement`. Проверяет наличие `anchor_ref` для `anchor_pad`, обязательность координат при отсутствии якоря, а также взаимную исключительность `anchor_ref` и `anchor_role`. |
 
 **Особенности:**  
 - **`templates_file`** — путь к внешнему файлу шаблонов (JSON или YAML). Инлайновые `templates` дополняют/переопределяют внешние.
 - Проверка уникальности ролей внутри шаблона (дублирование недопустимо).
 - Поддержка `net_template` для клонирования (плейсхолдеры для цепей).
-- Для `ClonePlacement` поддерживаются два режима сопоставления ролей: «по выделению» (без `nets`/`params`) и «по цепям» (с `nets` или `params`).
+- Для `ClonePlacement` поддерживаются два режима сопоставления ролей: «по выделению» (без `nets`/`params`) и «по цепям» (с `nets` или `params`). Явный флаг `by_selection` переопределяет автоматическое определение.
 - Наследование `net` для via и треков: если `net` не указан, берётся из `rule.net` (для ManualSpoke) или обязателен для ClonePlacement.
 - Перекрёстная валидация `layer`/`mirror`: `mirror` без смены слоя или смена слоя без `mirror` — фатальная ошибка.
 - Устаревшие поля `target_ref` и `side` в корне конфига — фатальная ошибка.
@@ -133,16 +133,16 @@
 | `TrackRegistryEntry` | Dataclass для трека: UUID, координаты начала/конца, ширина, цепь, слой. |
 | `PlacementRegistry` | Класс, управляющий реестром via. |
 | `TrackRegistry` | Класс, управляющий реестром треков. |
-| `reconcile(planned_objects, known_clone_names)` | Сравнивает запланированные объекты с реестром и реальными объектами на плате, удаляет устаревшие, возвращает список объектов для реального создания. |
+| `reconcile(planned_objects, known_anchor_ids)` | Сравнивает запланированные объекты с реестром и реальными объектами на плате, удаляет устаревшие, возвращает список объектов для реального создания. |
 | `record_created(cmd, created_uuid)` | Записывает созданный объект в реестр. |
 
 **Особенности:**
 - **Сверка с живыми объектами на плате** — источник истины, а не только JSON-запись. Это предотвращает рассинхронизацию при ручном удалении или сбоях между записью в реестр и коммитом на плату.
 - Ключи реестра строятся по схеме: `anchor_id|template_name|role|via_index` (для треков аналогично).
-- `anchor_id` для ManualSpoke — `f"pad:{pad}"`, для ClonePlacement — `f"name:{name}"`.
+- `anchor_id` для ManualSpoke — `f"pad:{pad}"`, для ClonePlacement — `f"name:{clone.name}"` (или `anchor:{ref}:{pad}` / `role:{role}:{sheet}:{pad}` для физических якорей).
 - `role` для via уровня спицы — `__spoke__`.
 - Допуск на позицию: 0.01 мм.
-- Поддержка `known_clone_names` — при использовании `--clone-placement` via/треки других клонов не удаляются (prune).
+- Поддержка `known_anchor_ids` — при использовании `--clone-placement` via/треки других клонов не удаляются (prune).
 - Отдельные реестры для via и треков (разные файлы и разные структуры записей).
 
 **Используется в:** `kicadspoke_cli.py` (при выполнении `apply`), `executor/via_executor.py` и `executor/track_executor.py`.
@@ -209,15 +209,17 @@
 | `check_templates_and_pads_exist(adapter, cfg)` | Проверяет, что каждая включённая спица ссылается на существующий шаблон и существующую площадку целевого компонента (якоря). Пропускает отключённые спицы (`enabled=False`). |
 | `check_role_pool_sufficiency(adapter, cfg)` | Для каждого правила строит `ComponentPool` и сверяет требуемое количество компонентов каждой роли с доступным. Если не хватает — сообщает все нехватки разом. |
 | `check_clone_templates_exist(cfg)` | Проверяет, что каждый `ClonePlacement` ссылается на существующий шаблон (чисто конфиговая проверка, без подключения к KiCad). |
+| `check_no_duplicate_clone_anchors(cfg)` | Проверяет уникальность имён `clone_placements` и уникальность физических якорей (комбинации `template`, `anchor_ref`, `anchor_pad` или `template`, `anchor_role`, `anchor_sheet`, `anchor_pad`) среди включённых клонов. Фатально при дублировании. |
 | `check_clone_nets_exist_on_board(adapter, cfg)` | Резолвит `via.net` и `track.net` для каждого `ClonePlacement` и сверяет результат с реальными цепями платы (`adapter.get_all_nets()`). Отлавливает опечатки в `params` и `net_overrides`. |
-| `check_single_selection_based_clone(cfg)` | Проверяет, что в конфиге не более одного `ClonePlacement` в режиме «по выделению» (без `nets`/`params`), так как в KiCad активно только одно выделение. Подсказывает использовать `--clone-placement` для отладки. |
-| `run_all_checks(adapter, cfg)` | Запускает все проверки по порядку: `check_clone_templates_exist`, `check_single_selection_based_clone`, `check_templates_and_pads_exist`, `check_role_pool_sufficiency`, `check_clone_nets_exist_on_board`. |
+| `check_single_selection_based_clone(cfg)` | Проверяет, что в конфиге не более одного `ClonePlacement` в режиме «по выделению» (без `nets`/`params`, или с `by_selection: true`), так как в KiCad активно только одно выделение. Подсказывает использовать `--clone-placement` для отладки. |
+| `run_all_checks(adapter, cfg)` | Запускает все проверки по порядку: `check_clone_templates_exist`, `check_no_duplicate_clone_anchors`, `check_single_selection_based_clone`, `check_templates_and_pads_exist`, `check_role_pool_sufficiency`, `check_clone_nets_exist_on_board`. |
 
 **Особенности:**  
 - Сбор всех проблем: проверки собирают список ошибок, а не останавливаются на первой.
 - Использование `ComponentPool`: в `check_role_pool_sufficiency` строится пул для каждой цепи.
 - Для `ClonePlacement` проверяется, что не более одного клона в режиме «по выделению» (иначе фатальная ошибка).
-- `check_clone_nets_exist_on_board` — новая проверка, которая гарантирует, что резолвнутые цепи via и треков действительно существуют на плате.
+- `check_clone_nets_exist_on_board` — проверяет, что резолвнутые цепи via и треков действительно существуют на плате.
+- `check_no_duplicate_clone_anchors` — предотвращает конфликты в реестре при одинаковых физических якорях.
 - Форматирование ошибок через `format_fatal_error()` из `exceptions.py`.
 
 **Используется в:** `kicadspoke_cli.py` (перед планированием).
@@ -256,6 +258,7 @@ graph TD
     CLI --> Extract[template_extraction.py]
     CLI --> Undo[undo.py]
     CLI --> Constants[constants.py]
+    CLI --> NetResolution[net_resolution.py]
 
     Config --> Exceptions[exceptions.py]
     Config --> TemplatesFile[templates_file (external JSON/YAML)]
@@ -280,7 +283,7 @@ graph TD
     Undo --> Adapter
     Undo --> Exceptions
 
-    NetResolution[net_resolution.py] --> Exceptions
+    NetResolution --> Exceptions
     NetResolution --> Config (используется ClonePlacement)
     NetResolution --> Extract (parametrize_net)
 ```

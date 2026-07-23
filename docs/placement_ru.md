@@ -168,10 +168,12 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 | Метод | Описание |
 |-------|----------|
 | `__init__(adapter, config, batch_size)` | Инициализация. |
-| `execute_moves(moves, ...)` | Вызывает `MoveExecutor.execute_moves()` и сохраняет лог. |
-| `execute_vias(vias, registry)` | Вызывает `ViaExecutor.execute_vias()` и сохраняет лог via. |
-| `execute_tracks(tracks, registry)` | Вызывает `TrackExecutor.execute_tracks()` и записывает единый JSON-лог (объединяя перемещения, via и треки). |
+| `execute_moves(moves, ...)` | Вызывает `MoveExecutor.execute_moves()` и сохраняет лог перемещений во внутренний буфер. |
+| `execute_vias(vias, registry)` | Вызывает `ViaExecutor.execute_vias()` и сохраняет лог via во внутренний буфер. |
+| `execute_tracks(tracks, registry)` | Вызывает `TrackExecutor.execute_tracks()` и **записывает единый JSON-лог** (объединяя перемещения, via и треки). |
 | `execute(moves, vias, tracks, ...)` | Обратно совместимая обёртка (вызывает все фазы подряд). Не рекомендуется для боевого использования. |
+
+**Важно:** лог операции записывается только после выполнения `execute_tracks()`, так как треки – последняя фаза. Если треков нет, вызывается `execute_tracks([])` для завершения логирования.
 
 ---
 
@@ -190,13 +192,14 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 
 #### `services/clone_role_resolver.py`
 Разрешает роли для `ClonePlacement`. Поддерживает два режима:
-- **по выделению** – считывает роли из выделенных компонентов.
-- **по цепям** – ищет компоненты по ожидаемой цепи (с плейсхолдерами). В случае неоднозначности использует каскадное сужение: выделение → лист иерархии → **физическая близость к якорю** (если отрыв по расстоянию достаточен, выбирается ближайший кандидат).
+- **по выделению** – считывает роли из выделенных компонентов. В одном прогоне может быть только один такой клон (из-за ограничения KiCad на одно выделение).
+- **по цепям** – ищет компоненты по ожидаемой цепи (с плейсхолдерами). В случае неоднозначности использует каскадное сужение: явные `refs` → выделение → лист иерархии → **физическая близость к якорю** (если отрыв по расстоянию достаточен, выбирается ближайший кандидат). Это позволяет различать электрически одинаковые фильтры на общей шине.
 
 Функции:
-- `clone_uses_selection_mode(clone)` – определяет режим.
+- `clone_uses_selection_mode(clone)` – определяет режим (учитывает `by_selection`, `nets`, `params`).
 - `resolve_roles_by_selection(adapter, template, clone_name)` – по выделению.
 - `resolve_roles_by_nets(adapter, template, clone, anchor_position)` – по цепям с учётом близости к якорю.
+- `resolve_anchor_by_role(adapter, clone)` – находит якорь по полю `Role` (альтернатива `anchor_ref`).
 
 **Используется в:** `clone_position_calculator.py`.
 
@@ -205,8 +208,8 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 
 | Метод | Описание |
 |-------|----------|
-| `_resolve_anchor(clone)` | Возвращает абсолютную точку якоря (центр пада или футпринта) или `None`. |
-| `compute_raw_positions(clone_placements)` | Для каждого клона определяет режим, получает `role_to_ref`, вызывает `apply_clone_geometry`, возвращает `(PlacedComponentInfo[], ViaCommand[], TrackCommand[])` с корректными `registry_key`. |
+| `_resolve_anchor(clone)` | Возвращает абсолютную точку якоря (центр пада или футпринта) или `None`. Учитывает `anchor_ref`/`anchor_pad`, `anchor_role`/`anchor_sheet`. |
+| `compute_raw_positions(clone_placements)` | Для каждого клона определяет режим, получает `role_to_ref`, вызывает `apply_clone_geometry` (с учётом `mirror`), возвращает `(PlacedComponentInfo[], ViaCommand[], TrackCommand[])` с корректными `registry_key` (anchor_id формируется на основе физической привязки). |
 
 **Используется в:** `planner.py`.
 
@@ -227,7 +230,7 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 | Метод | Описание |
 |-------|----------|
 | `_via_already_exists(existing_vias, position, net_name)` | Проверяет существование via с заданной цепью и позицией (допуск 0.01 мм). |
-| `plan_vias(planned_components, planned_vias, target_fp, target_layer)` | Фильтрует `planned_vias` через `skip_existing_components` и реестр, строит keepout, вызывает `_plan_thermal_vias`. |
+| `plan_vias(planned_components, planned_vias, target_fp, target_layer)` | Фильтрует `planned_vias` через `skip_existing_components` (сверяет с реальными via на плате), строит keepout, вызывает `_plan_thermal_vias`. |
 | `_build_keepout(target_fp, planned, exclude)` | Строит keepout из падов IC и компонентов. |
 | `_plan_thermal_vias(planned, target_fp, keepout, existing_vias)` | Генерирует термовиа с поиском свободных мест. |
 
@@ -243,7 +246,7 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 - **`geometry/thermal_grid.py`** и **`geometry/keepout.py`** – для термовиа и keepout.
 - **`config.py`** – структуры данных (Config, SpokeTemplate, ManualSpoke, ClonePlacement и т.д.).
 - **`validation.py`** – предварительные проверки (включая цепей via и треков).
-- **`registry.py`** – реестры via и треков (с живой сверкой).
+- **`registry.py`** – реестры via (`PlacementRegistry`) и треков (`TrackRegistry`) с живой сверкой.
 - **`net_resolution.py`** – разрешение цепей с плейсхолдерами.
 - **`constants.py`** – допуски, имена полей, таймауты.
 - **`utils/units.py`** – `MM` для перевода единиц.
@@ -255,22 +258,28 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 - **Трёхфазный процесс** (обязателен для корректного учёта термовиа и идемпотентности):
   1. Выполнить `plan_moves()` → `execute_moves()`.
   2. Выполнить `adapter.refresh_board()`.
-  3. Выполнить `plan_vias()` → `execute_vias()` (с реестром).
+  3. Выполнить `plan_vias()` → `execute_vias()` (с реестром via).
   4. Выполнить `plan_tracks()` → `execute_tracks()` (с реестром треков).
   Это реализовано в `kicadspoke_cli.py:cmd_apply()`.
 
 - **Коллизии** – проверяются только для компонентов (опционально); треки не проверяются (полагаемся на DRC KiCad). Отключается флагом `--no-collision-check`.
 
-- **Логирование операции** – сохраняется в `logs/operation_*.json` и используется `undo` (включая треки).
+- **Логирование операции** – сохраняется в `logs/operation_*.json` и используется `undo` (включая треки). Запись происходит после выполнения `execute_tracks()`.
 
 - **Dry-run** – отображает перемещения, via и треки. Термовиа могут слегка отличаться из-за keepout, но это нормально.
 
 - **Идемпотентность** – включение `skip_existing_components: true` позволяет безопасно перезапускать скрипт. Реестры via и треков предотвращают дублирование (сверка с реальными объектами на плате).
 
-- **Автоматический подбор refdes** – для `ManualSpoke` через `ComponentPool` по полю `Role`. Для `ClonePlacement` – два режима (выделение или цепи) с разрешением неоднозначности по близости к якорю.
+- **Автоматический подбор refdes** – для `ManualSpoke` через `ComponentPool` по полю `Role`. Для `ClonePlacement` – два режима (выделение или цепи) с разрешением неоднозначности по близости к якорю (включая `refs` для крайних случаев).
 
-- **Клонирование секций** – для многократно повторяющихся шаблонов используйте `clone_placements` с явными цепями (`nets`/`params`) и запускайте без выделения; для штучных экземпляров – режим «по выделению» (без `nets` и `params`), выделяя компоненты в KiCad перед запуском.
+- **Клонирование секций** – для многократно повторяющихся шаблонов используйте `clone_placements` с явными цепями (`nets`/`params`) и запускайте без выделения; для штучных экземпляров – режим «по выделению» (без `nets` и `params`, или с `by_selection: true`), выделяя компоненты в KiCad перед запуском.
 
 - **Треки** – поддерживаются только в `ClonePlacement`. При извлечении шаблона (`extract`) треки попадают в шаблон автоматически (если выделены). При клонировании они создаются вместе с компонентами и via.
 
 - **Слой размещения** – для каждого компонента может быть свой (per‑placement), для `ManualSpoke` используется глобальный `layer` из конфига. При зеркалировании (`mirror`) слои инвертируются.
+
+- **Якорь по роли** – вместо `anchor_ref` можно использовать `anchor_role` (поле Role якорного компонента). Это устойчиво к перенумерации. Дополнительно можно сузить поиск с помощью `anchor_sheet` (префикс локальной цепи) или `anchor_pad`.
+
+- **Явные refs** – в `ClonePlacement` можно задать `refs: {role: refdes}` для крайних случаев, когда кандидаты неразличимы ни по цепям, ни по выделению, ни по близости к якорю.
+```
+

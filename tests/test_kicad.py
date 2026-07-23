@@ -23,25 +23,36 @@ def test_import():
 
 def test_adapter_has_methods():
     """Проверяем наличие всех методов интерфейса у адаптера."""
-    # Создаём экземпляр, но без реального подключения (таймаут малый, но не будет вызывать методы)
-    # Можно просто проверить, что методы существуют в классе
+    # Список методов, которые должны быть в KiCadBoardAdapter (включая новые)
     methods = [
+        # Основные методы доступа
         "refresh_board",
         "get_footprint",
         "get_footprints",
+        "get_vias",
+        "get_tracks",
+        "get_selected_items",
+        "get_field_value",
         "get_footprint_pads",
         "get_pad_by_number",
         "get_zone_by_name",
         "get_net_by_name",
+        "get_all_nets",
         "get_bounding_boxes",
+        # Транзакции
         "begin_commit",
         "push_commit",
         "drop_commit",
+        # Мутации
         "update_items",
         "create_items",
         "flip_selected",
         "commit_with_retry",
         "create_via",
+        "create_track",
+        "remove_by_id",
+        # Предупреждение о риске краша
+        "check_write_crash_risk",
     ]
     for method in methods:
         assert hasattr(Adapter, method), f"Метод {method} отсутствует в KiCadBoardAdapter"

@@ -132,7 +132,7 @@ The adapter is used throughout the project wherever KiCad interaction is needed:
 | `placement/executor/via_executor.py` | Creating vias and registering them. |
 | `placement/executor/track_executor.py` | Creating tracks and registering them. |
 | `placement/services/manual_position_calculator.py` | Looking up footprints by refdes. |
-| `placement/services/clone_position_calculator.py` | Looking up footprints during cloning. |
+| `placement/services/clone_position_calculator.py` | Looking up footprints during cloning (including anchor_role). |
 | `placement/services/via_planner.py` | Reading pads and creating thermal vias. |
 | `placement/services/component_pool.py` | Building the component pool by `Role` and net. |
 | `validation.py` | Checking pad/template existence and via/track net validity. |
@@ -153,6 +153,20 @@ Thanks to the `IBoardAdapter` interface, the code does not depend on a specific 
 - `get_selected_items()` requires that something is selected in KiCad. If a group is selected, it is correctly expanded into its members.
 - The adapter uses the default timeout `DEFAULT_TIMEOUT_MS` from `constants.py` (20000 ms). It can be overridden via the `timeout_ms` parameter when instantiating.
 - `remove_by_id()` is used by registries to delete obsolete vias/tracks; if the object with that UUID no longer exists, it returns `False` and logs a warning, but does not raise an exception.
+
+---
+
+## Error Handling and Diagnostics
+
+### Known Issues
+
+- **KiCad crash on first write (#24966)** – if the schematic editor is open and no interactive edits have been made. The adapter logs a warning and treats a `ConnectionError` as a probable crash.
+- **“KiCad is busy”** – occurs when KiCad is busy with a modal dialog or a long operation. The adapter automatically retries up to 3 times with delays.
+- **Stale UUIDs** – when deleting a via/track via `remove_by_id()`, if the object is already gone, the method returns `False` and logs a warning.
+
+### Diagnostic Tools
+
+For debugging connection issues and crashes, it is recommended to use the diagnostic script `diagnose_first_write_crash.py` (see `diagnostics.md`) and the external crash‑capture script `hunt-proc.ps1` to intercept crash dumps.
 
 ---
 

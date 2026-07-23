@@ -1,6 +1,6 @@
 # Команды KiCadSpoke (CLI)
 
-Этот документ содержит полный справочник по командам и флагам `kicadspoke_cli.py`, а также практические примеры для типовых сценариев. Актуально для версии **v1.20.0** и выше.
+Этот документ содержит полный справочник по командам и флагам `kicadspoke_cli.py`, а также практические примеры для типовых сценариев. Актуально для версии **v1.22.0** и выше.
 
 ---
 
@@ -35,7 +35,7 @@ python kicadspoke_cli.py apply <путь_к_конфигу.yaml> [опции]
 | `--log-file` | Сохранять логи в указанный файл. |
 | `--no-collision-check` | Отключить проверку коллизий (если даёт ложные срабатывания). |
 | `--collision-margin` | Дополнительный зазор при проверке коллизий (мм). По умолчанию `0.2`. |
-| `--clone-placement NAME` | Обработать только один клон с указанным именем. Полезно, когда в конфиге несколько клонов в режиме «по выделению» (в KiCad активно только одно выделение). |
+| `--clone-placement NAME` | Обработать только один клон с указанным именем. Полезно, когда в конфиге несколько клонов в режиме «по выделению» (в KiCad активно только одно выделение) или для отладки конкретного размещения. |
 
 ### Примеры
 
@@ -102,7 +102,7 @@ python kicadspoke_cli.py undo --verbose
 ### Синтаксис
 
 ```bash
-python kicadspoke_cli.py extract --name <имя_шаблона> --output <файл> [--timeout-ms] [--verbose] [--log-file] [--param KEY=VALUE] [--net-template ЛИТЕРАЛ=ПАТТЕРН] [--origin-by-via-net NET] [--origin-by-component-role ROLE]
+python kicadspoke_cli.py extract --name <имя_шаблона> --output <файл> [--timeout-ms] [--verbose] [--log-file] [--param KEY=VALUE] [--net-template ЛИТЕРАЛ=ПАТТЕРН] [--origin-by-via-net NET] [--origin-by-component-role ROLE] [--profiles FILE] [--profile NAME]
 ```
 
 ### Опции
@@ -118,6 +118,8 @@ python kicadspoke_cli.py extract --name <имя_шаблона> --output <фай
 | `--net-template ЛИТЕРАЛ=ПАТТЕРН` | Заменяет реальную цепь на паттерн с плейсхолдером (например, `DAC1_DB1=DAC{channel}_DB1`). Можно указывать несколько раз. |
 | `--origin-by-via-net NET` | Задаёт origin шаблона по позиции via с указанной цепью (вместо левого нижнего угла bbox). Фатально, если такой via нет или она не единственна. |
 | `--origin-by-component-role ROLE` | Задаёт origin по позиции компонента с указанной ролью. |
+| `--profiles FILE` | YAML-файл с именованными профилями для `extract`. |
+| `--profile NAME` | Использовать профиль из файла `--profiles` вместо явных флагов (нельзя сочетать с `--name`, `--output` и другими прямыми флагами). |
 
 **Важно:** перед запуском выделите в PCB-редакторе нужные компоненты, via и треки. Роли должны быть уникальны. При сохранении в JSON файл записывается **без обёртки `templates:`**, что позволяет использовать его непосредственно как `templates_file` в основном конфиге.
 
@@ -131,6 +133,28 @@ python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter
   --param PWR_IN='+3V3' --param PWR_OUT='+3V3_VCCIO' \
   --net-template '+3V3_VCCIO={PWR_OUT}' --net-template '+3V3={PWR_IN}' \
   --verbose
+```
+
+#### Извлечение шаблона с использованием профиля
+
+В файле `extract_profiles.yaml`:
+```yaml
+extract_profiles:
+  my_filter:
+    name: my_filter
+    output: templates/my_filter.json
+    param:
+      PWR_IN: '+3V3'
+      PWR_OUT: '+3V3_VCCIO'
+    net_template:
+      '+3V3_VCCIO': '{PWR_OUT}'
+      '+3V3': '{PWR_IN}'
+    origin_by_via_net: '+3V3_VCCIO'
+```
+
+Запуск:
+```bash
+python kicadspoke_cli.py extract --profiles extract_profiles.yaml --profile my_filter --verbose
 ```
 
 #### Извлечение шаблона в YAML (без параметризации)
@@ -156,8 +180,20 @@ python kicadspoke_cli.py extract --name my_filter --output 10CL006YE144C8G.yaml 
 ### Синтаксис
 
 ```bash
-python kicadspoke_cli.py clone-extract --net <файл.net> --pcb <файл.kicad_pcb> --channel <имя_канала> --output <файл.yaml> [--verbose]
+python kicadspoke_cli.py clone-extract --net <файл.net> --pcb <файл.kicad_pcb> --channel <имя_канала> --output <файл.yaml> [--profiles FILE] [--profile NAME] [--verbose]
 ```
+
+### Опции
+
+| Флаг | Описание |
+|------|----------|
+| `--net` | Путь к файлу `.net` (нетлист). |
+| `--pcb` | Путь к файлу `.kicad_pcb`. |
+| `--channel` | Имя канала (например, `Channel_0`). |
+| `--output` | Выходной YAML-файл. |
+| `--profiles FILE` | YAML-файл с именованными профилями для `clone-extract`. |
+| `--profile NAME` | Использовать профиль из файла `--profiles` вместо явных флагов. |
+| `--verbose` | Подробный вывод. |
 
 ### Пример
 
@@ -165,13 +201,28 @@ python kicadspoke_cli.py clone-extract --net <файл.net> --pcb <файл.kica
 python kicadspoke_cli.py clone-extract --net my_project.net --pcb my_project.kicad_pcb --channel Channel_0 --output snapshot.yaml --verbose
 ```
 
+С использованием профиля (`clone_profiles.yaml`):
+```yaml
+clone_profiles:
+  channel0:
+    net: my_project.net
+    pcb: my_project.kicad_pcb
+    channel: Channel_0
+    output: snapshot.yaml
+```
+
+Запуск:
+```bash
+python kicadspoke_cli.py clone-extract --profiles clone_profiles.yaml --profile channel0 --verbose
+```
+
 После выполнения вы получите YAML-файл с информацией о канале, который можно использовать для написания шаблона и `ClonePlacement`.
 
 ---
 
-## Утилита `transform_template.py` – трансформация шаблонов
+## Утилита `transform_template.py` – трансформация шаблонов (опционально)
 
-Отдельный скрипт для постобработки уже существующих шаблонов (YAML или JSON). Позволяет поворачивать, зеркалировать и переносить начало координат без повторного извлечения с платы.
+Отдельный скрипт для постобработки уже существующих шаблонов (YAML или JSON). Позволяет поворачивать, зеркалировать и переносить начало координат без повторного извлечения с платы. Находится в папке `utils/`.
 
 ### Синтаксис
 
@@ -382,3 +433,4 @@ python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
 ## Лицензия
 
 Все примеры распространяются под лицензией MIT, так же как и основной проект.
+

@@ -4,9 +4,9 @@
 
 Директория `tests/` содержит два типа тестов:
 
-1. **Модульные тесты** (unit tests) – выполняются **без подключения к KiCad**, используют моки и проверяют логику модулей: геометрию, конфигурацию, валидацию, реестр, извлечение шаблонов, разрешение цепей и т.д. Они быстрые, стабильные и запускаются в CI/CD.
+1. **Модульные тесты** (unit tests) – выполняются **без подключения к KiCad**, используют моки и проверяют логику модулей: геометрию, конфигурацию, валидацию, реестр, извлечение шаблонов, разрешение цепей, клонирование (`ClonePlacement`), преобразование шаблонов и т.д. Они быстрые, стабильные и запускаются в CI/CD.
 
-2. **Интеграционные тесты** (integration tests) – выполняются **с реальным KiCad** и проверяют сквозную работу через IPC: подключение, создание via, перемещение/флип компонентов, работу реестра, извлечение шаблонов из выделения, а также клонирование (`ClonePlacement`). Они требуют открытого KiCad с активной платой и отмечены маркером `@pytest.mark.integration`, чтобы не запускаться случайно.
+2. **Интеграционные тесты** (integration tests) – выполняются **с реальным KiCad** и проверяют сквозную работу через IPC: подключение, создание via и треков, перемещение/флип компонентов, работу реестра, извлечение шаблонов из выделения, клонирование (`ClonePlacement`) в реальном окружении. Они требуют открытого KiCad с активной платой и отмечены маркером `@pytest.mark.integration`, чтобы не запускаться случайно.
 
 ---
 
@@ -15,17 +15,20 @@
 ```
 tests/
 ├── conftest.py                       # Общие фикстуры для модульных тестов
+├── test_clone_geometry.py            # Геометрия ClonePlacement (поворот, зеркало, треки)
 ├── test_clone_placement_config.py    # Загрузка ClonePlacement из YAML
-├── test_clone_role_resolver.py       # Разрешение ролей для клонирования (по выделению и по цепям)
-├── test_execute_vias_owner_ref.py    # Корректность owner_ref в логах
+├── test_clone_placement_integration.py # Сквозной тест ClonePlacement (моки)
+├── test_clone_role_resolver.py       # Разрешение ролей для клонирования (выделение, цепи, близость к якорю)
+├── test_clone_selection_conflict.py  # Проверка конфликта нескольких клонов в режиме выделения
+├── test_execute_vias_owner_ref.py    # Корректность owner_ref в логах (via)
 ├── test_full_pipeline_templates.py   # Сквозной тест конвейера (моки) для ManualSpoke
 ├── test_kicad.py                     # Проверка адаптера (наличие методов)
 ├── test_net_resolution.py            # Разрешение цепей с плейсхолдерами (net_resolution)
 ├── test_pad_projection.py            # Предсказание позиции пада
 ├── test_registry_integration.py      # Полный цикл реестра (создание, обновление, prune) на моках
-├── test_skip_existing.py             # Идемпотентность компонентов и via
+├── test_skip_existing.py             # Идемпотентность компонентов, via и треков
 ├── test_spoke_layout.py              # Преобразование локальных координат шаблона (spoke_layout)
-├── test_template_extraction.py       # Извлечение шаблона из выделения (логика)
+├── test_template_extraction.py       # Извлечение шаблона из выделения (логика, треки)
 ├── test_two_phase_execution.py       # Двухфазное выполнение (moves → refresh → vias) на моках
 ├── test_undo_layer.py                # Сохранение и восстановление слоя в undo
 ├── test_unique_roles.py              # Уникальность ролей в шаблоне
@@ -35,6 +38,7 @@ tests/
     ├── conftest.py                   # Фикстуры для интеграционных тестов
     ├── test_connection.py            # Подключение и базовые операции
     ├── test_via_ops.py               # Создание/удаление via, работа реестра
+    ├── test_track_ops.py             # Создание/удаление треков (проверка API)
     ├── test_component_ops.py         # Перемещение/флип компонентов
     ├── test_extract.py               # Извлечение шаблона из выделения
     └── test_registry.py              # Полный цикл реестра с реальным KiCad
@@ -111,21 +115,24 @@ pytest tests/integration_tests/ -v -s -m integration
 
 | Файл | Что тестирует |
 |------|---------------|
+| `test_clone_geometry.py` | Геометрию `ClonePlacement`: преобразование локальных координат в абсолютные, углы компонентов, via и треки, зеркалирование (`mirror`), разрешение цепей через `params` и `net_overrides`. Проверяет фатальность via без `net`. |
 | `test_clone_placement_config.py` | Загрузку `ClonePlacement` из YAML, проверку полей `name`, `template`, `origin_x_mm`, `origin_y_mm`, `rotation_deg`, `nets`, `params`, `net_overrides`, `enabled`. |
-| `test_clone_role_resolver.py` | Разрешение ролей для `ClonePlacement` двумя режимами: по выделению (`resolve_roles_by_selection`) и по цепям (`resolve_roles_by_nets`), включая поддержку плейсхолдеров и `net_overrides`. |
+| `test_clone_placement_integration.py` | Сквозной тест `PlacementPlanner` с `ClonePlacement` (моки): совместная работа с `rules` (ManualSpoke) и клонами в одном прогоне, проверка `registry_key` для via. |
+| `test_clone_role_resolver.py` | Разрешение ролей для `ClonePlacement` двумя режимами: по выделению (`resolve_roles_by_selection`) и по цепям (`resolve_roles_by_nets`), включая плейсхолдеры, `net_overrides`, обработку неоднозначности и близость к якорю. |
+| `test_clone_selection_conflict.py` | Проверку, что в конфиге не более одного `ClonePlacement` в режиме «по выделению» (`check_single_selection_based_clone`), а также работу `clone_uses_selection_mode` с учётом `by_selection`, `nets`, `params`. |
 | `test_execute_vias_owner_ref.py` | Корректность `owner_ref` в JSON-логах (каждая via получает свой владелец) и вызов `registry.record_created` с правильным UUID. |
-| `test_full_pipeline_templates.py` | Сквозной тест конвейера с шаблонами (моки): расчёт позиций и via для `ManualSpoke`, распределение компонентов по ролям. |
-| `test_kicad.py` | Наличие всех методов интерфейса `IBoardAdapter` в `KiCadBoardAdapter`, импорт и конструктор. |
+| `test_full_pipeline_templates.py` | Сквозной тест конвейера с шаблонами (моки): расчёт позиций и via для `ManualSpoke`, распределение компонентов по ролям, проверка `registry_key`. |
+| `test_kicad.py` | Наличие всех методов интерфейса `IBoardAdapter` в `KiCadBoardAdapter`, импорт и конструктор (без реального IPC). |
 | `test_net_resolution.py` | Разрешение цепей с плейсхолдерами: подстановка из `params`, применение `net_overrides`, ошибки при отсутствии параметров. |
-| `test_pad_projection.py` | Предсказание позиции пада после перемещения/поворота (без флипа и с флипом). |
-| `test_registry_integration.py` | Полный цикл реестра (создание, обновление, prune) на моках. |
+| `test_pad_projection.py` | Предсказание позиции пада после перемещения/поворота (без флипа и с флипом), инвариантность `local_pad_offset` к углу. |
+| `test_registry_integration.py` | Полный цикл реестра (создание, обновление, prune) на моках, включая сверку с реальными via. |
 | `test_skip_existing.py` | Идемпотентность компонентов (пропуск уже стоящих на месте) и via (пропуск уже существующих с той же цепью и позицией). |
-| `test_spoke_layout.py` | Геометрическое преобразование локальных координат шаблона в глобальные (`spoke_layout`), включая via уровня спицы и компонента. |
-| `test_template_extraction.py` | Извлечение шаблона из выделения: проверка ролей, уникальности, вычисление origin, формирование YAML. |
-| `test_two_phase_execution.py` | Двухфазное выполнение (moves → refresh → vias) на моках – гарантирует, что via планируются после перемещений. |
+| `test_spoke_layout.py` | Геометрическое преобразование локальных координат шаблона в глобальные (`spoke_layout`), включая via уровня спицы и компонента, произвольное количество ролей. |
+| `test_template_extraction.py` | Извлечение шаблона из выделения: проверка ролей, уникальности, вычисление origin, фильтрация треков, параметризация цепей (`--net-template`), выбор origin по via/роли. |
+| `test_two_phase_execution.py` | Двухфазное выполнение (moves → refresh → vias) на моках – гарантирует, что via планируются после перемещений и имеют корректный `registry_key`. |
 | `test_undo_layer.py` | Сохранение и восстановление слоя компонента при undo (`original_layer` в JSON-логе). |
 | `test_unique_roles.py` | Проверка уникальности ролей внутри шаблона (фатальная ошибка при дублировании). |
-| `test_validation.py` | Предварительные проверки конфигурации: существование шаблонов и падов, достаточность компонентов по ролям, корректность `clone_placements`. |
+| `test_validation.py` | Предварительные проверки конфигурации: существование шаблонов и падов, достаточность компонентов по ролям, уникальность якорей клонов, резолв цепей via/треков, режим выделения для клонов. |
 
 ---
 
@@ -135,6 +142,7 @@ pytest tests/integration_tests/ -v -s -m integration
 |------|---------------|
 | `test_connection.py` | Подключение к KiCad, поиск компонента по refdes, поиск цепи по имени, получение всех via. |
 | `test_via_ops.py` | Создание/удаление via, работа реестра (`reconcile`, `record_created`), временная via (`temp_via`). |
+| `test_track_ops.py` | Создание/удаление треков (прямых дорожек) через API – проверяет работоспособность `create_items` для треков. |
 | `test_component_ops.py` | Перемещение компонента на 1 мм по X и обратно, флип на другую сторону и восстановление. |
 | `test_extract.py` | Извлечение шаблона из текущего выделения на плате (успех при выделении, ошибка при пустом выделении). |
 | `test_registry.py` | Полный цикл реестра с реальным KiCad: создание via, идемпотентность, обновление позиции (удаление старой, создание новой), prune. |

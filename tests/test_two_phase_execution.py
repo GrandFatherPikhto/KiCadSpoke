@@ -31,6 +31,7 @@ from kicadspoke.config import (
 from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.placement.executor import BatchExecutor
 from kicadspoke.geometry.spoke_layout import rotate_local_offset
+from kicadspoke.constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 MM = 1_000_000
 
@@ -113,3 +114,9 @@ def test_two_phase_flow_completes_and_via_geometry_is_correct():
     assert via.position.x == expected_x
     assert via.position.y == expected_y
     assert via.net_name == "GND"
+
+    # Проверяем, что registry_key заполнен (важно для идемпотентности)
+    assert via.registry_key is not None
+    # Для via уровня компонента роль LIGHT, а не SPOKE_LEVEL
+    assert "LIGHT" in via.registry_key
+    assert SPOKE_LEVEL_ROLE_PLACEHOLDER not in via.registry_key

@@ -14,9 +14,10 @@ from kipy.board_types import BoardLayer, Pad, FootprintInstance, Net
 
 from kicadspoke.config import (
     Config, ThermalViaArrayConfig, ClonePlacement, SpokeTemplate,
-    TemplateVia, TemplateComponentSlot
+    TemplateVia, TemplateComponentSlot, ManualSpoke, Rule
 )
 from kicadspoke.placement.planner import PlacementPlanner
+from kicadspoke.constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 MM = 1_000_000
 
@@ -85,13 +86,14 @@ def test_clone_placements_only_via_selection():
     clone_vias = [v for v in vias if v.owner_ref == "crystal2"]
     assert len(clone_vias) == 1
     assert clone_vias[0].net_name == "GND"
+    # Проверяем, что registry_key заполнен (важно для идемпотентности)
+    assert clone_vias[0].registry_key is not None
+    assert SPOKE_LEVEL_ROLE_PLACEHOLDER in clone_vias[0].registry_key
 
 
 def test_rules_and_clone_placements_together():
     """Одновременно и rules (ManualSpoke), и clone_placements — оба потока
     должны отработать в одном plan_moves()/plan_vias(), не мешая друг другу."""
-    from kicadspoke.config import ManualSpoke, Rule
-
     ic1_pads = [_make_pad("17", 50.0, 50.0, "+3V3")]
     ic1 = _make_fp("IC1")
     ic1.definition.items = ic1_pads
@@ -134,3 +136,12 @@ def test_rules_and_clone_placements_together():
 
     refs = {m.ref for m in moves}
     assert refs == {"C5", "Y1"}, f"оба потока должны дать свои перемещения, получили {refs}"
+
+    # Дополнительно проверим, что via для rules (ManualSpoke) тоже созданы
+    # (в этом тесте via нет, но если бы были, их бы проверили)
+    vias = planner.plan_vias()
+    # Здесь может быть via уровня спицы для cap_single, но мы не добавляли via в шаблон,
+    # так что via будут только от clone_placements
+    clone_vias = [v for v in vias if v.owner_ref == "xtal1"]
+    # Шаблон crystal не содержит via, значит clone_vias должно быть пусто
+    assert len(clone_vias) == 0

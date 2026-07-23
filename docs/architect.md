@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-**KiCadSpoke** is a command‑line tool for automated placement of components, vias, and tracks on PCBs in **KiCad 8/10** using **spoke templates**. It is an advanced script‑based alternative to the KiCad Replicate Layout plugin, designed for complex multi‑channel projects and automated design reuse via the IPC API.
+**KiCadSpoke** is a command‑line tool for automated placement of components, vias, and tracks on PCBs in **KiCad 10** using **spoke templates**. It is an advanced script‑based alternative to the KiCad Replicate Layout plugin, designed for complex multi‑channel projects and automated design reuse via the IPC API.
 
 The tool connects to a running KiCad instance via IPC (the `kipy` library) and performs:
 
@@ -12,7 +12,6 @@ The tool connects to a running KiCad instance via IPC (the `kipy` library) and p
 - Undo of the last operation (restores the board to its original state).
 - Extracting templates from the current PCB selection (command `extract`) with support for JSON output and net parametrisation.
 - **Template cloning** (`ClonePlacement`) – reusing a single template at multiple board locations with different nets and parameters.
-- **Template transformation** (rotation, mirroring, origin shift) using the separate `utils/transform_template.py` script.
 - **Disambiguation** of component selection by physical proximity to the anchor.
 
 The core concept is a **spoke** – a set of components, vias, and tracks that belong to a single IC pin or to an arbitrary point on the board (for cloned sections). The entire geometry of a spoke is described in **local coordinates (along, across)** as a **template**, which can be applied to any pad of the target IC (with shift and rotation) or to any board location (for ClonePlacement).
@@ -27,7 +26,7 @@ The core concept is a **spoke** – a set of components, vias, and tracks that b
 | **Separation of data and logic** | Templates (geometry) are machine‑generated data (only via `extract`); placement (cloning logic) is human‑written Python or YAML. Templates are stored separately (`templates_file`). |
 | **Encapsulation of IPC complexity** | All KiCad calls are concentrated in the adapter, which exposes a uniform `IBoardAdapter` interface. |
 | **Extensibility** | New via types, roles, templates, and tracks can be added easily thanks to the modular structure. |
-| **Safety** | Two‑phase (moves first, then vias/tracks) with intermediate board reload; pre‑validation before any modifications; logging and undo. |
+| **Safety** | Three‑phase execution (moves → vias → tracks) with intermediate board reload; pre‑validation before any modifications; logging and undo. |
 | **Idempotency** | Repeated runs do not duplicate already correctly placed items (via registry reconciliation against live board objects). |
 | **Determinism** | Automatic component selection from pools by role and net, sorted by natural numeric order; disambiguation by anchor proximity. |
 | **Physical IR** | The internal model stores only physical facts (coordinates, pad geometry); semantics (banks, roles) are stored as tags/metadata, not baked into the structure. |
@@ -42,8 +41,8 @@ kicadspoke/
 ├── config.py                         # Config loading (supports templates_file)
 ├── exceptions.py                     # Exception hierarchy
 ├── undo.py                           # Undo operations
-├── validation.py                     # Pre‑validation checks
-├── registry.py                       # Registry for vias and tracks (with live reconciliation)
+├── validation.py                     # Pre‑validation checks (including net resolution)
+├── registry.py                       # Registry for vias (PlacementRegistry) and tracks (TrackRegistry)
 ├── net_resolution.py                 # Net resolution for cloning (and reverse parametrisation)
 ├── template_extraction.py            # Template extraction (supports tracks, JSON, net parametrisation)
 ├── constants.py                      # Global constants
@@ -52,8 +51,7 @@ kicadspoke/
 │   ├── pad_projection.py             # Pad position prediction after move/rotate/flip
 │   ├── spoke_layout.py               # Local‑to‑global transformation for ManualSpoke
 │   ├── clone_geometry.py             # Transformation for ClonePlacement (supports tracks and mirror)
-│   ├── thermal_grid.py               # Thermal via grid generation
-│   └── placement.py                  # (deprecated)
+│   └── thermal_grid.py               # Thermal via grid generation
 ├── kicad/                            # KiCad adapter
 │   ├── adapter.py                    # KiCadBoardAdapter implementation (supports tracks)
 │   └── interfaces.py                 # IBoardAdapter abstraction
@@ -106,9 +104,8 @@ Modules that work with coordinates, independent of KiCad:
 - **`keepout.py`** – `Rect` (AABB) class and functions for building keepout areas, checking point clearance, finding free positions.
 - **`pad_projection.py`** – predicts pad position after moving/rotating the component, accounting for flipping.
 - **`spoke_layout.py`** – transforms template local coordinates (`along/across`) to absolute board coordinates for `ManualSpoke` (pad‑based). Generates vias and **tracks** using `rule.net` as default net.
-- **`clone_geometry.py`** – similar transformation for `ClonePlacement`, but without pad binding: uses an absolute origin `(origin_x, origin_y)`, resolves via/track nets via `net_resolution` (with placeholder support). Supports mirroring.
+- **`clone_geometry.py`** – similar transformation for `ClonePlacement`, but without pad binding: uses an absolute origin `(origin_x, origin_y)`, resolves via/track nets via `net_resolution` (with placeholder support). Supports mirroring (`mirror`).
 - **`thermal_grid.py`** – generates thermal via grids under pads.
-- **`placement.py`** – deprecated, kept for backward compatibility.
 
 ### 4.3. Business Logic (`placement/`)
 
@@ -123,7 +120,7 @@ Modules that work with coordinates, independent of KiCad:
 - **`interfaces.py`** – defines `IPositionCalculator` and `IViaPlanner` to allow easy replacement of implementations.
 - **`services/`**:
   - `ComponentPool` – collects components by `Role` field and net, sorts them, assigns to spokes (for `ManualSpoke`).
-  - `CloneRoleResolver` – resolves roles for `ClonePlacement` in two modes: by selection (reads roles from selected components) and by nets (explicit net assignment with placeholders via `net_resolution`). In net mode, **disambiguation** is performed by physical proximity to the anchor (if multiple candidates exist, the closest one is chosen if the distance margin is sufficient).
+  - `CloneRoleResolver` – resolves roles for `ClonePlacement` in two modes: by selection (reads roles from selected components) and by nets (explicit net assignment with placeholders via `net_resolution`). In net mode, **disambiguation** is performed by physical proximity to the anchor (if multiple candidates exist, the closest one is chosen if the distance margin is sufficient). Supports `anchor_role`, `anchor_sheet`, `by_selection`, and explicit `refs`.
   - `ManualPositionCalculator` – implements `IPositionCalculator` for `rules`: builds a pool, applies `apply_spoke_geometry`, returns `PlacedComponentInfo` and `ViaCommand`.
   - `ClonePositionCalculator` – implements calculation for `clone_placements`, using `apply_clone_geometry` and `clone_role_resolver`, returns components, vias, and tracks.
   - `ViaPlanner` – implements `IViaPlanner`: handles only thermal vias and existing‑via filtering via the registry (`skip_existing_components`).
@@ -131,13 +128,13 @@ Modules that work with coordinates, independent of KiCad:
 ### 4.4. Configuration and Validation
 
 - **`config.py`** – defines dataclasses for all config structures (`Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, etc.) and the `load_config()` function. Supports **`templates_file`** – an external JSON/YAML template file that is loaded and merged with inline `templates`. This allows moving heavy geometry out of the main config.
-- **`validation.py`** – pre‑validation checks: template/pad existence, component pool sufficiency, clone correctness (no more than one selection‑based clone per run), **and resolution of via/track nets against actual board nets**. Throws `ValidationError` with a clear list of issues.
+- **`validation.py`** – pre‑validation checks: template/pad existence, component pool sufficiency, clone correctness (no more than one selection‑based clone per run), **resolution of via/track nets against actual board nets**, uniqueness of clone names/physical anchors, validity of `layer`/`mirror` combinations. Throws `ValidationError` with a clear list of issues.
 
 ### 4.5. Placement Registry (`registry.py`)
 
 - Ensures idempotency of vias and tracks across runs.
 - Stores via/track information (UUID, position, net, parameters for vias; start/end, width, layer for tracks) in JSON files with composite keys `anchor_id|template_name|role|via_index` (and similar for tracks).
-- For `ManualSpoke`, `anchor_id = pad:{pad}`; for `ClonePlacement`, `anchor_id = name:{clone.name}`.
+- For `ManualSpoke`, `anchor_id = pad:{pad}`; for `ClonePlacement`, `anchor_id` can be `name:{clone.name}`, `anchor:{ref}:{pad}`, or `role:{role}:{sheet}:{pad}` depending on the anchor type.
 - On subsequent runs, **compares planned vias/tracks with real objects on the board** (`adapter.get_vias()`, `adapter.get_tracks()`) rather than only the JSON record. This prevents desynchronisation due to manual deletions or crashes.
 - Removes obsolete vias/tracks (prune) and creates only those that are new or have changed position/parameters.
 
@@ -156,8 +153,7 @@ Modules that work with coordinates, independent of KiCad:
 
 ### 4.8. Template Transformation (`utils/transform_template.py`)
 
-- A separate script for post‑processing existing templates (YAML or JSON).
-- Allows **rotation**, **mirroring** (X or Y), and **origin shift** to a specified via (by index or net) or component (by index or role), or explicit offset.
+- A separate script for post‑processing existing templates (YAML or JSON). Allows **rotation**, **mirroring** (X or Y), and **origin shift** to a specified via (by index or net) or component (by index or role), or explicit offset.
 - Order: first origin shift (if any), then rotation and mirroring – ensuring the target element ends up at (0,0) after all transformations.
 
 ### 4.9. Undo (`undo.py`)
@@ -232,11 +228,11 @@ Modules that work with coordinates, independent of KiCad:
    │   ├── adapter.refresh_board() – reload board
    │   │
    ├── Phase 2: Vias
-   │   ├── planner.plan_vias() – apply registry filtering
+   │   ├── planner.plan_vias() – apply registry filtering and thermal vias
    │   ├── executor.execute_vias()
    │   │   ├── Create vias in batches
    │   │   ├── Collect UUIDs (for undo and registry)
-   │   │   └── Record in registry (record_created)
+   │   │   └── Record in via registry (record_created)
    │   │
    ├── Phase 3: Tracks
    │   ├── planner.plan_tracks() – simply return planned tracks (no keepout)
@@ -303,7 +299,7 @@ All such uses are **documented in the code** and covered by unit tests.
 ## 9. Dependencies and Requirements
 
 - **Python 3.8+** (recommended 3.9+).
-- **KiCad 8.0+** (tested on 10.0.4) with IPC API enabled.
+- **KiCad 10.0.4+** with IPC API enabled.
 - **`kipy`** – official Python client for KiCad IPC (version 0.7.1 or newer).
 - Additional packages: `pyyaml`, `sexpdata`, `json5` (optional), `tomli` (optional).
 
@@ -316,10 +312,11 @@ During the architectural discussions (May–July 2026), the following decisions 
 1. **Separation of templates and placement** – templates (geometry) are moved to separate files; placement logic is written in Python or YAML referencing the external template files.
 2. **Rejection of lock‑file** – replaced by a `diff` command (plan) and explicit `plan`/`apply` distinction (planned for the future).
 3. **Physical IR** – the internal model stores only coordinates and geometry; semantics (roles, banks) are stored as tags/metadata.
-4. **Support for tracks** – added as part of templates to preserve connectivity when cloning.
+4. **Support for tracks** – added as part of templates to preserve connectivity when cloning (v1.22.0).
 5. **Disambiguation by anchor proximity** – implemented in `clone_role_resolver`.
 6. **JSON for templates** – `extract` can save templates in JSON, simplifying serialisation and integration with `templates_file`.
-7. **Template transformation** – a separate script for post‑processing without re‑extracting.
+7. **Live‑board reconciliation** – `PlacementRegistry` and `TrackRegistry` now check against real objects on the board.
+8. **Explicit `by_selection`, `anchor_role`, `refs`** – improved control for cloning.
 
 These decisions ensure flexibility, reliability, and ease of use for complex projects.
 

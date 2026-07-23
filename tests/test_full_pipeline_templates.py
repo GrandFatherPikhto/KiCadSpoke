@@ -22,6 +22,7 @@ from kicadspoke.config import (
 )
 from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.geometry.spoke_layout import rotate_local_offset
+from kicadspoke.constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 MM = 1_000_000
 
@@ -176,3 +177,15 @@ class TestFullPipelineWithTemplates:
             assert v.net_name == "+1V2_VCCINT"  # net=None в шаблоне -> взят rule.net
         for v in component_level:
             assert v.net_name == "GND"
+
+        # Проверяем, что у всех via есть registry_key (важно для идемпотентности)
+        for v in vias:
+            assert v.registry_key is not None
+            if v.owner_ref == "IC1":
+                # via уровня спицы должны содержать SPOKE_LEVEL_ROLE_PLACEHOLDER
+                assert SPOKE_LEVEL_ROLE_PLACEHOLDER in v.registry_key
+            else:
+                # via уровня компонента должны содержать имя роли (HEAVY/LIGHT)
+                # В реальности роль будет в ключе, но в этом тесте роль захардкожена в шаблоне
+                # Мы можем проверить, что ключ содержит "HEAVY" или "LIGHT"
+                assert any(role in v.registry_key for role in ("HEAVY", "LIGHT"))

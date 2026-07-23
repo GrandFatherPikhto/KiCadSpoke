@@ -15,7 +15,7 @@ Main executable script that processes command-line arguments, initialises loggin
 |----------|-------------|
 | `setup_logging(verbose, log_file)` | Configures logging: level (INFO/DEBUG), output to console and/or file. |
 | `cmd_apply(args)` | `apply` command: loads config, connects to KiCad, runs validation, planning, and **three-phase** execution (moves → refresh → vias → tracks). Supports `--dry-run` and `--clone-placement` for processing a single clone. |
-| `cmd_extract(args)` | `extract` command: extracts a template from the current selection on the board (including **tracks**) and writes it as JSON or YAML. Supports `--param`, `--net-template`, `--origin-by-via-net`, `--origin-by-component-role`. The format is determined by the file extension; for `.json` the file is written as a flat dictionary without a `templates:` wrapper. |
+| `cmd_extract(args)` | `extract` command: extracts a template from the current selection on the board (including **tracks**) and writes it as JSON or YAML. Supports `--param`, `--net-template`, `--origin-by-via-net`, `--origin-by-component-role`, and **profiles** (`--profiles`, `--profile`) for convenient parameter reuse. The format is determined by the file extension; for `.json` the file is written as a flat dictionary without a `templates:` wrapper. |
 | `cmd_undo(args)` | `undo` command: finds the latest JSON log in `logs/`, calls `undo_last_operation()` (removes created vias **and tracks**, restores components). |
 | `main()` | Parses arguments (supports implicit `apply`), configures logging, invokes the appropriate command, catches exceptions. |
 
@@ -25,8 +25,8 @@ Main executable script that processes command-line arguments, initialises loggin
 **Features:**  
 - Supports four commands: `apply`, `undo`, `extract`, `clone-extract`.
 - In `apply` mode, performs a three-phase process: moves → vias → tracks (with intermediate board reload).
-- The `--clone-placement NAME` flag allows processing only one clone in selection mode (useful for debugging).
-- In `extract` mode, uses the current selection in the PCB editor to create a template; extracts components, vias, and tracks.
+- The `--clone-placement NAME` flag allows processing only one clone in selection mode (useful for debugging) or when you need to process a specific clone among several.
+- In `extract` mode, uses the current selection in the PCB editor to create a template; extracts components, vias, and tracks. Supports profiles that store parameters (`name`, `output`, `param`, `net_template`, `origin_by_via_net`, `origin_by_component_role`) in a separate YAML file.
 - All exceptions are caught and logged; user‑defined (`PlacerError`) are printed without a stack trace.
 
 ---
@@ -47,26 +47,26 @@ Defines all data structures (dataclasses) describing the placement configuration
 | `SpokeTemplate` | Complete spoke template: name, list of vias, list of tracks, list of component slots, absolute `layer`. |
 | `ManualSpoke` | Specific spoke: pad, template, shift, rotation, `enabled` flag. |
 | `Rule` | Rule for one net: net name, list of spokes, `anchor_ref` (mandatory). |
-| `ClonePlacement` | Cloned placement: name, template, absolute point or shift from anchor, angle, dicts `nets`, `params`, `net_overrides`, `layer`, `mirror`, `refs`. |
+| `ClonePlacement` | Cloned placement: name, template, absolute point or shift from anchor, angle, dicts `nets`, `params`, `net_overrides`, `layer`, `mirror`, `refs`, `by_selection`, `anchor_role`, `anchor_sheet`, `anchor_pad`. |
 | `Config` | Main object: global `layer`, templates, thermal vias, rules, clones, flags. |
 
 **Main functions:**
 
 | Function | Description |
 |----------|-------------|
-| `load_config(path)` | Reads YAML, loads external template file (`templates_file`) if specified, merges with inline `templates` (inline take precedence). Parses all sections, returns a `Config` object. Checks for unique roles in templates and validity of `layer`/`mirror` in `ClonePlacement`. |
+| `load_config(path)` | Reads YAML, loads external template file (`templates_file`) if specified, merges with inline `templates` (inline take precedence). Parses all sections, returns a `Config` object. Checks for unique roles in templates, validity of `layer`/`mirror` in `ClonePlacement`, presence of anchor when using `anchor_pad`, uniqueness of names and physical anchors (`anchor_ref`/`anchor_role`) among `clone_placements`. |
 | `_load_template_via(data)` | Loads `TemplateVia`. Checks that `net` is a string (protection against accidental `net_overrides` nesting). |
 | `_load_template_track(data)` | Loads `TemplateTrack`. Checks that `net` is a string. |
 | `_load_template_component_slot(data)` | Loads `TemplateComponentSlot`. |
 | `_load_spoke_template(name, data)` | Loads `SpokeTemplate` with role uniqueness check. |
 | `_load_manual_spoke(data)` | Loads `ManualSpoke`. |
-| `_load_clone_placement(data)` | Loads `ClonePlacement`. Checks that `anchor_ref` is present if `anchor_pad` is given, and that coordinates are mandatory if no anchor. |
+| `_load_clone_placement(data)` | Loads `ClonePlacement`. Checks that `anchor_ref` is present if `anchor_pad` is given, that coordinates are mandatory if no anchor, and mutual exclusivity of `anchor_ref` and `anchor_role`. |
 
 **Features:**  
 - **`templates_file`** – path to an external template file (JSON or YAML). Inline `templates` complement/override external ones.
 - Role uniqueness check inside a template (duplicates are not allowed).
 - Support for `net_template` for cloning (placeholders for nets).
-- For `ClonePlacement`, two role resolution modes: "by selection" (no `nets`/`params`) and "by nets" (with `nets` or `params`).
+- For `ClonePlacement`, two role resolution modes: "by selection" (no `nets`/`params`) and "by nets" (with `nets` or `params`). The explicit `by_selection` flag overrides automatic detection.
 - Net inheritance for vias and tracks: if `net` is omitted, it is taken from `rule.net` (for ManualSpoke) or is mandatory for ClonePlacement.
 - Cross-validation of `layer`/`mirror`: `mirror` without a layer change, or a layer change without `mirror`, is a fatal error.
 - Deprecated fields `target_ref` and `side` at the root of the config cause a fatal error.
@@ -133,16 +133,16 @@ Ensures idempotency of via and track placement across runs. Stores information a
 | `TrackRegistryEntry` | Dataclass for tracks: UUID, start/end coordinates, width, net, layer. |
 | `PlacementRegistry` | Class managing the via registry. |
 | `TrackRegistry` | Class managing the track registry. |
-| `reconcile(planned_objects, known_clone_names)` | Compares planned objects against the registry and real objects on the board, removes obsolete entries, returns the list of objects to actually create. |
+| `reconcile(planned_objects, known_anchor_ids)` | Compares planned objects against the registry and real objects on the board, removes obsolete entries, returns the list of objects to actually create. |
 | `record_created(cmd, created_uuid)` | Records a created object in the registry. |
 
 **Features:**
 - **Reconciliation against live board objects** – source of truth, not just JSON. This prevents desynchronisation due to manual deletions or crashes between registry write and board commit.
 - Registry keys follow the pattern: `anchor_id|template_name|role|via_index` (similar for tracks).
-- `anchor_id` for ManualSpoke is `f"pad:{pad}"`, for ClonePlacement `f"name:{name}"`.
+- `anchor_id` for ManualSpoke is `f"pad:{pad}"`, for ClonePlacement it can be `f"name:{clone.name}"`, `f"anchor:{ref}:{pad}"`, or `f"role:{role}:{sheet}:{pad}"` depending on the anchor type.
 - `role` for spoke‑level vias is `__spoke__`.
 - Position tolerance: 0.01 mm.
-- Support for `known_clone_names` – when using `--clone-placement`, vias/tracks of other clones are not pruned.
+- Support for `known_anchor_ids` – when using `--clone-placement`, vias/tracks of other clones are not pruned.
 - Separate registries for vias and tracks (different files and record structures).
 
 **Used in:** `kicadspoke_cli.py` (during `apply`), `executor/via_executor.py`, and `executor/track_executor.py`.
@@ -209,15 +209,17 @@ Performs fatal checks on the configuration **before** any board modifications. I
 | `check_templates_and_pads_exist(adapter, cfg)` | Ensures that every enabled spoke references an existing template and a valid pad of the target component (anchor). Skips disabled spokes (`enabled=False`). |
 | `check_role_pool_sufficiency(adapter, cfg)` | For each rule, builds a `ComponentPool` and checks that the required number of components for each role is available. Reports all shortages at once. |
 | `check_clone_templates_exist(cfg)` | Checks that every `ClonePlacement` references an existing template (config‑only check, no KiCad connection). |
+| `check_no_duplicate_clone_anchors(cfg)` | Checks uniqueness of `clone_placements` names and uniqueness of physical anchors (combination of `template`, `anchor_ref`, `anchor_pad` or `template`, `anchor_role`, `anchor_sheet`, `anchor_pad`) among enabled clones. Fatal on duplicates. |
 | `check_clone_nets_exist_on_board(adapter, cfg)` | Resolves `via.net` and `track.net` for each `ClonePlacement` and checks the result against actual board nets (`adapter.get_all_nets()`). Catches typos in `params` and `net_overrides`. |
-| `check_single_selection_based_clone(cfg)` | Ensures that no more than one `ClonePlacement` is in selection mode (without `nets`/`params`), because KiCad supports only one selection at a time. Suggests using `--clone-placement` for debugging. |
-| `run_all_checks(adapter, cfg)` | Runs all checks in order: `check_clone_templates_exist`, `check_single_selection_based_clone`, `check_templates_and_pads_exist`, `check_role_pool_sufficiency`, `check_clone_nets_exist_on_board`. |
+| `check_single_selection_based_clone(cfg)` | Ensures that no more than one `ClonePlacement` is in selection mode (without `nets`/`params`, or with `by_selection: true`), because KiCad supports only one selection at a time. Suggests using `--clone-placement` for debugging. |
+| `run_all_checks(adapter, cfg)` | Runs all checks in order: `check_clone_templates_exist`, `check_no_duplicate_clone_anchors`, `check_single_selection_based_clone`, `check_templates_and_pads_exist`, `check_role_pool_sufficiency`, `check_clone_nets_exist_on_board`. |
 
 **Features:**
 - Collects all problems rather than stopping at the first one.
 - Uses `ComponentPool` in `check_role_pool_sufficiency` for each net.
 - For `ClonePlacement`, checks that no more than one clone is in selection mode (otherwise fatal).
 - `check_clone_nets_exist_on_board` is a new check that guarantees that resolved via and track nets actually exist on the board.
+- `check_no_duplicate_clone_anchors` prevents registry conflicts from identical physical anchors.
 - Error formatting via `format_fatal_error()` from `exceptions.py`.
 
 **Used in:** `kicadspoke_cli.py` (before planning).
@@ -256,6 +258,7 @@ graph TD
     CLI --> Extract[template_extraction.py]
     CLI --> Undo[undo.py]
     CLI --> Constants[constants.py]
+    CLI --> NetResolution[net_resolution.py]
 
     Config --> Exceptions[exceptions.py]
     Config --> TemplatesFile[templates_file (external JSON/YAML)]
@@ -280,7 +283,7 @@ graph TD
     Undo --> Adapter
     Undo --> Exceptions
 
-    NetResolution[net_resolution.py] --> Exceptions
+    NetResolution --> Exceptions
     NetResolution --> Config (used by ClonePlacement)
     NetResolution --> Extract (parametrize_net)
 ```

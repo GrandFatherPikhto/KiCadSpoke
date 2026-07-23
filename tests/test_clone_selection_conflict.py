@@ -36,6 +36,27 @@ class TestCloneUsesSelectionMode:
         c = ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0, params={"channel": 1})
         assert clone_uses_selection_mode(c) is False
 
+    def test_by_selection_explicit_true_overrides_nets(self):
+        """Явный by_selection: true должен считать режим выделения, даже если nets непуст."""
+        c = ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0,
+                           nets={"X": "GND"}, by_selection=True)
+        assert clone_uses_selection_mode(c) is True
+
+    def test_by_selection_false_with_empty_nets_and_params_implicit_selection(self):
+        """by_selection: false при пустых nets/params — всё равно режим выделения (старое поведение)."""
+        c = ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0, by_selection=False)
+        assert clone_uses_selection_mode(c) is True
+
+    def test_anchor_role_does_not_affect_selection_mode(self):
+        """Наличие anchor_role не меняет режим, он определяется nets/params/by_selection."""
+        c = ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0,
+                           anchor_role="SOME_ROLE")
+        assert clone_uses_selection_mode(c) is True
+
+        c2 = ClonePlacement(name="b", template="t", origin_x_mm=0, origin_y_mm=0,
+                            anchor_role="SOME_ROLE", nets={"X": "GND"})
+        assert clone_uses_selection_mode(c2) is False
+
 
 class TestCheckSingleSelectionBasedClone:
     def test_single_selection_based_passes(self):
@@ -72,6 +93,23 @@ class TestCheckSingleSelectionBasedClone:
         ])
         with pytest.raises(ValidationError):
             check_single_selection_based_clone(cfg)
+
+    def test_by_selection_true_with_nets_counts_as_selection_based(self):
+        """Даже если есть nets, by_selection: true заставляет считать режим выделения."""
+        cfg = _cfg([
+            ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0, nets={"X": "GND"}, by_selection=True),
+            ClonePlacement(name="b", template="t", origin_x_mm=0, origin_y_mm=0, nets={"Y": "GND"}),
+        ])
+        # a - selection-based (by_selection), b - nets-based => конфликта нет
+        check_single_selection_based_clone(cfg)
+
+        cfg2 = _cfg([
+            ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0, by_selection=True),
+            ClonePlacement(name="b", template="t", origin_x_mm=0, origin_y_mm=0, by_selection=True),
+        ])
+        # два с by_selection => фатал
+        with pytest.raises(ValidationError):
+            check_single_selection_based_clone(cfg2)
 
 
 class TestCheckCloneTemplatesExist:
