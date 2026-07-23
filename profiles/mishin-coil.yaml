@@ -1,5 +1,7 @@
 templates_file: templates/mishin-coil.yaml
 schematic_dir: D:/Projects/KiCad/Mishin-Coil/mishin-coil-gen-v1
+registry_path: profiles/registries/power_board.registry.json
+track_registry_path: profiles/registries/power_board.tracks.registry.json
 
 extract_profiles:
   dac_pi_filter:

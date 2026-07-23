@@ -101,8 +101,8 @@ def cmd_apply(args):
         return
 
     executor = BatchExecutor(adapter, cfg, batch_size=args.batch_size)
-    registry = PlacementRegistry(adapter, registry_path_for_config(args.config))
-    track_registry = TrackRegistry(adapter, track_registry_path_for_config(args.config))
+    registry = PlacementRegistry(adapter, cfg.registry_path or registry_path_for_config(args.config))
+    track_registry = TrackRegistry(adapter, cfg.track_registry_path or track_registry_path_for_config(args.config))
 
     # --- Фаза 1: перемещения ---
     moves = planner.plan_moves()

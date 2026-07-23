@@ -261,6 +261,12 @@ class Config:
     # листов "на отшибе", не лежащих в schematic_dir.
     schematic_dir: Optional[str] = None
     schematic_files: List[str] = field(default_factory=list)
+    # Явный override пути к файлам реестра — по умолчанию выводится из
+    # имени САМОГО конфига (registry_path_for_config), что рвётся при
+    # переименовании конфига (реестр молча переезжает на новый путь).
+    # Пути — относительно самого этого YAML, как и templates_file.
+    registry_path: Optional[str] = None
+    track_registry_path: Optional[str] = None
     # Вычисляется в load_config из schematic_dir/schematic_files — НЕ
     # читается из YAML напрямую. {uuid: Sheetname}, пусто если ни
     # schematic_dir, ни schematic_files не заданы (и anchor_sheet тогда
@@ -615,6 +621,13 @@ def load_config(path: str) -> Config:
     schematic_files = data.get('schematic_files', []) or []
     sheet_names = build_sheet_name_map(path, schematic_dir, schematic_files)
 
+    registry_path = data.get('registry_path')
+    track_registry_path = data.get('track_registry_path')
+    if registry_path:
+        registry_path = str(Path(path).parent / registry_path)
+    if track_registry_path:
+        track_registry_path = str(Path(path).parent / track_registry_path)
+
     cfg = Config(
         layer=root_layer,
         templates=templates,
@@ -630,6 +643,8 @@ def load_config(path: str) -> Config:
         schematic_dir=schematic_dir,
         schematic_files=schematic_files,
         sheet_names=sheet_names,
+        registry_path=registry_path,
+        track_registry_path=track_registry_path,
     )
     total_spokes = sum(len(r.spokes) for r in cfg.rules)
     logger.debug(f"Конфигурация загружена: layer={cfg.layer}, "

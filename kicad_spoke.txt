@@ -15,7 +15,6 @@ docs\kicad.md
 docs\kicad_ru.md
 docs\kipy.md
 docs\kipy_ru.md
-docs\notes_ru.md
 docs\placement.md
 docs\placement_ru.md
 docs\rotate_template_ru.md
@@ -73,6 +72,7 @@ kicadspoke\placement\services\component_pool.py
 kicadspoke\placement\services\manual_position_calculator.py
 kicadspoke\placement\services\via_planner.py
 kicadspoke\registry.py
+kicadspoke\sheet_names.py
 kicadspoke\template_extraction.py
 kicadspoke\undo.py
 kicadspoke\utils\__init__.py
