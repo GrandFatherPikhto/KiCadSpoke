@@ -8,6 +8,7 @@ from typing import Optional, List, Dict, Any
 import yaml
 
 from .exceptions import ValidationError, format_fatal_error
+from .sheet_names import build_sheet_name_map
 
 logger = logging.getLogger(__name__)
 
@@ -248,6 +249,22 @@ class Config:
     via_search_step_mm: float = 0.1
     via_search_max_radius_mm: float = 3.0
     via_search_n_directions: int = 8
+    # Для anchor_sheet (см. ClonePlacement) — словарь {uuid: Sheetname}
+    # строится прямым парсингом *.kicad_sch (sexpdata, тот же формат, что
+    # уже читает cloner), НЕ через kipy — см. обсуждение: sheet_path.
+    # path_human_readable сломан в этой версии KiCad, а UUID из kipy
+    # (path[:-1]) эмпирически подтверждены совпадающими с uuid в
+    # (sheet ...) блоках .kicad_sch. schematic_dir — папка, где лежат
+    # все *.kicad_sch проекта (путь относительно самого YAML-конфига,
+    # как и templates_file); schematic_files — точечные добавки для
+    # листов "на отшибе", не лежащих в schematic_dir.
+    schematic_dir: Optional[str] = None
+    schematic_files: List[str] = field(default_factory=list)
+    # Вычисляется в load_config из schematic_dir/schematic_files — НЕ
+    # читается из YAML напрямую. {uuid: Sheetname}, пусто если ни
+    # schematic_dir, ни schematic_files не заданы (и anchor_sheet тогда
+    # использовать нельзя — см. фатал в validation.py).
+    sheet_names: Dict[str, str] = field(default_factory=dict)
 
     @property
     def anchor_refs(self) -> set:
@@ -562,6 +579,10 @@ def load_config(path: str) -> Config:
                  f"или убери layer"]
             ))
 
+    schematic_dir = data.get('schematic_dir')
+    schematic_files = data.get('schematic_files', []) or []
+    sheet_names = build_sheet_name_map(path, schematic_dir, schematic_files)
+
     cfg = Config(
         layer=root_layer,
         templates=templates,
@@ -574,6 +595,9 @@ def load_config(path: str) -> Config:
         via_search_step_mm=data.get('via_search_step_mm', 0.1),
         via_search_max_radius_mm=data.get('via_search_max_radius_mm', 3.0),
         via_search_n_directions=data.get('via_search_n_directions', 8),
+        schematic_dir=schematic_dir,
+        schematic_files=schematic_files,
+        sheet_names=sheet_names,
     )
     total_spokes = sum(len(r.spokes) for r in cfg.rules)
     logger.debug(f"Конфигурация загружена: layer={cfg.layer}, "

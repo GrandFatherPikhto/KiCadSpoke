@@ -282,23 +282,23 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
     return role_to_ref
 
 
-def _pad_on_sheet(adapter, fp, anchor_sheet: str) -> bool:
+def _fp_on_sheet(fp, anchor_sheet: str, sheet_names: Dict[str, str]) -> bool:
     """
-    Хоть один пад fp сидит на локальной (иерархической) цепи, начинающейся
-    с '/{anchor_sheet}/' — точный префикс по сегментам пути, не подстрока
-    (см. обсуждение: '/Channel_0/' не должен совпасть с '/Channel_01/').
-    Работает ТОЛЬКО через имя цепи — попытка сопоставить по sheet_path
-    (UUID-цепочка) была эмпирически опровергнута (см. пробные скрипты в
-    чате: UUID уникален per-компонент, группировки по листу нет вовсе).
+    anchor_sheet встречается как ОДИН ИЗ СЕГМЕНТОВ человекочитаемого пути
+    fp (не обязательно последним — компонент может быть глубже указанного
+    листа). Путь строится через sheet_names (см. kicadspoke/sheet_names.py) —
+    прямой парсинг .kicad_sch, эмпирически подтверждённый на реальном
+    проекте (0 конфликтов, 0 нерасшифрованных uuid на mishin-coil).
+    Работает для ЛЮБОГО компонента — в отличие от прежнего варианта через
+    имена локальных цепей, не требует, чтобы сам fp касался локальной
+    метки.
     """
-    prefix = f"/{anchor_sheet}/"
-    for pad in adapter.get_footprint_pads(fp):
-        if pad.net and (pad.net.name == f"/{anchor_sheet}" or pad.net.name.startswith(prefix)):
-            return True
-    return False
+    from ...sheet_names import resolve_sheet_path_names
+    names = resolve_sheet_path_names(fp, sheet_names)
+    return anchor_sheet in names
 
 
-def resolve_anchor_by_role(adapter, clone: ClonePlacement) -> FootprintInstance:
+def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str, str]) -> FootprintInstance:
     """
     Резолв якорного компонента clone_placement по anchor_role (поле Role
     на плате, НЕ роль шаблона — это разные вещи: тут ищем сам якорь среди
@@ -306,11 +306,16 @@ def resolve_anchor_by_role(adapter, clone: ClonePlacement) -> FootprintInstance:
     каскад сужения неоднозначности, что и у ролей шаблона:
 
       1. кандидаты = все футпринты с Role == clone.anchor_role.
-      2. несколько — сузить до anchor_sheet (если задан): хоть один пад
-         на локальной цепи с этим префиксом (см. _pad_on_sheet).
+      2. несколько — сузить до anchor_sheet (если задан): человекочитаемый
+         путь fp (через sheet_names, см. kicadspoke/sheet_names.py)
+         содержит этот сегмент (см. _fp_on_sheet).
       3. всё ещё несколько — сузить до текущего выделения на плате.
       4. всё ещё несколько, или 0 — ФАТАЛ со списком кандидатов и
          подсказкой (anchor_sheet/выделение/явный anchor_ref).
+
+    sheet_names — {uuid: Sheetname}, см. Config.sheet_names; пустой словарь
+    (schematic_dir/schematic_files не заданы) — anchor_sheet тогда никогда
+    ничего не сузит (фатал проверяет это заранее, см. validation.py).
     """
     all_fps = adapter.get_footprints()
     candidates = [fp for fp in all_fps
@@ -325,7 +330,7 @@ def resolve_anchor_by_role(adapter, clone: ClonePlacement) -> FootprintInstance:
 
     narrowed = candidates
     if len(narrowed) > 1 and clone.anchor_sheet:
-        by_sheet = [fp for fp in narrowed if _pad_on_sheet(adapter, fp, clone.anchor_sheet)]
+        by_sheet = [fp for fp in narrowed if _fp_on_sheet(fp, clone.anchor_sheet, sheet_names)]
         if by_sheet:
             if len(by_sheet) < len(narrowed):
                 logger.info(f"[{clone.name}] anchor_role {clone.anchor_role!r}: "

@@ -3,7 +3,7 @@ templates_file: power_board_templates.yaml
 clone_placements:
   - name: p5v_pi_filter
     template: pm5v_pi_filter
-    anchor_ref: J1
+    anchor_role: CONN_PWR_IN
     anchor_pad: '1'
     origin_x_mm: 7.0
     origin_y_mm: -5.0

@@ -167,6 +167,27 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
     logger.debug("Проверка на дубликаты имён/якорей clone_placements: всё сходится")
 
 
+def check_anchor_sheet_configured(cfg: Config) -> None:
+    """
+    Чисто конфиговая проверка. anchor_sheet резолвится через Config.
+    sheet_names (см. sheet_names.py) — если он пуст, значит ни
+    schematic_dir, ни schematic_files не заданы (или заданы, но ни один
+    .kicad_sch не распарсился), и anchor_sheet НИКОГДА ничего не сузит —
+    молча пройдёт мимо, как будто его не было, и neoднозначность
+    anchor_role потом упадёт с менее полезным фаталом. Лучше сказать
+    прямо и сразу, в чём дело.
+    """
+    users = [c.name for c in cfg.clone_placements if c.enabled and c.anchor_sheet]
+    if users and not cfg.sheet_names:
+        raise ValidationError(format_fatal_error(
+            "anchor_sheet используется, но словарь листов пуст",
+            [f"clone_placements с anchor_sheet: {users}",
+             "нужен schematic_dir (или schematic_files) в корне конфига — "
+             "путь к папке с *.kicad_sch, относительно самого этого YAML"]
+        ))
+    logger.debug("Проверка anchor_sheet/sheet_names: всё сходится")
+
+
 def check_clone_nets_exist_on_board(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     """
     Резолвит via.net КАЖДОГО clone_placement (и уровня спицы, и вложенных
@@ -245,6 +266,7 @@ def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     logger.info("Предварительные проверки конфигурации...")
     check_clone_templates_exist(cfg)
     check_no_duplicate_clone_anchors(cfg)
+    check_anchor_sheet_configured(cfg)
     check_single_selection_based_clone(cfg)
     check_templates_and_pads_exist(adapter, cfg)
     check_role_pool_sufficiency(adapter, cfg)

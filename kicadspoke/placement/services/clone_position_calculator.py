@@ -71,7 +71,7 @@ class ClonePositionCalculator:
                      f"такого ref на плате нет (опечатка? компонент ещё не в PCB?)"]
                 ))
         elif clone.anchor_role is not None:
-            fp = resolve_anchor_by_role(self.adapter, clone)
+            fp = resolve_anchor_by_role(self.adapter, clone, self.cfg.sheet_names)
         else:
             return None
 
