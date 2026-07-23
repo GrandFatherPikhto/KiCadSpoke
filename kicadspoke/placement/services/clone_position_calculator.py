@@ -23,7 +23,8 @@ from ...kicad.adapter import KiCadBoardAdapter
 from ...geometry.clone_geometry import apply_clone_geometry
 from ...registry import make_registry_key
 from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand
-from .clone_role_resolver import resolve_roles_by_selection, resolve_roles_by_nets, clone_uses_selection_mode
+from .clone_role_resolver import (resolve_roles_by_selection, resolve_roles_by_nets,
+                                  clone_uses_selection_mode, resolve_anchor_by_role)
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +32,20 @@ logger = logging.getLogger(__name__)
 def clone_anchor_id(clone: ClonePlacement) -> str:
     """
     Идентичность clone_placement для реестра — физическая привязка, не
-    имя. anchor_ref задан -> "anchor:{ref}:{pad}" (pad может быть пустым,
-    если привязка к центру компонента, не к конкретному паду). anchor_ref
-    не задан (абсолютные координаты) -> "name:{clone.name}", единственный
-    доступный идентификатор в этом режиме — переименование в нём всё ещё
-    сотрёт историю, но деваться некуда.
+    имя. Порядок приоритета совпадает с порядком резолва якоря:
+      anchor_ref задан -> "anchor:{ref}:{pad}"
+      anchor_role задан -> "role:{anchor_role}:{anchor_sheet}:{pad}"
+        (anchor_role — тоже устойчив к переименованию/перенумерации,
+        как и anchor_ref к переименованию clone.name; anchor_sheet
+        включён в ключ, потому что это часть УСЛОВИЙ поиска якоря —
+        смена anchor_sheet тоже меняет физическое размещение)
+      ни то, ни другое (абсолютные координаты) -> "name:{clone.name}",
+        единственный доступный идентификатор в этом режиме.
     """
     if clone.anchor_ref is not None:
         return f"anchor:{clone.anchor_ref}:{clone.anchor_pad or ''}"
+    if clone.anchor_role is not None:
+        return f"role:{clone.anchor_role}:{clone.anchor_sheet or ''}:{clone.anchor_pad or ''}"
     return f"name:{clone.name}"
 
 
@@ -49,32 +56,37 @@ class ClonePositionCalculator:
 
     def _resolve_anchor(self, clone: ClonePlacement) -> Optional[Vector2]:
         """
-        anchor_ref/anchor_pad -> абсолютная точка якоря. None, если якорь
-        не задан (режим абсолютных координат). Несуществующий ref/pad —
-        ФАТАЛЬНО: якорь задан явно, разместить секцию «где-то» или молча
-        пропустить — оба варианта хуже падения.
+        anchor_ref/anchor_pad ИЛИ anchor_role(+anchor_sheet)/anchor_pad ->
+        абсолютная точка якоря. None, если якорь не задан (режим абсолютных
+        координат). Несуществующий/неоднозначный якорь — ФАТАЛЬНО: якорь
+        задан явно, разместить секцию «где-то» или молча пропустить — оба
+        варианта хуже падения.
         """
-        if clone.anchor_ref is None:
+        if clone.anchor_ref is not None:
+            fp = self.adapter.get_footprint(clone.anchor_ref)
+            if fp is None:
+                raise ValidationError(format_fatal_error(
+                    f"{clone.name}: якорный компонент {clone.anchor_ref!r} не найден на плате",
+                    [f"проверь anchor_ref в clone_placement {clone.name!r} — "
+                     f"такого ref на плате нет (опечатка? компонент ещё не в PCB?)"]
+                ))
+        elif clone.anchor_role is not None:
+            fp = resolve_anchor_by_role(self.adapter, clone)
+        else:
             return None
-        fp = self.adapter.get_footprint(clone.anchor_ref)
-        if fp is None:
-            raise ValidationError(format_fatal_error(
-                f"{clone.name}: якорный компонент {clone.anchor_ref!r} не найден на плате",
-                [f"проверь anchor_ref в clone_placement {clone.name!r} — "
-                 f"такого ref на плате нет (опечатка? компонент ещё не в PCB?)"]
-            ))
+
         if clone.anchor_pad is None:
-            logger.debug(f"  [{clone.name}] якорь: центр {clone.anchor_ref} "
+            logger.debug(f"  [{clone.name}] якорь: центр {fp.reference_field.text.value} "
                          f"({fp.position.x/1e6:.3f}, {fp.position.y/1e6:.3f}) мм")
             return fp.position
         pad = self.adapter.get_pad_by_number(fp, clone.anchor_pad)
         if pad is None:
             raise ValidationError(format_fatal_error(
-                f"{clone.name}: у {clone.anchor_ref} нет площадки {clone.anchor_pad!r}",
+                f"{clone.name}: у {fp.reference_field.text.value} нет площадки {clone.anchor_pad!r}",
                 [f"проверь anchor_pad в clone_placement {clone.name!r} — "
                  f"номера падов это строки как в KiCad ('1', '17', 'A3')"]
             ))
-        logger.debug(f"  [{clone.name}] якорь: пад {clone.anchor_ref}.{clone.anchor_pad} "
+        logger.debug(f"  [{clone.name}] якорь: пад {fp.reference_field.text.value}.{clone.anchor_pad} "
                      f"({pad.position.x/1e6:.3f}, {pad.position.y/1e6:.3f}) мм")
         return pad.position
 
