@@ -9800,6 +9800,17 @@
 				)
 			)
 		)
+		(property "Cluster" "R_Filter_3V3_Osc"
+			(at 325.12 106.68 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "6d7dc2e0-df65-4e57-bb38-8f70d5679d73")
 		)
@@ -9827,7 +9838,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "04da97f1-ff45-4e1c-a74d-b866f17226f2")
-		(property "Reference" "#PWR073"
+		(property "Reference" "#PWR075"
 			(at 93.98 105.41 0)
 			(hide yes)
 			(show_name no)
@@ -9887,7 +9898,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR073")
+					(reference "#PWR075")
 					(unit 1)
 				)
 			)
@@ -9905,7 +9916,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "07f7e505-4f5e-405f-8ac9-cfc756b57045")
-		(property "Reference" "R26"
+		(property "Reference" "R27"
 			(at 388.62 182.88 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9978,7 +9989,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R26")
+					(reference "R27")
 					(unit 1)
 				)
 			)
@@ -9996,7 +10007,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0862a21b-d451-416e-a69c-e3f457f45527")
-		(property "Reference" "#PWR061"
+		(property "Reference" "#PWR063"
 			(at 64.77 254 0)
 			(hide yes)
 			(show_name no)
@@ -10056,7 +10067,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR061")
+					(reference "#PWR063")
 					(unit 1)
 				)
 			)
@@ -10130,6 +10141,17 @@
 			)
 		)
 		(property "Role" "C_IN_BYPASS"
+			(at 309.88 106.68 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "R_Filter_3V3_Osc"
 			(at 309.88 106.68 0)
 			(hide yes)
 			(show_name no)
@@ -10427,7 +10449,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "164f4366-ca31-480e-8823-cba547ad77ed")
-		(property "Reference" "#PWR088"
+		(property "Reference" "#PWR090"
 			(at 364.49 60.96 0)
 			(hide yes)
 			(show_name no)
@@ -10487,7 +10509,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR088")
+					(reference "#PWR090")
 					(unit 1)
 				)
 			)
@@ -10561,6 +10583,17 @@
 			)
 		)
 		(property "Role" "C_OUT_BULK"
+			(at 81.28 80.01 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_1V2_VCCA_P2V5"
 			(at 81.28 80.01 0)
 			(hide yes)
 			(show_name no)
@@ -10664,6 +10697,17 @@
 				)
 			)
 		)
+		(property "Cluster" "R_Filter_3V3_Osc"
+			(at 336.55 106.68 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "f736e5ee-aa22-41e2-9c7e-c0e5e3a3b816")
 		)
@@ -10691,7 +10735,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "17ec52d2-291e-45ce-b4f2-bedabe8f743b")
-		(property "Reference" "#PWR058"
+		(property "Reference" "#PWR060"
 			(at 57.15 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -10751,7 +10795,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR058")
+					(reference "#PWR060")
 					(unit 1)
 				)
 			)
@@ -10911,6 +10955,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_3V3_VCCIO"
+			(at 54.61 101.6 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "713c148b-934a-47f2-8a60-d8664d4b6c47")
 		)
@@ -10938,7 +10993,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "28e7e4b5-7b88-46b1-96d9-9c707ca9bad7")
-		(property "Reference" "R11"
+		(property "Reference" "R12"
 			(at 302.26 165.1 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11011,7 +11066,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R11")
+					(reference "R12")
 					(unit 1)
 				)
 			)
@@ -11029,7 +11084,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "2ac03250-9118-4552-ad30-e22ee900a347")
-		(property "Reference" "#PWR051"
+		(property "Reference" "#PWR053"
 			(at 27.94 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -11089,7 +11144,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR051")
+					(reference "#PWR053")
 					(unit 1)
 				)
 			)
@@ -11713,7 +11768,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "321f3fe1-0e7c-4564-9806-df0bc750603e")
-		(property "Reference" "#PWR086"
+		(property "Reference" "#PWR088"
 			(at 336.55 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -11773,7 +11828,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR086")
+					(reference "#PWR088")
 					(unit 1)
 				)
 			)
@@ -11791,7 +11846,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "337c3e8d-bf64-4b0d-a239-3db898bfc271")
-		(property "Reference" "R17"
+		(property "Reference" "R18"
 			(at 344.17 165.1 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11855,6 +11910,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Channel_0_Signal_Matcher"
+			(at 344.17 171.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "cca1458d-a0b5-42e2-b5ac-3387107c1a28")
 		)
@@ -11864,7 +11930,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R17")
+					(reference "R18")
 					(unit 1)
 				)
 			)
@@ -11948,6 +12014,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_3V3_VCCIO"
+			(at 93.98 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "58e36599-11ea-4fbb-b921-70205f9bc35b")
 		)
@@ -11975,7 +12052,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "38b36478-38e3-40b2-809b-2e8b8bb9256b")
-		(property "Reference" "#PWR076"
+		(property "Reference" "#PWR078"
 			(at 104.14 186.69 0)
 			(hide yes)
 			(show_name no)
@@ -12035,7 +12112,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR076")
+					(reference "#PWR078")
 					(unit 1)
 				)
 			)
@@ -12053,7 +12130,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "3d29077e-2024-4aae-8f1a-b3a0b9c00637")
-		(property "Reference" "#PWR053"
+		(property "Reference" "#PWR055"
 			(at 27.94 80.01 0)
 			(hide yes)
 			(show_name no)
@@ -12113,7 +12190,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR053")
+					(reference "#PWR055")
 					(unit 1)
 				)
 			)
@@ -12561,6 +12638,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCD_PLL"
+			(at 27.94 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "7f326d80-303d-46c9-b7d1-d289fc452fc5")
 		)
@@ -12588,7 +12676,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "4231dd93-da51-41fd-9669-42c8139d3f6f")
-		(property "Reference" "R13"
+		(property "Reference" "R14"
 			(at 309.88 85.09 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12661,7 +12749,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R13")
+					(reference "R14")
 					(unit 1)
 				)
 			)
@@ -12867,7 +12955,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "45686259-7bf9-4a62-8af7-5996ac2269fe")
-		(property "Reference" "#PWR085"
+		(property "Reference" "#PWR087"
 			(at 336.55 106.68 0)
 			(hide yes)
 			(show_name no)
@@ -12927,7 +13015,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR085")
+					(reference "#PWR087")
 					(unit 1)
 				)
 			)
@@ -12945,7 +13033,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "45bfbba5-8a9c-4fc0-860a-7424d865ba77")
-		(property "Reference" "#PWR078"
+		(property "Reference" "#PWR080"
 			(at 295.91 130.81 0)
 			(hide yes)
 			(show_name no)
@@ -13005,7 +13093,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR078")
+					(reference "#PWR080")
 					(unit 1)
 				)
 			)
@@ -13258,6 +13346,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_3V3_Flash"
+			(at 370.84 34.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "d7816666-04b0-4460-a1e0-bdf1c0ba4cf8")
 		)
@@ -13341,6 +13440,17 @@
 			)
 		)
 		(property "Role" "C_OUT_BULK"
+			(at 81.28 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_3V3_VCCIO"
 			(at 81.28 105.41 0)
 			(hide yes)
 			(show_name no)
@@ -13444,6 +13554,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_3V3_Flash"
+			(at 358.14 34.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "1eaf9f0d-6848-4eae-a202-c2c7340953f0")
 		)
@@ -13471,7 +13592,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "50811982-e463-4966-9a82-8e23fb5a35d1")
-		(property "Reference" "#PWR063"
+		(property "Reference" "#PWR065"
 			(at 73.66 170.18 0)
 			(hide yes)
 			(show_name no)
@@ -13531,7 +13652,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR063")
+					(reference "#PWR065")
 					(unit 1)
 				)
 			)
@@ -13730,7 +13851,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "52c75474-444c-4ae8-97ad-a8c0264a4132")
-		(property "Reference" "R25"
+		(property "Reference" "R26"
 			(at 388.62 173.99 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13803,7 +13924,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R25")
+					(reference "R26")
 					(unit 1)
 				)
 			)
@@ -13821,7 +13942,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "53dea121-4ac2-479b-a345-05bb2d3b8f6f")
-		(property "Reference" "#PWR052"
+		(property "Reference" "#PWR054"
 			(at 27.94 54.61 0)
 			(hide yes)
 			(show_name no)
@@ -13881,7 +14002,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR052")
+					(reference "#PWR054")
 					(unit 1)
 				)
 			)
@@ -13899,7 +14020,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "55db9b28-073c-40a0-9069-ecd29540a2e3")
-		(property "Reference" "#PWR065"
+		(property "Reference" "#PWR067"
 			(at 81.28 252.73 0)
 			(hide yes)
 			(show_name no)
@@ -13959,7 +14080,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR065")
+					(reference "#PWR067")
 					(unit 1)
 				)
 			)
@@ -13977,7 +14098,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "57aece0c-57da-45c4-92a3-f175d4f6c3fa")
-		(property "Reference" "R18"
+		(property "Reference" "R19"
 			(at 344.17 173.99 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14041,6 +14162,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Channel_0_Signal_Matcher"
+			(at 344.17 180.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "9ef3aefa-c17d-4435-aa45-660a47acf4ca")
 		)
@@ -14050,7 +14182,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R18")
+					(reference "R19")
 					(unit 1)
 				)
 			)
@@ -14134,6 +14266,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCA_P2V5"
+			(at 40.64 80.01 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "946d65e8-15c5-4ba7-9565-aa1a7a95587c")
 		)
@@ -14161,7 +14304,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5c6b0dd4-0a9d-4b8e-91d9-8e428b732808")
-		(property "Reference" "#PWR069"
+		(property "Reference" "#PWR071"
 			(at 93.98 54.61 0)
 			(hide yes)
 			(show_name no)
@@ -14221,7 +14364,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR069")
+					(reference "#PWR071")
 					(unit 1)
 				)
 			)
@@ -14330,7 +14473,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5fb14669-5fc0-49af-83ec-c2d7303350f7")
-		(property "Reference" "R19"
+		(property "Reference" "R20"
 			(at 344.17 184.15 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14394,6 +14537,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Channel_1_Signal_Matcher"
+			(at 344.17 190.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "a4a39139-e92f-40e1-a072-937f54c97257")
 		)
@@ -14403,7 +14557,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R19")
+					(reference "R20")
 					(unit 1)
 				)
 			)
@@ -14477,6 +14631,17 @@
 			)
 		)
 		(property "Role" "C_OUT_BYPASS"
+			(at 93.98 33.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_1V2_VCCINT"
 			(at 93.98 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -14696,7 +14861,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "64850e3f-a1f9-4e91-a4b2-760b101ba101")
-		(property "Reference" "#PWR057"
+		(property "Reference" "#PWR059"
 			(at 49.53 238.76 0)
 			(hide yes)
 			(show_name no)
@@ -14756,7 +14921,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR057")
+					(reference "#PWR059")
 					(unit 1)
 				)
 			)
@@ -14774,7 +14939,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "648dd086-9c92-4f78-af93-84b8d0c6eff2")
-		(property "Reference" "#PWR084"
+		(property "Reference" "#PWR086"
 			(at 332.74 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -14834,7 +14999,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR084")
+					(reference "#PWR086")
 					(unit 1)
 				)
 			)
@@ -14943,7 +15108,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6ab5a012-b5d2-4df7-acef-ac8ba51145eb")
-		(property "Reference" "R29"
+		(property "Reference" "R30"
 			(at 388.62 212.09 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15016,7 +15181,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R29")
+					(reference "R30")
 					(unit 1)
 				)
 			)
@@ -15034,7 +15199,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6b6e6cd3-c092-47e0-8f09-b64f2fe26525")
-		(property "Reference" "#PWR070"
+		(property "Reference" "#PWR072"
 			(at 93.98 64.77 0)
 			(hide yes)
 			(show_name no)
@@ -15094,7 +15259,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR070")
+					(reference "#PWR072")
 					(unit 1)
 				)
 			)
@@ -15451,6 +15616,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCA_P2V5"
+			(at 93.98 80.01 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "f7e262aa-0085-4d3e-9714-fee9b751047a")
 		)
@@ -15478,7 +15654,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "730caca6-32c8-448d-947e-55dec1fb1921")
-		(property "Reference" "#PWR079"
+		(property "Reference" "#PWR081"
 			(at 298.45 106.68 0)
 			(hide yes)
 			(show_name no)
@@ -15538,7 +15714,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR079")
+					(reference "#PWR081")
 					(unit 1)
 				)
 			)
@@ -15556,7 +15732,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7406dafb-227d-4f27-94a4-47d6ebdcf881")
-		(property "Reference" "R22"
+		(property "Reference" "R23"
 			(at 344.17 212.09 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15620,6 +15796,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Channel_2_Signal_Matcher"
+			(at 344.17 218.44 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "3526a7c3-60d3-467e-bdd9-73282cc584aa")
 		)
@@ -15629,7 +15816,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R22")
+					(reference "R23")
 					(unit 1)
 				)
 			)
@@ -15758,7 +15945,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7520ecdc-29ba-455a-8a49-4ae81af9f556")
-		(property "Reference" "#PWR059"
+		(property "Reference" "#PWR061"
 			(at 57.15 170.18 0)
 			(hide yes)
 			(show_name no)
@@ -15818,7 +16005,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR059")
+					(reference "#PWR061")
 					(unit 1)
 				)
 			)
@@ -15836,7 +16023,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "75fdf572-b386-4fb2-b806-643e5a57bd81")
-		(property "Reference" "#PWR077"
+		(property "Reference" "#PWR079"
 			(at 111.76 209.55 0)
 			(hide yes)
 			(show_name no)
@@ -15896,7 +16083,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR077")
+					(reference "#PWR079")
 					(unit 1)
 				)
 			)
@@ -15914,7 +16101,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "78712b16-9681-4412-9eb1-50dd3dd10452")
-		(property "Reference" "R20"
+		(property "Reference" "R21"
 			(at 344.17 193.04 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15978,6 +16165,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Channel_1_Signal_Matcher"
+			(at 344.17 199.39 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "d94887ba-0840-40cb-a25a-c6ff890333ba")
 		)
@@ -15987,7 +16185,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R20")
+					(reference "R21")
 					(unit 1)
 				)
 			)
@@ -16096,7 +16294,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7972f811-e4c6-44b3-812b-f8d1b2952e7a")
-		(property "Reference" "#PWR092"
+		(property "Reference" "#PWR094"
 			(at 392.43 167.64 0)
 			(hide yes)
 			(show_name no)
@@ -16156,7 +16354,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR092")
+					(reference "#PWR094")
 					(unit 1)
 				)
 			)
@@ -16240,6 +16438,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCD_PLL"
+			(at 93.98 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "4688cf06-6361-463e-b7f6-3cd6e2d58028")
 		)
@@ -16267,7 +16476,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7b828c48-a533-46f1-9df2-51655283ba76")
-		(property "Reference" "R12"
+		(property "Reference" "R13"
 			(at 302.26 175.26 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16340,7 +16549,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R12")
+					(reference "R13")
 					(unit 1)
 				)
 			)
@@ -16618,7 +16827,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "83b3e117-a375-45c3-9a17-46e8d534c054")
-		(property "Reference" "R28"
+		(property "Reference" "R29"
 			(at 388.62 201.93 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16691,7 +16900,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R28")
+					(reference "R29")
 					(unit 1)
 				)
 			)
@@ -16800,7 +17009,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8504f229-d6d6-4692-8e16-7d245b6ca19a")
-		(property "Reference" "R27"
+		(property "Reference" "R28"
 			(at 388.62 191.77 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16873,7 +17082,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R27")
+					(reference "R28")
 					(unit 1)
 				)
 			)
@@ -16891,7 +17100,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8a598252-8747-4bf7-8f71-7f166fc1b341")
-		(property "Reference" "#PWR082"
+		(property "Reference" "#PWR084"
 			(at 318.77 148.59 0)
 			(hide yes)
 			(show_name no)
@@ -16951,7 +17160,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR082")
+					(reference "#PWR084")
 					(unit 1)
 				)
 			)
@@ -16969,7 +17178,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "904dd4ff-3ed5-411a-bdc3-38f8f943de34")
-		(property "Reference" "#PWR062"
+		(property "Reference" "#PWR064"
 			(at 72.39 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -17029,7 +17238,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR062")
+					(reference "#PWR064")
 					(unit 1)
 				)
 			)
@@ -17047,7 +17256,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "904e24bb-ead1-43fd-9f0f-b01695c3c347")
-		(property "Reference" "#PWR091"
+		(property "Reference" "#PWR093"
 			(at 370.84 44.45 0)
 			(hide yes)
 			(show_name no)
@@ -17107,7 +17316,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR091")
+					(reference "#PWR093")
 					(unit 1)
 				)
 			)
@@ -17125,7 +17334,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "96299797-3525-4400-a32d-72d7dc50a8b8")
-		(property "Reference" "#PWR064"
+		(property "Reference" "#PWR066"
 			(at 80.01 158.75 0)
 			(hide yes)
 			(show_name no)
@@ -17185,7 +17394,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR064")
+					(reference "#PWR066")
 					(unit 1)
 				)
 			)
@@ -17203,7 +17412,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "970e4b92-dc4b-44ad-99dd-ce6ef69f07d2")
-		(property "Reference" "#PWR071"
+		(property "Reference" "#PWR073"
 			(at 93.98 80.01 0)
 			(hide yes)
 			(show_name no)
@@ -17263,7 +17472,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR071")
+					(reference "#PWR073")
 					(unit 1)
 				)
 			)
@@ -17429,6 +17638,17 @@
 		)
 		(property "Role" "C_IN_BYPASS"
 			(at 2.54 0 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_1V2_VCCD_PLL"
+			(at 40.64 54.61 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17634,7 +17854,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a8ee7bbf-d09e-4a24-80ee-ef21409a0d4f")
-		(property "Reference" "#PWR074"
+		(property "Reference" "#PWR076"
 			(at 93.98 115.57 0)
 			(hide yes)
 			(show_name no)
@@ -17694,7 +17914,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR074")
+					(reference "#PWR076")
 					(unit 1)
 				)
 			)
@@ -17769,6 +17989,17 @@
 		)
 		(property "Role" "C_IN_BULK"
 			(at 0 0 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_3V3_VCCIO"
+			(at 27.94 105.41 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17861,6 +18092,17 @@
 			)
 		)
 		(property "Role" "C_OUT_BULK"
+			(at 81.28 33.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_1V2_VCCINT"
 			(at 81.28 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -17989,7 +18231,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ae6ee9c2-d8d5-43e7-805d-f9fa99bb34ea")
-		(property "Reference" "#PWR060"
+		(property "Reference" "#PWR062"
 			(at 64.77 158.75 0)
 			(hide yes)
 			(show_name no)
@@ -18049,7 +18291,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR060")
+					(reference "#PWR062")
 					(unit 1)
 				)
 			)
@@ -18067,7 +18309,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b1218c8f-e7a3-4960-8dba-1d7efd54459f")
-		(property "Reference" "#PWR089"
+		(property "Reference" "#PWR091"
 			(at 364.49 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -18127,7 +18369,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR089")
+					(reference "#PWR091")
 					(unit 1)
 				)
 			)
@@ -18145,7 +18387,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b26e8133-60f8-4c19-9b27-ef97be033a41")
-		(property "Reference" "R16"
+		(property "Reference" "R17"
 			(at 341.63 66.0399 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18220,7 +18462,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R16")
+					(reference "R17")
 					(unit 1)
 				)
 			)
@@ -18238,7 +18480,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b3596573-524e-4864-a78b-3094acf60901")
-		(property "Reference" "#PWR054"
+		(property "Reference" "#PWR056"
 			(at 27.94 105.41 0)
 			(hide yes)
 			(show_name no)
@@ -18298,7 +18540,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR054")
+					(reference "#PWR056")
 					(unit 1)
 				)
 			)
@@ -18473,6 +18715,17 @@
 				)
 			)
 		)
+		(property "Cluster" "R_Filter_3V3_Osc"
+			(at 298.45 106.68 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "5a18047f-353c-4b30-9f35-87730c69d568")
 		)
@@ -18500,7 +18753,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b5a6ea1e-fd12-4346-a82d-1e671545fce7")
-		(property "Reference" "#PWR087"
+		(property "Reference" "#PWR089"
 			(at 339.09 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -18560,7 +18813,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR087")
+					(reference "#PWR089")
 					(unit 1)
 				)
 			)
@@ -18851,7 +19104,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "bd7335de-5bbf-4e7c-b473-661a94d591ab")
-		(property "Reference" "#PWR080"
+		(property "Reference" "#PWR082"
 			(at 306.07 191.77 0)
 			(hide yes)
 			(show_name no)
@@ -18911,7 +19164,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR080")
+					(reference "#PWR082")
 					(unit 1)
 				)
 			)
@@ -18929,7 +19182,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "c0ea6385-edcf-423f-88ac-89e658b4e87f")
-		(property "Reference" "#PWR090"
+		(property "Reference" "#PWR092"
 			(at 370.84 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -18989,7 +19242,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR090")
+					(reference "#PWR092")
 					(unit 1)
 				)
 			)
@@ -19255,6 +19508,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCA_P2V5"
+			(at 27.94 80.01 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "8325c7b8-25ed-46cc-9dcc-f901af2ebaaa")
 		)
@@ -19437,6 +19701,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCA_P2V5"
+			(at 54.61 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "66ded5e2-65a4-4d83-aa13-0807f45603e6")
 		)
@@ -19464,7 +19739,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "cb59d118-0691-4f4d-a841-b72d2472c270")
-		(property "Reference" "#PWR066"
+		(property "Reference" "#PWR068"
 			(at 88.9 186.69 0)
 			(hide yes)
 			(show_name no)
@@ -19524,7 +19799,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR066")
+					(reference "#PWR068")
 					(unit 1)
 				)
 			)
@@ -19542,7 +19817,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "cb5d6042-7663-4771-8703-d498c7e1475a")
-		(property "Reference" "#PWR068"
+		(property "Reference" "#PWR070"
 			(at 93.98 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -19602,7 +19877,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR068")
+					(reference "#PWR070")
 					(unit 1)
 				)
 			)
@@ -19684,6 +19959,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCD_PLL"
+			(at 54.61 50.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "b84dd5e1-adb6-403a-9804-bf2993a6f2b1")
 		)
@@ -19711,7 +19997,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d0075009-5d53-4008-970c-147743a663f5")
-		(property "Reference" "R14"
+		(property "Reference" "R15"
 			(at 316.23 96.52 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -19775,6 +20061,17 @@
 				)
 			)
 		)
+		(property "Cluster" "R_Filter_3V3_Osc"
+			(at 316.23 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "ebf56f5b-30c8-47b3-a379-84e605fa329f")
 		)
@@ -19784,7 +20081,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R14")
+					(reference "R15")
 					(unit 1)
 				)
 			)
@@ -19802,7 +20099,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d4fa5e95-01c2-4c8b-8e71-29812a3cff1b")
-		(property "Reference" "#PWR055"
+		(property "Reference" "#PWR057"
 			(at 34.29 252.73 0)
 			(hide yes)
 			(show_name no)
@@ -19862,7 +20159,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR055")
+					(reference "#PWR057")
 					(unit 1)
 				)
 			)
@@ -19880,7 +20177,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d5f13fbb-5fdd-41de-af99-239ee41ef6d1")
-		(property "Reference" "R15"
+		(property "Reference" "R16"
 			(at 327.66 66.0399 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -19955,7 +20252,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R15")
+					(reference "R16")
 					(unit 1)
 				)
 			)
@@ -20029,6 +20326,17 @@
 			)
 		)
 		(property "Role" "C_IN_BYPASS"
+			(at 40.64 33.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_1V2_VCCINT"
 			(at 40.64 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -20122,6 +20430,17 @@
 			)
 		)
 		(property "Role" "C_IN_BYPASS"
+			(at 344.17 34.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_3V3_Flash"
 			(at 344.17 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -20250,7 +20569,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d9638e02-5885-4bb3-84e1-9730cc196a95")
-		(property "Reference" "R23"
+		(property "Reference" "R24"
 			(at 350.52 24.13 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20314,6 +20633,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_3V3_Flash"
+			(at 350.52 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "1d160e7c-18fe-4704-b08b-f634b5315195")
 		)
@@ -20323,7 +20653,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R23")
+					(reference "R24")
 					(unit 1)
 				)
 			)
@@ -20432,7 +20762,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "dc85345a-84b8-4c4d-81f8-57b76238aab9")
-		(property "Reference" "#PWR056"
+		(property "Reference" "#PWR058"
 			(at 41.91 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -20492,7 +20822,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR056")
+					(reference "#PWR058")
 					(unit 1)
 				)
 			)
@@ -20588,7 +20918,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "deceec8e-4800-474f-83c8-7be3695b36d4")
-		(property "Reference" "R30"
+		(property "Reference" "R31"
 			(at 388.62 223.52 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20661,7 +20991,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R30")
+					(reference "R31")
 					(unit 1)
 				)
 			)
@@ -20927,6 +21257,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_3V3_Flash"
+			(at 332.74 34.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "54d132cb-adbb-4158-b97c-6b1d5cbb2b5d")
 		)
@@ -21135,6 +21476,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCD_PLL"
+			(at 81.28 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "95dfd31d-9553-4b35-9b47-0ed9ae3756e8")
 		)
@@ -21316,6 +21668,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCINT"
+			(at 54.61 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "56aaa0d4-38c4-41fc-92f0-1c40162ca449")
 		)
@@ -21343,7 +21706,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "eca33f27-2967-4fb5-b9de-a2267dd3ae09")
-		(property "Reference" "R21"
+		(property "Reference" "R22"
 			(at 344.17 203.2 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21407,6 +21770,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Channel_2_Signal_Matcher"
+			(at 344.17 209.55 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "304b501a-5448-4bfb-b503-7f9255654842")
 		)
@@ -21416,7 +21790,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R21")
+					(reference "R22")
 					(unit 1)
 				)
 			)
@@ -21525,7 +21899,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ed453b44-b1fe-45c2-9b0c-d7faac5f1843")
-		(property "Reference" "#PWR081"
+		(property "Reference" "#PWR083"
 			(at 318.77 130.81 0)
 			(hide yes)
 			(show_name no)
@@ -21585,7 +21959,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR081")
+					(reference "#PWR083")
 					(unit 1)
 				)
 			)
@@ -21603,7 +21977,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f12307a9-5198-4ceb-94f3-cf469c28c213")
-		(property "Reference" "#PWR050"
+		(property "Reference" "#PWR052"
 			(at 26.67 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -21663,7 +22037,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR050")
+					(reference "#PWR052")
 					(unit 1)
 				)
 			)
@@ -21681,7 +22055,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f1394362-f623-4a75-a524-3c71f16528d0")
-		(property "Reference" "#PWR083"
+		(property "Reference" "#PWR085"
 			(at 325.12 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -21741,7 +22115,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR083")
+					(reference "#PWR085")
 					(unit 1)
 				)
 			)
@@ -21850,7 +22224,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f3f4d1a7-be60-4959-ac8c-c10f078088af")
-		(property "Reference" "#PWR072"
+		(property "Reference" "#PWR074"
 			(at 93.98 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -21910,7 +22284,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR072")
+					(reference "#PWR074")
 					(unit 1)
 				)
 			)
@@ -22085,6 +22459,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_1V2_VCCINT"
+			(at 27.94 33.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "7feb84a2-21b4-430d-92f9-00ab58309dea")
 		)
@@ -22112,7 +22497,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f641fd1c-0e94-4f78-a2e5-419ebeef6bf8")
-		(property "Reference" "R24"
+		(property "Reference" "R25"
 			(at 388.62 165.1 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -22185,7 +22570,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R24")
+					(reference "R25")
 					(unit 1)
 				)
 			)
@@ -22203,7 +22588,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f97965fb-2e46-46f8-a17c-1b18e2f161df")
-		(property "Reference" "R31"
+		(property "Reference" "R32"
 			(at 388.62 233.68 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -22276,7 +22661,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R31")
+					(reference "R32")
 					(unit 1)
 				)
 			)
@@ -22294,7 +22679,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "fa5f188e-2f20-4c72-afe4-56ba056b9d47")
-		(property "Reference" "#PWR075"
+		(property "Reference" "#PWR077"
 			(at 96.52 209.55 0)
 			(hide yes)
 			(show_name no)
@@ -22354,7 +22739,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR075")
+					(reference "#PWR077")
 					(unit 1)
 				)
 			)
@@ -22438,6 +22823,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_3V3_VCCIO"
+			(at 40.64 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "31b25f12-711e-4a2a-a614-9e350cc3773c")
 		)
@@ -22465,7 +22861,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "fbaa4985-2046-47cb-b5c3-513a004fd589")
-		(property "Reference" "#PWR067"
+		(property "Reference" "#PWR069"
 			(at 93.98 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -22525,7 +22921,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "#PWR067")
+					(reference "#PWR069")
 					(unit 1)
 				)
 			)
@@ -22634,7 +23030,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "fcab4b23-83f4-4bc7-b71c-a59f4662d68b")
-		(property "Reference" "R10"
+		(property "Reference" "R11"
 			(at 298.45 129.5399 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -22709,7 +23105,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/a49990ef-0acf-4623-aebb-07783deb8795"
-					(reference "R10")
+					(reference "R11")
 					(unit 1)
 				)
 			)

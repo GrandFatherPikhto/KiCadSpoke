@@ -46,12 +46,22 @@ class ManualPositionCalculator(IPositionCalculator):
         vias_result: List[ViaCommand] = []
 
         for rule in rules:
-            # Якорь правила: чьи пады перечислены в spokes этого правила
-            target_fp = self.adapter.get_footprint(rule.anchor_ref)
-            if target_fp is None:
-                from ...exceptions import ComponentNotFoundError
-                raise ComponentNotFoundError(
-                    f"правило (цепь {rule.net!r}): якорь {rule.anchor_ref!r} не найден на плате")
+            # Якорь правила: чьи пады перечислены в spokes этого правила.
+            # anchor_ref ИЛИ anchor_role (взаимоисключающе, гарантировано
+            # load_config) — тот же принцип, что у ClonePlacement.
+            if rule.anchor_ref is not None:
+                target_fp = self.adapter.get_footprint(rule.anchor_ref)
+                if target_fp is None:
+                    from ...exceptions import ComponentNotFoundError
+                    raise ComponentNotFoundError(
+                        f"правило (цепь {rule.net!r}): якорь {rule.anchor_ref!r} не найден на плате")
+            else:
+                from .clone_role_resolver import resolve_footprint_by_role
+                target_fp = resolve_footprint_by_role(
+                    self.adapter, rule.anchor_role, rule.anchor_sheet, rule.anchor_cluster,
+                    self.cfg.sheet_names, label=f"правило (цепь {rule.net!r})",
+                )
+            anchor_ref_resolved = target_fp.reference_field.text.value
             # Собираем ВСЕ роли, нужные хоть одной спице этого правила --
             # пул строится один раз на всё правило, не на каждую спицу.
             roles_needed = set()
@@ -76,7 +86,7 @@ class ManualPositionCalculator(IPositionCalculator):
 
                 pad = self.adapter.get_pad_by_number(target_fp, spoke.pad)
                 if pad is None:
-                    logger.warning(f"У {rule.anchor_ref} нет площадки {spoke.pad}, "
+                    logger.warning(f"У {anchor_ref_resolved} нет площадки {spoke.pad}, "
                                    f"спица пропущена")
                     continue
 
@@ -93,7 +103,7 @@ class ManualPositionCalculator(IPositionCalculator):
                 for via_index, via in enumerate(layout.vias):
                     vias_result.append(ViaCommand(
                         position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
-                        net_name=via.net, owner_ref=rule.anchor_ref,
+                        net_name=via.net, owner_ref=anchor_ref_resolved,
                         registry_key=make_registry_key(anchor_id, spoke.template, None, via_index),
                     ))
                     logger.debug(f"  via спицы (пад {spoke.pad}): "

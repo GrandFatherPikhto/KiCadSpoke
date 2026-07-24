@@ -1032,7 +1032,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "2050a331-39fa-46d1-aad0-c436ee621ec2")
-		(property "Reference" "#PWR049"
+		(property "Reference" "#PWR051"
 			(at 93.98 107.95 0)
 			(hide yes)
 			(show_name no)
@@ -1092,7 +1092,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/1e5ef2d5-403e-4249-9e10-59c2a2eeeae0"
-					(reference "#PWR049")
+					(reference "#PWR051")
 					(unit 1)
 				)
 			)
@@ -1272,6 +1272,17 @@
 				)
 			)
 		)
+		(property "Cluster" "In_Filter_N18V"
+			(at 93.98 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "5bd1c24f-a8b3-43ac-b82a-8252346b79ea")
 		)
@@ -1365,6 +1376,17 @@
 				)
 			)
 		)
+		(property "Cluster" "In_Filter_P18V"
+			(at 93.98 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "31d7beaa-304f-4150-8947-4a623eace297")
 		)
@@ -1392,7 +1414,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "31e0f2cc-f572-4d5f-af8e-02cfcf92ef11")
-		(property "Reference" "#PWR047"
+		(property "Reference" "#PWR049"
 			(at 74.93 97.79 0)
 			(hide yes)
 			(show_name no)
@@ -1452,7 +1474,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/1e5ef2d5-403e-4249-9e10-59c2a2eeeae0"
-					(reference "#PWR047")
+					(reference "#PWR049")
 					(unit 1)
 				)
 			)
@@ -1526,6 +1548,17 @@
 			)
 		)
 		(property "Role" "C_IN_BULK"
+			(at 78.74 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "In_Filter_P18V"
 			(at 78.74 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -1641,7 +1674,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9a8a4f8d-5ca2-495f-b9ed-8c89cf17569d")
-		(property "Reference" "#PWR048"
+		(property "Reference" "#PWR050"
 			(at 93.98 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -1701,7 +1734,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/1e5ef2d5-403e-4249-9e10-59c2a2eeeae0"
-					(reference "#PWR048")
+					(reference "#PWR050")
 					(unit 1)
 				)
 			)
@@ -1797,7 +1830,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d452d1c3-c58b-49f9-b2c7-51e63f79b564")
-		(property "Reference" "#PWR046"
+		(property "Reference" "#PWR048"
 			(at 74.93 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -1857,7 +1890,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/1e5ef2d5-403e-4249-9e10-59c2a2eeeae0"
-					(reference "#PWR046")
+					(reference "#PWR048")
 					(unit 1)
 				)
 			)
@@ -1931,6 +1964,17 @@
 			)
 		)
 		(property "Role" "C_IN_BULK"
+			(at 78.74 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "In_Filter_N18V"
 			(at 78.74 97.79 0)
 			(hide yes)
 			(show_name no)

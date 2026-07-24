@@ -3088,6 +3088,16 @@
 	)
 	(wire
 		(pts
+			(xy 148.59 120.65) (xy 148.59 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "197e0ba0-8077-4169-9c1d-d7cc4398ed62")
+	)
+	(wire
+		(pts
 			(xy 184.15 156.21) (xy 207.01 156.21)
 		)
 		(stroke
@@ -3886,6 +3896,16 @@
 		)
 		(uuid "0fd1cd96-a838-4f21-9df4-0466b3b07b00")
 	)
+	(label "+1V2_LED"
+		(at 148.59 119.38 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "2525c111-a557-4d0a-8522-f72511d48b0f")
+	)
 	(label "-2V5_ADJ"
 		(at 203.2 105.41 180)
 		(effects
@@ -4023,6 +4043,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_P2V5"
+			(at 210.82 53.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "a7405221-dc13-49a9-9daf-0f9a80dd883d")
 		)
@@ -4116,6 +4147,16 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_Out_3V3"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "bef9b39b-4d7e-44ba-af44-ff78e13728ca")
 		)
@@ -4143,7 +4184,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "08a23df1-4898-4821-a306-27504ca4f7ca")
-		(property "Reference" "#PWR026"
+		(property "Reference" "#PWR028"
 			(at 148.59 146.05 0)
 			(hide yes)
 			(show_name no)
@@ -4203,7 +4244,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR026")
+					(reference "#PWR028")
 					(unit 1)
 				)
 			)
@@ -4287,6 +4328,17 @@
 				)
 			)
 		)
+		(property "Cluster" "In_Pi_Filter_Neg"
+			(at 63.5 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "93f40050-3b6e-4261-9b97-6f70ab6dc092")
 		)
@@ -4314,7 +4366,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0d20c4a4-7206-441a-9171-a6436a7ab507")
-		(property "Reference" "#PWR042"
+		(property "Reference" "#PWR044"
 			(at 240.03 140.97 0)
 			(hide yes)
 			(show_name no)
@@ -4374,7 +4426,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR042")
+					(reference "#PWR044")
 					(unit 1)
 				)
 			)
@@ -4536,6 +4588,16 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_Out_3V3"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "0877b4a1-91f8-4e32-a786-227ccb871e13")
 		)
@@ -4563,7 +4625,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "11159e65-8c07-4f58-b861-1738b730241e")
-		(property "Reference" "D7"
+		(property "Reference" "D8"
 			(at 215.9 107.9499 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4651,6 +4713,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_N2V5"
+			(at 213.36 109.22 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "58195aa3-c72e-4bc0-b775-d17978c490c8")
 		)
@@ -4660,7 +4733,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "D7")
+					(reference "D8")
 					(unit 1)
 				)
 			)
@@ -4833,6 +4906,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_P5V"
+			(at 132.08 66.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "48b18323-f4b5-4166-9dfc-d1435e892e10")
 		)
@@ -4926,6 +5010,17 @@
 				)
 			)
 		)
+		(property "Cluster" "In_Pi_Filter_Neg"
+			(at 99.06 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "4ba3c329-8713-4c85-961f-cf22a3c7ad35")
 		)
@@ -4953,7 +5048,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "188c6746-0a31-4423-9596-ef828a36c8de")
-		(property "Reference" "D4"
+		(property "Reference" "D5"
 			(at 201.93 17.78 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5039,6 +5134,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_P2V5"
+			(at 201.93 24.13 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "27deb448-f93d-4f37-b531-c5dea641bb64")
 		)
@@ -5048,7 +5154,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "D4")
+					(reference "D5")
 					(unit 1)
 				)
 			)
@@ -5210,6 +5316,16 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_Out_1V2"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "42a74707-4153-42a6-87b7-c335f1a20820")
 		)
@@ -5237,7 +5353,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "1f51ef08-a705-48c5-99af-90972dd74dc6")
-		(property "Reference" "R8"
+		(property "Reference" "R9"
 			(at 242.57 139.6999 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5303,6 +5419,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_N2V5"
+			(at 240.03 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "54c7482f-e6bf-48a7-a425-f604bb3f27ff")
 		)
@@ -5312,7 +5439,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "R8")
+					(reference "R9")
 					(unit 1)
 				)
 			)
@@ -5708,6 +5835,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Out_Pi_Filter_N2V5"
+			(at 207.01 152.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "bd2fe741-8a66-45a0-961c-bbb544005490")
 		)
@@ -5718,6 +5856,110 @@
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
 					(reference "C22")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 148.59 111.76 180)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "25cbf52b-ce97-4522-a7ce-0fdcb14231ba")
+		(property "Reference" "R3"
+			(at 151.13 110.4899 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "50"
+			(at 151.13 113.0299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder"
+			(at 150.368 111.76 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 148.59 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 148.59 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "R_LED"
+			(at 148.59 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Led_1V2"
+			(at 148.59 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "d5ec159f-5d4f-48cc-8393-8a9e0fae2280")
+		)
+		(pin "1"
+			(uuid "957441c5-dfb7-49c8-a7a7-441a38812bbc")
+		)
+		(instances
+			(project "3CH-AWG-TIA"
+				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
+					(reference "R3")
 					(unit 1)
 				)
 			)
@@ -5789,6 +6031,17 @@
 			)
 		)
 		(property "Role" "C_IN_BULK"
+			(at 39.37 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "In_Pi_Filter_Neg"
 			(at 39.37 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -5882,6 +6135,17 @@
 			)
 		)
 		(property "Role" "C_OUT_BYPASS"
+			(at 223.52 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Out_Pi_Filter_P2V5"
 			(at 223.52 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -6063,6 +6327,16 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_Out_3V3"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "8d7b983d-c562-47d3-9929-0c04ce48bd08")
 		)
@@ -6168,7 +6442,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "308d9e97-bdb9-4c43-9d68-2c74135fe96f")
-		(property "Reference" "D9"
+		(property "Reference" "D10"
 			(at 245.11 76.5174 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6245,6 +6519,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_P2V5"
+			(at 241.3 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "bad886c5-ed93-499a-9970-ee66bf911671")
 		)
@@ -6254,7 +6539,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "D9")
+					(reference "D10")
 					(unit 1)
 				)
 			)
@@ -6328,6 +6613,17 @@
 			)
 		)
 		(property "Role" "С_IN_BYPASS"
+			(at 63.5 68.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "In_Pi_Filter_Pos"
 			(at 63.5 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -6442,6 +6738,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_N5V"
+			(at 132.08 99.06 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "972c7e60-b7ad-4e35-86ef-a9b820d466e1")
 		)
@@ -6535,6 +6842,17 @@
 				)
 			)
 		)
+		(property "Cluster" "In_Pi_Filter_Pos"
+			(at 86.36 68.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "e5f0ff7e-756d-476a-991c-43e3b92814e6")
 		)
@@ -6562,7 +6880,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "3cd2b240-704a-4604-80aa-1c70031854ed")
-		(property "Reference" "#PWR043"
+		(property "Reference" "#PWR045"
 			(at 240.03 162.56 0)
 			(hide yes)
 			(show_name no)
@@ -6622,7 +6940,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR043")
+					(reference "#PWR045")
 					(unit 1)
 				)
 			)
@@ -6640,7 +6958,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "41d2c115-b75c-47ac-99ef-4f75a858065a")
-		(property "Reference" "D6"
+		(property "Reference" "D7"
 			(at 213.36 41.9099 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6728,6 +7046,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_P2V5"
+			(at 210.82 43.18 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "ac6ab909-b7b1-4965-84eb-699ce05a8e7f")
 		)
@@ -6737,7 +7066,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "D6")
+					(reference "D7")
 					(unit 1)
 				)
 			)
@@ -6809,7 +7138,18 @@
 				)
 			)
 		)
-		(property "Role" "LDO_ADJ"
+		(property "Role" "LDO_ADJ_N2V5"
+			(at 203.2 116.84 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" ""
 			(at 203.2 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -6850,7 +7190,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "47aa38a3-8ab1-40d5-be88-be04ccab90f8")
-		(property "Reference" "#PWR033"
+		(property "Reference" "#PWR035"
 			(at 189.23 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -6911,7 +7251,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR033")
+					(reference "#PWR035")
 					(unit 1)
 				)
 			)
@@ -6995,18 +7335,7 @@
 				)
 			)
 		)
-		(property "Module" ""
-			(at 97.79 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Group" ""
+		(property "Cluster" "In_Pi_Filter_Pos"
 			(at 97.79 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -7044,7 +7373,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "4f96ad1b-e232-4296-97e3-90c7bb8bc380")
-		(property "Reference" "R9"
+		(property "Reference" "R10"
 			(at 243.84 63.4999 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7110,6 +7439,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_P2V5"
+			(at 241.3 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "9ad95450-65e1-4500-aad0-178b912ed112")
 		)
@@ -7119,7 +7459,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "R9")
+					(reference "R10")
 					(unit 1)
 				)
 			)
@@ -7203,6 +7543,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_P5V"
+			(at 132.08 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "24c5d40c-faa3-40ca-a7b4-e0cf228f0aa8")
 		)
@@ -7213,6 +7564,106 @@
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
 					(reference "R1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 148.59 107.95 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "50ff6ac9-a5dd-4a15-8208-0a8435958f6a")
+		(property "Reference" "#PWR026"
+			(at 148.59 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+1V2"
+			(at 148.59 102.87 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 148.59 107.95 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 148.59 107.95 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 148.59 107.95 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" ""
+			(at 148.59 107.95 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" ""
+			(at 148.59 107.95 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "b39942bb-cf3f-4e13-8a81-ede26df75013")
+		)
+		(instances
+			(project "3CH-AWG-TIA"
+				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
+					(reference "#PWR026")
 					(unit 1)
 				)
 			)
@@ -7230,7 +7681,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5427240a-e89b-4e6c-be4c-ecd5cffd02ab")
-		(property "Reference" "R6"
+		(property "Reference" "R7"
 			(at 224.79 41.9099 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7296,6 +7747,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_P2V5"
+			(at 222.25 43.18 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "9ddc2ba2-e7ea-422c-b405-671d4e917be9")
 		)
@@ -7305,7 +7767,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "R6")
+					(reference "R7")
 					(unit 1)
 				)
 			)
@@ -7323,7 +7785,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "54b95bc6-ce3a-46e4-a16f-686b4749a1fd")
-		(property "Reference" "#PWR032"
+		(property "Reference" "#PWR034"
 			(at 185.42 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -7383,7 +7845,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR032")
+					(reference "#PWR034")
 					(unit 1)
 				)
 			)
@@ -7401,7 +7863,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "567d2653-659f-42e7-af62-2496b4cca5b9")
-		(property "Reference" "R4"
+		(property "Reference" "R5"
 			(at 204.47 52.0699 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7467,6 +7929,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_P2V5"
+			(at 201.93 53.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "ff66d638-b1c2-40f2-906d-973141642b1c")
 		)
@@ -7476,7 +7949,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "R4")
+					(reference "R5")
 					(unit 1)
 				)
 			)
@@ -7572,7 +8045,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "57ff246b-fdf4-4589-b87a-7e7794336bc8")
-		(property "Reference" "R5"
+		(property "Reference" "R6"
 			(at 205.74 96.5199 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7638,6 +8111,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_N2V5"
+			(at 203.2 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "0a9100f4-f2dd-4fa0-8859-d08a440f8c74")
 		)
@@ -7647,7 +8131,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "R5")
+					(reference "R6")
 					(unit 1)
 				)
 			)
@@ -7665,7 +8149,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5811fe0d-fea2-4f41-bd33-14a0a0fc6e6b")
-		(property "Reference" "#PWR041"
+		(property "Reference" "#PWR043"
 			(at 226.06 162.56 0)
 			(hide yes)
 			(show_name no)
@@ -7725,7 +8209,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR041")
+					(reference "#PWR043")
 					(unit 1)
 				)
 			)
@@ -7796,7 +8280,18 @@
 				)
 			)
 		)
-		(property "Role" "LDO"
+		(property "Role" "LDO_1V2"
+			(at 45.72 116.84 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" ""
 			(at 45.72 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -8022,7 +8517,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "606a630d-4fef-4357-80ea-09c866c9eb1a")
-		(property "Reference" "D5"
+		(property "Reference" "D6"
 			(at 203.2 125.73 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8108,6 +8603,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_N2V5"
+			(at 203.2 132.08 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "83dd7d5a-5051-4a11-b66f-fde8fce9273e")
 		)
@@ -8117,7 +8623,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "D5")
+					(reference "D6")
 					(unit 1)
 				)
 			)
@@ -8200,6 +8706,17 @@
 			)
 		)
 		(property "Group" "PI_FILTER_P5V"
+			(at 39.37 68.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "In_Pi_Filter_Pos"
 			(at 39.37 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -8381,6 +8898,16 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_Out_1V2"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "b5af039e-0053-4c33-b029-8e65ce775582")
 		)
@@ -8464,6 +8991,17 @@
 			)
 		)
 		(property "Role" "C_IN_BYPASS"
+			(at 184.15 152.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Out_Pi_Filter_N2V5"
 			(at 184.15 152.4 0)
 			(hide yes)
 			(show_name no)
@@ -8567,6 +9105,16 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_Out_1V2"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "ec1a8fa2-babc-43e7-b7ca-c0a7a54f3750")
 		)
@@ -8660,6 +9208,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_N5V"
+			(at 132.08 87.63 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "8296b74b-b958-4d1a-ac3d-29be01590cc4")
 		)
@@ -8687,7 +9246,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "77a623bd-a1ad-4ee1-8818-c1f318de7e1d")
-		(property "Reference" "#PWR036"
+		(property "Reference" "#PWR038"
 			(at 222.25 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -8747,7 +9306,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR036")
+					(reference "#PWR038")
 					(unit 1)
 				)
 			)
@@ -8765,7 +9324,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7a5f0deb-a8de-42f8-82e6-ac6b621efc2d")
-		(property "Reference" "#PWR030"
+		(property "Reference" "#PWR032"
 			(at 184.15 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -8825,7 +9384,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR030")
+					(reference "#PWR032")
 					(unit 1)
 				)
 			)
@@ -9221,6 +9780,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Out_Pi_Filter_N2V5"
+			(at 226.06 152.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "b5bd2dc3-5745-4010-9490-3ce157ebd7d9")
 		)
@@ -9304,6 +9874,17 @@
 			)
 		)
 		(property "Role" "C_OUT_BULK"
+			(at 86.36 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "In_Pi_Filter_Neg"
 			(at 86.36 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -9408,6 +9989,121 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:LED")
+		(at 148.59 124.46 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "8ca2f4b5-8d89-45c7-95a9-75599c465a0d")
+		(property "Reference" "D3"
+			(at 152.4 124.7774 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "LED"
+			(at 152.4 127.3174 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder"
+			(at 148.59 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 148.59 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Light emitting diode"
+			(at 148.59 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" "1=K 2=A"
+			(at 148.59 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Role" "LED"
+			(at 148.59 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Led_1V2"
+			(at 148.59 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "21a20ba1-4b6f-4759-b553-3713680bb45d")
+		)
+		(pin "2"
+			(uuid "0eec7761-1d44-481d-bcc7-fd1e343d0f04")
+		)
+		(instances
+			(project "3CH-AWG-TIA"
+				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
+					(reference "D3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Regulator_Linear:AMS1117CD-3.3")
 		(at 45.72 142.24 0)
 		(unit 1)
@@ -9472,7 +10168,18 @@
 				)
 			)
 		)
-		(property "Role" "LDO"
+		(property "Role" "LDO_3V3"
+			(at 45.72 142.24 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" ""
 			(at 45.72 142.24 0)
 			(hide yes)
 			(show_name no)
@@ -9580,6 +10287,84 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 148.59 128.27 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "94066601-d206-44e1-a618-7e5a95d5107a")
+		(property "Reference" "#PWR027"
+			(at 148.59 134.62 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 148.59 133.35 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 148.59 128.27 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 148.59 128.27 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 148.59 128.27 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "343c5b7c-f85a-4613-8344-3179158160e3")
+		)
+		(instances
+			(project "3CH-AWG-TIA"
+				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
+					(reference "#PWR027")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 224.79 109.22 0)
 		(unit 1)
@@ -9591,7 +10376,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "958f3657-e452-4908-b2a6-6eae15886ac6")
-		(property "Reference" "R7"
+		(property "Reference" "R8"
 			(at 227.33 107.9499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9657,6 +10442,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_N2V5"
+			(at 224.79 109.22 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "28c7576b-e1ee-495d-bf86-9f29ac873e59")
 		)
@@ -9666,7 +10462,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "R7")
+					(reference "R8")
 					(unit 1)
 				)
 			)
@@ -9684,7 +10480,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9a0353c1-1330-48d8-a624-8580079c64e7")
-		(property "Reference" "D3"
+		(property "Reference" "D4"
 			(at 152.4 159.0674 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9761,6 +10557,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_3V3"
+			(at 148.59 158.75 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "d990e2cc-8321-4482-9298-e8888ff78bb7")
 		)
@@ -9770,7 +10577,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "D3")
+					(reference "D4")
 					(unit 1)
 				)
 			)
@@ -9843,6 +10650,17 @@
 			)
 		)
 		(property "Role" "C_ADJ_BYPASS"
+			(at 213.36 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "LDO_Subsystem_N2V5"
 			(at 213.36 97.79 0)
 			(hide yes)
 			(show_name no)
@@ -9934,6 +10752,17 @@
 			)
 		)
 		(property "Role" "PI_FILTER_FB"
+			(at 199.39 148.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Out_Pi_Filter_N2V5"
 			(at 199.39 148.59 0)
 			(hide yes)
 			(show_name no)
@@ -10062,7 +10891,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9de634c4-31cd-445a-b543-d2b0c3a30bb2")
-		(property "Reference" "#PWR038"
+		(property "Reference" "#PWR040"
 			(at 223.52 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -10122,7 +10951,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR038")
+					(reference "#PWR040")
 					(unit 1)
 				)
 			)
@@ -10196,6 +11025,17 @@
 			)
 		)
 		(property "Role" "C_IN_BULK"
+			(at 73.66 120.65 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_Out_1V2"
 			(at 73.66 120.65 0)
 			(hide yes)
 			(show_name no)
@@ -10299,6 +11139,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Out_Pi_Filter_P2V5"
+			(at 207.01 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "b760247d-a214-486e-b8ee-dd34a587c443")
 		)
@@ -10326,7 +11177,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a2e990c4-296f-4a4e-a95d-ce414039d82c")
-		(property "Reference" "#PWR040"
+		(property "Reference" "#PWR042"
 			(at 226.06 152.4 0)
 			(hide yes)
 			(show_name no)
@@ -10386,7 +11237,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR040")
+					(reference "#PWR042")
 					(unit 1)
 				)
 			)
@@ -10404,7 +11255,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a32580c9-854c-4bdd-b38e-23211e9bba9d")
-		(property "Reference" "#PWR045"
+		(property "Reference" "#PWR047"
 			(at 241.3 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -10464,7 +11315,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR045")
+					(reference "#PWR047")
 					(unit 1)
 				)
 			)
@@ -10794,7 +11645,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ae7722da-20d7-43de-946c-d4051b18f27f")
-		(property "Reference" "#PWR034"
+		(property "Reference" "#PWR036"
 			(at 203.2 87.63 0)
 			(hide yes)
 			(show_name no)
@@ -10854,7 +11705,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR034")
+					(reference "#PWR036")
 					(unit 1)
 				)
 			)
@@ -10950,7 +11801,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b227c50e-31b4-4a17-847b-e35811ab6ea1")
-		(property "Reference" "#PWR035"
+		(property "Reference" "#PWR037"
 			(at 210.82 63.5 0)
 			(hide yes)
 			(show_name no)
@@ -11010,7 +11861,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR035")
+					(reference "#PWR037")
 					(unit 1)
 				)
 			)
@@ -11170,6 +12021,17 @@
 				)
 			)
 		)
+		(property "Cluster" "In_Pi_Filter_Neg"
+			(at 74.93 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "9f3a780f-4e81-4fc2-b466-60d2182cffe6")
 		)
@@ -11197,7 +12059,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "c0148294-1c01-4d0b-9c67-0d629f582c51")
-		(property "Reference" "#PWR039"
+		(property "Reference" "#PWR041"
 			(at 224.79 113.03 0)
 			(hide yes)
 			(show_name no)
@@ -11257,7 +12119,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR039")
+					(reference "#PWR041")
 					(unit 1)
 				)
 			)
@@ -11329,6 +12191,17 @@
 			)
 		)
 		(property "Role" "PI_FILTER_FB"
+			(at 74.93 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "In_Pi_Filter_Pos"
 			(at 74.93 64.77 0)
 			(hide yes)
 			(show_name no)
@@ -11422,6 +12295,17 @@
 			)
 		)
 		(property "Role" "C_IN_BULK"
+			(at 73.66 146.05 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Pi_Filter_Out_3V3"
 			(at 73.66 146.05 0)
 			(hide yes)
 			(show_name no)
@@ -11615,7 +12499,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ca1f05a2-3015-49aa-9e33-9eb852b2110b")
-		(property "Reference" "#PWR028"
+		(property "Reference" "#PWR030"
 			(at 182.88 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -11675,7 +12559,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR028")
+					(reference "#PWR030")
 					(unit 1)
 				)
 			)
@@ -11771,7 +12655,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "cd24e20d-bb0a-4732-b651-cdabca9af88a")
-		(property "Reference" "#PWR027"
+		(property "Reference" "#PWR029"
 			(at 148.59 168.91 0)
 			(hide yes)
 			(show_name no)
@@ -11831,7 +12715,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR027")
+					(reference "#PWR029")
 					(unit 1)
 				)
 			)
@@ -11905,6 +12789,17 @@
 			)
 		)
 		(property "Role" "C_IN_BYPASS"
+			(at 185.42 113.03 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "LDO_Subsystem_N2V5"
 			(at 185.42 113.03 0)
 			(hide yes)
 			(show_name no)
@@ -12020,7 +12915,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "da9cd20e-862f-40c4-b67b-d375d1797c89")
-		(property "Reference" "R3"
+		(property "Reference" "R4"
 			(at 151.13 144.7799 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12086,6 +12981,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_3V3"
+			(at 148.59 146.05 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "6d9f3975-debf-4114-ac45-2a8fba5c1fc5")
 		)
@@ -12095,7 +13001,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "R3")
+					(reference "R4")
 					(unit 1)
 				)
 			)
@@ -12269,7 +13175,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "df33cf36-bf41-4991-9717-00c47fad5434")
-		(property "Reference" "#PWR031"
+		(property "Reference" "#PWR033"
 			(at 184.15 152.4 0)
 			(hide yes)
 			(show_name no)
@@ -12329,7 +13235,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR031")
+					(reference "#PWR033")
 					(unit 1)
 				)
 			)
@@ -12479,7 +13385,18 @@
 				)
 			)
 		)
-		(property "Role" "LDO_ADJ"
+		(property "Role" "LDO_ADJ_P2V5"
+			(at 201.93 34.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" ""
 			(at 201.93 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -12520,7 +13437,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e4be843b-f90b-47cb-8870-b6c8b6a93c77")
-		(property "Reference" "#PWR044"
+		(property "Reference" "#PWR046"
 			(at 241.3 64.77 0)
 			(hide yes)
 			(show_name no)
@@ -12580,7 +13497,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR044")
+					(reference "#PWR046")
 					(unit 1)
 				)
 			)
@@ -12652,6 +13569,17 @@
 			)
 		)
 		(property "Role" "PI_FILTER_FB"
+			(at 199.39 72.39 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Out_Pi_Filter_P2V5"
 			(at 199.39 72.39 0)
 			(hide yes)
 			(show_name no)
@@ -12753,6 +13681,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Pi_Filter_Out_3V3"
+			(at 110.49 142.24 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "d7092b54-ea83-46d4-9879-8d87298ef577")
 		)
@@ -12780,7 +13719,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ea574ba5-d59d-4bec-a409-1e2225b95706")
-		(property "Reference" "#PWR029"
+		(property "Reference" "#PWR031"
 			(at 182.88 55.88 0)
 			(hide yes)
 			(show_name no)
@@ -12840,7 +13779,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR029")
+					(reference "#PWR031")
 					(unit 1)
 				)
 			)
@@ -12937,7 +13876,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f5d1563c-020c-43d0-944d-0617839a17d6")
-		(property "Reference" "#PWR037"
+		(property "Reference" "#PWR039"
 			(at 223.52 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -12997,7 +13936,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "#PWR037")
+					(reference "#PWR039")
 					(unit 1)
 				)
 			)
@@ -13071,6 +14010,17 @@
 			)
 		)
 		(property "Role" "C_IN_BYPASS"
+			(at 184.15 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Cluster" "Out_Pi_Filter_P2V5"
 			(at 184.15 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -13252,6 +14202,17 @@
 				)
 			)
 		)
+		(property "Cluster" "LDO_Subsystem_P2V5"
+			(at 182.88 38.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "6afb597b-2239-4f7e-8d73-6113db8df771")
 		)
@@ -13357,7 +14318,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ff8a31b6-e296-4fe9-86c6-1a87799638aa")
-		(property "Reference" "D8"
+		(property "Reference" "D9"
 			(at 243.84 152.7174 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13434,6 +14395,17 @@
 				)
 			)
 		)
+		(property "Cluster" "Led_N2V5"
+			(at 240.03 152.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "5eb3d238-504b-4faa-a438-8c22d72381f6")
 		)
@@ -13443,7 +14415,7 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/f0f029e2-aa73-4d43-9475-f78bf5f02acc"
-					(reference "D8")
+					(reference "D9")
 					(unit 1)
 				)
 			)

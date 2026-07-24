@@ -358,14 +358,18 @@ def _fp_on_sheet(fp, anchor_sheet: str, sheet_names: Dict[str, str]) -> bool:
     return anchor_sheet in names
 
 
-def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str, str]) -> FootprintInstance:
+def resolve_footprint_by_role(adapter, anchor_role: str, anchor_sheet: Optional[str],
+                              anchor_cluster: Optional[str], sheet_names: Dict[str, str],
+                              label: str) -> FootprintInstance:
     """
-    Резолв якорного компонента clone_placement по anchor_role (поле Role
-    на плате, НЕ роль шаблона — это разные вещи: тут ищем сам якорь среди
-    ВСЕХ футпринтов платы, а не роли внутри клонируемого шаблона). Тот же
-    каскад сужения неоднозначности, что и у ролей шаблона:
+    Резолв ЛЮБОГО якорного компонента по anchor_role (поле Role на плате,
+    НЕ роль шаблона — это разные вещи: тут ищем сам якорь среди ВСЕХ
+    футпринтов платы). Не завязан на ClonePlacement — используется и им
+    (resolve_anchor_by_role ниже, тонкая обёртка), и Rule (см.
+    manual_position_calculator.py) для anchor_role в spoke-путях. Тот же
+    каскад сужения неоднозначности:
 
-      1. кандидаты = все футпринты с Role == clone.anchor_role.
+      1. кандидаты = все футпринты с Role == anchor_role.
       2. несколько — сузить до anchor_sheet (если задан): человекочитаемый
          путь fp (через sheet_names, см. kicadspoke/sheet_names.py)
          содержит этот сегмент (см. _fp_on_sheet).
@@ -377,41 +381,43 @@ def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str
       4. всё ещё несколько, или 0 — ФАТАЛ со списком кандидатов и
          подсказкой (anchor_sheet/anchor_cluster/выделение/явный anchor_ref).
 
+    label — только для текста сообщений (clone.name у ClonePlacement,
+    rule.net у Rule — у Rule нет своего "имени", цепь заменяет его).
     sheet_names — {uuid: Sheetname}, см. Config.sheet_names; пустой словарь
     (schematic_dir/schematic_files не заданы) — anchor_sheet тогда никогда
     ничего не сузит (фатал проверяет это заранее, см. validation.py).
     """
     all_fps = adapter.get_footprints()
     candidates = [fp for fp in all_fps
-                  if adapter.get_field_value(fp, ROLE_FIELD_NAME) == clone.anchor_role]
+                  if adapter.get_field_value(fp, ROLE_FIELD_NAME) == anchor_role]
 
     if not candidates:
         raise ValidationError(format_fatal_error(
-            f"{clone.name}: anchor_role {clone.anchor_role!r} не найден ни на одном компоненте платы",
+            f"{label}: anchor_role {anchor_role!r} не найден ни на одном компоненте платы",
             [f"проверь, что поле Role проставлено в схеме и долетело до PCB "
              f"(Update PCB from Schematic)"]
         ))
 
     narrowed = candidates
-    if len(narrowed) > 1 and clone.anchor_sheet:
-        by_sheet = [fp for fp in narrowed if _fp_on_sheet(fp, clone.anchor_sheet, sheet_names)]
+    if len(narrowed) > 1 and anchor_sheet:
+        by_sheet = [fp for fp in narrowed if _fp_on_sheet(fp, anchor_sheet, sheet_names)]
         if by_sheet:
             if len(by_sheet) < len(narrowed):
-                logger.info(f"[{clone.name}] anchor_role {clone.anchor_role!r}: "
+                logger.info(f"[{label}] anchor_role {anchor_role!r}: "
                             f"{len(narrowed)} кандидатов сужено до {len(by_sheet)} "
-                            f"по anchor_sheet {clone.anchor_sheet!r}")
+                            f"по anchor_sheet {anchor_sheet!r}")
             narrowed = by_sheet
 
-    if len(narrowed) > 1 and clone.anchor_cluster:
+    if len(narrowed) > 1 and anchor_cluster:
         by_cluster = [fp for fp in narrowed
                      if _cluster_prefix_match(
                          adapter.get_field_value(fp, CLUSTER_FIELD_NAME) or '',
-                         clone.anchor_cluster)]
+                         anchor_cluster)]
         if by_cluster:
             if len(by_cluster) < len(narrowed):
-                logger.info(f"[{clone.name}] anchor_role {clone.anchor_role!r}: "
+                logger.info(f"[{label}] anchor_role {anchor_role!r}: "
                             f"{len(narrowed)} кандидатов сужено до {len(by_cluster)} "
-                            f"по anchor_cluster {clone.anchor_cluster!r}")
+                            f"по anchor_cluster {anchor_cluster!r}")
             narrowed = by_cluster
 
     if len(narrowed) > 1:
@@ -422,7 +428,7 @@ def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str
             by_selection = [fp for fp in narrowed
                             if fp.reference_field.text.value in selected_refs]
             if by_selection and len(by_selection) < len(narrowed):
-                logger.info(f"[{clone.name}] anchor_role {clone.anchor_role!r}: "
+                logger.info(f"[{label}] anchor_role {anchor_role!r}: "
                             f"{len(narrowed)} кандидатов сужено до {len(by_selection)} "
                             f"по текущему выделению на плате")
                 narrowed = by_selection
@@ -432,8 +438,15 @@ def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str
 
     refs = sorted(fp.reference_field.text.value for fp in narrowed)
     raise ValidationError(format_fatal_error(
-        f"{clone.name}: anchor_role {clone.anchor_role!r} неоднозначен",
+        f"{label}: anchor_role {anchor_role!r} неоднозначен",
         [f"кандидатов: {len(narrowed)}: {refs}. Выходы: уточни anchor_sheet "
          f"и/или anchor_cluster, ЛИБО выдели нужный экземпляр на плате перед "
          f"запуском, ЛИБО укажи явно anchor_ref вместо anchor_role: {refs[0]!r}"]
     ))
+
+
+def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str, str]) -> FootprintInstance:
+    """Тонкая обёртка resolve_footprint_by_role под ClonePlacement — обратная
+    совместимость вызывающего кода (clone_position_calculator.py)."""
+    return resolve_footprint_by_role(adapter, clone.anchor_role, clone.anchor_sheet,
+                                     clone.anchor_cluster, sheet_names, clone.name)

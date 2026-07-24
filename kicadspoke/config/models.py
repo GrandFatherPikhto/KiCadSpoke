@@ -162,11 +162,16 @@ class ManualSpoke:
 @dataclass
 class Rule:
     """Правило: выводок спиц вокруг ОДНОГО якорного компонента.
-    anchor_ref — чей это выводок (пады спиц — его пады); глобального
-    target_ref больше нет, у каждого правила свой якорь."""
+    anchor_ref ИЛИ anchor_role (взаимоисключающе, ровно одно обязательно) —
+    чей это выводок (пады спиц — его пады). anchor_sheet/anchor_cluster —
+    сужение неоднозначности anchor_role, тот же принцип, что у
+    ClonePlacement (см. config/models.py)."""
     net: str
     spokes: List[ManualSpoke]
-    anchor_ref: str = ''
+    anchor_ref: Optional[str] = None
+    anchor_role: Optional[str] = None
+    anchor_sheet: Optional[str] = None
+    anchor_cluster: Optional[str] = None
 
 
 @dataclass

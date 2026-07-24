@@ -1,0 +1,197 @@
+layer: B.Cu
+thermal_via_array:
+  enabled: true
+  anchor_ref: IC1
+  pad: '145'
+  net: GND
+  rows: 4
+  cols: 4
+  margin_mm: 0.5
+  pattern: grid
+  drill_mm: 0.3
+  diameter_mm: 0.5
+templates:
+  cap_pair_standard:
+    vias:
+    - offset_along_mm: 0.0
+      offset_across_mm: 1.5
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    components:
+    - role: C_OUT_BYPASS
+      offset_along_mm: -1.0
+      offset_across_mm: 1.0
+      angle_deg: 270.0
+      vias:
+      - offset_along_mm: -1.0
+        offset_across_mm: 2.7
+        net: GND
+        drill_mm: 0.3
+        diameter_mm: 0.6
+    - role: C_OUT_BULK
+      offset_along_mm: -1.0
+      offset_across_mm: -2.0
+      angle_deg: 90.0
+      vias:
+      - offset_along_mm: -1.0
+        offset_across_mm: -4.2
+        net: GND
+        drill_mm: 0.3
+        diameter_mm: 0.6
+rules:
+- net: +3V3_VCCIO
+  spokes:
+  - pad: '17'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 90.0
+    enabled: true
+  - pad: '26'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: -1.8
+    rotation_deg: 90.0
+    enabled: true
+  - pad: '40'
+    template: cap_pair_standard
+    shift_x_mm: 1.3
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    enabled: true
+  - pad: '47'
+    template: cap_pair_standard
+    shift_x_mm: 2.5
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    enabled: true
+  - pad: '56'
+    template: cap_pair_standard
+    shift_x_mm: 0.3
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    enabled: true
+  - pad: '62'
+    template: cap_pair_standard
+    shift_x_mm: 2.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    enabled: true
+  - pad: '81'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: -1.0
+    rotation_deg: 270.0
+    enabled: true
+  - pad: '93'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 270.0
+    enabled: true
+  - pad: '117'
+    template: cap_pair_standard
+    shift_x_mm: -2.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+  - pad: '122'
+    template: cap_pair_standard
+    shift_x_mm: -1.8
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+  - pad: '130'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+  - pad: '139'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+  anchor_ref: IC1
+- net: +1V2_VCCINT
+  spokes:
+  - pad: '5'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 90.0
+    enabled: true
+  - pad: '29'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: -0.8
+    rotation_deg: 90.0
+    enabled: true
+  - pad: '45'
+    template: cap_pair_standard
+    shift_x_mm: 1.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    enabled: true
+  - pad: '61'
+    template: cap_pair_standard
+    shift_x_mm: -0.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    enabled: true
+  - pad: '78'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 270.0
+    enabled: true
+  - pad: '102'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 270.0
+    enabled: true
+  - pad: '116'
+    template: cap_pair_standard
+    shift_x_mm: -0.3
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+  - pad: '134'
+    template: cap_pair_standard
+    shift_x_mm: -0.3
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+  anchor_ref: IC1
+- net: +1V2_VCCD_PLL
+  spokes:
+  - pad: '37'
+    template: cap_pair_standard
+    shift_x_mm: 0.5
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    enabled: true
+  - pad: '109'
+    template: cap_pair_standard
+    shift_x_mm: -1.5
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    enabled: true
+  anchor_ref: IC1
+- net: +2V5_VCCA
+  spokes:
+  - pad: '35'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: -1.0
+    rotation_deg: 90.0
+    enabled: true
+  - pad: '107'
+    template: cap_pair_standard
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 270.0
+    enabled: true
+  anchor_ref: IC1

@@ -338,15 +338,35 @@ def load_config(path: str) -> Config:
 
     rules = []
     for rule_data in data.get('rules', []):
-        anchor_ref = rule_data.get('anchor_ref', '')
-        if not anchor_ref:
+        rule_net = rule_data.get('net')
+        anchor_ref = rule_data.get('anchor_ref')
+        anchor_role = rule_data.get('anchor_role')
+        anchor_sheet = rule_data.get('anchor_sheet')
+        anchor_cluster = rule_data.get('anchor_cluster')
+
+        if anchor_ref and anchor_role:
             raise ValidationError(format_fatal_error(
-                f"правило (цепь {rule_data.get('net')!r}) без anchor_ref",
-                ["у правила спиц обязателен anchor_ref: <ref> — компонент, чьи "
-                 "пады перечислены в spokes (раньше это был глобальный target_ref)"]
+                f"anchor_ref и anchor_role одновременно в правиле (цепь {rule_net!r})",
+                ["это два взаимоисключающих способа задать якорь — либо по refdes "
+                 "(anchor_ref), либо по полю Role (anchor_role), не оба сразу"]
+            ))
+        if anchor_sheet and not anchor_role:
+            raise ValidationError(format_fatal_error(
+                f"anchor_sheet без anchor_role в правиле (цепь {rule_net!r})",
+                ["anchor_sheet только сужает неоднозначность anchor_role, сам по "
+                 "себе якорем не является"]
+            ))
+        if not anchor_ref and not anchor_role:
+            raise ValidationError(format_fatal_error(
+                f"правило (цепь {rule_net!r}) без anchor_ref/anchor_role",
+                ["у правила спиц обязателен якорь — anchor_ref: <ref> (компонент, "
+                 "чьи пады перечислены в spokes), либо anchor_role: <ROLE> (переживает "
+                 "переименование/перенумерацию — раньше это был глобальный target_ref)"]
             ))
         spokes = [_load_manual_spoke(spoke_data) for spoke_data in rule_data.get('spokes', [])]
-        rules.append(Rule(net=rule_data['net'], spokes=spokes, anchor_ref=anchor_ref))
+        rules.append(Rule(net=rule_net, spokes=spokes, anchor_ref=anchor_ref,
+                          anchor_role=anchor_role, anchor_sheet=anchor_sheet,
+                          anchor_cluster=anchor_cluster))
 
     clone_placements = [_load_clone_placement(cp) for cp in data.get('clone_placements', [])]
 

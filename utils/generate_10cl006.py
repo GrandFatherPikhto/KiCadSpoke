@@ -77,11 +77,11 @@ def main():
                  "drill_mm": 0.3, "diameter_mm": 0.6},
             ],
             "components": [
-                {"role": "LIGHT", "offset_along_mm": -1.0, "offset_across_mm": 1.0,
+                {"role": "C_OUT_BYPASS", "offset_along_mm": -1.0, "offset_across_mm": 1.0,
                  "angle_deg": 270.0,
                  "vias": [{"offset_along_mm": -1.0, "offset_across_mm": 2.7,
                           "net": "GND", "drill_mm": 0.3, "diameter_mm": 0.6}]},
-                {"role": "HEAVY", "offset_along_mm": -1.0, "offset_across_mm": -2.0,
+                {"role": "C_OUT_BULK", "offset_along_mm": -1.0, "offset_across_mm": -2.0,
                  "angle_deg": 90.0,
                  "vias": [{"offset_along_mm": -1.0, "offset_across_mm": -4.2,
                           "net": "GND", "drill_mm": 0.3, "diameter_mm": 0.6}]},
@@ -96,7 +96,7 @@ def main():
         "rules": [asdict(r) for r in build_rules()],
     }
 
-    output_path = "templates/10CL006YE144C8G.generated.yaml"
+    output_path = "profiles/generated/10CL006YE144C8G.yaml"
     with open(output_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
     print(f"Сгенерирован: {output_path}")
