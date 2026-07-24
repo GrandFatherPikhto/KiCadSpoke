@@ -3,17 +3,8 @@ schematic_dir: D:/Projects/KiCad/Mishin-Coil/mishin-coil-gen-v1
 registry_path: profiles/registries/power_board.registry.json
 track_registry_path: profiles/registries/power_board.tracks.registry.json
 
-templates:                          # ← инлайн, прямо тут же, руками, один раз
-  dac_single:
-    components:
-      - role: DAC1
-        offset_along_mm: 0.0
-        offset_across_mm: 0.0
-        angle_deg: 0.0
-
-
 extract_profiles:
-  5v_filter:
+  5v_pi_filter:
     name: 5v_pi_filter
     output: profiles/templates/mishin-coil.yaml
     param:
@@ -23,8 +14,8 @@ extract_profiles:
     net_template:
       '{PWR_IN}': '+5V_DIRTY'
       '{PWR_OUT}': '+5V'
-    origin_by_via_net: '+5V_DIRTY'
-
+    origin_by_component_role: C_IN_BULK
+    origin_by_component_pad: '1'
 
 clone_placements:
   conn_pm5v:

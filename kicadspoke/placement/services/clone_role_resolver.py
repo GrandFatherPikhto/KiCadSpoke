@@ -34,6 +34,7 @@ from ...exceptions import ValidationError, format_fatal_error
 from ...net_resolution import resolve_net
 from ...utils.units import MM
 from .component_pool import ROLE_FIELD_NAME
+from ...constants import CLUSTER_FIELD_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -96,16 +97,15 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone_name: str
     return role_to_ref
 
 
-def _sheet_key(fp) -> str:
+def _cluster_prefix_match(candidate_cluster: str, wanted: str) -> bool:
     """
-    Строковый ключ экземпляра листа иерархии для футпринта (для сравнения
-    'соседи ли по листу'). sheet_path доступен с KiCad 9.0.3 / kipy 0.4;
-    при недоступности возвращает '' — фильтр по листу тогда пропускается.
+    candidate_cluster == wanted, ИЛИ candidate_cluster начинается с
+    'wanted/' — сравнение по сегментам префикса, не по подстроке (чтобы
+    'Channel_1' не совпал случайно с 'Channel_10'). Плоские имена без '/'
+    просто вырождаются в точное совпадение — иерархия не обязательна,
+    работает тем же кодом.
     """
-    try:
-        return str(fp.sheet_path.proto if hasattr(fp.sheet_path, 'proto') else fp.sheet_path)
-    except Exception:
-        return ''
+    return candidate_cluster == wanted or candidate_cluster.startswith(wanted + '/')
 
 
 def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacement,
@@ -121,12 +121,16 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
          при реаннотации (refdes не стабилен) — крайняя мера, не основной
          путь.
       1. кандидаты = Role-поле совпадает И сидит на ожидаемой цепи.
-      2. если кандидатов несколько — сузить до пересечения с ТЕКУЩИМ
-         выделением на плате, если оно не пусто и сужает хоть что-то.
-      3. всё ещё несколько — сузить до соседей по листу иерархии с уже
-         однозначно разрешёнными ролями ЭТОГО ЖЕ размещения (не помогает,
-         если у неоднозначных ролей нет отдельного сабшита на инстанс —
-         типовой случай общей силовой цепи/развязки, не DAC-сигнала).
+      2. если кандидатов несколько И задан clone.anchor_cluster — сузить
+         до кандидатов, чьё поле Cluster совпадает с ним по префиксу
+         сегментов (см. _cluster_prefix_match). Это и есть основной путь
+         для типового случая "N одинаковых ролей на одном листе, потому
+         что цепь общая силовая, а не по-канальная" — раньше здесь стояла
+         попытка сузить по sheet_path (см. историю: эмпирически
+         подтверждено, что UUID в sheet_path.path уникален per-компонент,
+         группировки по листу не даёт вообще — ступень была тихим no-op).
+      3. всё ещё несколько — сузить до пересечения с ТЕКУЩИМ выделением
+         на плате, если оно не пусто и сужает хоть что-то.
       4. всё ещё несколько, и задан anchor_position — сузить по физической
          близости к якорю ЭТОГО clone_placement: ближайший кандидат
          побеждает, но только с явным отрывом (ближайший минимум вдвое
@@ -134,8 +138,8 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
          зависит ни от refdes, ни от листа/цепи — переживает реаннотацию.
       5. всё ещё несколько — ФАТАЛ: кандидаты неразличимы всеми
          доступными способами, человеку предлагается либо развести роли
-         по именам в схеме, либо выделить нужный экземпляр, либо (крайняя
-         мера) явный refs.
+         по именам в схеме, либо задать anchor_cluster, либо выделить
+         нужный экземпляр, либо (крайняя мера) явный refs.
     """
     selected_items = adapter.get_selected_items()
     selected_refs = {i.reference_field.text.value for i in selected_items
@@ -151,7 +155,6 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
             fps_by_role.setdefault(role, []).append(fp)
 
     role_to_ref: Dict[str, str] = {}
-    resolved_fps: List = []
     problems: List[str] = []
     ambiguous: List = []   # (role, expected_net, matched) на второй проход
 
@@ -165,7 +168,6 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
             problems.append(f"refs: компонент {ref!r} (роль {role!r}) не найден на плате")
             continue
         role_to_ref[role] = ref
-        resolved_fps.append(fp)
         logger.info(f"[{clone.name}] роль {role!r} -> {ref} (явный refs)")
 
     # --- первый проход: однозначные по Role+цепи ---
@@ -208,30 +210,29 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
             ambiguous.append((role, expected_net, matched))
         else:
             role_to_ref[role] = matched[0].reference_field.text.value
-            resolved_fps.append(matched[0])
 
-    # --- сужение неоднозначных: сначала по выделению, потом по листу иерархии ---
-    neighbor_sheets = {_sheet_key(fp) for fp in resolved_fps}
-    neighbor_sheets.discard('')
+    # --- сужение неоднозначных: сначала Cluster, потом выделение, потом физическая близость ---
     for role, expected_net, matched in ambiguous:
         narrowed = matched
 
-        if selected_refs:
+        if clone.anchor_cluster:
+            by_cluster = [fp for fp in narrowed
+                         if _cluster_prefix_match(
+                             adapter.get_field_value(fp, CLUSTER_FIELD_NAME) or '',
+                             clone.anchor_cluster)]
+            if by_cluster and len(by_cluster) < len(narrowed):
+                logger.info(f"[{clone.name}] роль {role!r}: {len(narrowed)} кандидатов "
+                            f"сужено до {len(by_cluster)} по anchor_cluster "
+                            f"{clone.anchor_cluster!r}")
+                narrowed = by_cluster
+
+        if len(narrowed) > 1 and selected_refs:
             by_selection = [fp for fp in narrowed
                             if fp.reference_field.text.value in selected_refs]
             if by_selection and len(by_selection) < len(narrowed):
                 logger.info(f"[{clone.name}] роль {role!r}: {len(narrowed)} кандидатов "
                             f"сужено до {len(by_selection)} по текущему выделению на плате")
                 narrowed = by_selection
-
-        if len(narrowed) > 1 and neighbor_sheets:
-            by_sheet = [fp for fp in narrowed if _sheet_key(fp) in neighbor_sheets]
-            if by_sheet:
-                if len(by_sheet) < len(narrowed):
-                    logger.info(f"[{clone.name}] роль {role!r}: {len(narrowed)} кандидатов "
-                                f"сужено до {len(by_sheet)} по листу иерархии уже "
-                                f"разрешённых соседей")
-                narrowed = by_sheet
 
         by_distance_note = ""
         if len(narrowed) > 1 and anchor_position is not None:
@@ -258,18 +259,19 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
 
         if len(narrowed) == 1:
             role_to_ref[role] = narrowed[0].reference_field.text.value
-            resolved_fps.append(narrowed[0])
         else:
             refs = sorted(fp.reference_field.text.value for fp in narrowed)
             problems.append(
                 f"роль {role!r}: неоднозначность — {len(narrowed)} компонентов на цепи "
                 f"{expected_net!r}"
-                + (" (уже в одном листе иерархии — кандидаты электрически "
-                   "неразличимы; типовой случай: несколько одинаковых фильтров "
-                   "в одном листе с одинаковыми ролями)" if neighbor_sheets else "")
+                + (f" (уже сужено по anchor_cluster {clone.anchor_cluster!r}, но "
+                   f"этого недостаточно)" if clone.anchor_cluster else
+                   " (Cluster не задан — если у этих компонентов разные физические "
+                   "экземпляры, anchor_cluster сузил бы до одного)")
                 + by_distance_note
-                + f": {refs}. Выходы: выделите нужный экземпляр целиком на плате перед "
-                f"запуском, ЛИБО разведите роли по именам в схеме "
+                + f": {refs}. Выходы: задайте anchor_cluster (если поле Cluster "
+                f"проставлено в схеме), ЛИБО выделите нужный экземпляр целиком на "
+                f"плате перед запуском, ЛИБО разведите роли по именам в схеме "
                 f"(напр. DAC_PI_3V3_C1 vs DAC_PI_AVDD_C1), ЛИБО укажите явно: "
                 f"refs: {{{role}: {refs[0]}}}")
 
@@ -309,9 +311,13 @@ def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str
       2. несколько — сузить до anchor_sheet (если задан): человекочитаемый
          путь fp (через sheet_names, см. kicadspoke/sheet_names.py)
          содержит этот сегмент (см. _fp_on_sheet).
+      2b. всё ещё несколько — сузить до anchor_cluster (если задан):
+          поле Cluster совпадает по префиксу сегментов (см.
+          _cluster_prefix_match) — независимый от anchor_sheet канал
+          сужения, читается из схемы, не из UUID/sheet_path.
       3. всё ещё несколько — сузить до текущего выделения на плате.
       4. всё ещё несколько, или 0 — ФАТАЛ со списком кандидатов и
-         подсказкой (anchor_sheet/выделение/явный anchor_ref).
+         подсказкой (anchor_sheet/anchor_cluster/выделение/явный anchor_ref).
 
     sheet_names — {uuid: Sheetname}, см. Config.sheet_names; пустой словарь
     (schematic_dir/schematic_files не заданы) — anchor_sheet тогда никогда
@@ -338,6 +344,18 @@ def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str
                             f"по anchor_sheet {clone.anchor_sheet!r}")
             narrowed = by_sheet
 
+    if len(narrowed) > 1 and clone.anchor_cluster:
+        by_cluster = [fp for fp in narrowed
+                     if _cluster_prefix_match(
+                         adapter.get_field_value(fp, CLUSTER_FIELD_NAME) or '',
+                         clone.anchor_cluster)]
+        if by_cluster:
+            if len(by_cluster) < len(narrowed):
+                logger.info(f"[{clone.name}] anchor_role {clone.anchor_role!r}: "
+                            f"{len(narrowed)} кандидатов сужено до {len(by_cluster)} "
+                            f"по anchor_cluster {clone.anchor_cluster!r}")
+            narrowed = by_cluster
+
     if len(narrowed) > 1:
         selected_items = adapter.get_selected_items()
         selected_refs = {i.reference_field.text.value for i in selected_items
@@ -358,7 +376,6 @@ def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str
     raise ValidationError(format_fatal_error(
         f"{clone.name}: anchor_role {clone.anchor_role!r} неоднозначен",
         [f"кандидатов: {len(narrowed)}: {refs}. Выходы: уточни anchor_sheet "
-         f"(если у кандидатов есть локальные цепи разных листов), ЛИБО выдели "
-         f"нужный экземпляр на плате перед запуском, ЛИБО укажи явно anchor_ref "
-         f"вместо anchor_role: {refs[0]!r}"]
+         f"и/или anchor_cluster, ЛИБО выдели нужный экземпляр на плате перед "
+         f"запуском, ЛИБО укажи явно anchor_ref вместо anchor_role: {refs[0]!r}"]
     ))

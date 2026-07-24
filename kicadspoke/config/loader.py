@@ -140,7 +140,7 @@ def _load_manual_spoke(data: Dict[str, Any]) -> ManualSpoke:
 _CLONE_PLACEMENT_KNOWN_KEYS = {
     'name', 'template', 'role', 'origin_x_mm', 'origin_y_mm', 'rotation_deg',
     'nets', 'params', 'net_overrides', 'enabled',
-    'anchor_ref', 'anchor_pad', 'anchor_role', 'anchor_sheet',
+    'anchor_ref', 'anchor_pad', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
     'layer', 'mirror', 'refs', 'by_selection',
     'side',  # устаревшее — распознаётся отдельно ниже, только чтобы дать
              # осмысленное сообщение про миграцию, а не "неизвестный ключ"
@@ -174,6 +174,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
     anchor_pad = data.get('anchor_pad')
     anchor_role = data.get('anchor_role')
     anchor_sheet = data.get('anchor_sheet')
+    anchor_cluster = data.get('anchor_cluster')
 
     template = data.get('template')
     role = data.get('role')
@@ -261,6 +262,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
         anchor_pad=str(anchor_pad) if anchor_pad is not None else None,
         anchor_role=anchor_role,
         anchor_sheet=anchor_sheet,
+        anchor_cluster=anchor_cluster,
         layer=layer,
         mirror=bool(data.get('mirror', False)),
         refs=data.get('refs', {}) or {},
