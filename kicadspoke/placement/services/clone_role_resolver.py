@@ -58,17 +58,80 @@ def clone_uses_selection_mode(clone: ClonePlacement) -> bool:
     return not (clone.nets or clone.params)
 
 
-def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone_name: str) -> Dict[str, str]:
+def _narrow_ambiguous_candidates(candidates, clone: ClonePlacement, adapter, selected_refs: set,
+                                 anchor_position: Optional[Vector2], clone_name: str, role: str):
+    """
+    Общий каскад сужения неоднозначных кандидатов: Cluster -> текущее
+    выделение -> физическая близость к якорю. Используется и в
+    resolve_roles_by_nets (после сопоставления по цепям), и в
+    resolve_roles_by_selection (когда роль не найдена в выделении, но и
+    на всей плате неоднозначна) — одна и та же логика сужения, не две
+    разные копии. Возвращает (список после сужения, note для сообщения
+    об ошибке, если сузить до одного не вышло — пустая строка иначе).
+    """
+    narrowed = list(candidates)
+
+    if clone.anchor_cluster:
+        by_cluster = [fp for fp in narrowed
+                     if _cluster_prefix_match(
+                         adapter.get_field_value(fp, CLUSTER_FIELD_NAME) or '',
+                         clone.anchor_cluster)]
+        if by_cluster and len(by_cluster) < len(narrowed):
+            logger.info(f"[{clone_name}] роль {role!r}: {len(narrowed)} кандидатов "
+                        f"сужено до {len(by_cluster)} по anchor_cluster {clone.anchor_cluster!r}")
+            narrowed = by_cluster
+
+    if len(narrowed) > 1 and selected_refs:
+        by_selection = [fp for fp in narrowed if fp.reference_field.text.value in selected_refs]
+        if by_selection and len(by_selection) < len(narrowed):
+            logger.info(f"[{clone_name}] роль {role!r}: {len(narrowed)} кандидатов "
+                        f"сужено до {len(by_selection)} по текущему выделению на плате")
+            narrowed = by_selection
+
+    note = ""
+    if len(narrowed) > 1 and anchor_position is not None:
+        with_dist = sorted(
+            ((math.hypot((fp.position.x - anchor_position.x) / MM,
+                         (fp.position.y - anchor_position.y) / MM), fp)
+             for fp in narrowed),
+            key=lambda t: t[0]
+        )
+        closest_dist, closest_fp = with_dist[0]
+        second_dist = with_dist[1][0]
+        note = (f" (ближайший к якорю {clone_name!r}: "
+               f"{closest_fp.reference_field.text.value} на "
+               f"{closest_dist:.2f} мм, второй — {second_dist:.2f} мм)")
+        if second_dist >= 2 * max(closest_dist, 1e-6):
+            logger.info(f"[{clone_name}] роль {role!r}: {len(narrowed)} кандидатов "
+                        f"сужено до 1 по физической близости к якорю "
+                        f"({closest_fp.reference_field.text.value}, {closest_dist:.2f} мм, "
+                        f"второй ближайший — {second_dist:.2f} мм, отрыв достаточный)")
+            narrowed = [closest_fp]
+        else:
+            logger.debug(f"[{clone_name}] роль {role!r}: по близости к якорю не сузить — "
+                        f"{closest_dist:.2f} мм vs {second_dist:.2f} мм, отрыв недостаточный")
+
+    return narrowed, note
+
+
+def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePlacement,
+                               anchor_position: Optional[Vector2] = None) -> Dict[str, str]:
     """
     Сопоставление по текущему выделению на плате — но выделение
-    обязательно ТОЛЬКО когда роль реально неоднозначна. Если роли нет в
-    выделении, но она уникальна на ВСЕЙ плате — резолвим напрямую, без
-    выделения (нет смысла требовать мышку ради того, что и так однозначно).
-    Выделение имеет приоритет, если роль в нём есть — компонент из
-    выделения побеждает над глобальным поиском, даже если он там не один.
+    обязательно ТОЛЬКО когда роль реально неоднозначна:
+      1. роль есть в выделении -> используем (приоритет над всем ниже).
+      2. роли нет в выделении, но она уникальна на ВСЕЙ плате -> резолвим
+         напрямую, выделение не нужно вообще.
+      3. роли нет в выделении, и на плате неоднозначна -> тот же каскад
+         сужения, что и в resolve_roles_by_nets: Cluster -> выделение
+         (повторно, вдруг в выделении есть что-то из этих же кандидатов
+         без самой роли... на практике редко, но не вредит) -> физическая
+         близость к якорю -> ФАТАЛ с точным списком, если не сузилось.
     """
     items = adapter.get_selected_items()
     footprints = [i for i in items if isinstance(i, FootprintInstance)]
+    selected_refs = {fp.reference_field.text.value for fp in footprints}
+    clone_name = clone.name
 
     template_roles = {slot.role for slot in template.components}
 
@@ -93,10 +156,6 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone_name: str
 
     missing = template_roles - set(role_to_ref.keys())
     if missing:
-        # Роли нет в выделении — но, может, она и не нуждается в выделении:
-        # если на ВСЕЙ плате она встречается ровно один раз, резолвим
-        # напрямую. Требовать мышку имеет смысл только при реальной
-        # неоднозначности, не как формальность.
         all_fps_by_role: Dict[str, list] = {}
         for fp in adapter.get_footprints():
             role = adapter.get_field_value(fp, ROLE_FIELD_NAME)
@@ -105,18 +164,27 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone_name: str
 
         for role in sorted(missing):
             candidates = all_fps_by_role.get(role, [])
+            if not candidates:
+                problems.append(f"роль {role!r} есть в шаблоне, но не найдена нигде на плате")
+                continue
             if len(candidates) == 1:
                 ref = candidates[0].reference_field.text.value
                 role_to_ref[role] = ref
                 logger.info(f"[{clone_name}] роль {role!r} -> {ref} (уникальна на всей "
                            f"плате, выделение не потребовалось)")
-            elif not candidates:
-                problems.append(f"роль {role!r} есть в шаблоне, но не найдена нигде на плате")
+                continue
+
+            narrowed, note = _narrow_ambiguous_candidates(
+                candidates, clone, adapter, selected_refs, anchor_position, clone_name, role
+            )
+            if len(narrowed) == 1:
+                role_to_ref[role] = narrowed[0].reference_field.text.value
             else:
-                refs = sorted(fp.reference_field.text.value for fp in candidates)
+                refs = sorted(fp.reference_field.text.value for fp in narrowed)
                 problems.append(f"роль {role!r} есть в шаблоне, не найдена в выделении, "
-                                f"и на плате неоднозначна ({len(candidates)} кандидатов: "
-                                f"{refs}) — выдели нужный экземпляр на плате перед запуском")
+                                f"и на плате неоднозначна ({len(narrowed)} кандидатов: "
+                                f"{refs}){note} — задай anchor_cluster, ЛИБО выдели "
+                                f"нужный экземпляр на плате перед запуском")
 
     if problems:
         raise ValidationError(format_fatal_error(
@@ -241,51 +309,11 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
         else:
             role_to_ref[role] = matched[0].reference_field.text.value
 
-    # --- сужение неоднозначных: сначала Cluster, потом выделение, потом физическая близость ---
+    # --- сужение неоднозначных: Cluster -> выделение -> физическая близость (общая функция) ---
     for role, expected_net, matched in ambiguous:
-        narrowed = matched
-
-        if clone.anchor_cluster:
-            by_cluster = [fp for fp in narrowed
-                         if _cluster_prefix_match(
-                             adapter.get_field_value(fp, CLUSTER_FIELD_NAME) or '',
-                             clone.anchor_cluster)]
-            if by_cluster and len(by_cluster) < len(narrowed):
-                logger.info(f"[{clone.name}] роль {role!r}: {len(narrowed)} кандидатов "
-                            f"сужено до {len(by_cluster)} по anchor_cluster "
-                            f"{clone.anchor_cluster!r}")
-                narrowed = by_cluster
-
-        if len(narrowed) > 1 and selected_refs:
-            by_selection = [fp for fp in narrowed
-                            if fp.reference_field.text.value in selected_refs]
-            if by_selection and len(by_selection) < len(narrowed):
-                logger.info(f"[{clone.name}] роль {role!r}: {len(narrowed)} кандидатов "
-                            f"сужено до {len(by_selection)} по текущему выделению на плате")
-                narrowed = by_selection
-
-        by_distance_note = ""
-        if len(narrowed) > 1 and anchor_position is not None:
-            with_dist = sorted(
-                ((math.hypot((fp.position.x - anchor_position.x) / MM,
-                             (fp.position.y - anchor_position.y) / MM), fp)
-                 for fp in narrowed),
-                key=lambda t: t[0]
-            )
-            closest_dist, closest_fp = with_dist[0]
-            second_dist = with_dist[1][0]
-            by_distance_note = (f" (ближайший к якорю {clone.name!r}: "
-                                f"{closest_fp.reference_field.text.value} на "
-                                f"{closest_dist:.2f} мм, второй — {second_dist:.2f} мм)")
-            if second_dist >= 2 * max(closest_dist, 1e-6):
-                logger.info(f"[{clone.name}] роль {role!r}: {len(narrowed)} кандидатов "
-                            f"сужено до 1 по физической близости к якорю "
-                            f"({closest_fp.reference_field.text.value}, {closest_dist:.2f} мм, "
-                            f"второй ближайший — {second_dist:.2f} мм, отрыв достаточный)")
-                narrowed = [closest_fp]
-            else:
-                logger.debug(f"[{clone.name}] роль {role!r}: по близости к якорю не сузить — "
-                            f"{closest_dist:.2f} мм vs {second_dist:.2f} мм, отрыв недостаточный")
+        narrowed, note = _narrow_ambiguous_candidates(
+            matched, clone, adapter, selected_refs, anchor_position, clone.name, role
+        )
 
         if len(narrowed) == 1:
             role_to_ref[role] = narrowed[0].reference_field.text.value
@@ -298,7 +326,7 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
                    f"этого недостаточно)" if clone.anchor_cluster else
                    " (Cluster не задан — если у этих компонентов разные физические "
                    "экземпляры, anchor_cluster сузил бы до одного)")
-                + by_distance_note
+                + note
                 + f": {refs}. Выходы: задайте anchor_cluster (если поле Cluster "
                 f"проставлено в схеме), ЛИБО выделите нужный экземпляр целиком на "
                 f"плате перед запуском, ЛИБО разведите роли по именам в схеме "

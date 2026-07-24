@@ -130,7 +130,8 @@ class ClonePositionCalculator:
             # выделению". Явное решение снаружи, не автоматика внутри
             # самого резолвера (см. clone_role_resolver.py).
             if clone_uses_selection_mode(clone):
-                role_to_ref = resolve_roles_by_selection(self.adapter, template, clone.name)
+                role_to_ref = resolve_roles_by_selection(self.adapter, template, clone,
+                                                         anchor_position=anchor_position)
             else:
                 role_to_ref = resolve_roles_by_nets(self.adapter, template, clone,
                                                     anchor_position=anchor_position)
