@@ -59,7 +59,14 @@ def clone_uses_selection_mode(clone: ClonePlacement) -> bool:
 
 
 def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone_name: str) -> Dict[str, str]:
-    """Сопоставление по текущему выделению на плате."""
+    """
+    Сопоставление по текущему выделению на плате — но выделение
+    обязательно ТОЛЬКО когда роль реально неоднозначна. Если роли нет в
+    выделении, но она уникальна на ВСЕЙ плате — резолвим напрямую, без
+    выделения (нет смысла требовать мышку ради того, что и так однозначно).
+    Выделение имеет приоритет, если роль в нём есть — компонент из
+    выделения побеждает над глобальным поиском, даже если он там не один.
+    """
     items = adapter.get_selected_items()
     footprints = [i for i in items if isinstance(i, FootprintInstance)]
 
@@ -85,8 +92,31 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone_name: str
         role_to_ref[role] = ref
 
     missing = template_roles - set(role_to_ref.keys())
-    for role in sorted(missing):
-        problems.append(f"роль {role!r} есть в шаблоне, но не найдена в выделении")
+    if missing:
+        # Роли нет в выделении — но, может, она и не нуждается в выделении:
+        # если на ВСЕЙ плате она встречается ровно один раз, резолвим
+        # напрямую. Требовать мышку имеет смысл только при реальной
+        # неоднозначности, не как формальность.
+        all_fps_by_role: Dict[str, list] = {}
+        for fp in adapter.get_footprints():
+            role = adapter.get_field_value(fp, ROLE_FIELD_NAME)
+            if role in missing:
+                all_fps_by_role.setdefault(role, []).append(fp)
+
+        for role in sorted(missing):
+            candidates = all_fps_by_role.get(role, [])
+            if len(candidates) == 1:
+                ref = candidates[0].reference_field.text.value
+                role_to_ref[role] = ref
+                logger.info(f"[{clone_name}] роль {role!r} -> {ref} (уникальна на всей "
+                           f"плате, выделение не потребовалось)")
+            elif not candidates:
+                problems.append(f"роль {role!r} есть в шаблоне, но не найдена нигде на плате")
+            else:
+                refs = sorted(fp.reference_field.text.value for fp in candidates)
+                problems.append(f"роль {role!r} есть в шаблоне, не найдена в выделении, "
+                                f"и на плате неоднозначна ({len(candidates)} кандидатов: "
+                                f"{refs}) — выдели нужный экземпляр на плате перед запуском")
 
     if problems:
         raise ValidationError(format_fatal_error(

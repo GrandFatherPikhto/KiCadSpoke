@@ -18,9 +18,8 @@ extract_profiles:
     origin_by_component_pad: '1'
 
 clone_placements:
-  conn_pm5v:
-    components:
-      - role: CONN_PM5V
-        offset_along_mm: 0.0
-        offset_across_mm: 0.0
-        angle_deg: 9.0
+  - name: conn_pm5v
+    role: CONN_PM5V
+    origin_x_mm: 0.0
+    origin_y_mm: 0.0
+    rotation_deg: 9.0
