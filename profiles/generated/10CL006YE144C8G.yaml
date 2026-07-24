@@ -20,6 +20,10 @@ templates:
       offset_across_mm: 1.5
       drill_mm: 0.3
       diameter_mm: 0.6
+    - offset_along_mm: -1.0
+      offset_across_mm: -5.2
+      drill_mm: 0.3
+      diameter_mm: 0.6
     components:
     - role: C_OUT_BYPASS
       offset_along_mm: -1.0
@@ -47,14 +51,14 @@ rules:
   - pad: '17'
     template: cap_pair_standard
     shift_x_mm: 0.0
-    shift_y_mm: 0.0
+    shift_y_mm: -0.5
     rotation_deg: 90.0
     enabled: true
     cluster: VCCIO_BANK
   - pad: '26'
     template: cap_pair_standard
     shift_x_mm: 0.0
-    shift_y_mm: -1.8
+    shift_y_mm: -2.4
     rotation_deg: 90.0
     enabled: true
     cluster: VCCIO_BANK
@@ -144,7 +148,7 @@ rules:
   - pad: '29'
     template: cap_pair_standard
     shift_x_mm: 0.0
-    shift_y_mm: -0.8
+    shift_y_mm: -1.5
     rotation_deg: 90.0
     enabled: true
     cluster: VCCINT_BANK
@@ -172,7 +176,7 @@ rules:
   - pad: '102'
     template: cap_pair_standard
     shift_x_mm: 0.0
-    shift_y_mm: 0.0
+    shift_y_mm: 1.0
     rotation_deg: 270.0
     enabled: true
     cluster: VCCINT_BANK
@@ -219,14 +223,14 @@ rules:
   - pad: '35'
     template: cap_pair_standard
     shift_x_mm: 0.0
-    shift_y_mm: -1.0
+    shift_y_mm: -2.0
     rotation_deg: 90.0
     enabled: true
     cluster: VCCA_BANK
   - pad: '107'
     template: cap_pair_standard
     shift_x_mm: 0.0
-    shift_y_mm: 0.0
+    shift_y_mm: 1.0
     rotation_deg: 270.0
     enabled: true
     cluster: VCCA_BANK

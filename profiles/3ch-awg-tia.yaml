@@ -1,12 +1,17 @@
-templates_file: templates/mishin-coil.yaml
-schematic_dir: D:/Projects/KiCad/Mishin-Coil/mishin-coil-gen-v1
-registry_path: profiles/registries/power_board.registry.json
+templates_file: templates/3ch-awg-tia.yaml
+schematic_dir: D:/Projects/Python/KiCadSpoke/test_boards/3CH-AWG-TIA
+registry_path: profiles/registries/3ch-awg-tia.json
 track_registry_path: profiles/registries/power_board.tracks.registry.json
 
 extract_profiles:
+  fpga_pwr_bank:
+    name: fpga_pwr_bank
+    output: profiles/templates/3ch-awg-tia.yaml
+    param:
+
   5v_pi_filter:
     name: 5v_pi_filter
-    output: profiles/templates/mishin-coil.yaml
+    output: profiles/templates/3ch-awg-tia.yaml
     param:
       PWR_IN: '+5V_DIRTY'
       PWR_OUT: '+5V'

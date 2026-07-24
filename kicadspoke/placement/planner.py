@@ -32,7 +32,7 @@ class PlacementPlanner:
         self._planned_tracks = None
         self.via_planner = ViaPlanner(adapter, config)
         logger.info(f"Планировщик инициализирован: layer={config.layer}, "
-                    f"якорей в правилах: {len({r.anchor_ref for r in config.rules})}")
+                    f"якорей в правилах: {len({r.anchor_ref or r.anchor_role for r in config.rules})}")
 
     # Допуски для проверки "уже на месте" (skip_existing_components) —
     # достаточно грубые, чтобы не реагировать на шум округления при
@@ -102,24 +102,14 @@ class PlacementPlanner:
         return moves
 
     def plan_vias(self) -> List[ViaCommand]:
-        tva = self.cfg.thermal_via_array
-        thermal_anchor_fp = None
-        if tva.enabled:
-            # Если задан anchor_ref, используем его (обратная совместимость)
-            if tva.anchor_ref is not None:
-                thermal_anchor_fp = self.adapter.get_footprint(tva.anchor_ref)
-                if thermal_anchor_fp is None:
-                    raise ComponentNotFoundError(
-                        f"thermal_via_array: якорь {tva.anchor_ref!r} не найден")
-            # Если задан только anchor_role, оставляем None — via_planner сам разрешит
-            elif tva.anchor_role is not None:
-                thermal_anchor_fp = None
-            else:
-                raise ValidationError("thermal_via_array: ни anchor_ref, ни anchor_role не заданы")
+        # Резолв якоря термовиа (anchor_ref/anchor_role/anchor_sheet/
+        # anchor_cluster) целиком внутри via_planner.py (_resolve_thermal_
+        # anchor) — не дублируем эту логику здесь, target_fp=None всегда
+        # означает "резолви сам из cfg.thermal_via_array".
         return self.via_planner.plan_vias(
             planned_components=self._planned,
             planned_vias=self._planned_vias,
-            target_fp=thermal_anchor_fp,
+            target_fp=None,
             target_layer=self._target_layer
         )
 

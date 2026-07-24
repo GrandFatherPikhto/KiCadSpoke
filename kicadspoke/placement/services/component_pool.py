@@ -25,6 +25,22 @@ def _natural_sort_key(ref: str):
     return [int(p) if p.isdigit() else p for p in parts]
 
 
+def _cluster_prefix_match(candidate_cluster: str, wanted: str) -> bool:
+    """
+    candidate_cluster == wanted, ИЛИ candidate_cluster начинается с
+    'wanted/' — сравнение по сегментам префикса, не по подстроке (чтобы
+    'Channel_1' не совпал случайно с 'Channel_10'). Плоские имена без '/'
+    просто вырождаются в точное совпадение — иерархия не обязательна,
+    работает тем же кодом. Единая реализация на весь проект — раньше
+    была продублирована с точным сравнением здесь и префиксным в
+    clone_role_resolver.py, что давало РАЗНОЕ поведение Cluster в двух
+    разных местах молча; теперь одна функция, определена здесь (не в
+    clone_role_resolver.py — тот уже и так зависит от этого модуля через
+    ROLE_FIELD_NAME, обратная зависимость создала бы цикл импорта).
+    """
+    return candidate_cluster == wanted or candidate_cluster.startswith(wanted + '/')
+
+
 class ComponentPool:
     """
     Пул компонентов для одной цепи (rule.net), сгруппированных по роли.
@@ -44,10 +60,11 @@ class ComponentPool:
             role = self.adapter.get_field_value(fp, ROLE_FIELD_NAME)
             if role is None or role not in self._pools:
                 continue
-            # Если кластер задан, проверяем
+            # Если кластер задан, проверяем по префиксу сегментов (тот же
+            # принцип, что и у anchor_cluster) — не точным равенством
             if self.cluster is not None:
                 fp_cluster = self.adapter.get_field_value(fp, CLUSTER_FIELD_NAME)
-                if fp_cluster != self.cluster:
+                if fp_cluster is None or not _cluster_prefix_match(fp_cluster, self.cluster):
                     continue
             pads = self.adapter.get_footprint_pads(fp)
             nets_on_fp = {p.net.name for p in pads if p.net and p.net.name}

@@ -64,13 +64,21 @@ class ManualPositionCalculator(IPositionCalculator):
                 if template is not None:
                     roles_needed.update(slot.role for slot in template.components)
 
-            if not roles_needed:
-                continue
+            # ВАЖНО: не пропускаем правило целиком, если roles_needed пуст —
+            # это значит только "ни у одного шаблона спицы нет роле-
+            # компонентов", а не "у правила нет спиц вообще". Спицы могут
+            # нести via уровня самой спицы без единого под-компонента (см.
+            # cap_pair_standard без components: в старых конфигах) — им
+            # пул вообще не нужен, но геометрию/via создавать всё равно
+            # надо. Пустой roles_needed просто даёт пустые пулы ниже —
+            # дёшево, не требует отдельной ветки.
 
             # --- Собираем кластеры, которые используются в спицах (включая None) ---
             clusters_needed = {spoke.cluster for spoke in rule.spokes if spoke.enabled}
 
-            # --- Строим пулы для каждого кластера ---
+            # --- Строим пулы для каждого кластера, включая None (спицы без
+            # кластера) — clusters_needed уже содержит None, если хоть одна
+            # включённая спица без кластера, так что отдельный проход не нужен ---
             pools_by_cluster = {}
             for cluster in clusters_needed:
                 pools_by_cluster[cluster] = ComponentPool(
@@ -79,19 +87,6 @@ class ManualPositionCalculator(IPositionCalculator):
                     roles=sorted(roles_needed),
                     cluster=cluster
                 )
-            # Пул для спиц без кластера (если такие есть)
-            # Он уже создан, если None есть в clusters_needed
-            # Если None нет, но есть спица с cluster=None (невозможно, т.к. мы собрали все),
-            # то создадим отдельно
-            if None not in pools_by_cluster:
-                # Если есть хоть одна спица без кластера, создаём пул без фильтрации
-                if any(spoke.cluster is None for spoke in rule.spokes if spoke.enabled):
-                    pools_by_cluster[None] = ComponentPool(
-                        self.adapter,
-                        rule.net,
-                        roles=sorted(roles_needed),
-                        cluster=None
-                    )
 
             # --- Обрабатываем каждую спицу ---
             for spoke in rule.spokes:
@@ -110,12 +105,12 @@ class ManualPositionCalculator(IPositionCalculator):
                                    f"спица пропущена")
                     continue
 
-                # Выбираем пул по кластеру спицы
-                pool = pools_by_cluster.get(spoke.cluster)
-                if pool is None:
-                    # Если пул не найден (например, кластер не был собран), создаём на лету
-                    logger.warning(f"Пул для кластера {spoke.cluster!r} не найден, создаю новый")
-                    pool = ComponentPool(self.adapter, rule.net, roles=sorted(roles_needed), cluster=spoke.cluster)
+                # Выбираем пул по кластеру спицы — по построению pools_by_cluster
+                # уже содержит ключ spoke.cluster (см. clusters_needed выше),
+                # для любой включённой спицы; если это когда-нибудь перестанет
+                # быть так — пусть падает громко (KeyError), а не тихо
+                # подставляет свежесозданный пул мимо общего учёта расхода.
+                pool = pools_by_cluster[spoke.cluster]
 
                 # Разбираем пул по ролям
                 role_to_ref = {slot.role: pool.pop(slot.role, spoke.pad) for slot in template.components}

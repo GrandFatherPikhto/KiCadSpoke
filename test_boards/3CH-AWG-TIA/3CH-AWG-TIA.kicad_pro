@@ -988,7 +988,7 @@
           "show": true
         }
       ],
-      "filter_string": "/^C(6[3-9]|7[0-9]|80)$/",
+      "filter_string": "/^C(6[2-9]|7[0-9]|80|3[5-9]|4[0-6]|5[1-9]|85[5-8]|9[3-6])$/",
       "group_symbols": true,
       "include_excluded_from_bom": true,
       "name": "",

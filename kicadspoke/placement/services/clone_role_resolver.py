@@ -33,7 +33,7 @@ from ...config import SpokeTemplate, ClonePlacement
 from ...exceptions import ValidationError, format_fatal_error
 from ...net_resolution import resolve_net
 from ...utils.units import MM
-from .component_pool import ROLE_FIELD_NAME
+from .component_pool import ROLE_FIELD_NAME, _cluster_prefix_match
 from ...constants import CLUSTER_FIELD_NAME
 
 logger = logging.getLogger(__name__)
@@ -194,16 +194,6 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePla
     logger.info(f"[{clone_name}] сопоставлено по выделению: {len(role_to_ref)} ролей")
     return role_to_ref
 
-
-def _cluster_prefix_match(candidate_cluster: str, wanted: str) -> bool:
-    """
-    candidate_cluster == wanted, ИЛИ candidate_cluster начинается с
-    'wanted/' — сравнение по сегментам префикса, не по подстроке (чтобы
-    'Channel_1' не совпал случайно с 'Channel_10'). Плоские имена без '/'
-    просто вырождаются в точное совпадение — иерархия не обязательна,
-    работает тем же кодом.
-    """
-    return candidate_cluster == wanted or candidate_cluster.startswith(wanted + '/')
 
 
 def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacement,

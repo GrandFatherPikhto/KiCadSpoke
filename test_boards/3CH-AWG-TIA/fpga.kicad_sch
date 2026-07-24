@@ -10619,7 +10619,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 58.42 149.86 90)
 			(hide yes)
 			(show_name no)
@@ -10721,7 +10721,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 29.21 161.29 0)
 			(hide yes)
 			(show_name no)
@@ -10823,7 +10823,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 264.16 90)
 			(hide yes)
 			(show_name no)
@@ -11367,7 +11367,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -212.09 283.21 0)
 			(hide yes)
 			(show_name no)
@@ -12357,7 +12357,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 72.39 218.44 90)
 			(hide yes)
 			(show_name no)
@@ -12899,7 +12899,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCA_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 87.63 185.42 0)
 			(hide yes)
 			(show_name no)
@@ -13001,7 +13001,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 58.42 207.01 90)
 			(hide yes)
 			(show_name no)
@@ -13103,7 +13103,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCA_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 104.14 185.42 0)
 			(hide yes)
 			(show_name no)
@@ -13205,7 +13205,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -166.37 226.06 0)
 			(hide yes)
 			(show_name no)
@@ -13502,7 +13502,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -212.09 271.78 0)
 			(hide yes)
 			(show_name no)
@@ -13868,7 +13868,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -200.66 260.35 0)
 			(hide yes)
 			(show_name no)
@@ -14048,7 +14048,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 218.44 90)
 			(hide yes)
 			(show_name no)
@@ -14539,7 +14539,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 72.39 161.29 90)
 			(hide yes)
 			(show_name no)
@@ -14641,7 +14641,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 72.39 195.58 90)
 			(hide yes)
 			(show_name no)
@@ -14990,7 +14990,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -212.09 294.64 0)
 			(hide yes)
 			(show_name no)
@@ -15376,7 +15376,7 @@
 				)
 			)
 		)
-		(property "Cluster" "PLL_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 87.63 138.43 0)
 			(hide yes)
 			(show_name no)
@@ -15684,7 +15684,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 172.72 90)
 			(hide yes)
 			(show_name no)
@@ -15786,7 +15786,7 @@
 				)
 			)
 		)
-		(property "Cluster" "PLL_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 104.14 151.13 0)
 			(hide yes)
 			(show_name no)
@@ -16044,7 +16044,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 72.39 172.72 90)
 			(hide yes)
 			(show_name no)
@@ -16146,7 +16146,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 252.73 90)
 			(hide yes)
 			(show_name no)
@@ -16417,7 +16417,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 184.15 90)
 			(hide yes)
 			(show_name no)
@@ -16519,7 +16519,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -177.8 237.49 0)
 			(hide yes)
 			(show_name no)
@@ -16621,7 +16621,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 229.87 90)
 			(hide yes)
 			(show_name no)
@@ -16723,7 +16723,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 149.86 90)
 			(hide yes)
 			(show_name no)
@@ -17376,7 +17376,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 72.39 229.87 90)
 			(hide yes)
 			(show_name no)
@@ -17580,7 +17580,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 72.39 138.43 90)
 			(hide yes)
 			(show_name no)
@@ -18033,7 +18033,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 161.29 90)
 			(hide yes)
 			(show_name no)
@@ -18135,7 +18135,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 72.39 184.15 90)
 			(hide yes)
 			(show_name no)
@@ -18328,7 +18328,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 58.42 195.58 90)
 			(hide yes)
 			(show_name no)
@@ -18911,7 +18911,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 207.01 90)
 			(hide yes)
 			(show_name no)
@@ -19195,7 +19195,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 195.58 90)
 			(hide yes)
 			(show_name no)
@@ -19583,7 +19583,7 @@
 				)
 			)
 		)
-		(property "Cluster" "PLL_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 104.14 139.7 0)
 			(hide yes)
 			(show_name no)
@@ -20012,7 +20012,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -120.65 180.34 0)
 			(hide yes)
 			(show_name no)
@@ -20296,7 +20296,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 241.3 90)
 			(hide yes)
 			(show_name no)
@@ -20398,7 +20398,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -143.51 203.2 0)
 			(hide yes)
 			(show_name no)
@@ -20500,7 +20500,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 58.42 172.72 90)
 			(hide yes)
 			(show_name no)
@@ -20602,7 +20602,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 29.21 138.43 0)
 			(hide yes)
 			(show_name no)
@@ -20860,7 +20860,7 @@
 				)
 			)
 		)
-		(property "Cluster" "PLL_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 87.63 149.86 0)
 			(hide yes)
 			(show_name no)
@@ -20962,7 +20962,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 58.42 218.44 90)
 			(hide yes)
 			(show_name no)
@@ -21168,7 +21168,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 41.91 138.43 90)
 			(hide yes)
 			(show_name no)
@@ -22111,7 +22111,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 58.42 161.29 90)
 			(hide yes)
 			(show_name no)
@@ -22315,7 +22315,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 72.39 207.01 90)
 			(hide yes)
 			(show_name no)
@@ -22664,7 +22664,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 58.42 184.15 90)
 			(hide yes)
 			(show_name no)
@@ -22766,7 +22766,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -154.94 214.63 0)
 			(hide yes)
 			(show_name no)
@@ -23201,7 +23201,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 72.39 149.86 90)
 			(hide yes)
 			(show_name no)
@@ -23507,7 +23507,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCIO_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at -189.23 248.92 0)
 			(hide yes)
 			(show_name no)
@@ -23843,7 +23843,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 58.42 138.43 90)
 			(hide yes)
 			(show_name no)
@@ -24023,7 +24023,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCA_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 87.63 173.99 0)
 			(hide yes)
 			(show_name no)
@@ -24671,7 +24671,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCINT_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 58.42 229.87 90)
 			(hide yes)
 			(show_name no)
@@ -24866,7 +24866,7 @@
 				)
 			)
 		)
-		(property "Cluster" "VCCA_BANK"
+		(property "Cluster" "FPGA_PWR_BANK"
 			(at 104.14 173.99 0)
 			(hide yes)
 			(show_name no)
