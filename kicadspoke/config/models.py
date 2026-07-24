@@ -19,7 +19,10 @@ from typing import Optional, List, Dict, Any
 class ThermalViaArrayConfig:
     """Конфигурация массива тепловых via под термопадом IC."""
     enabled: bool = False
-    anchor_ref: str = ""
+    anchor_ref: Optional[str] = None          # было str = ""
+    anchor_role: Optional[str] = None         # новое
+    anchor_sheet: Optional[str] = None        # для сужения роли
+    anchor_cluster: Optional[str] = None      # для сужения роли    
     pad: str = ""
     net: str = "GND"
     rows: int = 4
@@ -157,6 +160,7 @@ class ManualSpoke:
     shift_y_mm: float = 0.0
     rotation_deg: float = 0.0
     enabled: bool = True
+    cluster: Optional[str] = None
 
 
 @dataclass

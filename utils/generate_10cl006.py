@@ -1,28 +1,18 @@
 #!/usr/bin/env python3
 """
 generate_10cl006.py — генератор конфига термопада/спиц для 10CL006YE144C8G.
-
-Заменяет ручной YAML с 24 копипаст-блоками spoke на таблицу
-(pad, shift_x_mm, shift_y_mm, rotation_deg) на цепь. Ничего не меняет в
-рантайме kicadspoke — на выходе тот же YAML, что и раньше, просто больше
-не переписанный руками 24 раза.
 """
 from dataclasses import asdict
 import yaml
-
 import sys
 from pathlib import Path
 
-# Добавляем корень проекта в sys.path, чтобы импорты работали
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from kicadspoke.config import Rule, ManualSpoke, ThermalViaArrayConfig
 
 TEMPLATE_NAME = "cap_pair_standard"
 
-# net -> список (pad, shift_x_mm, shift_y_mm, rotation_deg)
-# Снято 1:1 с исходного 10CL006YE144C8G.yaml — просто как таблица, а не
-# как 12+8+2+2 отдельных YAML-блока.
 BANKS = {
     "+3V3_VCCIO": [
         ('17', 0.0, 0.0, 90.0), ('26', 0.0, -1.8, 90.0),
@@ -46,30 +36,57 @@ BANKS = {
     ],
 }
 
-ANCHOR_REF = "IC1"
+# net -> cluster name
+CLUSTER_MAP = {
+    "+3V3_VCCIO": "VCCIO_BANK",
+    "+1V2_VCCINT": "VCCINT_BANK",
+    "+1V2_VCCD_PLL": "PLL_BANK",
+    "+2V5_VCCA": "VCCA_BANK",
+}
 
+# --------------------- Якорь для правил (спиц) ---------------------
+ANCHOR_REF = "IC1"          # используется, если USE_ANCHOR_ROLE = False
+ANCHOR_ROLE = "FPGA"        # используется, если USE_ANCHOR_ROLE = True
+USE_ANCHOR_ROLE = True      # переключите на False, чтобы использовать ANCHOR_REF
+
+# --------------------- Якорь для термовиа ---------------------
+THERMAL_ANCHOR_REF = "IC1"          # используется, если THERMAL_USE_ANCHOR_ROLE = False
+THERMAL_ANCHOR_ROLE = "FPGA"        # используется, если THERMAL_USE_ANCHOR_ROLE = True
+THERMAL_USE_ANCHOR_ROLE = True      # переключите на False, чтобы использовать THERMAL_ANCHOR_REF
 
 def build_rules():
     rules = []
     for net, spokes_table in BANKS.items():
+        cluster = CLUSTER_MAP.get(net)
         spokes = [
-            ManualSpoke(pad=pad, template=TEMPLATE_NAME,
-                       shift_x_mm=sx, shift_y_mm=sy, rotation_deg=rot)
+            ManualSpoke(
+                pad=pad,
+                template=TEMPLATE_NAME,
+                shift_x_mm=sx,
+                shift_y_mm=sy,
+                rotation_deg=rot,
+                cluster=cluster,
+            )
             for pad, sx, sy, rot in spokes_table
         ]
-        rules.append(Rule(net=net, spokes=spokes, anchor_ref=ANCHOR_REF))
+        if USE_ANCHOR_ROLE:
+            rules.append(Rule(net=net, spokes=spokes, anchor_role=ANCHOR_ROLE))
+        else:
+            rules.append(Rule(net=net, spokes=spokes, anchor_ref=ANCHOR_REF))
     return rules
 
-
 def main():
+    # Термовиа теперь тоже может использовать роль
     thermal_via = ThermalViaArrayConfig(
-        enabled=True, anchor_ref=ANCHOR_REF, pad='145', net='GND',
+        enabled=True,
+        anchor_ref=THERMAL_ANCHOR_REF if not THERMAL_USE_ANCHOR_ROLE else None,
+        anchor_role=THERMAL_ANCHOR_ROLE if THERMAL_USE_ANCHOR_ROLE else None,
+        pad='145',
+        net='GND',
         rows=4, cols=4, margin_mm=0.5, pattern='grid',
         drill_mm=0.3, diameter_mm=0.5,
     )
 
-    # templates: — маленький, руками не раздут (в отличие от pi_filter_4),
-    # оставляем инлайн; при желании тоже можно вынести в templates_file.
     templates = {
         "cap_pair_standard": {
             "vias": [
@@ -100,7 +117,6 @@ def main():
     with open(output_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
     print(f"Сгенерирован: {output_path}")
-
 
 if __name__ == "__main__":
     main()

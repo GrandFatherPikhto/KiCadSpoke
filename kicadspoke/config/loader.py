@@ -134,6 +134,7 @@ def _load_manual_spoke(data: Dict[str, Any]) -> ManualSpoke:
         shift_y_mm=data.get('shift_y_mm', 0.0),
         rotation_deg=data.get('rotation_deg', 0.0),
         enabled=data.get('enabled', True),
+        cluster=data.get('cluster'),
     )
 
 
@@ -299,7 +300,10 @@ def load_config(path: str) -> Config:
         ))
     thermal_via = ThermalViaArrayConfig(
         enabled=tva_data.get('enabled', False),
-        anchor_ref=tva_data.get('anchor_ref', ''),
+        anchor_ref=tva_data.get('anchor_ref'),
+        anchor_role=tva_data.get('anchor_role'),
+        anchor_sheet=tva_data.get('anchor_sheet'),
+        anchor_cluster=tva_data.get('anchor_cluster'),
         pad=tva_data.get('pad', ''),
         net=tva_data.get('net', 'GND'),
         rows=tva_data.get('rows', 4),

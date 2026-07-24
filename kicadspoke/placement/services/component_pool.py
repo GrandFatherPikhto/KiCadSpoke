@@ -11,11 +11,11 @@ component_pool.py — подбор конкретных компонентов �
 """
 import re
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 from ...kicad.adapter import KiCadBoardAdapter
 from ...exceptions import ValidationError
 
-from ...constants import ROLE_FIELD_NAME
+from ...constants import ROLE_FIELD_NAME, CLUSTER_FIELD_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +31,11 @@ class ComponentPool:
     Строится один раз, спицы этой цепи разбирают его по очереди через pop().
     """
 
-    def __init__(self, adapter: KiCadBoardAdapter, net_name: str, roles: List[str]):
+    def __init__(self, adapter: KiCadBoardAdapter, net_name: str, roles: List[str],
+                 cluster: Optional[str] = None):
         self.adapter = adapter
         self.net_name = net_name
+        self.cluster = cluster
         self._pools: Dict[str, List[str]] = {role: [] for role in roles}
         self._build()
 
@@ -42,6 +44,11 @@ class ComponentPool:
             role = self.adapter.get_field_value(fp, ROLE_FIELD_NAME)
             if role is None or role not in self._pools:
                 continue
+            # Если кластер задан, проверяем
+            if self.cluster is not None:
+                fp_cluster = self.adapter.get_field_value(fp, CLUSTER_FIELD_NAME)
+                if fp_cluster != self.cluster:
+                    continue
             pads = self.adapter.get_footprint_pads(fp)
             nets_on_fp = {p.net.name for p in pads if p.net and p.net.name}
             if self.net_name not in nets_on_fp:
@@ -51,7 +58,7 @@ class ComponentPool:
 
         for role in self._pools:
             self._pools[role].sort(key=_natural_sort_key)
-            logger.debug(f"Пул {self.net_name!r}/{role!r}: {self._pools[role]}")
+            logger.debug(f"Пул {self.net_name!r}/{role!r}{' (cluster='+self.cluster+')' if self.cluster else ''}: {self._pools[role]}")
 
     def pop(self, role: str, spoke_pad: str) -> str:
         """

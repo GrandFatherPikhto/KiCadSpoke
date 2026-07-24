@@ -1568,7 +1568,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6b386c61-6553-477b-b903-76b678c0a7ab")
-		(property "Reference" "C128"
+		(property "Reference" "C137"
 			(at 55.88 50.7999 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1643,15 +1643,15 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/37fadcfc-2053-465b-a57f-61f3ae87f57a/5aaff5b5-4f08-4c6b-b668-79f4c527a860"
-					(reference "C162")
+					(reference "C171")
 					(unit 1)
 				)
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/6b018f07-dde5-4cc8-ba46-360bc68cf3d3/5aaff5b5-4f08-4c6b-b668-79f4c527a860"
-					(reference "C196")
+					(reference "C205")
 					(unit 1)
 				)
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/fb16a0a4-f706-49de-9d7e-e9bca2583031/5aaff5b5-4f08-4c6b-b668-79f4c527a860"
-					(reference "C128")
+					(reference "C137")
 					(unit 1)
 				)
 			)
@@ -2610,7 +2610,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "da058aaf-6eb1-43f9-9fe2-520c2c2ca537")
-		(property "Reference" "C129"
+		(property "Reference" "C138"
 			(at 67.31 50.7999 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2685,15 +2685,15 @@
 		(instances
 			(project "3CH-AWG-TIA"
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/37fadcfc-2053-465b-a57f-61f3ae87f57a/5aaff5b5-4f08-4c6b-b668-79f4c527a860"
-					(reference "C163")
+					(reference "C172")
 					(unit 1)
 				)
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/6b018f07-dde5-4cc8-ba46-360bc68cf3d3/5aaff5b5-4f08-4c6b-b668-79f4c527a860"
-					(reference "C197")
+					(reference "C206")
 					(unit 1)
 				)
 				(path "/1e22769e-c24b-4bb1-9c9f-ec579d192217/fb16a0a4-f706-49de-9d7e-e9bca2583031/5aaff5b5-4f08-4c6b-b668-79f4c527a860"
-					(reference "C129")
+					(reference "C138")
 					(unit 1)
 				)
 			)

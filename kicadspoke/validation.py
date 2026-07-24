@@ -14,7 +14,7 @@ ValidationError с понятным, собранным сразу по всем
 """
 import logging
 import difflib
-from typing import List, Dict
+from typing import List, Dict, Optional
 from .config import Config
 from .kicad.adapter import KiCadBoardAdapter
 from .exceptions import ValidationError, format_fatal_error
@@ -34,66 +34,116 @@ def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config) -> N
     problems = []
     anchors = {}
     for rule in cfg.rules:
-        if rule.anchor_ref not in anchors:
-            anchors[rule.anchor_ref] = adapter.get_footprint(rule.anchor_ref)
-            if anchors[rule.anchor_ref] is None:
-                problems.append(f"правило (цепь {rule.net!r}): якорь {rule.anchor_ref!r} "
-                                f"не найден на плате")
+        # Резолвим якорь: либо anchor_ref, либо anchor_role
+        if rule.anchor_ref is not None:
+            fp = adapter.get_footprint(rule.anchor_ref)
+            if fp is None:
+                problems.append(f"правило (цепь {rule.net!r}): якорь {rule.anchor_ref!r} не найден на плате")
+            anchors[rule.anchor_ref] = fp
+        else:
+            from .placement.services.clone_role_resolver import resolve_footprint_by_role
+            try:
+                fp = resolve_footprint_by_role(
+                    adapter,
+                    rule.anchor_role,
+                    rule.anchor_sheet,
+                    rule.anchor_cluster,
+                    cfg.sheet_names,
+                    label=f"правило (цепь {rule.net!r})"
+                )
+                anchors[f"role:{rule.anchor_role}"] = fp
+            except ValidationError as e:
+                problems.append(str(e))
 
     for rule in cfg.rules:
-        target_fp = anchors.get(rule.anchor_ref)
+        if rule.anchor_ref is not None:
+            target_fp = anchors.get(rule.anchor_ref)
+        else:
+            target_fp = anchors.get(f"role:{rule.anchor_role}")
+        if target_fp is None:
+            continue
         for spoke in rule.spokes:
             if not spoke.enabled:
                 continue
             if spoke.template not in cfg.templates:
-                problems.append(
-                    f"спица (пад {spoke.pad}, цепь {rule.net!r}): "
-                    f"шаблон {spoke.template!r} не найден в templates"
-                )
+                problems.append(f"спица (пад {spoke.pad}, цепь {rule.net!r}): "
+                                f"шаблон {spoke.template!r} не найден в templates")
                 continue
             pad = adapter.get_pad_by_number(target_fp, spoke.pad) if target_fp else None
             if target_fp is not None and pad is None:
-                problems.append(
-                    f"спица (шаблон {spoke.template!r}, цепь {rule.net!r}): "
-                    f"у {rule.anchor_ref} нет площадки {spoke.pad!r}"
-                )
+                anchor_name = rule.anchor_ref if rule.anchor_ref is not None else rule.anchor_role
+                problems.append(f"спица (шаблон {spoke.template!r}, цепь {rule.net!r}): "
+                                f"у {anchor_name!r} нет площадки {spoke.pad!r}")
 
     if problems:
         raise ValidationError(format_fatal_error("спица ссылается на несуществующий шаблон или площадку", problems))
-    logger.debug("Проверка шаблонов/падов спиц: все ссылки корректны")
 
 
 def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     """
     Для каждой цепи правила заранее считает, сколько компонентов каждой
-    роли требуется всеми её спицами, и сверяет с реальным количеством
-    компонентов на плате (та же цепь + поле Role) — фатально и со списком
-    всех нехваток разом, если не сходится хоть где-то.
+    роли требуется всеми её спицами для каждого кластера, и сверяет
+    с реальным количеством компонентов на плате (та же цепь + поле Role + Cluster).
     """
     problems = []
 
     for rule in cfg.rules:
-        needed_counts: Dict[str, int] = {}
+        # Собираем все роли, нужные для этого правила
+        roles_needed = set()
         for spoke in rule.spokes:
             if not spoke.enabled:
                 continue
             template = cfg.templates.get(spoke.template)
             if template is None:
-                continue  # уже поймано check_templates_and_pads_exist
+                continue
             for slot in template.components:
-                needed_counts[slot.role] = needed_counts.get(slot.role, 0) + 1
+                roles_needed.add(slot.role)
 
-        if not needed_counts:
+        if not roles_needed:
             continue
 
-        pool = ComponentPool(adapter, rule.net, roles=sorted(needed_counts.keys()))
-        for role, needed in needed_counts.items():
-            available = pool.remaining_count(role)
-            if available < needed:
-                problems.append(
-                    f"цепь {rule.net!r}, роль {role!r}: нужно {needed}, найдено {available} "
-                    f"(проверьте поле Role в схеме и реальное подключение к цепи)"
-                )
+        # Собираем все кластеры, которые используются в спицах (включая None)
+        clusters_needed = set()
+        for spoke in rule.spokes:
+            if not spoke.enabled:
+                continue
+            clusters_needed.add(spoke.cluster)  # None допустимо
+
+        # Инициализируем словарь потребностей по кластерам
+        needed_by_cluster: Dict[Optional[str], Dict[str, int]] = {
+            cluster: {role: 0 for role in roles_needed}
+            for cluster in clusters_needed
+        }
+
+        # Заполняем потребности
+        for spoke in rule.spokes:
+            if not spoke.enabled:
+                continue
+            template = cfg.templates.get(spoke.template)
+            if template is None:
+                continue
+            cluster = spoke.cluster
+            for slot in template.components:
+                needed_by_cluster[cluster][slot.role] += 1
+
+        # Для каждого кластера проверяем достаточность
+        for cluster, needed_counts in needed_by_cluster.items():
+            # Если все нули — пропускаем (не должно быть, но на всякий случай)
+            if not any(needed_counts.values()):
+                continue
+
+            pool = ComponentPool(adapter, rule.net, roles=sorted(roles_needed), cluster=cluster)
+            for role, needed in needed_counts.items():
+                if needed == 0:
+                    continue
+                available = pool.remaining_count(role)
+                if available < needed:
+                    cluster_label = f" (кластер {cluster!r})" if cluster is not None else ""
+                    problems.append(
+                        f"цепь {rule.net!r}, роль {role!r}{cluster_label}: "
+                        f"нужно {needed}, найдено {available} "
+                        f"(проверьте поле Role и Cluster в схеме и реальное подключение к цепи)"
+                    )
 
     if problems:
         raise ValidationError(format_fatal_error("не хватает компонентов для ролей шаблона", problems))

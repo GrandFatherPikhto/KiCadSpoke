@@ -11,7 +11,7 @@ from ..utils.units import MM
 from .services.via_planner import ViaPlanner
 from .services.manual_position_calculator import ManualPositionCalculator
 from .services.clone_position_calculator import ClonePositionCalculator
-from ..exceptions import ComponentNotFoundError
+from ..exceptions import ComponentNotFoundError, ValidationError
 from .commands import MoveCommand, ViaCommand, TrackCommand
 
 from ..constants import POSITION_TOLERANCE_NM, ANGLE_TOLERANCE_DEG
@@ -105,10 +105,17 @@ class PlacementPlanner:
         tva = self.cfg.thermal_via_array
         thermal_anchor_fp = None
         if tva.enabled:
-            thermal_anchor_fp = self.adapter.get_footprint(tva.anchor_ref)
-            if thermal_anchor_fp is None:
-                raise ComponentNotFoundError(
-                    f"thermal_via_array: якорь {tva.anchor_ref!r} не найден")
+            # Если задан anchor_ref, используем его (обратная совместимость)
+            if tva.anchor_ref is not None:
+                thermal_anchor_fp = self.adapter.get_footprint(tva.anchor_ref)
+                if thermal_anchor_fp is None:
+                    raise ComponentNotFoundError(
+                        f"thermal_via_array: якорь {tva.anchor_ref!r} не найден")
+            # Если задан только anchor_role, оставляем None — via_planner сам разрешит
+            elif tva.anchor_role is not None:
+                thermal_anchor_fp = None
+            else:
+                raise ValidationError("thermal_via_array: ни anchor_ref, ни anchor_role не заданы")
         return self.via_planner.plan_vias(
             planned_components=self._planned,
             planned_vias=self._planned_vias,

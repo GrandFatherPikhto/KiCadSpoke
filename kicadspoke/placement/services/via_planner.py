@@ -10,23 +10,19 @@ from ...geometry.keepout import Rect, build_keepout, find_free_point
 from ...geometry.thermal_grid import compute_thermal_via_grid
 from ...kicad.adapter import KiCadBoardAdapter
 from ...utils.units import MM
-from ...exceptions import GeometryError, ComponentNotFoundError
+from ...exceptions import GeometryError, ComponentNotFoundError, ValidationError
 from ..commands import ViaCommand, PlacedComponentInfo
-
 from ..interfaces import IViaPlanner
+from .clone_role_resolver import resolve_footprint_by_role   # для резолва anchor_role
 
 logger = logging.getLogger(__name__)
 
 
 class ViaPlanner(IViaPlanner):
     """
-    ИЗМЕНЕНО (KiCadSpoke, обобщённые via): via уровня спицы и уровня
-    компонента теперь полностью вычисляются заранее в
-    ManualPositionCalculator.compute_raw_positions() (чистая геометрия,
-    без обращения к живой плате) — ViaPlanner их больше не считает, а
-    только применяет к ним skip_existing_components и добавляет термовиа
-    (единственное, что по-прежнему зависит от живой платы — реальный
-    термопад целевого компонента).
+    Планировщик via: фильтрует существующие via (skip_existing_components),
+    добавляет термовиа. Поддерживает anchor_role для термовиа (аналогично
+    правилам и ClonePlacement).
     """
 
     _VIA_POSITION_TOLERANCE_NM = 10_000  # 0.01 мм
@@ -44,15 +40,49 @@ class ViaPlanner(IViaPlanner):
                 return True
         return False
 
+    def _resolve_thermal_anchor(self) -> Optional[FootprintInstance]:
+        """
+        Резолвит якорь для термовиа по anchor_ref или anchor_role (с учётом
+        anchor_sheet и anchor_cluster). Возвращает FootprintInstance или None,
+        если термовиа выключена.
+        """
+        tva = self.cfg.thermal_via_array
+        if not tva.enabled:
+            return None
+
+        if tva.anchor_ref is not None:
+            fp = self.adapter.get_footprint(tva.anchor_ref)
+            if fp is None:
+                raise ComponentNotFoundError(f"Термопад: компонент {tva.anchor_ref} не найден")
+            return fp
+
+        if tva.anchor_role is not None:
+            return resolve_footprint_by_role(
+                self.adapter,
+                tva.anchor_role,
+                tva.anchor_sheet,
+                tva.anchor_cluster,
+                self.cfg.sheet_names,
+                label="thermal_via_array"
+            )
+
+        raise ValidationError("thermal_via_array: ни anchor_ref, ни anchor_role не заданы")
+
     def plan_vias(
         self,
         planned_components: List[PlacedComponentInfo],
         planned_vias: List[ViaCommand],
-        target_fp: FootprintInstance,
-        target_layer: BoardLayer
+        target_fp: Optional[FootprintInstance] = None,
+        target_layer: BoardLayer = BoardLayer.BL_F_Cu
     ) -> List[ViaCommand]:
+        """
+        Фильтрует planned_vias через skip_existing_components, затем добавляет
+        термовиа. Если target_fp не передан (или None), якорь резолвится
+        из cfg.thermal_via_array (поддерживает anchor_role).
+        """
         existing_vias = self.adapter.get_vias() if self.cfg.skip_existing_components else []
 
+        # --- фильтрация существующих via ---
         vias: List[ViaCommand] = []
         skipped = 0
         for via in planned_vias:
@@ -65,13 +95,17 @@ class ViaPlanner(IViaPlanner):
         if skipped:
             logger.info(f"Пропущено {skipped} via спиц/компонентов, уже существующих на плате")
 
+        # --- термовиа ---
         if target_fp is None:
-            logger.debug("Термовиа выключены — keepout/термопланирование пропущены")
-            logger.info(f"plan_vias завершено: {len(vias)} виа")
-            return vias
-        keepout = self._build_keepout(target_fp, planned_components)
-        logger.debug(f"Keepout для термовиа: {len(keepout)} прямоугольников")
-        vias.extend(self._plan_thermal_vias(planned_components, target_fp, keepout, existing_vias))
+            # резолвим самостоятельно
+            target_fp = self._resolve_thermal_anchor()
+
+        if target_fp is not None:
+            keepout = self._build_keepout(target_fp, planned_components)
+            logger.debug(f"Keepout для термовиа: {len(keepout)} прямоугольников")
+            vias.extend(self._plan_thermal_vias(planned_components, target_fp, keepout, existing_vias))
+        else:
+            logger.debug("Термовиа выключены или не задан якорь — keepout/термопланирование пропущены")
 
         logger.info(f"plan_vias завершено: {len(vias)} виа")
         return vias
@@ -110,13 +144,13 @@ class ViaPlanner(IViaPlanner):
         tva = self.cfg.thermal_via_array
         if not tva.enabled:
             return []
-        logger.debug(f"Планирование термовиа для {tva.anchor_ref}, площадка {tva.pad}")
-        fp = self.adapter.get_footprint(tva.anchor_ref)
-        if fp is None:
-            raise ComponentNotFoundError(f"Термопад: компонент {tva.anchor_ref} не найден")
-        pad = self.adapter.get_pad_by_number(fp, tva.pad)
+
+        # target_fp уже должен быть резолвлен (передан из plan_vias)
+        logger.debug(f"Планирование термовиа для {target_fp.reference_field.text.value}, площадка {tva.pad}")
+        pad = self.adapter.get_pad_by_number(target_fp, tva.pad)
         if pad is None:
-            raise ComponentNotFoundError(f"Термопад: у {tva.anchor_ref} нет площадки {tva.pad}")
+            raise ComponentNotFoundError(f"Термопад: у {target_fp.reference_field.text.value} нет площадки {tva.pad}")
+
         try:
             points = compute_thermal_via_grid(
                 pad,
@@ -128,7 +162,7 @@ class ViaPlanner(IViaPlanner):
         except GeometryError as e:
             raise GeometryError(f"Термопад: {e}")
 
-        exclude = {(tva.anchor_ref, tva.pad)}
+        exclude = {(target_fp.reference_field.text.value, tva.pad)}
         keepout_excl = self._build_keepout(target_fp, planned, exclude=exclude)
         via_radius = tva.diameter_mm / 2.0 * MM
         result = []
@@ -147,7 +181,7 @@ class ViaPlanner(IViaPlanner):
             if free_p is None:
                 logger.warning(f"Термовиа: место для ({p.x/MM:.3f}, {p.y/MM:.3f}) мм не найдено, точка пропущена")
                 continue
-            result.append(ViaCommand(free_p, tva.drill_mm, tva.diameter_mm, tva.net, tva.anchor_ref))
+            result.append(ViaCommand(free_p, tva.drill_mm, tva.diameter_mm, tva.net, target_fp.reference_field.text.value))
         if skipped:
             logger.info(f"Пропущено {skipped} термовиа, уже существующих на плате")
         logger.info(f"Запланировано {len(result)} термовиа на {tva.pad}")

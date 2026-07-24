@@ -10,7 +10,6 @@ from ...geometry.spoke_layout import apply_spoke_geometry
 from ..commands import PlacedComponentInfo, ViaCommand
 from ...registry import make_registry_key
 from .component_pool import ComponentPool
-
 from ..interfaces import IPositionCalculator
 
 
@@ -19,19 +18,10 @@ logger = logging.getLogger(__name__)
 
 class ManualPositionCalculator(IPositionCalculator):
     """
-    Ручное позиционирование компонентов и via по шаблонам спиц (см.
-    geometry/spoke_layout.py). Геометрия зоны больше не нужна вообще —
-    всё определяется pad + spoke.shift/rotation + содержимое шаблона.
-
-    Конкретные ref компонентов НЕ читаются из конфига — подбираются из
-    ComponentPool (по реальной цепи правила + пользовательскому полю
-    Role), один пул на правило, разбираемый по очереди при обработке его
-    спиц в порядке следования в YAML.
-
-    ИЗМЕНЕНО (KiCadSpoke, обобщённые via): компоненты и via считаются в
-    ОДНОМ проходе по спицам (пул потребляется один раз) — via больше не
-    зависит от живой платы, поэтому возвращаются сразу как готовые
-    ViaCommand, а не переносятся отдельным путём через via_planner.
+    Ручное позиционирование компонентов и via по шаблонам спиц.
+    Поддерживает кластеры: для каждого уникального кластера в правиле
+    строится отдельный ComponentPool, и спицы берут компоненты из своего
+    кластера.
     """
 
     def __init__(self, adapter: KiCadBoardAdapter, config: Config):
@@ -46,9 +36,7 @@ class ManualPositionCalculator(IPositionCalculator):
         vias_result: List[ViaCommand] = []
 
         for rule in rules:
-            # Якорь правила: чьи пады перечислены в spokes этого правила.
-            # anchor_ref ИЛИ anchor_role (взаимоисключающе, гарантировано
-            # load_config) — тот же принцип, что у ClonePlacement.
+            # --- Резолвим якорь (anchor_ref или anchor_role) ---
             if rule.anchor_ref is not None:
                 target_fp = self.adapter.get_footprint(rule.anchor_ref)
                 if target_fp is None:
@@ -58,26 +46,58 @@ class ManualPositionCalculator(IPositionCalculator):
             else:
                 from .clone_role_resolver import resolve_footprint_by_role
                 target_fp = resolve_footprint_by_role(
-                    self.adapter, rule.anchor_role, rule.anchor_sheet, rule.anchor_cluster,
-                    self.cfg.sheet_names, label=f"правило (цепь {rule.net!r})",
+                    self.adapter,
+                    rule.anchor_role,
+                    rule.anchor_sheet,
+                    rule.anchor_cluster,
+                    self.cfg.sheet_names,
+                    label=f"правило (цепь {rule.net!r})",
                 )
             anchor_ref_resolved = target_fp.reference_field.text.value
-            # Собираем ВСЕ роли, нужные хоть одной спице этого правила --
-            # пул строится один раз на всё правило, не на каждую спицу.
+
+            # --- Собираем все роли, нужные для этого правила ---
             roles_needed = set()
             for spoke in rule.spokes:
                 if not spoke.enabled:
                     continue
                 template = self.cfg.templates.get(spoke.template)
-                if template is None:
-                    continue
-                roles_needed.update(slot.role for slot in template.components)
+                if template is not None:
+                    roles_needed.update(slot.role for slot in template.components)
 
-            pool = ComponentPool(self.adapter, rule.net, roles=sorted(roles_needed))
+            if not roles_needed:
+                continue
 
+            # --- Собираем кластеры, которые используются в спицах (включая None) ---
+            clusters_needed = {spoke.cluster for spoke in rule.spokes if spoke.enabled}
+
+            # --- Строим пулы для каждого кластера ---
+            pools_by_cluster = {}
+            for cluster in clusters_needed:
+                pools_by_cluster[cluster] = ComponentPool(
+                    self.adapter,
+                    rule.net,
+                    roles=sorted(roles_needed),
+                    cluster=cluster
+                )
+            # Пул для спиц без кластера (если такие есть)
+            # Он уже создан, если None есть в clusters_needed
+            # Если None нет, но есть спица с cluster=None (невозможно, т.к. мы собрали все),
+            # то создадим отдельно
+            if None not in pools_by_cluster:
+                # Если есть хоть одна спица без кластера, создаём пул без фильтрации
+                if any(spoke.cluster is None for spoke in rule.spokes if spoke.enabled):
+                    pools_by_cluster[None] = ComponentPool(
+                        self.adapter,
+                        rule.net,
+                        roles=sorted(roles_needed),
+                        cluster=None
+                    )
+
+            # --- Обрабатываем каждую спицу ---
             for spoke in rule.spokes:
                 if not spoke.enabled:
                     continue
+
                 template = self.cfg.templates.get(spoke.template)
                 if template is None:
                     logger.warning(f"Спица на паде {spoke.pad}: шаблон {spoke.template!r} "
@@ -90,16 +110,20 @@ class ManualPositionCalculator(IPositionCalculator):
                                    f"спица пропущена")
                     continue
 
-                # Разбираем пул по ролям, нужным ИМЕННО этому шаблону --
-                # ValidationError из pool.pop() фатально всплывёт наружу,
-                # если на какую-то роль не хватило компонентов.
+                # Выбираем пул по кластеру спицы
+                pool = pools_by_cluster.get(spoke.cluster)
+                if pool is None:
+                    # Если пул не найден (например, кластер не был собран), создаём на лету
+                    logger.warning(f"Пул для кластера {spoke.cluster!r} не найден, создаю новый")
+                    pool = ComponentPool(self.adapter, rule.net, roles=sorted(roles_needed), cluster=spoke.cluster)
+
+                # Разбираем пул по ролям
                 role_to_ref = {slot.role: pool.pop(slot.role, spoke.pad) for slot in template.components}
 
                 layout = apply_spoke_geometry(pad.position, spoke, template, rule.net, role_to_ref)
-
                 anchor_id = f"pad:{spoke.pad}"
 
-                # Via уровня спицы (была power_via)
+                # Via уровня спицы
                 for via_index, via in enumerate(layout.vias):
                     vias_result.append(ViaCommand(
                         position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
@@ -110,9 +134,6 @@ class ManualPositionCalculator(IPositionCalculator):
                                 f"({via.position.x/1e6:.3f}, {via.position.y/1e6:.3f}) мм, net={via.net}")
 
                 for comp_layout in layout.components:
-                    # ManualSpoke — легаси-путь с ЕДИНЫМ глобальным side
-                    # (Config.side): per-slot layer здесь сознательно не
-                    # применяется, слой всем назначит планировщик.
                     components_result.append(PlacedComponentInfo(
                         ref=comp_layout.ref, dest=comp_layout.position, angle_deg=comp_layout.angle_deg,
                     ))
@@ -121,7 +142,6 @@ class ManualPositionCalculator(IPositionCalculator):
                         f"позиция ({comp_layout.position.x/1e6:.3f}, {comp_layout.position.y/1e6:.3f}) мм, "
                         f"угол {comp_layout.angle_deg:.1f}°"
                     )
-                    # Via уровня компонента (была GND via)
                     for via_index, via in enumerate(comp_layout.vias):
                         vias_result.append(ViaCommand(
                             position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
