@@ -37,6 +37,14 @@ python kicadspoke_cli.py apply <config.yaml> [options]
 | `--collision-margin` | Extra clearance for collision checking in mm (default: `0.2`). |
 | `--clone-placement NAME` | Process only the specified clone by name. Useful when multiple clones are in selection mode (only one selection can be active in KiCad at a time) or for debugging a specific placement. |
 
+**`log_file:` in the config itself** – an optional root‑level YAML field (like `templates_file`/
+`registry_path`), resolved relative to the config file itself. If set, you don't need to pass
+`--log-file` by hand every time for the same board profile. The CLI flag `--log-file`, if given, takes
+priority over this field:
+```yaml
+log_file: ../logs/placer.log
+```
+
 **About the current production config:** the master config for the `3CH-AWG-TIA` board is `profiles/3ch-awg-tia.yaml` (merged `rules:`, `clone_placements:`, `thermal_via_array`, with a reference to `profiles/templates/3ch-awg-tia.yaml` via `templates_file`). The file `profiles/generated/10CL006YE144C8G.yaml` written by `utils/generate_10cl006.py` is a self‑contained archival version (can be run separately, but is no longer used in `apply` for this board).
 
 ### Examples
@@ -303,7 +311,7 @@ python utils/generate_10cl006.py
 # Generated: profiles/generated/10CL006YE144C8G.yaml
 # Generated: profiles/generated/10CL006YE144C8G.clone_placements.yaml
 # Generated: profiles/generated/10CL006YE144C8G.cluster_table.md
-# Total spokes: <N>
+# Total spokes: 24
 ```
 
 ### `generate_config.py` – template stub (NOT a ready‑to‑run script)

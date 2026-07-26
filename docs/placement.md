@@ -39,7 +39,7 @@ placement/
     ├── component_pool.py       # Component selection by role and net (for ManualSpoke)
     ├── clone_role_resolver.py  # Role resolution for ClonePlacement (with anchor proximity, by_selection, refs)
     ├── clone_position_calculator.py # Position/via/track calculation for ClonePlacement (with physical anchor)
-    ├── manual_position_calculator.py   # Position/via calculation for ManualSpoke (no tracks)
+    ├── manual_position_calculator.py   # Position/via/track calculation for ManualSpoke
     └── via_planner.py          # Thermal via planning and via filtering via registry (live reconciliation)
 ```
 
@@ -214,11 +214,11 @@ Functions:
 **Used in:** `planner.py`.
 
 #### `services/manual_position_calculator.py`
-**Class `ManualPositionCalculator`** – calculates component and via positions for `ManualSpoke` based on IC pads. Implements `IPositionCalculator`. **Does not support tracks.**
+**Class `ManualPositionCalculator`** – calculates component, via, and track positions for `ManualSpoke` based on IC pads. Implements `IPositionCalculator`. A `TemplateTrack.net = None` inherits `rule.net` (same convention as `TemplateVia`), which is what lets one template (e.g. `cap_pair_standard`) be reused across rules with different nets.
 
 | Method | Description |
 |-------|-------------|
-| `compute_raw_positions(rules)` | For each rule, builds a `ComponentPool`, for each spoke calls `apply_spoke_geometry`, returns `(PlacedComponentInfo[], ViaCommand[])`. |
+| `compute_raw_positions(rules)` | For each rule, builds a `ComponentPool`, for each spoke calls `apply_spoke_geometry`, returns `(PlacedComponentInfo[], ViaCommand[], TrackCommand[])`. |
 
 **Used in:** `planner.py`.
 
@@ -241,7 +241,7 @@ Functions:
 ## Relationships with Other Modules
 
 - **`kicad/adapter.py`** – board operations (reading, writing, transactions, creating vias and tracks).
-- **`geometry/spoke_layout.py`** – template transformation for `ManualSpoke` (vias, no tracks).
+- **`geometry/spoke_layout.py`** – template transformation for `ManualSpoke` (vias and tracks).
 - **`geometry/clone_geometry.py`** – transformation for `ClonePlacement` (vias and tracks, with mirror).
 - **`geometry/thermal_grid.py`** and **`geometry/keepout.py`** – thermal vias and keepout.
 - **`config.py`** – data structures (Config, SpokeTemplate, ManualSpoke, ClonePlacement, etc.).

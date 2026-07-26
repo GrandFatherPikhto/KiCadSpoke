@@ -37,6 +37,14 @@ python kicadspoke_cli.py apply <путь_к_конфигу.yaml> [опции]
 | `--collision-margin` | Дополнительный зазор при проверке коллизий (мм). По умолчанию `0.2`. |
 | `--clone-placement NAME` | Обработать только один клон с указанным именем. Полезно, когда в конфиге несколько клонов в режиме «по выделению» (в KiCad активно только одно выделение) или для отладки конкретного размещения. |
 
+**`log_file:` в самом конфиге** – необязательное поле в корне YAML (как `templates_file`/
+`registry_path`), путь резолвится относительно самого файла конфига. Если задано – не нужно каждый раз
+передавать `--log-file` руками для одного и того же профиля платы. CLI-флаг `--log-file`, если указан,
+имеет приоритет над этим полем:
+```yaml
+log_file: ../logs/placer.log
+```
+
 **Про текущий боевой конфиг:** мастер-конфиг платы `3CH-AWG-TIA` — `profiles/3ch-awg-tia.yaml` (слиты `rules:`, `clone_placements:`, `thermal_via_array`, ссылка на `profiles/templates/3ch-awg-tia.yaml` через `templates_file`). Файл `profiles/generated/10CL006YE144C8G.yaml`, который пишет `utils/generate_10cl006.py`, — самодостаточный архивный вариант (можно прогнать отдельно, но в `apply` для этой платы больше не используется).
 
 ### Примеры
@@ -303,7 +311,7 @@ python utils/generate_10cl006.py
 # Сгенерирован: profiles/generated/10CL006YE144C8G.yaml
 # Сгенерирован: profiles/generated/10CL006YE144C8G.clone_placements.yaml
 # Сгенерирован: profiles/generated/10CL006YE144C8G.cluster_table.md
-# Всего спиц: <N>
+# Всего спиц: 24
 ```
 
 ### `generate_config.py` – заготовка-пример (НЕ готовый к запуску скрипт)

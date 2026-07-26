@@ -39,7 +39,7 @@ placement/
     ├── component_pool.py       # Подбор компонентов по ролям и цепи (для ManualSpoke)
     ├── clone_role_resolver.py  # Разрешение ролей для ClonePlacement (с учётом близости к якорю)
     ├── clone_position_calculator.py # Расчёт позиций, via и треков для ClonePlacement
-    ├── manual_position_calculator.py   # Расчёт позиций и via для ManualSpoke (без треков)
+    ├── manual_position_calculator.py   # Расчёт позиций, via и треков для ManualSpoke
     └── via_planner.py          # Планирование термовиа и фильтрация via через реестр
 ```
 
@@ -214,11 +214,11 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 **Используется в:** `planner.py`.
 
 #### `services/manual_position_calculator.py`
-**Класс `ManualPositionCalculator`** – расчёт позиций компонентов и via для `ManualSpoke` на основе падов IC. Реализует `IPositionCalculator`. Треки **не поддерживаются**.
+**Класс `ManualPositionCalculator`** – расчёт позиций компонентов, via и треков для `ManualSpoke` на основе падов IC. Реализует `IPositionCalculator`. `TemplateTrack.net = None` наследует `rule.net` (та же конвенция, что и у `TemplateVia`) — именно это позволяет одному шаблону (например, `cap_pair_standard`) переиспользоваться в правилах с разными цепями.
 
 | Метод | Описание |
 |-------|----------|
-| `compute_raw_positions(rules)` | Для каждого правила строит `ComponentPool`, для каждой спицы вызывает `apply_spoke_geometry`, возвращает `(PlacedComponentInfo[], ViaCommand[])`. |
+| `compute_raw_positions(rules)` | Для каждого правила строит `ComponentPool`, для каждой спицы вызывает `apply_spoke_geometry`, возвращает `(PlacedComponentInfo[], ViaCommand[], TrackCommand[])`. |
 
 **Используется в:** `planner.py`.
 
@@ -241,7 +241,7 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 ## Взаимосвязи с другими модулями
 
 - **`kicad/adapter.py`** – операции с платой (чтение, запись, транзакции, создание via и треков).
-- **`geometry/spoke_layout.py`** – преобразование шаблона для `ManualSpoke` (via, без треков).
+- **`geometry/spoke_layout.py`** – преобразование шаблона для `ManualSpoke` (via и треки).
 - **`geometry/clone_geometry.py`** – преобразование для `ClonePlacement` (via и треки, с mirror).
 - **`geometry/thermal_grid.py`** и **`geometry/keepout.py`** – для термовиа и keepout.
 - **`config.py`** – структуры данных (Config, SpokeTemplate, ManualSpoke, ClonePlacement и т.д.).

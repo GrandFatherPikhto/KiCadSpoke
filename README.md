@@ -379,6 +379,7 @@ Detailed documentation is in the `docs/` folder:
 - [Top‑level modules](./docs/uplevel_modules.md)
 - [File‑based cloner](./docs/cloner.md)
 - [Diagnostics](./docs/diagnostics.md)
+- [How to catch and analyze a KiCad crash dump (Windows + Linux)](./docs/coredump_howto.md)
 
 > **Note:** some of these files may be missing if they haven't been created yet. The actual list is always available in the `docs/` folder.
 
