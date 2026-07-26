@@ -1,0 +1,205 @@
+cap_pair_standard:
+  # Для Rule/ManualSpoke (rules: в profiles/3ch-awg-tia.yaml) — общие via
+  # тут net: null, наследуют rule.net (см. spoke_layout.py: via.net or
+  # rule_net). ЭТО ВАЖНО не путать с cap_pair_standard_clone ниже: Rule не
+  # резолвит "{placeholder}" вообще, так что net: "{power_net}" тут был бы
+  # тихой поломкой (via создалась бы на несуществующей цепи "{power_net}").
+  vias:
+  - offset_along_mm: -1.0
+    offset_across_mm: -4.2
+    net: GND
+    drill_mm: 0.3
+    diameter_mm: 0.6
+  - offset_along_mm: -1.0
+    offset_across_mm: 2.7
+    net: GND
+    drill_mm: 0.3
+    diameter_mm: 0.6
+  - offset_along_mm: -1.0
+    offset_across_mm: -5.2
+    net: null
+    drill_mm: 0.3
+    diameter_mm: 0.6
+  - offset_along_mm: 0.0
+    offset_across_mm: 1.5
+    net: null
+    drill_mm: 0.3
+    diameter_mm: 0.6
+  components:
+  - role: C_OUT_BULK
+    offset_along_mm: -1.0
+    offset_across_mm: -2.0
+    angle_deg: 90.0
+  - role: C_OUT_BYPASS
+    offset_along_mm: -1.0
+    offset_across_mm: 1.0
+    angle_deg: -90.0
+  # tracks: тут тоже есть (тот же extract их захватил), но ManualSpoke их
+  # не читает вообще (см. spoke_layout.py) — присутствуют только как
+  # достоверная запись того, что реально на плате, не влияют на apply.
+  tracks:
+  - start_along_mm: -1.0
+    start_across_mm: 1.5675
+    end_along_mm: -1.0
+    end_across_mm: 2.7
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: -1.0
+    start_across_mm: -2.8625
+    end_along_mm: -1.0
+    end_across_mm: -4.2
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: -1.0
+    start_across_mm: -1.1375
+    end_along_mm: -2.0
+    end_across_mm: -2.1375
+    width_mm: 0.65
+    net: +3V3_VCCIO
+  - start_along_mm: -1.2021
+    start_across_mm: -5.2
+    end_along_mm: -1.0
+    end_across_mm: -5.2
+    width_mm: 0.65
+    net: +3V3_VCCIO
+  - start_along_mm: -0.69
+    start_across_mm: 0.4325
+    end_along_mm: -1.0
+    end_across_mm: 0.4325
+    width_mm: 0.65
+    net: +3V3_VCCIO
+  - start_along_mm: 0.0
+    start_across_mm: 1.5
+    end_along_mm: 0.0
+    end_across_mm: 1.1225
+    width_mm: 0.65
+    net: +3V3_VCCIO
+  - start_along_mm: -2.0
+    start_across_mm: -2.1375
+    end_along_mm: -2.0
+    end_across_mm: -4.4021
+    width_mm: 0.65
+    net: +3V3_VCCIO
+  - start_along_mm: -2.0
+    start_across_mm: -4.4021
+    end_along_mm: -1.2021
+    end_across_mm: -5.2
+    width_mm: 0.65
+    net: +3V3_VCCIO
+  - start_along_mm: -1.0
+    start_across_mm: 0.4325
+    end_along_mm: -1.0
+    end_across_mm: -1.1375
+    width_mm: 0.65
+    net: +3V3_VCCIO
+  - start_along_mm: 0.0
+    start_across_mm: 1.1225
+    end_along_mm: -0.69
+    end_across_mm: 0.4325
+    width_mm: 0.65
+    net: +3V3_VCCIO
+  layer: B.Cu
+
+cap_pair_standard_clone:
+  # Та же геометрия, что и cap_pair_standard (снята с той же самой живой
+  # спицы) — но под ClonePlacement: общие via/треки параметризованы
+  # "{power_net}" вместо null, потому что ClonePlacement фатально падает
+  # на via/track без цепи (нет rule.net по умолчанию, см. clone_geometry.py).
+  # Резолвится через params: {power_net: "<буквальная цепь банка>"} в
+  # каждом clone_placements-инстансе (см. generate_10cl006.py:
+  # build_clone_placements()). Пока используются ОБА варианта параллельно
+  # (rules: тестируется бок о бок с clone_placements) — если/когда banк
+  # полностью переедет на ClonePlacement, cap_pair_standard можно будет
+  # убрать и оставить только этот.
+  vias:
+  - offset_along_mm: -1.0
+    offset_across_mm: -4.2
+    net: GND
+    drill_mm: 0.3
+    diameter_mm: 0.6
+  - offset_along_mm: -1.0
+    offset_across_mm: 2.7
+    net: GND
+    drill_mm: 0.3
+    diameter_mm: 0.6
+  - offset_along_mm: -1.0
+    offset_across_mm: -5.2
+    net: "{power_net}"
+    drill_mm: 0.3
+    diameter_mm: 0.6
+  - offset_along_mm: 0.0
+    offset_across_mm: 1.5
+    net: "{power_net}"
+    drill_mm: 0.3
+    diameter_mm: 0.6
+  components:
+  - role: C_OUT_BULK
+    offset_along_mm: -1.0
+    offset_across_mm: -2.0
+    angle_deg: 90.0
+  - role: C_OUT_BYPASS
+    offset_along_mm: -1.0
+    offset_across_mm: 1.0
+    angle_deg: -90.0
+  tracks:
+  - start_along_mm: -1.0
+    start_across_mm: 1.5675
+    end_along_mm: -1.0
+    end_across_mm: 2.7
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: -1.0
+    start_across_mm: -2.8625
+    end_along_mm: -1.0
+    end_across_mm: -4.2
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: -1.0
+    start_across_mm: -1.1375
+    end_along_mm: -2.0
+    end_across_mm: -2.1375
+    width_mm: 0.65
+    net: "{power_net}"
+  - start_along_mm: -1.2021
+    start_across_mm: -5.2
+    end_along_mm: -1.0
+    end_across_mm: -5.2
+    width_mm: 0.65
+    net: "{power_net}"
+  - start_along_mm: -0.69
+    start_across_mm: 0.4325
+    end_along_mm: -1.0
+    end_across_mm: 0.4325
+    width_mm: 0.65
+    net: "{power_net}"
+  - start_along_mm: 0.0
+    start_across_mm: 1.5
+    end_along_mm: 0.0
+    end_across_mm: 1.1225
+    width_mm: 0.65
+    net: "{power_net}"
+  - start_along_mm: -2.0
+    start_across_mm: -2.1375
+    end_along_mm: -2.0
+    end_across_mm: -4.4021
+    width_mm: 0.65
+    net: "{power_net}"
+  - start_along_mm: -2.0
+    start_across_mm: -4.4021
+    end_along_mm: -1.2021
+    end_across_mm: -5.2
+    width_mm: 0.65
+    net: "{power_net}"
+  - start_along_mm: -1.0
+    start_across_mm: 0.4325
+    end_along_mm: -1.0
+    end_across_mm: -1.1375
+    width_mm: 0.65
+    net: "{power_net}"
+  - start_along_mm: 0.0
+    start_across_mm: 1.1225
+    end_along_mm: -0.69
+    end_across_mm: 0.4325
+    width_mm: 0.65
+    net: "{power_net}"
+  layer: B.Cu

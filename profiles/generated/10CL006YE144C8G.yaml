@@ -54,84 +54,84 @@ rules:
     shift_y_mm: -0.5
     rotation_deg: 90.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '26'
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: -2.4
     rotation_deg: 90.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '40'
     template: cap_pair_standard
     shift_x_mm: 1.3
     shift_y_mm: 0.0
     rotation_deg: 180.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '47'
     template: cap_pair_standard
     shift_x_mm: 2.5
     shift_y_mm: 0.0
     rotation_deg: 180.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '56'
     template: cap_pair_standard
     shift_x_mm: 0.3
     shift_y_mm: 0.0
     rotation_deg: 180.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '62'
     template: cap_pair_standard
     shift_x_mm: 2.0
     shift_y_mm: 0.0
     rotation_deg: 180.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '81'
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: -1.0
     rotation_deg: 270.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '93'
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
     rotation_deg: 270.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '117'
     template: cap_pair_standard
     shift_x_mm: -2.0
     shift_y_mm: 0.0
     rotation_deg: 0.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '122'
     template: cap_pair_standard
     shift_x_mm: -1.8
     shift_y_mm: 0.0
     rotation_deg: 0.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '130'
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
     rotation_deg: 0.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '139'
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
     rotation_deg: 0.0
     enabled: true
-    cluster: VCCIO_BANK
+    cluster: FPGA_PWR_BANK
   anchor_ref: null
   anchor_role: FPGA
   anchor_sheet: null
@@ -144,56 +144,56 @@ rules:
     shift_y_mm: 0.0
     rotation_deg: 90.0
     enabled: true
-    cluster: VCCINT_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '29'
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: -1.5
     rotation_deg: 90.0
     enabled: true
-    cluster: VCCINT_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '45'
     template: cap_pair_standard
     shift_x_mm: 1.0
     shift_y_mm: 0.0
     rotation_deg: 180.0
     enabled: true
-    cluster: VCCINT_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '61'
     template: cap_pair_standard
     shift_x_mm: -0.0
     shift_y_mm: 0.0
     rotation_deg: 180.0
     enabled: true
-    cluster: VCCINT_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '78'
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
     rotation_deg: 270.0
     enabled: true
-    cluster: VCCINT_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '102'
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 1.0
     rotation_deg: 270.0
     enabled: true
-    cluster: VCCINT_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '116'
     template: cap_pair_standard
     shift_x_mm: -0.3
     shift_y_mm: 0.0
     rotation_deg: 0.0
     enabled: true
-    cluster: VCCINT_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '134'
     template: cap_pair_standard
     shift_x_mm: -0.3
     shift_y_mm: 0.0
     rotation_deg: 0.0
     enabled: true
-    cluster: VCCINT_BANK
+    cluster: FPGA_PWR_BANK
   anchor_ref: null
   anchor_role: FPGA
   anchor_sheet: null
@@ -206,14 +206,14 @@ rules:
     shift_y_mm: 0.0
     rotation_deg: 180.0
     enabled: true
-    cluster: PLL_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '109'
     template: cap_pair_standard
     shift_x_mm: -1.5
     shift_y_mm: 0.0
     rotation_deg: 0.0
     enabled: true
-    cluster: PLL_BANK
+    cluster: FPGA_PWR_BANK
   anchor_ref: null
   anchor_role: FPGA
   anchor_sheet: null
@@ -226,14 +226,14 @@ rules:
     shift_y_mm: -2.0
     rotation_deg: 90.0
     enabled: true
-    cluster: VCCA_BANK
+    cluster: FPGA_PWR_BANK
   - pad: '107'
     template: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 1.0
     rotation_deg: 270.0
     enabled: true
-    cluster: VCCA_BANK
+    cluster: FPGA_PWR_BANK
   anchor_ref: null
   anchor_role: FPGA
   anchor_sheet: null
