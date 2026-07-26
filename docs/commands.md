@@ -1,6 +1,6 @@
 # KiCadSpoke Commands (CLI)
 
-This document provides a complete reference for `kicadspoke_cli.py` commands and flags, config generators from `utils/`, and practical examples for typical scenarios. Verified against the code in the `main` branch (the project does not maintain version numbers/tags; refer to the commit date).
+This document provides a complete reference for `kicadspoke_cli.py` commands and flags, config generators from `tools/`, and practical examples for typical scenarios. Verified against the code in the `main` branch (the project does not maintain version numbers/tags; refer to the commit date).
 
 ---
 
@@ -45,7 +45,7 @@ priority over this field:
 log_file: ../logs/placer.log
 ```
 
-**About the current production config:** the master config for the `3CH-AWG-TIA` board is `profiles/3ch-awg-tia.yaml` (merged `rules:`, `clone_placements:`, `thermal_via_array`, with a reference to `profiles/templates/3ch-awg-tia.yaml` via `templates_file`). The file `profiles/generated/10CL006YE144C8G.yaml` written by `utils/generate_10cl006.py` is a self‑contained archival version (can be run separately, but is no longer used in `apply` for this board).
+**About the current production config:** the master config for the `3CH-AWG-TIA` board is `profiles/3ch-awg-tia.yaml` (merged `rules:`, `clone_placements:`, `thermal_via_array`, with a reference to `profiles/templates/3ch-awg-tia.yaml` via `templates_file`). The file `profiles/generated/10CL006YE144C8G.yaml` written by `tools/generate_10cl006.py` is a self‑contained archival version (can be run separately, but is no longer used in `apply` for this board).
 
 **`name:` is a mandatory field on every `rules:` entry, on `thermal_via_array:` (if that section is present at all), and on every `clone_placements:` entry.** Used by `--only`. `Rule`/`ThermalViaArrayConfig` without `name:` used to silently resolve to `net`/`thermal_<pad>`, and a `clone_placement` without `name:` used to silently become the literal string `'?'` (a real hole, not a feature) – all of that is gone; a missing `name:` is now fatal at config-load time:
 ```yaml
@@ -260,7 +260,7 @@ The resulting YAML file contains a complete overview of the channel, which can b
 
 ---
 
-## Utility scripts (`utils/`)
+## Utility scripts (`tools/`)
 
 ### `transform_template.py` – template transformation utility (optional)
 
@@ -269,7 +269,7 @@ A separate script for post‑processing existing templates (YAML or JSON). It al
 #### Syntax
 
 ```bash
-python utils/transform_template.py -i <input_file> -o <output_file> [options]
+python tools/transform_template.py -i <input_file> -o <output_file> [options]
 ```
 
 #### Options
@@ -296,19 +296,19 @@ python utils/transform_template.py -i <input_file> -o <output_file> [options]
 #### Rotate 180° and shift origin to the via with net "GND"
 
 ```bash
-python utils/transform_template.py -i template.yaml -o template_rotated.yaml --rotate 180 --set-origin-by-via-net "GND"
+python tools/transform_template.py -i template.yaml -o template_rotated.yaml --rotate 180 --set-origin-by-via-net "GND"
 ```
 
 #### Mirror along X and shift origin to the component with role "FB"
 
 ```bash
-python utils/transform_template.py -i template.yaml -o template_mirrored.yaml --mirror-x --set-origin-by-component-role FB
+python tools/transform_template.py -i template.yaml -o template_mirrored.yaml --mirror-x --set-origin-by-component-role FB
 ```
 
 #### Explicit origin shift
 
 ```bash
-python utils/transform_template.py -i template.yaml -o template_shifted.yaml --origin-x 1.5 --origin-y -2.0
+python tools/transform_template.py -i template.yaml -o template_shifted.yaml --origin-x 1.5 --origin-y -2.0
 ```
 
 ### `generate_10cl006.py` – config generator for 10CL006YE144C8G
@@ -318,7 +318,7 @@ A ready‑to‑run script (not an example, actually used in the project). A sing
 #### Syntax
 
 ```bash
-python utils/generate_10cl006.py
+python tools/generate_10cl006.py
 ```
 
 No arguments – output paths are hard‑coded inside the script (see `main()`); the `BANKS`/`CLUSTER_MAP` tables and anchor toggles (`USE_ANCHOR_ROLE`, `THERMAL_USE_ANCHOR_ROLE`) are edited directly in the source.
@@ -336,7 +336,7 @@ No arguments – output paths are hard‑coded inside the script (see `main()`);
 #### Example
 
 ```bash
-python utils/generate_10cl006.py
+python tools/generate_10cl006.py
 # Generated: profiles/generated/10CL006YE144C8G.yaml
 # Generated: profiles/generated/10CL006YE144C8G.clone_placements.yaml
 # Generated: profiles/generated/10CL006YE144C8G.cluster_table.md
@@ -348,11 +348,58 @@ python utils/generate_10cl006.py
 Unlike `generate_10cl006.py`, this is a **template stub** for writing a similar generator for a new chip, not a working tool. The `TEMPLATE` in it is filled with ellipsis `[...]` instead of real geometry – running it "as is" fails with a YAML serialisation error:
 
 ```bash
-python utils/generate_config.py
+python tools/generate_config.py
 # ValueError: dictionary update sequence element #0 has length 1; 2 is required
 ```
 
 Use it as a starting point: copy it, replace `TEMPLATE` with a real template (e.g., obtained via `extract`), fill the `FILTERS` list with your own `CloneParams` (`anchor_ref`/`anchor_pad`/`origin_x`/`origin_y`/`rotation_deg`/`params`/`nets`) – and only then run it.
+
+### `update_i18n.py` – rebuild the gettext translation catalogs
+
+Extracts every string wrapped in `_()` (`kicadspoke/`, `kicadspoke_cli.py`, `tools/`, `tests/`, ...) into
+`messages.pot`, merges it into the existing `locales/en/LC_MESSAGES/kicadspoke.po` and
+`locales/ru/LC_MESSAGES/kicadspoke.po` (pybabel keeps already‑translated strings, adds new ones empty or
+marks them `#, fuzzy` if it found a similar old one), then compiles both catalogs to `.mo`. The temporary
+`messages.pot` is removed at the end. Frozen archives (`files/`, `old/`, `arch/`, `test_sample/`) are
+excluded from the scan. Requires `pip install babel` (already in `requirements.txt`).
+
+#### Syntax
+
+```bash
+python tools/update_i18n.py
+```
+
+No arguments or flags – paths and languages (`en`, `ru`) are hard‑coded in the script.
+
+#### When to run it
+
+- After adding or changing ANY text wrapped in `_(...)` (a new `logger.info`, a new fatal error, a new
+  argparse `help=`, etc.) – otherwise `locales/*/kicadspoke.mo` goes stale and some messages keep showing in
+  English (fallback) even under `LANG=ru`.
+- The catalogs are committed to git (`.po` and the compiled `.mo`) – run this BEFORE committing; there is no
+  CI/build hook that does it for you.
+
+#### After running it
+
+- New/changed strings in `locales/ru/LC_MESSAGES/kicadspoke.po` show up with an empty `msgstr ""` (needs
+  translation) or marked `#, fuzzy` (pybabel guessed a similar old string by itself – **don't trust it
+  blindly**, review it and remove the `fuzzy` marker, otherwise gettext treats the entry as a draft and shows
+  the `msgid` (English) instead).
+- Find untranslated strings: `grep -B2 'msgstr ""' locales/ru/LC_MESSAGES/kicadspoke.po` (the first match is
+  the catalog header with an empty `msgid ""` too – that's expected, not a bug).
+- Check fuzzy entries: `grep -c '#, fuzzy' locales/ru/LC_MESSAGES/kicadspoke.po`.
+
+#### Example
+
+```bash
+python tools/update_i18n.py
+# ... extracting messages from ...
+# updating catalog locales\en\LC_MESSAGES\kicadspoke.po based on messages.pot
+# updating catalog locales\ru\LC_MESSAGES\kicadspoke.po based on messages.pot
+# compiling catalog locales\en\LC_MESSAGES\kicadspoke.po to locales\en\LC_MESSAGES\kicadspoke.mo
+# compiling catalog locales\ru\LC_MESSAGES\kicadspoke.po to locales\ru\LC_MESSAGES\kicadspoke.mo
+# ✅ Translations updated.
+```
 
 ---
 
@@ -475,7 +522,7 @@ python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --verbose --log-file lo
 ### Regenerate generated configs/cluster table for 10CL006
 
 ```bash
-python utils/generate_10cl006.py
+python tools/generate_10cl006.py
 ```
 
 Then run `apply profiles/3ch-awg-tia.yaml --dry-run --verbose` to verify that the new geometry resolves as expected (see the `generate_10cl006.py` section above).
@@ -505,7 +552,7 @@ python kicadspoke_cli.py apply config_with_templates_file.yaml --only fpga_filte
 ### Transform a template
 
 ```bash
-python utils/transform_template.py -i templates/pi_filter_4.json -o templates/pi_filter_4_rotated.json --rotate 180 --set-origin-by-via-net '+3V3_VCCIO'
+python tools/transform_template.py -i templates/pi_filter_4.json -o templates/pi_filter_4_rotated.json --rotate 180 --set-origin-by-via-net '+3V3_VCCIO'
 ```
 
 ### Test KiCad for crashes

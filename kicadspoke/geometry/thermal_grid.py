@@ -6,26 +6,28 @@ from kipy.board_types import Pad
 from kipy.geometry import Vector2
 from ..utils.units import MM
 from ..exceptions import GeometryError
+from ..i18n import _
 
 def get_pad_size(pad: Pad) -> tuple:
     """Возвращает (width, height) медного слоя падстека."""
     layers = pad.padstack.copper_layers
     if not layers:
-        raise GeometryError("у площадки нет медных слоёв в падстеке")
+        raise GeometryError(_("pad has no copper layers in its padstack"))
     size = layers[0].size
     return size.x, size.y
 
 def compute_thermal_via_grid(pad: Pad, rows: int, cols: int, margin_mm: float, stagger: bool = False) -> List[Vector2]:
     """Возвращает список абсолютных позиций для виа."""
     if rows < 1 or cols < 1:
-        raise GeometryError("rows и cols должны быть >= 1")
+        raise GeometryError(_("rows and cols must be >= 1"))
 
     width, height = get_pad_size(pad)
     margin = margin_mm * MM
     usable_w = width - 2 * margin
     usable_h = height - 2 * margin
     if usable_w <= 0 or usable_h <= 0:
-        raise GeometryError(f"margin_mm={margin_mm} слишком большой для площадки {width/MM:.2f}x{height/MM:.2f} мм")
+        raise GeometryError(_("margin_mm={margin_mm} is too large for a pad {width}x{height} mm").format(
+            margin_mm=margin_mm, width=f"{width/MM:.2f}", height=f"{height/MM:.2f}"))
 
     local_points = []
     for r in range(rows):

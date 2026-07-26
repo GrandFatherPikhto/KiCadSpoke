@@ -8,7 +8,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
+
 ROOT = Path(__file__).parent.parent
+
+# Замороженные архивы (files/, old/, ...) — не наш код, сканировать не нужно;
+# у pybabel extract нет ключа в babel.cfg для этого, только --ignore-dirs.
+# --ignore-dirs ПОЛНОСТЬЮ заменяет дефолт (".* ._"), не дополняет его — поэтому
+# дефолтные шаблоны дописаны явно, чтобы не потерять их.
+IGNORE_DIRS = [".*", "._", "files", "old", "arch", "test_sample", "venv"]
 
 
 def run(cmd):
@@ -18,7 +27,10 @@ def run(cmd):
 
 def main():
     # 1. Извлечение строк в .pot
-    run(["pybabel", "extract", "-F", "babel.cfg", "-o", "messages.pot", "."])
+    # --ignore-dirs принимает ОДНУ строку с шаблонами через пробел, не повторяемый флаг
+    run(["pybabel", "extract", "-F", "babel.cfg",
+         "--ignore-dirs", " ".join(IGNORE_DIRS),
+         "-o", "messages.pot", "."])
 
     # 2. Обновление/создание .po для каждого языка
     for lang in ("en", "ru"):

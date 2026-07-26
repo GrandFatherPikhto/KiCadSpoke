@@ -1,6 +1,6 @@
 # Команды KiCadSpoke (CLI)
 
-Этот документ содержит полный справочник по командам и флагам `kicadspoke_cli.py`, генераторам конфигов из `utils/`, а также практические примеры для типовых сценариев. Сверено с кодом в ветке `main` (проект не ведёт номера версий/тегов, ориентируйтесь на дату/коммит).
+Этот документ содержит полный справочник по командам и флагам `kicadspoke_cli.py`, генераторам конфигов из `tools/`, а также практические примеры для типовых сценариев. Сверено с кодом в ветке `main` (проект не ведёт номера версий/тегов, ориентируйтесь на дату/коммит).
 
 ---
 
@@ -45,7 +45,7 @@ python kicadspoke_cli.py apply <путь_к_конфигу.yaml> [опции]
 log_file: ../logs/placer.log
 ```
 
-**Про текущий боевой конфиг:** мастер-конфиг платы `3CH-AWG-TIA` — `profiles/3ch-awg-tia.yaml` (слиты `rules:`, `clone_placements:`, `thermal_via_array`, ссылка на `profiles/templates/3ch-awg-tia.yaml` через `templates_file`). Файл `profiles/generated/10CL006YE144C8G.yaml`, который пишет `utils/generate_10cl006.py`, — самодостаточный архивный вариант (можно прогнать отдельно, но в `apply` для этой платы больше не используется).
+**Про текущий боевой конфиг:** мастер-конфиг платы `3CH-AWG-TIA` — `profiles/3ch-awg-tia.yaml` (слиты `rules:`, `clone_placements:`, `thermal_via_array`, ссылка на `profiles/templates/3ch-awg-tia.yaml` через `templates_file`). Файл `profiles/generated/10CL006YE144C8G.yaml`, который пишет `tools/generate_10cl006.py`, — самодостаточный архивный вариант (можно прогнать отдельно, но в `apply` для этой платы больше не используется).
 
 **`name:` — обязательное поле у каждой записи `rules:`, у `thermal_via_array:` (если секция вообще присутствует в конфиге) и у каждого `clone_placements:`.** Используется в `--only`. Раньше `Rule`/`ThermalViaArrayConfig` без `name:` тихо резолвились в `net`/`thermal_<pad>`, а `clone_placement` без `name:` — вообще в литеральную строку `'?'` (реальная дыра, не поведение) — всё это убрано, отсутствие `name:` теперь фатал при загрузке конфига:
 ```yaml
@@ -260,7 +260,7 @@ python kicadspoke_cli.py clone-extract --profiles clone_profiles.yaml --profile 
 
 ---
 
-## Скрипты-утилиты (`utils/`)
+## Скрипты-утилиты (`tools/`)
 
 ### `transform_template.py` – трансформация шаблонов (опционально)
 
@@ -269,7 +269,7 @@ python kicadspoke_cli.py clone-extract --profiles clone_profiles.yaml --profile 
 #### Синтаксис
 
 ```bash
-python utils/transform_template.py -i <входной_файл> -o <выходной_файл> [опции]
+python tools/transform_template.py -i <входной_файл> -o <выходной_файл> [опции]
 ```
 
 #### Опции
@@ -296,19 +296,19 @@ python utils/transform_template.py -i <входной_файл> -o <выходн
 #### Поворот на 180° и перенос начала на via с цепью
 
 ```bash
-python utils/transform_template.py -i template.yaml -o template_rotated.yaml --rotate 180 --set-origin-by-via-net "GND"
+python tools/transform_template.py -i template.yaml -o template_rotated.yaml --rotate 180 --set-origin-by-via-net "GND"
 ```
 
 #### Зеркалирование по X и перенос начала на компонент с ролью
 
 ```bash
-python utils/transform_template.py -i template.yaml -o template_mirrored.yaml --mirror-x --set-origin-by-component-role FB
+python tools/transform_template.py -i template.yaml -o template_mirrored.yaml --mirror-x --set-origin-by-component-role FB
 ```
 
 #### Явный сдвиг начала координат
 
 ```bash
-python utils/transform_template.py -i template.yaml -o template_shifted.yaml --origin-x 1.5 --origin-y -2.0
+python tools/transform_template.py -i template.yaml -o template_shifted.yaml --origin-x 1.5 --origin-y -2.0
 ```
 
 ### `generate_10cl006.py` – генератор конфигов для 10CL006YE144C8G
@@ -318,7 +318,7 @@ python utils/transform_template.py -i template.yaml -o template_shifted.yaml --o
 #### Синтаксис
 
 ```bash
-python utils/generate_10cl006.py
+python tools/generate_10cl006.py
 ```
 
 Без аргументов — все пути на выход зашиты в скрипте (см. `main()`), таблицы `BANKS`/`CLUSTER_MAP`/переключатели якоря (`USE_ANCHOR_ROLE`, `THERMAL_USE_ANCHOR_ROLE`) правятся прямо в исходнике.
@@ -336,7 +336,7 @@ python utils/generate_10cl006.py
 #### Пример
 
 ```bash
-python utils/generate_10cl006.py
+python tools/generate_10cl006.py
 # Сгенерирован: profiles/generated/10CL006YE144C8G.yaml
 # Сгенерирован: profiles/generated/10CL006YE144C8G.clone_placements.yaml
 # Сгенерирован: profiles/generated/10CL006YE144C8G.cluster_table.md
@@ -348,7 +348,7 @@ python utils/generate_10cl006.py
 В отличие от `generate_10cl006.py`, это **шаблон-заготовка** для написания подобного генератора под новую микросхему, а не рабочий инструмент. `TEMPLATE` в нём заполнен литералами `[...]` (Ellipsis) вместо реальной геометрии — при запуске «как есть» падает с ошибкой сериализации YAML:
 
 ```bash
-python utils/generate_config.py
+python tools/generate_config.py
 # ValueError: dictionary update sequence element #0 has length 1; 2 is required
 ```
 
@@ -366,7 +366,7 @@ Bulk Edit в Eeschema для массовой разметки. **Единств
 #### Синтаксис
 
 ```bash
-python utils/apply_role_cluster.py <config.yaml> [--write] [--allow-non-ascii] [--force-with-kicad-running] [--verbose]
+python tools/apply_role_cluster.py <config.yaml> [--write] [--allow-non-ascii] [--force-with-kicad-running] [--verbose]
 ```
 
 #### Формат конфига
@@ -407,8 +407,55 @@ fields:
 #### Пример
 
 ```bash
-python utils/apply_role_cluster.py roles.yaml --verbose         # сначала dry-run
-python utils/apply_role_cluster.py roles.yaml --write            # затем реально записать
+python tools/apply_role_cluster.py roles.yaml --verbose         # сначала dry-run
+python tools/apply_role_cluster.py roles.yaml --write            # затем реально записать
+```
+
+### `update_i18n.py` – пересборка каталогов переводов (gettext)
+
+Извлекает все строки, обёрнутые в `_()` (`kicadspoke/`, `kicadspoke_cli.py`, `tools/`, `tests/`, ...) в
+`messages.pot`, сливает их с существующими `locales/en/LC_MESSAGES/kicadspoke.po` и
+`locales/ru/LC_MESSAGES/kicadspoke.po` (pybabel сохраняет уже переведённые строки, новые добавляет пустыми
+или помечает `#, fuzzy`, если нашёл похожую), компилирует оба каталога в `.mo`. Временный `messages.pot`
+удаляется в конце. Замороженные архивы (`files/`, `old/`, `arch/`, `test_sample/`) в сканирование не
+попадают. Требует `pip install babel` (уже в `requirements.txt`).
+
+#### Синтаксис
+
+```bash
+python tools/update_i18n.py
+```
+
+Без аргументов и флагов — пути и языки (`en`, `ru`) зашиты в скрипте.
+
+#### Когда запускать
+
+- После добавления/изменения ЛЮБОГО текста, обёрнутого в `_(...)` (новый `logger.info`, новая fatal-ошибка,
+  новый argparse `help=`, и т.п.) — иначе `locales/*/kicadspoke.mo` устареет, и часть сообщений будет
+  показываться на английском (fallback) даже при `LANG=ru`.
+- Каталоги коммитятся в git (`.po` и скомпилированные `.mo`) — запускать нужно ДО коммита, CI/build-хука на
+  это нет.
+
+#### После запуска
+
+- Новые/изменившиеся строки в `locales/ru/LC_MESSAGES/kicadspoke.po` появляются с пустым `msgstr ""` (нужен
+  перевод) или с пометкой `#, fuzzy` (pybabel сам подобрал похожую по смыслу старую строку — **не доверять
+  вслепую**, проверить и убрать метку `fuzzy`, иначе gettext игнорирует запись как черновую и показывает
+  `msgid` (английский) вместо неё).
+- Найти непереведённые строки: `grep -B2 'msgstr ""' locales/ru/LC_MESSAGES/kicadspoke.po` (первое
+  совпадение — заголовок каталога с пустым `msgid ""`, это норма, не баг).
+- Проверить fuzzy-записи: `grep -c '#, fuzzy' locales/ru/LC_MESSAGES/kicadspoke.po`.
+
+#### Пример
+
+```bash
+python tools/update_i18n.py
+# ... extracting messages from ...
+# updating catalog locales\en\LC_MESSAGES\kicadspoke.po based on messages.pot
+# updating catalog locales\ru\LC_MESSAGES\kicadspoke.po based on messages.pot
+# compiling catalog locales\en\LC_MESSAGES\kicadspoke.po to locales\en\LC_MESSAGES\kicadspoke.mo
+# compiling catalog locales\ru\LC_MESSAGES\kicadspoke.po to locales\ru\LC_MESSAGES\kicadspoke.mo
+# ✅ Переводы обновлены.
 ```
 
 ---
@@ -564,7 +611,7 @@ python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --verbose --log-file lo
 ### Пересборка сгенерированных конфигов/таблицы кластеров для 10CL006
 
 ```bash
-python utils/generate_10cl006.py
+python tools/generate_10cl006.py
 ```
 
 Дальше — `apply profiles/3ch-awg-tia.yaml --dry-run --verbose`, чтобы проверить, что новая геометрия резолвится так, как ожидается (см. раздел `generate_10cl006.py` выше).
@@ -594,7 +641,7 @@ python kicadspoke_cli.py apply config_with_templates_file.yaml --only fpga_filte
 ### Трансформация шаблона
 
 ```bash
-python utils/transform_template.py -i templates/pi_filter_4.json -o templates/pi_filter_4_rotated.json --rotate 180 --set-origin-by-via-net '+3V3_VCCIO'
+python tools/transform_template.py -i templates/pi_filter_4.json -o templates/pi_filter_4_rotated.json --rotate 180 --set-origin-by-via-net '+3V3_VCCIO'
 ```
 
 ### Тестирование KiCad на краши

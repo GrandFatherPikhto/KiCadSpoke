@@ -15,6 +15,7 @@ from kipy.geometry import Vector2
 
 from .planner import MoveCommand
 from ..utils.units import MM
+from ..i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,8 @@ def compute_radii(footprints: List[FootprintInstance], adapter) -> Dict[str, flo
         ref = fp.reference_field.text.value
         radii[ref] = _radius_from_bbox(bbox)
         if bbox is None:
-            logger.debug(f"  {ref}: bounding box недоступен, использую запасной радиус {DEFAULT_RADIUS_MM}мм")
+            logger.debug(_("  {ref}: bounding box unavailable, using fallback radius {radius}mm").format(
+                ref=ref, radius=DEFAULT_RADIUS_MM))
     return radii
 
 
