@@ -357,16 +357,40 @@ python -m kicadspoke.diagnostics.test_create_one_via --remove
 
 ### Тест на краш KiCad при первой записи (issue #24966)
 
+`kicadspoke/diagnostics/diagnose_first_write_crash.py` — диагностическая «лесенка»: пошагово выполняет чтения
+через kipy (connect → ping → version → open_documents → get_board → чтение футпринтов → повторное чтение),
+а на последней ступени — **no-op запись** `board.update_items([fp])` без каких-либо изменений (ровно тот
+вызов, на котором KiCad падает по #24966, см. [issue_lib_buffer_new.md](issues/issue_lib_buffer_new.md)).
+После каждой ступени снимается «пульс» (`ping` + сверка списка PID `kicad.exe`), чтобы точно увидеть, на
+каком шаге и в какой момент процесс умер. Лог пишется построчно с flush — последняя строка честна, даже если
+KiCad умрёт мгновенно.
+
+Различает три гипотезы (докстринг скрипта): H1 — гонка первой записи с ленивой инициализацией (чтения
+переживаются, умирает только запись, лечится/сдвигается `--delay`); H2 — зомби-инстанс от прошлой сессии
+(в снапшоте окружения видно больше одного `kicad.exe` или торчат старые `KICAD_API_SOCKET`/`KICAD_API_TOKEN`);
+H3 — падение не привязано к записи, умирает уже на чтении.
+
 ```bash
+# Полная лесенка: чтения + no-op запись (ступень 9) — может уронить KiCad, в этом и цель теста
+python -m kicadspoke.diagnostics.diagnose_first_write_crash
+
 # Только чтения (без записи) – безопасно, если KiCad открыт
 python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8
 
-# Полный тест (чтения → запись) – может вызвать краш KiCad (используйте осторожно)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash
-
-# Тест с паузой 30 секунд перед записью (проверка гипотезы о гонке)
+# Тест с паузой 30 секунд перед записью (проверка гипотезы H1 о гонке)
 python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
+
+# Повторить no-op запись 3 раза подряд (проверить, стабильна ли запись после первой удачной)
+python -m kicadspoke.diagnostics.diagnose_first_write_crash --repeat 3
+
+# Свой путь к лог-файлу и таймаут IPC (по умолчанию лог — diag_<timestamp>.log, таймаут 15000 мс)
+python -m kicadspoke.diagnostics.diagnose_first_write_crash --log diag.log --timeout-ms 20000
 ```
+
+Снимок PID `kicad.exe` на Windows берётся через `tasklist`, на остальных ОС (Linux/macOS) — через
+опциональный `psutil` (в `requirements.txt` не входит); без него эта часть диагностики (обнаружение
+зомби-инстансов, гипотеза H2) молча отключается, но `ping`-пульс и сама лесенка чтений/записи работают как
+обычно.
 
 ### Вывод информации о выделенных компонентах
 
