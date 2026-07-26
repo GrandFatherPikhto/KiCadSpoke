@@ -32,8 +32,12 @@ FLATPAK_APP_ID = "org.kicad.KiCad"
 
 
 def kicad_is_running() -> bool:
+    """
+    ВАЖНО: -x (точное имя процесса), не -f (командная строка) — иначе
+    pgrep ловит сам этот скрипт (его имя файла тоже содержит "kicad").
+    """
     try:
-        result = subprocess.run(["pgrep", "-f", "kicad"], capture_output=True, text=True)
+        result = subprocess.run(["pgrep", "-x", "kicad"], capture_output=True, text=True)
         return bool(result.stdout.strip())
     except FileNotFoundError:
         print("[предупреждение] pgrep не найден — не могу проверить, запущен ли KiCad; "
