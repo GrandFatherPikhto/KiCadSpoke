@@ -12,6 +12,16 @@ diagnose_first_write_crash.py — воспроизводимая лесенка 
       сессии; после смерти "нашего" собеседника PID другого жив.
   H3. Падение не привязано к записи: умирает уже на чтениях.
 
+ИСПРАВЛЕНО (2026-07-26): ступень 9 раньше делала голый board.update_items()
+без begin_commit()/push_commit() — и 8/8 прогонов проходили чисто. В тот же
+день реальный `apply` живьём уронил KiCad на Linux/KiCad 10.0.5 ровно на
+begin_commit() для Move batch 1 (первая транзакция сессии; флипы до этого
+прошли через отдельный API-путь run_action("...InteractiveEdit.flip"),
+не через commit — см. kicadspoke/kicad/adapter.py:flip_selected). Ступень 9
+теперь честно повторяет boевой путь adapter.commit_with_retry(): begin_commit
+-> update_items -> push_commit, одной транзакцией, с логом каждого под-вызова
+отдельно (чтобы даже при обрыве было видно, докуда дошло).
+
 Запуск (KiCad открыт, плата загружена):
   python -m kicadspoke.diagnostics.diagnose_first_write_crash
   python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # только чтения
@@ -217,15 +227,25 @@ class Ladder:
 
     def s_noop_write(self):
         """
-        ПОДОЗРЕВАЕМЫЙ: board.update_items([fp]) БЕЗ каких-либо изменений.
-        Ровно тот вызов, на котором падало (adapter.update_items ->
-        board.update_items). Если умирает здесь — минимальная репродукция
-        для issue готова: «no-op update_items на свежем инстансе».
+        ПОДОЗРЕВАЕМЫЙ: begin_commit() -> update_items([fp]) без изменений
+        -> push_commit() -- ОДНА транзакция, ровно тот путь, что реально
+        использует adapter.commit_with_retry() в бою (см.
+        kicadspoke/kicad/adapter.py). Раньше здесь был голый update_items()
+        без begin_commit/push_commit -- прошёл чисто 8/8 раз, но живой
+        краш под Linux (2026-07-26) произошёл именно на begin_commit(),
+        которую та версия скрипта вообще не трогала. Логируем каждый
+        под-вызов отдельно (INFO, флешится сразу) -- если транзакция
+        оборвётся, в логе будет видно, докуда дошло, даже без вердикта
+        FAIL на саму ступень.
         """
         ref = self.fp.reference_field.text.value
-        logger.info(f"отправляю no-op update_items([{ref}])...")
+        logger.info("отправляю begin_commit()...")
+        commit = self.board.begin_commit()
+        logger.info(f"begin_commit() OK, отправляю no-op update_items([{ref}]) внутри транзакции...")
         self.board.update_items([self.fp])
-        return f"no-op запись {ref} прошла"
+        logger.info("update_items() OK, отправляю push_commit()...")
+        self.board.push_commit(commit, "diagnose_first_write_crash: no-op")
+        return f"begin_commit -> no-op update_items({ref}) -> push_commit прошли полностью"
 
 
 def main():
@@ -279,7 +299,7 @@ def main():
                 time.sleep(args.delay)
             for i in range(args.repeat):
                 tag = f"9.{i+1}" if args.repeat > 1 else "9"
-                if not ladder.step(tag, "NO-OP WRITE: update_items([fp]) без изменений",
+                if not ladder.step(tag, "NO-OP WRITE: begin_commit -> update_items([fp]) -> push_commit",
                                    ladder.s_noop_write):
                     break
                 time.sleep(0.5)
