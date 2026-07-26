@@ -196,6 +196,7 @@ def extract_template_from_selection(
     origin_via_net: Optional[str] = None,
     origin_component_role: Optional[str] = None,
     origin_component_pad: Optional[str] = None,
+    net_template_role: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """
     Строит словарь {name: {vias: [...], components: [...]}}, готовый к
@@ -219,8 +220,20 @@ def extract_template_from_selection(
     ТОЛЬКО уточнение origin_component_role (см. --origin-by-component-pad):
     без него origin — центр компонента этой роли, с ним — позиция
     конкретного пада (тот же принцип, что anchor_pad у ClonePlacement).
+
+    net_template_role — ОПЦИОНАЛЬНО, {роль: литерал_цепи} (см.
+    --net-template-role в kicadspoke_cli.py). Нужен только для компонентов
+    с НЕСКОЛЬКИМИ цепями из net_template_map сразу на своих падах (дроссели/
+    ферритовые бусины/предохранители на стыке двух рельсов) — для них
+    авто-вывод ниже принципиально не может выбрать сам, какая из цепей
+    "главная" (см. warning "N цепей из --net-template сразу на падах"), и
+    без этого параметра net_template остаётся пустым до ручной правки YAML.
+    Никакого угадывания и здесь: если роль есть в net_template_role, но
+    указанной цепи на самом деле нет среди падов компонента — фатал, а не
+    молчаливое "как-нибудь сойдёт".
     """
     params = params or {}
+    net_template_role = net_template_role or {}
     net_template_map = dict(net_template_map or {})
     # Авто-вывод для простого случая: если весь литерал цепи РАВЕН значению
     # параметра целиком (не часть более длинной строки) — net_template
@@ -308,7 +321,26 @@ def extract_template_from_selection(
         if fp.layer != tpl_layer:
             slot["layer"] = 'F.Cu' if fp.layer == BoardLayer.BL_F_Cu else 'B.Cu'
 
-        if net_template_map:
+        if role in net_template_role:
+            literal = net_template_role[role]
+            fp_nets = sorted({p.net.name for p in adapter.get_footprint_pads(fp)
+                              if p.net and p.net.name})
+            if literal not in fp_nets:
+                raise ValidationError(format_fatal_error(
+                    f"--net-template-role для роли {role!r} просит цепь {literal!r}, "
+                    f"а её нет ни на одном паде {fp.reference_field.text.value}",
+                    [f"реальные цепи на падах: {fp_nets} — проверьте опечатку в "
+                     f"--net-template-role или в самой роли"]
+                ))
+            if literal not in net_template_map:
+                raise ValidationError(format_fatal_error(
+                    f"--net-template-role для роли {role!r} просит цепь {literal!r}, "
+                    f"которой нет в net_template_map",
+                    [f"добавьте {literal!r} в --net-template/net_template (или в params, "
+                     f"если он равен значению параметра целиком) — иначе не из чего строить паттерн"]
+                ))
+            slot["net_template"] = parametrize_net(literal, net_template_map, params)
+        elif net_template_map:
             fp_nets = sorted({p.net.name for p in adapter.get_footprint_pads(fp)
                               if p.net and p.net.name})
             mapped = [n for n in fp_nets if n in net_template_map]
@@ -317,8 +349,9 @@ def extract_template_from_selection(
             elif len(mapped) > 1:
                 logger.warning(f"  {fp.reference_field.text.value} (роль {role}): "
                                f"{len(mapped)} цепей из --net-template сразу на падах "
-                               f"({mapped}) — net_template не проставлен, впиши руками "
-                               f"в получившемся YAML, какая из них роль")
+                               f"({mapped}) — net_template не проставлен, впиши руками в "
+                               f"получившемся YAML, какая из них роль, либо задай "
+                               f"--net-template-role {role}=<цепь> заранее")
         components.append(slot)
         logger.debug(f"  {fp.reference_field.text.value} (роль {role}): "
                     f"along={along_mm}, across={across_mm}, angle={fp.orientation.degrees}"

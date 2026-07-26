@@ -312,6 +312,7 @@ def load_config(path: str) -> Config:
         pattern=tva_data.get('pattern', 'grid'),
         drill_mm=tva_data.get('drill_mm', 0.3),
         diameter_mm=tva_data.get('diameter_mm', 0.5),
+        name=tva_data.get('name'),
     )
 
     templates_data = dict(data.get('templates', {}) or {})
@@ -370,7 +371,7 @@ def load_config(path: str) -> Config:
         spokes = [_load_manual_spoke(spoke_data) for spoke_data in rule_data.get('spokes', [])]
         rules.append(Rule(net=rule_net, spokes=spokes, anchor_ref=anchor_ref,
                           anchor_role=anchor_role, anchor_sheet=anchor_sheet,
-                          anchor_cluster=anchor_cluster))
+                          anchor_cluster=anchor_cluster, name=rule_data.get('name')))
 
     clone_placements = [_load_clone_placement(cp) for cp in data.get('clone_placements', [])]
 

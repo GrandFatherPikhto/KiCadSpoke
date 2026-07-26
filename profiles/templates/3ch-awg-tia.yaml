@@ -1,9 +1,4 @@
 cap_pair_standard:
-  # Для Rule/ManualSpoke (rules: в profiles/3ch-awg-tia.yaml) — общие via
-  # тут net: null, наследуют rule.net (см. spoke_layout.py: via.net or
-  # rule_net). ЭТО ВАЖНО не путать с cap_pair_standard_clone ниже: Rule не
-  # резолвит "{placeholder}" вообще, так что net: "{power_net}" тут был бы
-  # тихой поломкой (via создалась бы на несуществующей цепи "{power_net}").
   vias:
   - offset_along_mm: -1.0
     offset_across_mm: -4.2
@@ -34,10 +29,6 @@ cap_pair_standard:
     offset_along_mm: -1.0
     offset_across_mm: 1.0
     angle_deg: -90.0
-  # tracks: ManualSpoke теперь тоже их расставляет (см. spoke_layout.py:
-  # _resolve_track). net: null здесь ОБЯЗАТЕЛЕН для силовых дорожек — те же
-  # правила, что и для via выше (наследуют rule.net); GND — литерал, он
-  # одинаков во всех правилах, что переиспользуют этот шаблон.
   tracks:
   - start_along_mm: -1.0
     start_across_mm: 1.5675
@@ -100,18 +91,7 @@ cap_pair_standard:
     width_mm: 0.65
     net: null
   layer: B.Cu
-
 cap_pair_standard_clone:
-  # Та же геометрия, что и cap_pair_standard (снята с той же самой живой
-  # спицы) — но под ClonePlacement: общие via/треки параметризованы
-  # "{power_net}" вместо null, потому что ClonePlacement фатально падает
-  # на via/track без цепи (нет rule.net по умолчанию, см. clone_geometry.py).
-  # Резолвится через params: {power_net: "<буквальная цепь банка>"} в
-  # каждом clone_placements-инстансе (см. generate_10cl006.py:
-  # build_clone_placements()). Пока используются ОБА варианта параллельно
-  # (rules: тестируется бок о бок с clone_placements) — если/когда banк
-  # полностью переедет на ClonePlacement, cap_pair_standard можно будет
-  # убрать и оставить только этот.
   vias:
   - offset_along_mm: -1.0
     offset_across_mm: -4.2
@@ -125,12 +105,12 @@ cap_pair_standard_clone:
     diameter_mm: 0.6
   - offset_along_mm: -1.0
     offset_across_mm: -5.2
-    net: "{power_net}"
+    net: '{power_net}'
     drill_mm: 0.3
     diameter_mm: 0.6
   - offset_along_mm: 0.0
     offset_across_mm: 1.5
-    net: "{power_net}"
+    net: '{power_net}'
     drill_mm: 0.3
     diameter_mm: 0.6
   components:
@@ -160,47 +140,176 @@ cap_pair_standard_clone:
     end_along_mm: -2.0
     end_across_mm: -2.1375
     width_mm: 0.65
-    net: "{power_net}"
+    net: '{power_net}'
   - start_along_mm: -1.2021
     start_across_mm: -5.2
     end_along_mm: -1.0
     end_across_mm: -5.2
     width_mm: 0.65
-    net: "{power_net}"
+    net: '{power_net}'
   - start_along_mm: -0.69
     start_across_mm: 0.4325
     end_along_mm: -1.0
     end_across_mm: 0.4325
     width_mm: 0.65
-    net: "{power_net}"
+    net: '{power_net}'
   - start_along_mm: 0.0
     start_across_mm: 1.5
     end_along_mm: 0.0
     end_across_mm: 1.1225
     width_mm: 0.65
-    net: "{power_net}"
+    net: '{power_net}'
   - start_along_mm: -2.0
     start_across_mm: -2.1375
     end_along_mm: -2.0
     end_across_mm: -4.4021
     width_mm: 0.65
-    net: "{power_net}"
+    net: '{power_net}'
   - start_along_mm: -2.0
     start_across_mm: -4.4021
     end_along_mm: -1.2021
     end_across_mm: -5.2
     width_mm: 0.65
-    net: "{power_net}"
+    net: '{power_net}'
   - start_along_mm: -1.0
     start_across_mm: 0.4325
     end_along_mm: -1.0
     end_across_mm: -1.1375
     width_mm: 0.65
-    net: "{power_net}"
+    net: '{power_net}'
   - start_along_mm: 0.0
     start_across_mm: 1.1225
     end_along_mm: -0.69
     end_across_mm: 0.4325
     width_mm: 0.65
-    net: "{power_net}"
+    net: '{power_net}'
   layer: B.Cu
+5v_pi_filter:
+  vias:
+  - offset_along_mm: 3.9567
+    offset_across_mm: 3.125
+    net: GND
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  - offset_along_mm: 9.37
+    offset_across_mm: 3.125
+    net: GND
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  - offset_along_mm: 9.37
+    offset_across_mm: -1.655
+    net: '{PWR_OUT}'
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  components:
+  - role: C_OUT_BULK
+    offset_along_mm: 6.6633
+    offset_across_mm: 1.5625
+    angle_deg: -90.0
+    net_template: '{PWR_OUT}'
+  - role: PI_FILTER_FB
+    offset_along_mm: 5.0192
+    offset_across_mm: -2.255
+    angle_deg: 0.0
+    net_template: '{PWR_IN}'
+  - role: C_OUT_BYPASS
+    offset_along_mm: 9.37
+    offset_across_mm: 0.8625
+    angle_deg: -90.0
+    net_template: '{PWR_OUT}'
+  - role: C_IN_BYPASS
+    offset_along_mm: 3.9567
+    offset_across_mm: 0.8625
+    angle_deg: -90.0
+    net_template: '{PWR_IN}'
+  - role: C_IN_BULK
+    offset_along_mm: 0.0
+    offset_across_mm: 3.2075
+    angle_deg: -90.0
+    net_template: '{PWR_IN}'
+  tracks:
+  - start_along_mm: 3.9567
+    start_across_mm: 3.125
+    end_along_mm: 6.6633
+    end_across_mm: 3.125
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 6.6633
+    start_across_mm: 0.0
+    end_along_mm: 9.37
+    end_across_mm: 0.0
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 9.37
+    start_across_mm: 3.125
+    end_along_mm: 9.37
+    end_across_mm: 1.725
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 3.9567
+    start_across_mm: 0.0
+    end_along_mm: 3.9567
+    end_across_mm: -2.255
+    width_mm: 0.8
+    net: '{PWR_IN}'
+  - start_along_mm: 6.0817
+    start_across_mm: -2.255
+    end_along_mm: 6.0817
+    end_across_mm: -0.5817
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 0.0
+    start_across_mm: 6.415
+    end_along_mm: 2.19
+    end_across_mm: 6.415
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 3.94
+    start_across_mm: 3.1417
+    end_along_mm: 3.9567
+    end_across_mm: 3.125
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 6.6633
+    start_across_mm: 3.125
+    end_along_mm: 9.37
+    end_across_mm: 3.125
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 2.19
+    start_across_mm: 6.415
+    end_along_mm: 3.94
+    end_across_mm: 4.665
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 6.0817
+    start_across_mm: -0.5817
+    end_along_mm: 6.6633
+    end_across_mm: 0.0
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 0.0
+    start_across_mm: 0.0
+    end_along_mm: 3.9567
+    end_across_mm: 0.0
+    width_mm: 0.8
+    net: '{PWR_IN}'
+  - start_along_mm: 9.37
+    start_across_mm: 0.0
+    end_along_mm: 9.37
+    end_across_mm: -1.655
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 3.94
+    start_across_mm: 4.665
+    end_along_mm: 3.94
+    end_across_mm: 3.1417
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 3.9567
+    start_across_mm: 3.125
+    end_along_mm: 3.9567
+    end_across_mm: 1.725
+    width_mm: 0.8
+    net: GND
+  layer: F.Cu

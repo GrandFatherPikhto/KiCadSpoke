@@ -8,6 +8,7 @@ placer.py — главный скрипт для расстановки разв
 """
 
 import argparse
+import difflib
 import sys
 import logging
 import json
@@ -18,7 +19,7 @@ from pathlib import Path
 # Добавляем корень проекта в sys.path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from kicadspoke.config import load_config
+from kicadspoke.config import load_config, rule_effective_name, thermal_via_array_effective_name
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.placement.services.clone_position_calculator import clone_anchor_id
@@ -59,9 +60,15 @@ def cmd_apply(args, cfg=None):
         logger.info(f"Загрузка конфига: {args.config}")
         cfg = load_config(args.config)
 
-    all_anchor_ids = {clone_anchor_id(c) for c in cfg.clone_placements}
-    if getattr(args, "clone_placement", None):
-        name = args.clone_placement
+    only_names = getattr(args, "only", None)
+    clone_placement_name = getattr(args, "clone_placement", None)
+    if only_names and clone_placement_name:
+        sys.exit("[ошибка] --only и --clone-placement нельзя вместе — --only уже "
+                 "покрывает случай --clone-placement (и заодно rules/thermal_via_array), "
+                 "смешивать оба не нужно")
+
+    if clone_placement_name:
+        name = clone_placement_name
         matching = [c for c in cfg.clone_placements if c.name == name]
         if not matching:
             all_names = [c.name for c in cfg.clone_placements]
@@ -70,6 +77,45 @@ def cmd_apply(args, cfg=None):
         cfg.clone_placements = matching
         logger.info(f"--clone-placement {name!r}: обрабатываю только его "
                    f"(остальные clone_placements в этом прогоне игнорируются)")
+
+    if only_names:
+        requested = set(only_names)
+        matched_rules = [r for r in cfg.rules if rule_effective_name(r) in requested]
+        matched_clones = [c for c in cfg.clone_placements if c.name in requested]
+        thermal_matches = (cfg.thermal_via_array.enabled and
+                           thermal_via_array_effective_name(cfg.thermal_via_array) in requested)
+
+        found_names = ({rule_effective_name(r) for r in matched_rules}
+                       | {c.name for c in matched_clones}
+                       | ({thermal_via_array_effective_name(cfg.thermal_via_array)}
+                          if thermal_matches else set()))
+        missing = requested - found_names
+        if missing:
+            all_names = sorted(
+                {rule_effective_name(r) for r in cfg.rules}
+                | {c.name for c in cfg.clone_placements}
+                | ({thermal_via_array_effective_name(cfg.thermal_via_array)}
+                   if cfg.thermal_via_array.enabled else set())
+            )
+            lines = []
+            for name in sorted(missing):
+                suggestion = difflib.get_close_matches(name, all_names, n=1)
+                hint = f" (может, имелся в виду {suggestion[0]!r}?)" if suggestion else ""
+                lines.append(f"  {name!r} — не найдено ни среди rules, ни среди "
+                            f"clone_placements, ни thermal_via_array{hint}")
+            sys.exit("[ошибка] --only: не найдены имена:\n" + "\n".join(lines) +
+                     f"\nДоступные: {all_names}")
+
+        cfg.rules = matched_rules
+        cfg.clone_placements = matched_clones
+        if not thermal_matches:
+            cfg.thermal_via_array.enabled = False
+        logger.info(f"--only {sorted(requested)}: rules={[rule_effective_name(r) for r in matched_rules]}, "
+                   f"clone_placements={[c.name for c in matched_clones]}, "
+                   f"thermal_via_array={'да' if thermal_matches else 'нет'} "
+                   f"(остальное в этом прогоне игнорируется)")
+
+    all_anchor_ids = {clone_anchor_id(c) for c in cfg.clone_placements}
 
     logger.info(f"Подключение к KiCad (таймаут {args.timeout_ms} мс)")
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
@@ -177,11 +223,13 @@ def cmd_extract(args):
     adapter.refresh_board()
 
     direct_args_given = bool(args.name or args.output or args.param or args.net_template
+                             or args.net_template_role
                              or args.origin_by_via_net or args.origin_by_component_role
                              or args.origin_by_component_pad)
     if args.profile and direct_args_given:
         sys.exit("[ошибка] --profile нельзя сочетать с --name/--output/--param/--net-template/"
-                 "--origin-by-*: либо всё из профиля, либо всё явными флагами, не вперемешку")
+                 "--net-template-role/--origin-by-*: либо всё из профиля, либо всё явными "
+                 "флагами, не вперемешку")
 
     if args.profile:
         if not args.profiles:
@@ -194,6 +242,7 @@ def cmd_extract(args):
         output = prof["output"]
         params = dict(prof.get("param", {}) or {})
         net_template_map = dict(prof.get("net_template", {}) or {})
+        net_template_role = dict(prof.get("net_template_role", {}) or {})
         origin_via_net = prof.get("origin_by_via_net")
         origin_component_role = prof.get("origin_by_component_role")
         origin_component_pad = prof.get("origin_by_component_pad")
@@ -218,6 +267,14 @@ def cmd_extract(args):
                 sys.exit(1)
             literal, pattern = item.split("=", 1)
             net_template_map[literal] = pattern
+
+        net_template_role = {}
+        for item in (args.net_template_role or []):
+            if "=" not in item:
+                logger.error(f"--net-template-role {item!r} — нужен формат РОЛЬ=ЛИТЕРАЛ")
+                sys.exit(1)
+            role_key, literal = item.split("=", 1)
+            net_template_role[role_key] = literal
         origin_via_net = args.origin_by_via_net
         origin_component_role = args.origin_by_component_role
         origin_component_pad = args.origin_by_component_pad
@@ -231,6 +288,7 @@ def cmd_extract(args):
         origin_via_net=origin_via_net,
         origin_component_role=origin_component_role,
         origin_component_pad=origin_component_pad,
+        net_template_role=net_template_role,
     )
 
     output_path = Path(output)
@@ -250,7 +308,7 @@ def cmd_extract(args):
         else:
             yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
-    logger.info(f"✅ Шаблон {args.name!r} записан в {output_path}")
+    logger.info(f"✅ Шаблон {name!r} записан в {output_path}")
 
 
 def cmd_undo(args):
@@ -298,7 +356,16 @@ def main():
                               help="Обработать только ОДИН clone_placements с этим именем "
                                    "(остальные игнорируются на этот прогон) — нужно, если несколько "
                                    "clone_placements в режиме «по выделению»: в KiCad активно только "
-                                   "одно выделение сразу, обработать все разом нельзя")
+                                   "одно выделение сразу, обработать все разом нельзя. Нельзя вместе "
+                                   "с --only.")
+    apply_parser.add_argument("--only", action="append", metavar="NAME",
+                              help="Обработать только rules/clone_placements/thermal_via_array с этим "
+                                   "именем (можно повторять — несколько --only сразу). Имя rule — его "
+                                   "name:, а если не задано — net; имя thermal_via_array — его name:, "
+                                   "а если не задано — thermal_<pad>. Всё остальное в этом прогоне "
+                                   "полностью игнорируется (не попадает даже в проверки/лог) — для "
+                                   "изолированной проверки одного куска платы, без шума от остальных. "
+                                   "Нельзя вместе с --clone-placement.")
 
     undo_parser = subparsers.add_parser("undo", help="Откатить последнюю операцию")
     undo_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
@@ -339,6 +406,15 @@ def main():
                                      "(напр. 'DAC1_DB1=DAC{channel}_DB1'); можно повторять; "
                                      "заполняет net_template ролей и параметризует via.net "
                                      "прямо при извлечении, вместо ручной правки YAML")
+    extract_parser.add_argument("--net-template-role", action="append", metavar="РОЛЬ=ЛИТЕРАЛ",
+                                help="Для компонента с НЕСКОЛЬКИМИ цепями из --net-template "
+                                     "сразу на падах (дроссель/бусина/предохранитель на стыке "
+                                     "двух рельсов) — явно говорит, какую из них считать "
+                                     "net_template этой роли (напр. 'PI_FILTER_FB=+5V_DIRTY'); "
+                                     "без этого такие роли остаются с пустым net_template, "
+                                     "правится руками в получившемся YAML. Можно повторять. "
+                                     "Фатал, если у роли на самом деле нет такой цепи на падах, "
+                                     "или если литерал не зарегистрирован в --net-template/params")
     origin_group = extract_parser.add_mutually_exclusive_group()
     origin_group.add_argument("--origin-by-via-net", metavar="NET",
                               help="Origin шаблона — позиция via на этой цепи (вместо bbox "

@@ -209,12 +209,39 @@ extract_profiles:
       # если его нет среди ключей — без ошибки, без предупреждения).
       '+5V_DIRTY': '{PWR_IN}'
       '+5V': '{PWR_OUT}'
+    # FB1 (роль PI_FILTER_FB) сидит между двумя рельсами сразу — на его
+    # падах ОБЕ цепи из net_template выше, extract сам не выберет.
+    # Явно говорим: net_template этой роли — {PWR_IN}. Без этой строки
+    # extract каждый раз молча оставляет net_template у PI_FILTER_FB
+    # пустым (см. warning при извлечении).
+    net_template_role:
+      PI_FILTER_FB: '+5V_DIRTY'
     origin_by_component_role: C_IN_BULK
     origin_by_component_pad: '1'
 
 clone_placements:
-  - name: conn_pm5v
-    role: CONN_PM5V
-    origin_x_mm: 0.0
-    origin_y_mm: 0.0
-    rotation_deg: 9.0
+  # - name: conn_pm5v
+  #   role: CONN_PM5V
+  #   origin_x_mm: 0.0
+  #   origin_y_mm: 0.0
+  #   rotation_deg: 9.0
+  - name: p5v_pi_filter
+    template: 5v_pi_filter
+    # C_IN_BULK как anchor_role неоднозначен на плате (второй такой же
+    # в Cluster=In_Pi_Filter_Neg) — anchor_cluster сужает до нужного.
+    # anchor_pad: '1' — тот же пад, что был origin_by_component_pad при
+    # extract, чтобы якорь совпал с нулём координат самого шаблона.
+    anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: 10.0
+    origin_y_mm: -3.0    
+    # anchor_role: C_IN_BULK
+    # anchor_cluster: In_Pi_Filter_Pos
+    # anchor_pad: '1'
+    # params (не param!) — ключ ClonePlacement, отличается от param: в
+    # extract_profiles (это разные структуры). Наличие params включает
+    # режим "по цепям" — все роли шаблона резолвятся по net_template,
+    # не по выделению на плате.
+    params:
+      PWR_IN: '+5V_DIRTY'
+      PWR_OUT: '+5V'

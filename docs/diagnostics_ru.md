@@ -13,6 +13,7 @@
 ```
 kicadspoke/diagnostics/
 ├── diagnose_first_write_crash.py  # Диагностика краша KiCad на первой IPC-записи (issue #24966)
+├── diagnostic_charset.py          # Поиск не-ASCII символов (гомоглифов) в Role/Cluster по всей плате
 ├── diagnostic_keepout.py          # Анализ keepout и пересечений
 ├── get_pad_bbox.py                # Bounding box пада
 ├── get_selected_component.py      # Детальная информация о выделенных компонентах
@@ -82,6 +83,47 @@ python -m kicadspoke.diagnostics.diagnose_first_write_crash --repeat 3
 `kipy` напрямую (не через `kicadspoke.kicad.adapter`). Снимок PID `kicad.exe` на Windows — через `tasklist`,
 на остальных ОС — через опциональный `psutil` (не входит в `requirements.txt`; без него обнаружение
 зомби-инстансов, гипотеза H2, молча отключается, но сама лесенка чтений/записи работает как обычно).
+
+---
+
+### `diagnostic_charset.py`
+
+**Назначение:**  
+Проходит по всем футпринтам платы (по умолчанию — поля `Role` и `Cluster`, список настраивается через
+`--fields`) и ищет символы вне печатной ASCII (`0x20`–`0x7E`). Повод для появления скрипта — живая находка на
+`3CH-AWG-TIA`: у трёх компонентов (`C3`, `C9`, `C170`) в значении `Role` первая буква оказалась
+кириллической «С» (`U+0421`) вместо латинской «C» (`U+0043`) — судя по всему, раскладка клавиатуры
+соскочила на русскую в момент набора значения поля в Eeschema Bulk Edit. Визуально буквы неотличимы почти в
+любом шрифте, но `component_pool.py`/`clone_role_resolver.py` сравнивают `Role` строгим посимвольным
+равенством — компонент с такой опечаткой не находит ни одно правило, которое ищет «правильную» (латинскую)
+роль, и диагностировать это глазами практически невозможно.
+
+**Использование:**
+```bash
+# Проверить Role и Cluster на всей плате (по умолчанию)
+python -m kicadspoke.diagnostics.diagnostic_charset
+
+# Проверить другой набор полей
+python -m kicadspoke.diagnostics.diagnostic_charset --fields Role,Cluster,Value
+
+# Печатать и чистые поля тоже (не только найденные проблемы)
+python -m kicadspoke.diagnostics.diagnostic_charset --verbose
+```
+
+**Параметры:**
+- `--fields` – список полей через запятую, без пробелов (по умолчанию `Role,Cluster`).
+- `--timeout-ms` – таймаут IPC (по умолчанию `20000`).
+- `--verbose` – логировать и «чистые» (без находок) поля тоже.
+
+**Вывод:**  
+Список находок: refdes, имя поля, значение целиком, и для каждого «плохого» символа — позиция в строке,
+сам символ, кодпоинт (`U+XXXX`) и его имя по Unicode (`unicodedata.name`). Код возврата — `0`, если проблем
+не найдено, `1` — если найдено хотя бы одно поле (удобно как самостоятельный шаг перед `apply` или в CI:
+`python -m kicadspoke.diagnostics.diagnostic_charset || echo "есть подозрительные символы в Role/Cluster"`).
+
+**Зависимости:**  
+`kicadspoke.kicad.adapter.KiCadBoardAdapter` (`get_footprints`/`get_field_value`), `unicodedata` из
+стандартной библиотеки.
 
 ---
 

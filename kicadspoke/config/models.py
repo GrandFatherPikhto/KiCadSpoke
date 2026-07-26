@@ -17,12 +17,16 @@ from typing import Optional, List, Dict, Any
 
 @dataclass
 class ThermalViaArrayConfig:
-    """Конфигурация массива тепловых via под термопадом IC."""
+    """Конфигурация массива тепловых via под термопадом IC.
+
+    name — для --only (см. kicadspoke_cli.py): без явного имени падает на
+    f"thermal_{pad}" (см. config/loader.py) — существующие конфиги без
+    name: продолжают работать без правок."""
     enabled: bool = False
     anchor_ref: Optional[str] = None          # было str = ""
     anchor_role: Optional[str] = None         # новое
     anchor_sheet: Optional[str] = None        # для сужения роли
-    anchor_cluster: Optional[str] = None      # для сужения роли    
+    anchor_cluster: Optional[str] = None      # для сужения роли
     pad: str = ""
     net: str = "GND"
     rows: int = 4
@@ -31,6 +35,14 @@ class ThermalViaArrayConfig:
     pattern: str = "grid"
     drill_mm: float = 0.3
     diameter_mm: float = 0.5
+    name: Optional[str] = None
+
+
+def thermal_via_array_effective_name(tva: "ThermalViaArrayConfig") -> str:
+    """См. докстринг ThermalViaArrayConfig.name — единая точка резолва
+    имени для --only (kicadspoke_cli.py), чтобы фоллбэк не разъезжался
+    между местами, которые его читают."""
+    return tva.name or f"thermal_{tva.pad}"
 
 
 @dataclass
@@ -169,13 +181,24 @@ class Rule:
     anchor_ref ИЛИ anchor_role (взаимоисключающе, ровно одно обязательно) —
     чей это выводок (пады спиц — его пады). anchor_sheet/anchor_cluster —
     сужение неоднозначности anchor_role, тот же принцип, что у
-    ClonePlacement (см. config/models.py)."""
+    ClonePlacement (см. config/models.py).
+
+    name — для --only (см. kicadspoke_cli.py): без явного имени падает на
+    net (см. config/loader.py) — существующие конфиги без name: продолжают
+    работать без правок, net и так обычно уникален и осмысленен."""
     net: str
     spokes: List[ManualSpoke]
     anchor_ref: Optional[str] = None
     anchor_role: Optional[str] = None
     anchor_sheet: Optional[str] = None
     anchor_cluster: Optional[str] = None
+    name: Optional[str] = None
+
+
+def rule_effective_name(rule: "Rule") -> str:
+    """См. докстринг Rule.name — единая точка резолва имени для --only
+    (kicadspoke_cli.py)."""
+    return rule.name or rule.net
 
 
 @dataclass

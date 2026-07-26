@@ -17,6 +17,8 @@ from .models import (
     Rule,
     ClonePlacement,
     Config,
+    rule_effective_name,
+    thermal_via_array_effective_name,
 )
 from .loader import (
     load_config,
@@ -40,4 +42,6 @@ __all__ = [
     "ClonePlacement",
     "Config",
     "load_config",
+    "rule_effective_name",
+    "thermal_via_array_effective_name",
 ]
