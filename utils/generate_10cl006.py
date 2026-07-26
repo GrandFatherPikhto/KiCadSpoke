@@ -6,8 +6,14 @@ generate_10cl006.py — генератор конфигов для 10CL006YE144C
   1. rules-based конфиг (ManualSpoke) — как раньше, apply-ready,
      profiles/generated/10CL006YE144C8G.yaml.
   2. clone_placements-based конфиг (ClonePlacement) — та же геометрия,
-     но через клонирование, потому что Rule/ManualSpoke не умеет
-     клонировать треки (см. обсуждение в чате) —
+     но через клонирование. УСТАРЕЛО как обоснование: раньше этот путь
+     существовал, ПОТОМУ ЧТО Rule/ManualSpoke не умел клонировать треки —
+     с 2026-07-26 умеет (см. TemplateTrack/_resolve_track в
+     spoke_layout.py, тест test_track_net_none_inherits_rule_net). Теперь
+     единственная оставшаяся причина держать этот путь параллельно —
+     резолв якоря по anchor_pad/anchor_cluster и net-плейсхолдеры
+     "{power_net}" через params, которые Rule принципиально не резолвит
+     (см. "ВАЖНО про шаблон" ниже) —
      profiles/generated/10CL006YE144C8G.clone_placements.yaml.
      Не подключается автоматически никуда (нет include-механизма в
      конфигах) — блок clone_placements: копируется руками в
@@ -126,8 +132,11 @@ def build_cluster_table():
 def build_clone_placements():
     """
     clone_placements-эквивалент build_rules() — та же геометрия
-    (pad -> anchor_pad, shift -> origin, rotation), но для ClonePlacement,
-    который умеет клонировать треки (Rule/ManualSpoke — нет).
+    (pad -> anchor_pad, shift -> origin, rotation), но для ClonePlacement.
+    Оба пути с 2026-07-26 умеют клонировать треки (Rule/ManualSpoke —
+    тоже, см. build_rules() выше) — этот путь остаётся полезен ради
+    anchor_pad/anchor_cluster резолва и net-плейсхолдеров через params,
+    которых у Rule нет.
 
     anchor_cluster проставлен ВСЕГДА (FPGA_PWR_BANK/<pad>, из
     build_cluster_table()) — это безопасно, даже пока поле Cluster в

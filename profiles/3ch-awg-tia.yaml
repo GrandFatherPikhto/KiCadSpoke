@@ -2,7 +2,7 @@ templates_file: templates/3ch-awg-tia.yaml
 schematic_dir: ../test_boards/3CH-AWG-TIA
 registry_path: profiles/registries/3ch-awg-tia.json
 track_registry_path: profiles/registries/power_board.tracks.registry.json
-log_file: ../logs/placer.log
+log_file: ../logs/3ch-awg-tia.log
 
 # Слой ManualSpoke-пути (rules ниже) — глобальный, из
 # profiles/generated/10CL006YE144C8G.yaml, откуда сюда же перенесены
@@ -201,10 +201,14 @@ extract_profiles:
     param:
       PWR_IN: '+5V_DIRTY'
       PWR_OUT: '+5V'
-      channel: 1   # <-- добавить параметр для канала
     net_template:
-      '{PWR_IN}': '+5V_DIRTY'
-      '{PWR_OUT}': '+5V'
+      # ЛИТЕРАЛ: ПАТТЕРН (см. --net-template в docs/commands_ru.md и
+      # net_resolution.parametrize_net) — раньше здесь было наоборот
+      # (паттерн: литерал), из-за чего параметризация цепей молча не
+      # срабатывала (parametrize_net тихо возвращает литерал как есть,
+      # если его нет среди ключей — без ошибки, без предупреждения).
+      '+5V_DIRTY': '{PWR_IN}'
+      '+5V': '{PWR_OUT}'
     origin_by_component_role: C_IN_BULK
     origin_by_component_pad: '1'
 
