@@ -1,3 +1,4 @@
+# kicadspoke/placement/executor/batch_executor.py
 import logging
 from typing import List, Tuple, Dict, Optional
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
@@ -8,8 +9,8 @@ from .via_executor import ViaExecutor
 from .track_executor import TrackExecutor
 from .operation_logger import OperationLogger
 from ...registry import PlacementRegistry, TrackRegistry
-
 from ...constants import DEFAULT_BATCH_SIZE
+from ...i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +34,6 @@ class BatchExecutor:
         return failed_refs
 
     def execute_vias(self, vias: List[ViaCommand], registry: Optional[PlacementRegistry] = None) -> List[str]:
-        """
-        ИЗМЕНЕНО: больше не пишет лог операции сама (раньше это была
-        последняя фаза) — теперь треки идут ПОСЛЕ via, лог откладывается
-        до execute_tracks(). Если в конфиге вообще нет треков, cmd_apply
-        всё равно вызывает execute_tracks([]) — она допишет лог с пустым
-        created_tracks, ничего не потеряется.
-        """
         failed_via_owners, via_log = self.via_executor.execute_vias(vias, registry)
         self._pending_via_log = via_log
         return failed_via_owners

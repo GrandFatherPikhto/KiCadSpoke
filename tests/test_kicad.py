@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Тест для модуля kicad (без реального подключения к KiCad).
-Проверяет импорт и наличие методов в классах.
+Test for the kicad module (without a real connection to KiCad).
+Checks imports and method presence in classes.
 """
 
 import sys
 from pathlib import Path
 
-# Добавляем корень проекта в путь
+# Add project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from kicadspoke.kicad import KiCadBoardAdapter, IBoardAdapter
@@ -15,17 +15,17 @@ from kicadspoke.kicad.adapter import KiCadBoardAdapter as Adapter
 
 
 def test_import():
-    """Проверяем, что импорт работает."""
+    """Check that imports work."""
     assert KiCadBoardAdapter is not None
     assert IBoardAdapter is not None
-    print("✅ Импорт kicad OK")
+    print("✅ kicad import OK")
 
 
 def test_adapter_has_methods():
-    """Проверяем наличие всех методов интерфейса у адаптера."""
-    # Список методов, которые должны быть в KiCadBoardAdapter (включая новые)
+    """Check that the adapter has all methods required by the interface."""
+    # List of methods that must be present in KiCadBoardAdapter (including new ones)
     methods = [
-        # Основные методы доступа
+        # Core access methods
         "refresh_board",
         "get_footprint",
         "get_footprints",
@@ -39,11 +39,11 @@ def test_adapter_has_methods():
         "get_net_by_name",
         "get_all_nets",
         "get_bounding_boxes",
-        # Транзакции
+        # Transactions
         "begin_commit",
         "push_commit",
         "drop_commit",
-        # Мутации
+        # Mutations
         "update_items",
         "create_items",
         "flip_selected",
@@ -51,27 +51,27 @@ def test_adapter_has_methods():
         "create_via",
         "create_track",
         "remove_by_id",
-        # Предупреждение о риске краша
+        # Crash risk warning
         "check_write_crash_risk",
     ]
     for method in methods:
-        assert hasattr(Adapter, method), f"Метод {method} отсутствует в KiCadBoardAdapter"
-    print("✅ Все методы интерфейса присутствуют в адаптере")
+        assert hasattr(Adapter, method), f"Method {method} is missing in KiCadBoardAdapter"
+    print("✅ All interface methods are present in the adapter")
 
 
 def test_init_without_connection():
-    """Проверяем, что конструктор не падает (без вызова refresh_board)."""
+    """Check that the constructor does not crash (without calling refresh_board)."""
     try:
         adapter = KiCadBoardAdapter(timeout_ms=1000)
         assert adapter is not None
-        print("✅ Конструктор KiCadBoardAdapter работает (без подключения)")
+        print("✅ KiCadBoardAdapter constructor works (without connection)")
     except Exception as e:
-        print(f"⚠️ Конструктор упал (это может быть нормально, если KiCad не запущен): {e}")
+        print(f"⚠️ Constructor crashed (this may be normal if KiCad is not running): {e}")
 
 
 if __name__ == "__main__":
-    print("Запуск тестов kicad (без подключения к KiCad)...")
+    print("Running kicad tests (without KiCad connection)...")
     test_import()
     test_adapter_has_methods()
     test_init_without_connection()
-    print("Все тесты kicad пройдены (без реального IPC).")
+    print("All kicad tests passed (no real IPC).")

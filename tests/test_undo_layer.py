@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Регрессия на находку (2026-07-15): executor.py никогда не записывал
-original_layer в JSON-лог операции, из-за чего undo.py всегда откатывался
-на захардкоженный дефолт 'F.Cu' — совпадало по чистой случайности при
-первом прогоне (компонент действительно на F.Cu), но ломалось при втором
-прогоне без undo между ними (компонент уже на B.Cu — undo ошибочно
-флипал его обратно на F.Cu).
+Regression test for a bug found on 2026-07-15: executor.py never wrote
+original_layer into the JSON operation log, so undo.py always reverted to
+the hard‑coded default 'F.Cu' — which happened to match the first run
+(the component was indeed on F.Cu), but broke on the second run without an
+undo in between (component already on B.Cu — undo incorrectly flipped it back
+to F.Cu).
 
-Заодно: str(BoardLayer.BL_B_Cu) даёт сырое число ('34'), а НЕ 'B.Cu' —
-если бы слой просто взяли через str(), проверка 'B.Cu' in ... в undo.py
-всё равно никогда бы не сработала. Нужно явное преобразование.
+Also: str(BoardLayer.BL_B_Cu) gives the raw number ('34'), not 'B.Cu' —
+if the layer were simply taken via str(), the 'B.Cu' in ... check in undo.py
+would never work. An explicit conversion is needed.
 
-Актуализировано: теперь использует реальный Config вместо MagicMock,
-убрано устаревшее поле target_ref.
+Updated: now uses a real Config instead of MagicMock, removed the obsolete
+target_ref field.
 """
 import sys
 import json
@@ -35,17 +35,17 @@ MM = 1_000_000
 
 class TestLayerToStr:
     def test_gives_real_strings_not_raw_enum_numbers(self):
-        """str(BoardLayer.BL_B_Cu) даёт '34', а не 'B.Cu' — проверяем,
-        что _layer_to_str даёт то, что реально ожидает undo.py."""
+        """str(BoardLayer.BL_B_Cu) gives '34', not 'B.Cu' — check that
+        _layer_to_str gives what undo.py actually expects."""
         assert _layer_to_str(BoardLayer.BL_F_Cu) == "F.Cu"
         assert _layer_to_str(BoardLayer.BL_B_Cu) == "B.Cu"
 
 
 class TestOriginalLayerCapture:
     def test_original_layer_written_correctly_when_already_on_back(self):
-        """Компонент УЖЕ на B.Cu до этого прогона (второй прогон без undo
-        между ними) — original_layer в логе должен быть 'B.Cu', а не
-        ошибочный дефолт 'F.Cu'."""
+        """Component already on B.Cu before this run (second run without undo
+        in between) — original_layer in the log must be 'B.Cu', not the
+        incorrect default 'F.Cu'."""
         fp = MagicMock()
         fp.reference_field.text.value = "C39"
         fp.position = Vector2.from_xy(int(50 * MM), int(50 * MM))

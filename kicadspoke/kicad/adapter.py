@@ -10,60 +10,59 @@ from kipy.geometry import Vector2, Box2, Angle
 from .interfaces import IBoardAdapter
 from ..exceptions import BoardNotFoundError, ComponentNotFoundError
 from ..utils.units import MM
-
 from ..constants import DEFAULT_TIMEOUT_MS
+from ..i18n import _
 
 logger = logging.getLogger(__name__)
 
+
 class KiCadBoardAdapter(IBoardAdapter):
     def __init__(self, timeout_ms: int = DEFAULT_TIMEOUT_MS):
-        logger.debug(f"Инициализация KiCadBoardAdapter с таймаутом {timeout_ms} мс")
-        logger.debug("Создание экземпляра kipy.KiCad...")
+        logger.debug(_("Initialising KiCadBoardAdapter with timeout {timeout} ms").format(timeout=timeout_ms))
+        logger.debug(_("Creating kipy.KiCad instance..."))
         self._kicad = kipy.KiCad(timeout_ms=timeout_ms)
-        logger.debug("Экземпляр kipy.KiCad создан")
+        logger.debug(_("kipy.KiCad instance created"))
         self._board = None
         self._write_risk_checked = False
 
     def refresh_board(self):
-        logger.debug("Обновление доски из KiCad")
+        logger.debug(_("Refreshing board from KiCad"))
         self._board = self._kicad.get_board()
         if self._board is None:
-            raise BoardNotFoundError("Не удалось получить плату из KiCad")
-        logger.info("Доска получена")
+            raise BoardNotFoundError(_("Failed to obtain board from KiCad"))
+        logger.info(_("Board obtained"))
 
-    # --- Поиск ---
+    # --- Search ---
     def get_footprint(self, ref: str) -> Optional[FootprintInstance]:
         for fp in self._board.get_footprints():
             if fp.reference_field.text.value == ref:
-                logger.debug(f"Найден футпринт {ref}")
+                logger.debug(_("Found footprint {ref}").format(ref=ref))
                 return fp
-        logger.debug(f"Футпринт {ref} не найден")
+        logger.debug(_("Footprint {ref} not found").format(ref=ref))
         return None
 
     def get_footprints(self) -> List[FootprintInstance]:
         fps = list(self._board.get_footprints())
-        logger.debug(f"Получено {len(fps)} футпринтов")
+        logger.debug(_("Retrieved {count} footprints").format(count=len(fps)))
         return fps
 
     def get_vias(self) -> List[Via]:
-        """Все существующие на плате виа (для проверки идемпотентности повторного прогона)."""
         vias = list(self._board.get_vias())
-        logger.debug(f"Получено {len(vias)} виа")
+        logger.debug(_("Retrieved {count} vias").format(count=len(vias)))
         return vias
 
     def get_tracks(self) -> List[Track]:
-        """Все существующие на плате прямые дорожки (для идемпотентности реестра)."""
         tracks = list(self._board.get_tracks())
-        logger.debug(f"Получено {len(tracks)} дорожек")
+        logger.debug(_("Retrieved {count} tracks").format(count=len(tracks)))
         return tracks
 
     def get_selected_items(self) -> List[Any]:
         """
-        Текущее выделение в PCB-редакторе, с учётом Group — у Group
-        свойство .items, полученное с сервера, ВСЕГДА ПУСТОЕ (просто
-        локальный кэш обёртки), реальные участники группы — в
-        .proto.items (список KIID). Разворачиваем группы в их реальных
-        участников через сопоставление id по всем футпринтам/виа платы.
+        Current selection in PCB editor, taking Groups into account — Group's
+        .items property as received from the server is ALWAYS EMPTY (just a
+        local cache wrapper); actual group members are in .proto.items (list of
+        KIID). Expand groups into their real members by matching IDs against all
+        footprints/vias on the board.
         """
         raw_selection = list(self._board.get_selection())
         direct_items = [item for item in raw_selection if not isinstance(item, Group)]
@@ -81,16 +80,16 @@ class KiCadBoardAdapter(IBoardAdapter):
                 if str(via.id.value) in group_uuids:
                     direct_items.append(via)
 
-        logger.debug(f"Выделено объектов (с учётом групп): {len(direct_items)}")
+        logger.debug(_("Selected items (including groups expanded): {count}").format(count=len(direct_items)))
         return direct_items
 
     def get_field_value(self, footprint: FootprintInstance, field_name: str) -> Optional[str]:
         """
-        Значение пользовательского поля компонента (например, роль для
-        KiCadSpoke 4.0). ВАЖНО: texts_and_fields содержит вперемешку
-        настоящие Field (name+text.value) и голый BoardText (просто текст
-        на шёлкографии, без имени поля вовсе) — фильтруем по типу, иначе
-        типична ошибка AttributeError на .name у BoardText.
+        Value of a custom component field (e.g., Role for KiCadSpoke 4.0).
+        IMPORTANT: texts_and_fields contains a mix of actual Field objects
+        (name+text.value) and plain BoardText (silkscreen text without a field
+        name at all) — filter by type, otherwise we get AttributeError on .name
+        for BoardText.
         """
         for item in footprint.texts_and_fields:
             if isinstance(item, Field) and item.name == field_name:
@@ -99,16 +98,15 @@ class KiCadBoardAdapter(IBoardAdapter):
 
     def get_footprint_pads(self, footprint: FootprintInstance) -> List[Pad]:
         """
-        Возвращает список пад данного футпринта. Не ходит в API отдельно —
-        площадки уже лежат в footprint.definition.items вместе с полями/
-        графикой, просто фильтруем по типу. Вынесено сюда из planner.py,
-        чтобы не дублировать в будущих местах (например, при сборке
-        keepout для виа — см. geometry/keepout.py).
+        Returns the list of pads of this footprint. Does not go to the API
+        separately — pads are already in footprint.definition.items together
+        with fields/graphics; just filter by type. Moved here from planner.py
+        to avoid duplication in future places (e.g., keepout building).
         """
         return [item for item in footprint.definition.items if isinstance(item, Pad)]
 
     def get_pad_by_number(self, footprint: FootprintInstance, pad_number: str) -> Optional[Pad]:
-        """Находит конкретную площадку футпринта по номеру (например, '1', '145')."""
+        """Finds a specific pad of a footprint by number (e.g., '1', '145')."""
         for pad in self.get_footprint_pads(footprint):
             if pad.number == pad_number:
                 return pad
@@ -117,63 +115,63 @@ class KiCadBoardAdapter(IBoardAdapter):
     def get_zone_by_name(self, name: str) -> Optional[Zone]:
         for z in self._board.get_zones():
             if z.name == name:
-                logger.debug(f"Найдена зона {name}")
+                logger.debug(_("Found zone {name}").format(name=name))
                 return z
-        logger.debug(f"Зона {name} не найдена")
+        logger.debug(_("Zone {name} not found").format(name=name))
         return None
 
     def get_net_by_name(self, name: str) -> Optional[Net]:
         for n in self._board.get_nets():
             if n.name == name:
-                logger.debug(f"Найдена цепь {name}")
+                logger.debug(_("Found net {name}").format(name=name))
                 return n
-        logger.debug(f"Цепь {name} не найдена")
+        logger.debug(_("Net {name} not found").format(name=name))
         return None
 
     def get_all_nets(self) -> List[Net]:
         nets = list(self._board.get_nets())
-        logger.debug(f"Получено {len(nets)} цепей")
+        logger.debug(_("Retrieved {count} nets").format(count=len(nets)))
         return nets
 
-    # --- Bounding box (для коллизий — см. collision.py) ---
+    # --- Bounding boxes (for collisions — see collision.py) ---
     def get_bounding_boxes(self, items) -> List[Optional[Box2]]:
         """
-        Возвращает bounding box'ы (Box2 | None) для списка элементов ОДНИМ
-        запросом. Board.get_item_bounding_box(list) возвращает List[Optional[Box2]]
-        для последовательности элементов (для одного элемента вернул бы
-        просто Box2|None — поэтому здесь всегда передаём список).
+        Returns bounding boxes (Box2 | None) for a list of items in ONE request.
+        Board.get_item_bounding_box(list) returns List[Optional[Box2]] for a
+        sequence of items (for a single item it would return just Box2|None —
+        so we always pass a list here).
         """
         if not items:
             return []
         result = self._board.get_item_bounding_box(list(items))
-        # На случай, если бы вдруг вернулся не список (защитная нормализация)
+        # Defensive normalisation in case it's not a list
         if not isinstance(result, list):
             result = [result]
         return result
 
-    # --- Транзакции ---
+    # --- Transactions ---
     def begin_commit(self):
-        logger.debug("Начало транзакции")
+        logger.debug(_("Beginning transaction"))
         return self._board.begin_commit()
 
     def push_commit(self, commit, description: str):
-        logger.debug(f"Применение транзакции: {description}")
+        logger.debug(_("Committing transaction: {desc}").format(desc=description))
         self._board.push_commit(commit, description)
-        logger.info(f"Транзакция применена: {description}")
+        logger.info(_("Transaction committed: {desc}").format(desc=description))
 
     def drop_commit(self, commit):
-        logger.warning("Откат транзакции")
+        logger.warning(_("Rolling back transaction"))
         self._board.drop_commit(commit)
 
     def check_write_crash_risk(self):
         """
-        Проверка перед ПЕРВОЙ мутирующей операцией: KiCad 10.0.4 может
-        упасть целиком на первой API-записи, если в сессии открыт редактор
-        схем и не было ни одной интерактивной правки (null-deref в
-        _eeschema.dll, наш репорт:
+        Check before the FIRST mutating operation: KiCad 10.0.4 may crash
+        entirely on the first API write if the schematic editor is open and no
+        interactive edit has been made in the session (null‑deref in
+        _eeschema.dll, our report:
         https://gitlab.com/kicad/code/kicad/-/issues/24966).
-        Крах предотвратить из клиента нельзя — но можно предупредить.
-        Вызывается один раз, повторные вызовы — no-op.
+        Cannot prevent the crash from the client, but can warn.
+        Called once; subsequent calls are no‑op.
         """
         if self._write_risk_checked:
             return
@@ -182,23 +180,22 @@ class KiCadBoardAdapter(IBoardAdapter):
             from kipy.proto.common.types import DocumentType
             schematics = self._kicad.get_open_documents(DocumentType.DOCTYPE_SCHEMATIC)
         except Exception as e:
-            logger.debug(f"проверка открытых схем не удалась: {e}")
+            logger.debug(_("Checking open schematics failed: {e}").format(e=e))
             return
         if schematics:
             logger.warning(
-                "Открыт редактор схем: если в этой сессии KiCad ещё не было "
-                "интерактивных правок, первая API-запись может уронить KiCad "
-                "(issue #24966). Workaround: подвинуть любой компонент + Ctrl+S "
-                "в pcbnew, либо закрыть окно схемы на время прогона."
+                _("Schematic editor is open: if there have been no interactive edits "
+                  "in this KiCad session, the first API write may crash KiCad "
+                  "(issue #24966). Workaround: move any component + Ctrl+S in "
+                  "pcbnew, or close the schematic window during the run.")
             )
 
     def _mutating_call(self, op_name: str, fn, retries: int = 2, backoff_s: float = 1.5):
         """
-        Обёртка мутирующих вызовов: перед первым — check_write_crash_risk,
-        на ApiError 'not ready' — ретрай с паузой (KiCad занят модальным
-        состоянием), на ConnectionError — внятный диагноз вместо голого
-        стектрейса: обрыв пайпа на записи = скорее всего KiCad умер
-        (см. issue #24966).
+        Wrapper for mutating calls: before first — check_write_crash_risk,
+        on ApiError 'not ready' — retry with backoff (KiCad busy with modal
+        state), on ConnectionError — clear diagnosis instead of raw stack trace:
+        pipe break during write = KiCad probably crashed (see issue #24966).
         """
         self.check_write_crash_risk()
         last_exc = None
@@ -208,59 +205,63 @@ class KiCadBoardAdapter(IBoardAdapter):
             except kipy.errors.ApiError as e:
                 if "not ready" in str(e).lower() and attempt < retries:
                     wait = backoff_s * (attempt + 1)
-                    logger.warning(f"{op_name}: KiCad не готов ответить "
-                                   f"(занят/модальный диалог?), ретрай через {wait:.1f} с "
-                                   f"[{attempt+1}/{retries}]")
+                    logger.warning(_("{op}: KiCad not ready to respond "
+                                     "(busy/modal dialog?), retrying in {wait:.1f}s "
+                                     "[{attempt}/{retries}]")
+                                   .format(op=op_name, wait=wait,
+                                           attempt=attempt+1, retries=retries))
                     time.sleep(wait)
                     last_exc = e
                     continue
                 raise
             except kipy.errors.ConnectionError as e:
                 logger.error(
-                    f"{op_name}: соединение с KiCad оборвалось во время записи — "
-                    f"вероятно, KiCad упал (известный краш на первой API-записи "
-                    f"при открытой схеме: issue #24966; workaround — подвинуть "
-                    f"компонент + Ctrl+S в pcbnew до прогона). Исходная ошибка: {e}"
+                    _("{op}: connection to KiCad broke during write — "
+                      "KiCad probably crashed (known crash on first API write "
+                      "with schematic open: issue #24966; workaround: move "
+                      "a component + Ctrl+S in pcbnew before running). Original error: {e}")
+                    .format(op=op_name, e=e)
                 )
                 raise
         raise last_exc
 
     def update_items(self, items):
-        logger.debug(f"Обновление {len(items)} элементов")
+        logger.debug(_("Updating {count} items").format(count=len(items)))
         return self._mutating_call("update_items",
                                    lambda: self._board.update_items(items))
 
     def create_items(self, items):
-        logger.debug(f"Создание {len(items)} элементов")
+        logger.debug(_("Creating {count} items").format(count=len(items)))
         created = self._mutating_call("create_items",
                                       lambda: self._board.create_items(items))
-        logger.debug(f"Создано {len(created)} элементов")
+        logger.debug(_("Created {count} items").format(count=len(created)))
         return created
 
-    # --- Специализированные действия ---
+    # --- Specialised actions ---
     def flip_selected(self, footprints: List[FootprintInstance]):
-        logger.info(f"Флип {len(footprints)} футпринтов через GUI action")
+        logger.info(_("Flipping {count} footprints via GUI action").format(count=len(footprints)))
         self._board.clear_selection()
         self._board.add_to_selection(footprints)
         self._kicad.run_action("pcbnew.InteractiveEdit.flip")
         self._board.clear_selection()
-        logger.debug("Флип выполнен")
+        logger.debug(_("Flip performed"))
 
     def commit_with_retry(self, description: str, work_fn, retries: int = 1) -> bool:
         """
-        ИСПРАВЛЕНО (2026-07-12): раньше `commit = self.begin_commit()` был
-        внутри try, но если begin_commit() САМ падал (реальный, воспроизведённый
-        сценарий — см. историю с зависшей IPC-сессией и "KiCad is busy"),
-        `commit` оставался НЕ ОПРЕДЕЛЁН, и `except: self.drop_commit(commit)`
-        падал с UnboundLocalError, полностью маскируя настоящую причину.
-        Теперь commit=None до try, drop_commit вызывается только если commit
-        реально был получен.
+        FIXED (2026-07-12): previously `commit = self.begin_commit()` was
+        inside try, but if begin_commit() ITSELF crashed (real reproducible
+        scenario — see history of stuck IPC session and "KiCad is busy"),
+        `commit` remained UNDEFINED, and `except: self.drop_commit(commit)`
+        crashed with UnboundLocalError, completely masking the real cause.
+        Now commit=None before try, drop_commit is called only if commit was
+        actually obtained.
         """
         last_exc = None
         for attempt in range(retries + 1):
             commit = None
             try:
-                logger.debug(f"Попытка {attempt+1}/{retries+1} для {description}")
+                logger.debug(_("Attempt {attempt}/{total} for {desc}")
+                             .format(attempt=attempt+1, total=retries+1, desc=description))
                 commit = self.begin_commit()
                 work_fn()
                 self.push_commit(commit, description)
@@ -271,19 +272,21 @@ class KiCadBoardAdapter(IBoardAdapter):
                     try:
                         self.drop_commit(commit)
                     except Exception as drop_exc:
-                        logger.error(f"Не удалось откатить транзакцию {description}: {drop_exc}")
-                logger.warning(f"Ошибка в транзакции {description} (попытка {attempt+1}): "
-                               f"{type(e).__name__}: {e}")
+                        logger.error(_("Failed to roll back transaction {desc}: {e}")
+                                     .format(desc=description, e=drop_exc))
+                logger.warning(_("Error in transaction {desc} (attempt {attempt}): {type}: {e}")
+                               .format(desc=description, attempt=attempt+1,
+                                       type=type(e).__name__, e=e))
                 if attempt == retries:
                     raise
                 time.sleep(0.5)
-        # Сюда не дойдём (либо return True, либо raise выше), но на всякий случай:
         if last_exc:
             raise last_exc
         return False
 
     def create_via(self, position: Vector2, net: Net, drill_mm: float, diameter_mm: float) -> Via:
-        logger.debug(f"Создание виа в ({position.x/MM:.3f}, {position.y/MM:.3f}) мм, net={net.name}")
+        logger.debug(_("Creating via at ({x:.3f}, {y:.3f}) mm, net={net}")
+                     .format(x=position.x/MM, y=position.y/MM, net=net.name))
         via = Via()
         via.type = ViaType.VT_THROUGH
         via.position = position
@@ -294,8 +297,9 @@ class KiCadBoardAdapter(IBoardAdapter):
 
     def create_track(self, start: Vector2, end: Vector2, width_mm: float,
                      net: Net, layer: BoardLayer) -> Track:
-        logger.debug(f"Создание трека ({start.x/MM:.3f}, {start.y/MM:.3f}) -> "
-                    f"({end.x/MM:.3f}, {end.y/MM:.3f}) мм, net={net.name}")
+        logger.debug(_("Creating track ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, net={net}")
+                     .format(sx=start.x/MM, sy=start.y/MM,
+                             ex=end.x/MM, ey=end.y/MM, net=net.name))
         track = Track()
         track.start = start
         track.end = end
@@ -306,12 +310,11 @@ class KiCadBoardAdapter(IBoardAdapter):
 
     def remove_by_id(self, uuid_str: str) -> bool:
         """
-        Удаляет объект (виа или любой другой) по его id (строка uuid) —
-        нужно для реестра расстановки (удалить устаревшую via перед
-        созданием новой на другом месте). Возвращает True, если запрос на
-        удаление прошёл без исключения — НЕ гарантирует, что объект с
-        таким uuid реально существовал (протухший uuid — не ошибка,
-        просто ничего не произойдёт).
+        Deletes an object (via or any other) by its id (UUID string) —
+        needed for the placement registry (delete stale via before creating
+        a new one at a different location). Returns True if the delete request
+        completed without exception — does NOT guarantee that an object with
+        that UUID actually existed (stale UUID is not an error, just no‑op).
         """
         from kipy.proto.common.types import base_types_pb2 as common_types_pb2
         kiid = common_types_pb2.KIID()
@@ -320,5 +323,6 @@ class KiCadBoardAdapter(IBoardAdapter):
             self._board.remove_items_by_id([kiid])
             return True
         except Exception as e:
-            logger.warning(f"Не удалось удалить объект {uuid_str}: {type(e).__name__}: {e}")
+            logger.warning(_("Failed to delete object {uuid}: {type}: {e}")
+                           .format(uuid=uuid_str, type=type(e).__name__, e=e))
             return False

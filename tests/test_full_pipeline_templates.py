@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Интеграционный тест конвейера KiCadSpoke целиком: PlacementPlanner
-(manual_position_calculator + component_pool + via_planner) на моках.
+Integration test for the KiCadSpoke pipeline end‑to‑end: PlacementPlanner
+(manual_position_calculator + component_pool + via_planner) with mocks.
 
-KiCadSpoke, обобщённые via: via уровня спицы и уровня компонента теперь
-вычисляются ОДНОВременно с позициями компонентов, в plan_moves() —
-никакого чтения живого пада компонента для via больше не требуется.
+KiCadSpoke, generalised vias: spoke‑level and component‑level vias are now
+computed SIMULTANEOUSLY with component positions in plan_moves() — no more
+reading of live component pads for vias.
 """
 import sys
 import math
@@ -36,7 +36,7 @@ def _make_pad(number, x_mm, y_mm, net_name):
 
 
 def _make_ic1_fp(pads_config):
-    """pads_config: список (number, x_mm, y_mm, net_name)"""
+    """pads_config: list of (number, x_mm, y_mm, net_name)"""
     fp = MagicMock()
     fp.reference_field.text.value = "IC1"
     fp.definition.items = [_make_pad(*p) for p in pads_config]
@@ -44,8 +44,8 @@ def _make_ic1_fp(pads_config):
 
 
 def _make_cap_fp(ref, net_name, role):
-    """Мок футпринта конденсатора -- ДЛЯ ПУЛА нужны только ref/роль/цепь,
-    реальная позиция более не важна для via (вычисляется геометрически)."""
+    """Mock capacitor footprint — for the pool only ref/role/net matter;
+    actual position is irrelevant for vias (computed geometrically)."""
     fp = MagicMock()
     fp.reference_field.text.value = ref
     fp.definition.items = [_make_pad("1", 0, 0, net_name), _make_pad("2", 0, 0, "GND")]
@@ -130,7 +130,8 @@ class TestFullPipelineWithTemplates:
             v = rotate_local_offset(along, across, rotation_deg)
             return ox + v.x / MM, oy + v.y / MM
 
-        # Естественный порядок: LIGHT-пул=[C10,C39] -> spoke_109 берёт C10; HEAVY-пул=[C35,C54] -> spoke_109 берёт C35
+        # Natural order: LIGHT pool = [C10, C39] -> spoke_109 takes C10;
+        # HEAVY pool = [C35, C54] -> spoke_109 takes C35
         ex, ey = _expected((50.0, 50.0), 1.0, -1.0, 90.0)
         assert abs(by_ref["C10"].position.x / MM - ex) < 1e-3
         assert abs(by_ref["C10"].position.y / MM - ey) < 1e-3
@@ -164,28 +165,27 @@ class TestFullPipelineWithTemplates:
         adapter.get_bounding_boxes.return_value = []
 
         planner = PlacementPlanner(adapter, cfg)
-        planner.plan_moves()  # заполняет self._planned и self._planned_vias, потребляет пул
+        planner.plan_moves()  # fills self._planned and self._planned_vias, consumes the pool
         vias = planner.plan_vias()
 
         spoke_level = [v for v in vias if v.owner_ref == "IC1"]
         component_level = [v for v in vias if v.owner_ref in ("C39", "C54", "C10", "C35")]
 
-        assert len(spoke_level) == 2   # по одной на спицу (109 и 62)
-        assert len(component_level) == 4  # по одной на каждый компонент
+        assert len(spoke_level) == 2   # one per spoke (109 and 62)
+        assert len(component_level) == 4  # one per component
 
         for v in spoke_level:
-            assert v.net_name == "+1V2_VCCINT"  # net=None в шаблоне -> взят rule.net
+            assert v.net_name == "+1V2_VCCINT"  # net=None in template → rule.net
         for v in component_level:
             assert v.net_name == "GND"
 
-        # Проверяем, что у всех via есть registry_key (важно для идемпотентности)
+        # Check that all vias have a registry_key (important for idempotency)
         for v in vias:
             assert v.registry_key is not None
             if v.owner_ref == "IC1":
-                # via уровня спицы должны содержать SPOKE_LEVEL_ROLE_PLACEHOLDER
+                # spoke‑level vias should contain SPOKE_LEVEL_ROLE_PLACEHOLDER
                 assert SPOKE_LEVEL_ROLE_PLACEHOLDER in v.registry_key
             else:
-                # via уровня компонента должны содержать имя роли (HEAVY/LIGHT)
-                # В реальности роль будет в ключе, но в этом тесте роль захардкожена в шаблоне
-                # Мы можем проверить, что ключ содержит "HEAVY" или "LIGHT"
+                # component‑level vias should contain the role name (HEAVY/LIGHT)
+                # In this test the role is hard‑coded in the template; we check that the key contains "HEAVY" or "LIGHT"
                 assert any(role in v.registry_key for role in ("HEAVY", "LIGHT"))

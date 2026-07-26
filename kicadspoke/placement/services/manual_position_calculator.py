@@ -11,17 +11,16 @@ from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand
 from ...registry import make_registry_key
 from .component_pool import ComponentPool
 from ..interfaces import IPositionCalculator
-
+from ...i18n import _
 
 logger = logging.getLogger(__name__)
 
 
 class ManualPositionCalculator(IPositionCalculator):
     """
-    Ручное позиционирование компонентов и via по шаблонам спиц.
-    Поддерживает кластеры: для каждого уникального кластера в правиле
-    строится отдельный ComponentPool, и спицы берут компоненты из своего
-    кластера.
+    Manual positioning of components and vias via spoke templates.
+    Supports clusters: for each unique cluster in the rule, a separate
+    ComponentPool is built, and spokes take components from their own cluster.
     """
 
     def __init__(self, adapter: KiCadBoardAdapter, config: Config):
@@ -37,13 +36,15 @@ class ManualPositionCalculator(IPositionCalculator):
         tracks_result: List[TrackCommand] = []
 
         for rule in rules:
-            # --- Резолвим якорь (anchor_ref или anchor_role) ---
+            # --- Resolve anchor (anchor_ref or anchor_role) ---
             if rule.anchor_ref is not None:
                 target_fp = self.adapter.get_footprint(rule.anchor_ref)
                 if target_fp is None:
                     from ...exceptions import ComponentNotFoundError
                     raise ComponentNotFoundError(
-                        f"правило (цепь {rule.net!r}): якорь {rule.anchor_ref!r} не найден на плате")
+                        _("rule (net {net!r}): anchor {anchor!r} not found on board")
+                        .format(net=rule.net, anchor=rule.anchor_ref)
+                    )
             else:
                 from .clone_role_resolver import resolve_footprint_by_role
                 target_fp = resolve_footprint_by_role(
@@ -52,11 +53,11 @@ class ManualPositionCalculator(IPositionCalculator):
                     rule.anchor_sheet,
                     rule.anchor_cluster,
                     self.cfg.sheet_names,
-                    label=f"правило (цепь {rule.net!r})",
+                    label=_("rule (net {net!r})").format(net=rule.net),
                 )
             anchor_ref_resolved = target_fp.reference_field.text.value
 
-            # --- Собираем все роли, нужные для этого правила ---
+            # --- Collect all roles needed for this rule ---
             roles_needed = set()
             for spoke in rule.spokes:
                 if not spoke.enabled:
@@ -65,21 +66,20 @@ class ManualPositionCalculator(IPositionCalculator):
                 if template is not None:
                     roles_needed.update(slot.role for slot in template.components)
 
-            # ВАЖНО: не пропускаем правило целиком, если roles_needed пуст —
-            # это значит только "ни у одного шаблона спицы нет роле-
-            # компонентов", а не "у правила нет спиц вообще". Спицы могут
-            # нести via уровня самой спицы без единого под-компонента (см.
-            # cap_pair_standard без components: в старых конфигах) — им
-            # пул вообще не нужен, но геометрию/via создавать всё равно
-            # надо. Пустой roles_needed просто даёт пустые пулы ниже —
-            # дёшево, не требует отдельной ветки.
+            # Important: do not skip the rule entirely if roles_needed is empty —
+            # this only means "no component‑bearing slots in any spoke template",
+            # not "the rule has no spokes at all". Spokes can carry spoke‑level
+            # vias without any sub‑components (e.g. cap_pair_standard without
+            # components in old configs) — they don't need a pool at all, but we
+            # still need to create their geometry/vias. An empty roles_needed just
+            # gives empty pools below — cheap, no special branch needed.
 
-            # --- Собираем кластеры, которые используются в спицах (включая None) ---
+            # --- Collect clusters used in spokes (including None) ---
             clusters_needed = {spoke.cluster for spoke in rule.spokes if spoke.enabled}
 
-            # --- Строим пулы для каждого кластера, включая None (спицы без
-            # кластера) — clusters_needed уже содержит None, если хоть одна
-            # включённая спица без кластера, так что отдельный проход не нужен ---
+            # --- Build pools for each cluster, including None (spokes without
+            # cluster) — clusters_needed already contains None if any enabled
+            # spoke has no cluster, so no separate pass needed ---
             pools_by_cluster = {}
             for cluster in clusters_needed:
                 pools_by_cluster[cluster] = ComponentPool(
@@ -89,49 +89,55 @@ class ManualPositionCalculator(IPositionCalculator):
                     cluster=cluster
                 )
 
-            # --- Обрабатываем каждую спицу ---
+            # --- Process each spoke ---
             for spoke in rule.spokes:
                 if not spoke.enabled:
                     continue
 
                 template = self.cfg.templates.get(spoke.template)
                 if template is None:
-                    logger.warning(f"Спица на паде {spoke.pad}: шаблон {spoke.template!r} "
-                                   f"не найден в templates, спица пропущена")
+                    logger.warning(
+                        _("Spoke on pad {pad}: template {template!r} not found in templates, spoke skipped")
+                        .format(pad=spoke.pad, template=spoke.template)
+                    )
                     continue
 
                 pad = self.adapter.get_pad_by_number(target_fp, spoke.pad)
                 if pad is None:
-                    logger.warning(f"У {anchor_ref_resolved} нет площадки {spoke.pad}, "
-                                   f"спица пропущена")
+                    logger.warning(
+                        _("{anchor} has no pad {pad}, spoke skipped")
+                        .format(anchor=anchor_ref_resolved, pad=spoke.pad)
+                    )
                     continue
 
-                # Выбираем пул по кластеру спицы — по построению pools_by_cluster
-                # уже содержит ключ spoke.cluster (см. clusters_needed выше),
-                # для любой включённой спицы; если это когда-нибудь перестанет
-                # быть так — пусть падает громко (KeyError), а не тихо
-                # подставляет свежесозданный пул мимо общего учёта расхода.
+                # Select pool by spoke cluster — by construction pools_by_cluster
+                # already contains the key spoke.cluster (see clusters_needed above)
+                # for any enabled spoke; if it ever stops being true, let it fail
+                # loudly (KeyError) rather than silently substituting a freshly
+                # created pool that bypasses shared consumption accounting.
                 pool = pools_by_cluster[spoke.cluster]
 
-                # Разбираем пул по ролям
+                # Consume pool by roles
                 role_to_ref = {slot.role: pool.pop(slot.role, spoke.pad) for slot in template.components}
 
                 layout = apply_spoke_geometry(pad.position, spoke, template, rule.net, role_to_ref)
                 anchor_id = f"pad:{spoke.pad}"
 
-                # Via уровня спицы
+                # Spoke‑level vias
                 for via_index, via in enumerate(layout.vias):
                     vias_result.append(ViaCommand(
                         position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
                         net_name=via.net, owner_ref=anchor_ref_resolved,
                         registry_key=make_registry_key(anchor_id, spoke.template, None, via_index),
                     ))
-                    logger.debug(f"  via спицы (пад {spoke.pad}): "
-                                f"({via.position.x/1e6:.3f}, {via.position.y/1e6:.3f}) мм, net={via.net}")
+                    logger.debug(
+                        _("  spoke‑level via (pad {pad}): ({x:.3f}, {y:.3f}) mm, net={net}")
+                        .format(pad=spoke.pad, x=via.position.x/1e6, y=via.position.y/1e6, net=via.net)
+                    )
 
-                # Треки уровня спицы (net=null в шаблоне наследует rule.net —
-                # см. spoke_layout._resolve_track). Только уровень спицы:
-                # TemplateComponentSlot треков не несёт, только via.
+                # Spoke‑level tracks (net=None in template inherits rule.net —
+                # see spoke_layout._resolve_track). Only spoke‑level: TemplateComponentSlot
+                # carries vias, not tracks.
                 for track_index, track in enumerate(layout.tracks):
                     track_layer = BoardLayer.BL_B_Cu if track.layer == 'B.Cu' else BoardLayer.BL_F_Cu
                     tracks_result.append(TrackCommand(
@@ -139,19 +145,22 @@ class ManualPositionCalculator(IPositionCalculator):
                         net_name=track.net, layer=track_layer, owner_ref=anchor_ref_resolved,
                         registry_key=make_registry_key(anchor_id, spoke.template, None, track_index),
                     ))
-                    logger.debug(f"  track спицы (пад {spoke.pad}): "
-                                f"({track.start.x/1e6:.3f}, {track.start.y/1e6:.3f}) -> "
-                                f"({track.end.x/1e6:.3f}, {track.end.y/1e6:.3f}) мм, "
-                                f"net={track.net}, layer={track.layer}")
+                    logger.debug(
+                        _("  spoke‑level track (pad {pad}): ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, net={net}, layer={layer}")
+                        .format(pad=spoke.pad, sx=track.start.x/1e6, sy=track.start.y/1e6,
+                                ex=track.end.x/1e6, ey=track.end.y/1e6, net=track.net, layer=track.layer)
+                    )
 
+                # Component‑level slots
                 for comp_layout in layout.components:
                     components_result.append(PlacedComponentInfo(
                         ref=comp_layout.ref, dest=comp_layout.position, angle_deg=comp_layout.angle_deg,
                     ))
                     logger.debug(
-                        f"  {comp_layout.ref} (роль {comp_layout.role}, пад {spoke.pad}): "
-                        f"позиция ({comp_layout.position.x/1e6:.3f}, {comp_layout.position.y/1e6:.3f}) мм, "
-                        f"угол {comp_layout.angle_deg:.1f}°"
+                        _("  {ref} (role {role}, pad {pad}): position ({x:.3f}, {y:.3f}) mm, angle {angle:.1f}°")
+                        .format(ref=comp_layout.ref, role=comp_layout.role, pad=spoke.pad,
+                                x=comp_layout.position.x/1e6, y=comp_layout.position.y/1e6,
+                                angle=comp_layout.angle_deg)
                     )
                     for via_index, via in enumerate(comp_layout.vias):
                         vias_result.append(ViaCommand(
@@ -159,7 +168,9 @@ class ManualPositionCalculator(IPositionCalculator):
                             net_name=via.net, owner_ref=comp_layout.ref,
                             registry_key=make_registry_key(anchor_id, spoke.template, comp_layout.role, via_index),
                         ))
-                        logger.debug(f"    via {comp_layout.ref}: "
-                                    f"({via.position.x/1e6:.3f}, {via.position.y/1e6:.3f}) мм, net={via.net}")
+                        logger.debug(
+                            _("    via {ref}: ({x:.3f}, {y:.3f}) mm, net={net}")
+                            .format(ref=comp_layout.ref, x=via.position.x/1e6, y=via.position.y/1e6, net=via.net)
+                        )
 
         return components_result, vias_result, tracks_result

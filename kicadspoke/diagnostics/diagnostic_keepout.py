@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-diagnostic_keepout.py — диагностика keepout и позиций via (KiCadSpoke).
+diagnostic_keepout.py — keepout and via position diagnostics (KiCadSpoke).
 
-Загружает конфиг, планирует перемещения, строит keepout и выводит детальную информацию.
-Использует новый API KiCadSpoke.
+Loads the config, plans moves, builds keepout, and prints detailed information.
+Uses the new KiCadSpoke API.
 
-Запуск:
+Run:
     python diagnostic_keepout.py <config.yaml>
 """
 
@@ -13,7 +13,7 @@ import sys
 import logging
 from pathlib import Path
 
-# Добавляем корень проекта в sys.path, если запускается из корня
+# Add project root to sys.path if running from root
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from kicadspoke.config import load_config
@@ -21,55 +21,57 @@ from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.geometry.keepout import build_keepout
 from kicadspoke.utils.units import MM
+from kicadspoke.i18n import _
 
 logger = logging.getLogger(__name__)
 
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python diagnostic_keepout.py <config.yaml>")
+        print(_("Usage: python diagnostic_keepout.py <config.yaml>"))
         sys.exit(1)
 
     config_path = sys.argv[1]
 
     logging.basicConfig(level=logging.INFO, format='%(message)s')
-    logger.info(f"Загрузка конфига: {config_path}")
+    logger.info(_("Loading config: {path}").format(path=config_path))
     cfg = load_config(config_path)
 
-    logger.info("Подключение к KiCad...")
+    logger.info(_("Connecting to KiCad..."))
     adapter = KiCadBoardAdapter()
     adapter.refresh_board()
 
-    logger.info("Создание планировщика...")
+    logger.info(_("Creating planner..."))
     planner = PlacementPlanner(adapter, cfg)
 
-    # Планируем перемещения (это заполнит _planned и _planned_vias)
+    # Plan moves (this fills _planned and _planned_vias)
     moves = planner.plan_moves()
-    planned_components = planner._planned  # список PlacedComponentInfo
-    planned_vias = planner._planned_vias   # список ViaCommand (все via, кроме термовиа)
+    planned_components = planner._planned  # list of PlacedComponentInfo
+    planned_vias = planner._planned_vias   # list of ViaCommand (all non‑thermal vias)
 
     if not planned_components and not planned_vias:
-        logger.error("Нет запланированных компонентов или via!")
+        logger.error(_("No planned components or vias!"))
         return
 
-    # Строим keepout из падов IC и компонентов (для диагностики)
+    # Build keepout from IC pads and components (for diagnostics)
     tva = cfg.thermal_via_array
     target_fp = adapter.get_footprint(tva.anchor_ref) if tva.enabled else None
     if target_fp is None:
-        logger.info('Термовиа выключены — keepout-диагностика пропущена')
+        logger.info(_("Thermal vias disabled — keepout diagnostics skipped"))
         return
     keepout_rects = planner.via_planner._build_keepout(target_fp, planned_components)
-    # Также можно добавить уже существующие via в keepout? Но для диагностики падов достаточно.
+    # Could also add existing vias to keepout? But for pad diagnostics it's enough.
 
-    logger.info(f"Построено {len(keepout_rects)} прямоугольников keepout")
+    logger.info(_("Built {count} keepout rectangles").format(count=len(keepout_rects)))
 
-    # Выводим информацию о keepout
+    # Print keepout information
     print("\n=== KEEPOUT RECTANGLES ===")
     for i, rect in enumerate(keepout_rects):
-        print(f"  [{i}] X: {rect.min_x/MM:.3f}..{rect.max_x/MM:.3f} мм, "
-              f"Y: {rect.min_y/MM:.3f}..{rect.max_y/MM:.3f} мм")
+        print(_("  [{i}] X: {xmin:.3f}..{xmax:.3f} mm, Y: {ymin:.3f}..{ymax:.3f} mm")
+              .format(i=i, xmin=rect.min_x/MM, xmax=rect.max_x/MM,
+                      ymin=rect.min_y/MM, ymax=rect.max_y/MM))
 
-    # Проверяем позиции компонентов относительно keepout
+    # Check component positions against keepout
     print("\n=== COMPONENT POSITIONS vs KEEPOUT ===")
     for info in planned_components:
         pos = info.dest
@@ -79,10 +81,11 @@ def main():
                 rect.min_y <= pos.y <= rect.max_y):
                 in_keepout = True
                 break
-        status = "INSIDE" if in_keepout else "CLEAR"
-        print(f"  {info.ref:6} pos=({pos.x/MM:7.3f}, {pos.y/MM:7.3f}) мм  -> {status}")
+        status = _("INSIDE") if in_keepout else _("CLEAR")
+        print(_("  {ref:6} pos=({x:7.3f}, {y:7.3f}) mm  -> {status}")
+              .format(ref=info.ref, x=pos.x/MM, y=pos.y/MM, status=status))
 
-    # Проверяем позиции via (уровня спицы и компонента)
+    # Check via positions (spoke‑level and component‑level)
     print("\n=== VIA POSITIONS vs KEEPOUT ===")
     for via_cmd in planned_vias:
         pos = via_cmd.position
@@ -92,12 +95,13 @@ def main():
                 rect.min_y <= pos.y <= rect.max_y):
                 in_keepout = True
                 break
-        status = "INSIDE" if in_keepout else "CLEAR"
-        print(f"  via for {via_cmd.owner_ref:6} ({pos.x/MM:7.3f}, {pos.y/MM:7.3f}) мм  -> {status}")
+        status = _("INSIDE") if in_keepout else _("CLEAR")
+        print(_("  via for {owner:6} ({x:7.3f}, {y:7.3f}) mm  -> {status}")
+              .format(owner=via_cmd.owner_ref, x=pos.x/MM, y=pos.y/MM, status=status))
 
-    # Дополнительно: термовиа (если включены) – их пока нет в planned_vias, нужно отдельно
-    # Но для полноты можно вызвать planner.plan_vias() и показать термовиа, но они могут быть
-    # сдвинуты из-за keepout; пока оставим.
+    # Additionally: thermal vias (if enabled) – they are not yet in planned_vias, need separate handling
+    # But for completeness we could call planner.plan_vias() and show thermal vias, but they might be
+    # shifted due to keepout; leave as is for now.
 
     print("\n=== DONE ===")
 

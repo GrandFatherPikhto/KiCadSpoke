@@ -1,3 +1,4 @@
+# kicadspoke/placement/executor/via_executor.py
 import logging
 from typing import List, Tuple, Dict, Optional
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
@@ -5,6 +6,7 @@ from ...config import Config
 from ..commands import ViaCommand
 from ...registry import PlacementRegistry
 from ...utils.units import MM
+from ...i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ class ViaExecutor:
         created_via_log = []
 
         via_batches = [vias[i:i+self.batch_size] for i in range(0, len(vias), self.batch_size)]
-        logger.info(f"Создание виа в {len(via_batches)} батчах")
+        logger.info(_("Creating vias in {count} batches").format(count=len(via_batches)))
         for idx, batch in enumerate(via_batches, 1):
             def work(batch=batch):
                 new_vias = []
@@ -27,7 +29,8 @@ class ViaExecutor:
                 for cmd in batch:
                     net = self.adapter.get_net_by_name(cmd.net_name)
                     if net is None:
-                        logger.warning(f"  цепь {cmd.net_name} не найдена для виа у {cmd.owner_ref}")
+                        logger.warning(_("  net {net} not found for via for {owner}")
+                                       .format(net=cmd.net_name, owner=cmd.owner_ref))
                         continue
                     via = self.adapter.create_via(cmd.position, net, cmd.drill_mm, cmd.diameter_mm)
                     new_vias.append(via)
@@ -47,12 +50,12 @@ class ViaExecutor:
                         })
                         if registry is not None:
                             registry.record_created(cmd, uuid_str)
-                    logger.debug(f"  создано {len(created)} виа")
-            ok = self.adapter.commit_with_retry(f"Via batch {idx}/{len(via_batches)}", work)
+                    logger.debug(_("  created {count} vias").format(count=len(created)))
+            ok = self.adapter.commit_with_retry(_("Via batch {idx}/{total}").format(idx=idx, total=len(via_batches)), work)
             if not ok:
                 failed_via_owners.extend(cmd.owner_ref for cmd in batch)
-                logger.error(f"  батч виа {idx} провалился")
+                logger.error(_("  via batch {idx} failed").format(idx=idx))
             else:
-                logger.info(f"  батч виа {idx} выполнен ({len(batch)} шт.)")
+                logger.info(_("  via batch {idx} completed ({count} items)").format(idx=idx, count=len(batch)))
 
         return failed_via_owners, created_via_log

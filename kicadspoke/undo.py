@@ -7,12 +7,13 @@ from kipy.board_types import BoardLayer
 from kipy.geometry import Vector2, Angle
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.utils.units import MM
+from kicadspoke.i18n import _
 
 logger = logging.getLogger(__name__)
 
 
 def undo_last_operation(json_path: Path) -> bool:
-    """Откатывает операцию, описанную в JSON-файле."""
+    """Undoes the operation described in the JSON file."""
     with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
@@ -20,43 +21,44 @@ def undo_last_operation(json_path: Path) -> bool:
     adapter.refresh_board()
     board = adapter._board
     if board is None:
-        logger.error("Не удалось получить плату.")
+        logger.error(_("Failed to get board."))
         return False
 
-    # 1. Восстановить перемещённые компоненты
+    # 1. Restore moved components
     for item in data.get('moves', []):
         ref = item['ref']
         fp = adapter.get_footprint(ref)
         if fp is None:
-            logger.warning(f"Компонент {ref} не найден, пропуск")
+            logger.warning(_("Component {ref} not found, skipping").format(ref=ref))
             continue
 
-        # Определяем исходный слой
+        # Determine original layer
         orig_layer_str = item.get('original_layer', 'F.Cu')
         if 'B.Cu' in orig_layer_str:
             orig_layer = BoardLayer.BL_B_Cu
         else:
             orig_layer = BoardLayer.BL_F_Cu
 
-        # Если текущий слой отличается от исходного — делаем флип
+        # If current layer differs from original — flip
         if fp.layer != orig_layer:
-            logger.debug(f"Возвращаем {ref} на слой {orig_layer_str} (флип)")
+            logger.debug(_("Restoring {ref} to layer {layer} (flip)").format(ref=ref, layer=orig_layer_str))
             adapter.flip_selected([fp])
-            # После флипа перечитываем футпринт (обновляем объект)
+            # After flip, re‑read the footprint
             fp = adapter.get_footprint(ref)
             if fp is None:
                 continue
 
-        # Восстанавливаем позицию и угол
+        # Restore position and angle
         orig_x = item['original_position']['x']
         orig_y = item['original_position']['y']
         orig_angle = item['original_angle_deg']
         fp.position = Vector2.from_xy(int(orig_x), int(orig_y))
         fp.orientation = Angle.from_degrees(orig_angle)
         adapter.update_items([fp])
-        logger.debug(f"Восстановлен {ref} на позицию ({orig_x/MM:.3f}, {orig_y/MM:.3f}), угол {orig_angle:.1f}°")
+        logger.debug(_("Restored {ref} to position ({x:.3f}, {y:.3f}) mm, angle {angle:.1f}°")
+                     .format(ref=ref, x=orig_x/MM, y=orig_y/MM, angle=orig_angle))
 
-    # 2. Удалить созданные via (по UUID)
+    # 2. Delete created vias (by UUID)
     for via_data in data.get('created_vias', []):
         uuid_str = via_data.get('uuid')
         if uuid_str:
@@ -65,13 +67,11 @@ def undo_last_operation(json_path: Path) -> bool:
                 kiid = common_types_pb2.KIID()
                 kiid.value = uuid_str
                 board.remove_items_by_id([kiid])
-                logger.debug(f"Удалена via с UUID {uuid_str}")
+                logger.debug(_("Deleted via with UUID {uuid}").format(uuid=uuid_str))
             except Exception as e:
-                logger.warning(f"Не удалось удалить via {uuid_str}: {e}")
+                logger.warning(_("Failed to delete via {uuid}: {e}").format(uuid=uuid_str, e=e))
 
-    # 2b. Удалить созданные треки (по UUID) — треки не двигались, им,
-    # в отличие от компонентов, восстанавливать нечего, только удалить,
-    # ровно как via.
+    # 2b. Delete created tracks (by UUID) — tracks were not moved, so only deletion is needed
     for track_data in data.get('created_tracks', []):
         uuid_str = track_data.get('uuid')
         if uuid_str:
@@ -80,15 +80,15 @@ def undo_last_operation(json_path: Path) -> bool:
                 kiid = common_types_pb2.KIID()
                 kiid.value = uuid_str
                 board.remove_items_by_id([kiid])
-                logger.debug(f"Удалён трек с UUID {uuid_str}")
+                logger.debug(_("Deleted track with UUID {uuid}").format(uuid=uuid_str))
             except Exception as e:
-                logger.warning(f"Не удалось удалить трек {uuid_str}: {e}")
+                logger.warning(_("Failed to delete track {uuid}: {e}").format(uuid=uuid_str, e=e))
 
-    # 3. Удалить файл операции (чтобы не откатывать дважды)
+    # 3. Delete the operation file (to prevent undoing twice)
     try:
         json_path.unlink()
-        logger.debug(f"Файл {json_path.name} удалён.")
+        logger.debug(_("File {name} deleted.").format(name=json_path.name))
     except Exception as e:
-        logger.warning(f"Не удалось удалить файл {json_path.name}: {e}")
+        logger.warning(_("Failed to delete file {name}: {e}").format(name=json_path.name, e=e))
 
     return True

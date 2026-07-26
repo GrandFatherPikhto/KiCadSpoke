@@ -1,15 +1,15 @@
 # kicadspoke/geometry/clone_geometry.py
 """
-clone_geometry.py — разворачивает шаблон в абсолютные координаты платы
-для ClonePlacement (TemplatePlacer), в отличие от spoke_layout.py:
+clone_geometry.py — transforms a template into absolute board coordinates
+for ClonePlacement (TemplatePlacer), unlike spoke_layout.py:
 
-  - origin = (origin_x_mm, origin_y_mm) НАПРЯМУЮ (нет пада, нет shift —
-    это уже абсолютная точка, не смещение от чего-либо).
-  - net каждой via резолвится через net_resolution.resolve_net()
-    (params + net_overrides) — НЕТ понятия rule_net (у ClonePlacement,
-    в отличие от Rule/ManualSpoke, нет единой "цепи правила" вообще).
-    via.net=None здесь ФАТАЛЬНО — нет разумного дефолта, на который
-    можно было бы упасть, в отличие от spoke_layout.py.
+  - origin = (origin_x_mm, origin_y_mm) DIRECTLY (no pad, no shift — it is an
+    absolute point, not an offset from something).
+  - net of each via is resolved via net_resolution.resolve_net()
+    (params + net_overrides) — there is NO concept of rule_net (ClonePlacement,
+    unlike Rule/ManualSpoke, has no single "rule net" at all).
+    via.net=None is FATAL here — there is no sensible default to fall back to,
+    unlike in spoke_layout.py.
 """
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
@@ -20,16 +20,19 @@ from ..exceptions import ValidationError, format_fatal_error
 from ..net_resolution import resolve_net
 from ..utils.units import MM
 from .spoke_layout import local_to_absolute, ResolvedVia, ResolvedTrack, ComponentLayout, SpokeLayout
+from ..i18n import _
 
 
 def _resolve_clone_via(origin: Vector2, via: TemplateVia, rotation_deg: float,
                        clone: ClonePlacement, mirror: bool = False) -> ResolvedVia:
     if via.net is None:
         raise ValidationError(format_fatal_error(
-            f"via без цепи в шаблоне {clone.template!r} ({clone.name!r})",
-            [f"via на (along={via.offset_along_mm}, across={via.offset_across_mm}) не имеет net — "
-             f"для ClonePlacement нет цепи правила по умолчанию (в отличие от ManualSpoke), "
-             f"net обязателен для каждой via в клонируемом шаблоне"]
+            _("via without net in template {template!r} ({name!r})").format(
+                template=clone.template, name=clone.name),
+            [_("via at (along={along}, across={across}) has no net — "
+               "ClonePlacement has no default rule net (unlike ManualSpoke), "
+               "so every via in a cloned template must have a net explicitly set")
+             .format(along=via.offset_along_mm, across=via.offset_across_mm)]
         ))
     pos = local_to_absolute(origin, via.offset_along_mm, via.offset_across_mm, rotation_deg)
     if mirror:
@@ -47,10 +50,12 @@ def _resolve_clone_track(origin: Vector2, track: TemplateTrack, rotation_deg: fl
                          mirror: bool = False) -> ResolvedTrack:
     if track.net is None:
         raise ValidationError(format_fatal_error(
-            f"track без цепи в шаблоне {clone.template!r} ({clone.name!r})",
-            [f"track (along={track.start_along_mm},{track.start_across_mm} -> "
-             f"{track.end_along_mm},{track.end_across_mm}) не имеет net — "
-             f"net обязателен для каждого track в клонируемом шаблоне, как и у via"]
+            _("track without net in template {template!r} ({name!r})").format(
+                template=clone.template, name=clone.name),
+            [_("track (along={s_along},{s_across} -> {e_along},{e_across}) has no net — "
+               "every track in a cloned template must have a net, just like vias")
+             .format(s_along=track.start_along_mm, s_across=track.start_across_mm,
+                     e_along=track.end_along_mm, e_across=track.end_across_mm)]
         ))
     start = local_to_absolute(origin, track.start_along_mm, track.start_across_mm, rotation_deg)
     end = local_to_absolute(origin, track.end_along_mm, track.end_across_mm, rotation_deg)
@@ -69,7 +74,7 @@ def _resolve_clone_track(origin: Vector2, track: TemplateTrack, rotation_deg: fl
 
 
 def _mirror_x(origin: Vector2, p: Vector2) -> Vector2:
-    """X-зеркало точки относительно вертикальной оси через origin."""
+    """X‑mirror of a point relative to the vertical axis through origin."""
     return Vector2.from_xy(2 * origin.x - p.x, p.y)
 
 
@@ -81,24 +86,25 @@ def apply_clone_geometry(
     mirror: bool = False,
 ) -> SpokeLayout:
     """
-    Считает абсолютные позиции всего, что есть в шаблоне, для конкретного
-    ClonePlacement. role_to_ref — уже разрешённое СНАРУЖИ (см.
-    clone_role_resolver.py) сопоставление роль->ref.
+    Computes absolute positions of everything in the template for a specific
+    ClonePlacement. role_to_ref is already resolved EXTERNALLY (see
+    clone_role_resolver.py).
 
-    anchor_position — абсолютная точка якоря (центр пада или футпринта из
-    anchor_ref/anchor_pad), разрешённая СНАРУЖИ (calculator ходит в adapter,
-    геометрия живую плату не трогает). Если задана — origin_x/y_mm работают
-    как ПЛОСКИЙ сдвиг от неё (без поворота, ровно как shift у ManualSpoke);
-    rotation_deg крутит только содержимое шаблона. Если None — origin_x/y_mm
-    остаются абсолютной точкой платы, как раньше.
+    anchor_position — absolute anchor point (pad centre or footprint centre from
+    anchor_ref/anchor_pad), resolved EXTERNALLY (the calculator goes to the
+    adapter, geometry does not touch the live board). If set — origin_x/y_mm
+    act as a FLAT shift from it (without rotation, exactly like shift in
+    ManualSpoke); rotation_deg rotates only the template contents. If None —
+    origin_x/y_mm remain absolute board coordinates, as before.
 
-    mirror=True — размещение на ОБРАТНОЙ стороне: шаблон считается снятым
-    с front, финальные позиции (после поворота) X-зеркалятся относительно
-    вертикальной оси через origin, углы компонентов -> 180°−φ (конвенция
-    B.Cu из декап-плейсера). Якорный сдвиг origin_x/y_mm НЕ зеркалится —
-    он в координатах платы, как shift у ManualSpoke. Сами футпринты на
-    B.Cu переворачивает FlipManager (executor ставит абсолютный угол
-    ПОСЛЕ флипа, так что +180° от флипа здесь учитывать не надо).
+    mirror=True — placement on the OPPOSITE side: the template is assumed to be
+    taken from front, final positions (after rotation) are X‑mirrored relative
+    to the vertical axis through origin, component angles become 180°−φ
+    (B.Cu convention from the decap placer). The anchor shift origin_x/y_mm is
+    NOT mirrored — it is in board coordinates, like shift in ManualSpoke.
+    Footprints on B.Cu are flipped by FlipManager (the executor sets the absolute
+    angle AFTER the flip, so the +180° from the flip does not need to be accounted
+    for here).
     """
     shift = Vector2.from_xy(int(clone.origin_x_mm * MM), int(clone.origin_y_mm * MM))
     if anchor_position is not None:

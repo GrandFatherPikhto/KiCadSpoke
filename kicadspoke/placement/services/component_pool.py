@@ -1,50 +1,50 @@
 # kicadspoke/placement/services/component_pool.py
 """
-component_pool.py — подбор конкретных компонентов на роли шаблона по
-(реальной цепи, пользовательскому полю Role), а не по явному ref в конфиге.
+component_pool.py — selects concrete components for template roles by
+(real net, custom Role field), not by explicit ref in config.
 
-Пул строится один раз на цепь (rule.net) и разделяется между ВСЕМИ
-спицами этого правила — компоненты разбираются по очереди, в
-детерминированном (естественном численном: C5 < C10, не как строки)
-порядке. Если для какой-то роли не хватило компонентов — фатальная
-ошибка (ValidationError), не тихая недостача.
+The pool is built once per rule net and shared among ALL spokes of that rule —
+components are consumed in order, in deterministic (natural numeric: C5 < C10,
+not lexicographic) order. If a role runs out of components — fatal ValidationError,
+not silent shortage.
 """
 import re
 import logging
 from typing import Dict, List, Optional
+
 from ...kicad.adapter import KiCadBoardAdapter
 from ...exceptions import ValidationError
-
 from ...constants import ROLE_FIELD_NAME, CLUSTER_FIELD_NAME
+from ...i18n import _
 
 logger = logging.getLogger(__name__)
 
+
 def _natural_sort_key(ref: str):
-    """C5 < C10 — не как при обычной строковой сортировке ('C10' < 'C5')."""
+    """C5 < C10 — not like ordinary string sorting ('C10' < 'C5')."""
     parts = re.split(r'(\d+)', ref)
     return [int(p) if p.isdigit() else p for p in parts]
 
 
 def _cluster_prefix_match(candidate_cluster: str, wanted: str) -> bool:
     """
-    candidate_cluster == wanted, ИЛИ candidate_cluster начинается с
-    'wanted/' — сравнение по сегментам префикса, не по подстроке (чтобы
-    'Channel_1' не совпал случайно с 'Channel_10'). Плоские имена без '/'
-    просто вырождаются в точное совпадение — иерархия не обязательна,
-    работает тем же кодом. Единая реализация на весь проект — раньше
-    была продублирована с точным сравнением здесь и префиксным в
-    clone_role_resolver.py, что давало РАЗНОЕ поведение Cluster в двух
-    разных местах молча; теперь одна функция, определена здесь (не в
-    clone_role_resolver.py — тот уже и так зависит от этого модуля через
-    ROLE_FIELD_NAME, обратная зависимость создала бы цикл импорта).
+    candidate_cluster == wanted, OR candidate_cluster starts with 'wanted/' —
+    segment‑prefix comparison, not substring (so 'Channel_1' does not match
+    'Channel_10'). Flat names without '/' reduce to exact match — hierarchy is
+    optional, works with the same code. Single implementation shared across the
+    whole project — previously duplicated with exact match here and prefix match
+    in clone_role_resolver.py, causing SILENTLY DIFFERENT behaviour of Cluster
+    in two places; now one function, defined here (not in clone_role_resolver.py —
+    that already depends on this module via ROLE_FIELD_NAME, and the reverse
+    dependency would create an import cycle).
     """
     return candidate_cluster == wanted or candidate_cluster.startswith(wanted + '/')
 
 
 class ComponentPool:
     """
-    Пул компонентов для одной цепи (rule.net), сгруппированных по роли.
-    Строится один раз, спицы этой цепи разбирают его по очереди через pop().
+    Pool of components for one rule net, grouped by role.
+    Built once; spokes of this net consume it in order via pop().
     """
 
     def __init__(self, adapter: KiCadBoardAdapter, net_name: str, roles: List[str],
@@ -60,8 +60,8 @@ class ComponentPool:
             role = self.adapter.get_field_value(fp, ROLE_FIELD_NAME)
             if role is None or role not in self._pools:
                 continue
-            # Если кластер задан, проверяем по префиксу сегментов (тот же
-            # принцип, что и у anchor_cluster) — не точным равенством
+            # If cluster is specified, check by segment‑prefix (same principle
+            # as anchor_cluster) — not exact equality.
             if self.cluster is not None:
                 fp_cluster = self.adapter.get_field_value(fp, CLUSTER_FIELD_NAME)
                 if fp_cluster is None or not _cluster_prefix_match(fp_cluster, self.cluster):
@@ -75,26 +75,31 @@ class ComponentPool:
 
         for role in self._pools:
             self._pools[role].sort(key=_natural_sort_key)
-            logger.debug(f"Пул {self.net_name!r}/{role!r}{' (cluster='+self.cluster+')' if self.cluster else ''}: {self._pools[role]}")
+            cluster_suffix = _(" (cluster={cluster})").format(cluster=self.cluster) if self.cluster else ""
+            logger.debug(_("Pool {net!r}/{role!r}{suffix}: {refs}")
+                         .format(net=self.net_name, role=role, suffix=cluster_suffix,
+                                 refs=self._pools[role]))
 
     def pop(self, role: str, spoke_pad: str) -> str:
         """
-        Забирает следующий (по естественному порядку) компонент с ролью
-        role. Фатальная ошибка, если пул для этой роли уже исчерпан.
+        Takes the next (in natural order) component with the given role.
+        Fatal error if the pool for this role is already exhausted.
         """
         candidates = self._pools.get(role)
         if candidates is None:
             raise ValidationError(
-                f"\nШаблон спицы (пад {spoke_pad}) требует роль {role!r}, "
-                f"но пул для цепи {self.net_name!r} про такую роль вообще не знает "
-                f"(проверьте список ролей, переданных при построении пула)."
+                _("\nSpoke template (pad {pad}) requires role {role!r}, "
+                  "but the pool for net {net!r} does not know this role at all "
+                  "(check the list of roles passed when building the pool).")
+                .format(pad=spoke_pad, role=role, net=self.net_name)
             )
         if not candidates:
             raise ValidationError(
-                f"\nНе хватает компонентов с ролью {role!r} на цепи {self.net_name!r} "
-                f"для спицы на паде {spoke_pad} — пул исчерпан. "
-                f"Проверьте поле {ROLE_FIELD_NAME!r} в схеме: возможно, забыли "
-                f"пометить ещё один компонент, или он физически не на этой цепи."
+                _("\nNot enough components with role {role!r} on net {net!r} "
+                  "for spoke on pad {pad} — pool exhausted. "
+                  "Check the {field!r} field in the schematic: perhaps you forgot "
+                  "to mark another component, or it is not physically on this net.")
+                .format(role=role, net=self.net_name, pad=spoke_pad, field=ROLE_FIELD_NAME)
             )
         return candidates.pop(0)
 

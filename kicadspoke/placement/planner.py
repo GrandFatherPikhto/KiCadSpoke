@@ -13,10 +13,11 @@ from .services.manual_position_calculator import ManualPositionCalculator
 from .services.clone_position_calculator import ClonePositionCalculator
 from ..exceptions import ComponentNotFoundError, ValidationError
 from .commands import MoveCommand, ViaCommand, TrackCommand
-
 from ..constants import POSITION_TOLERANCE_NM, ANGLE_TOLERANCE_DEG
+from ..i18n import _
 
 logger = logging.getLogger(__name__)
+
 
 class PlacementPlanner:
     def __init__(self, adapter: KiCadBoardAdapter, config: Config):
@@ -24,20 +25,20 @@ class PlacementPlanner:
         self.cfg = config
         self.position_calc = ManualPositionCalculator(adapter, config)
         self.clone_calc = ClonePositionCalculator(adapter, config)
-        # Глобального target_fp больше нет: якоря — per-rule (Rule.anchor_ref)
-        # и per-tva; резолвятся по месту использования.
+        # No global target_fp any more: anchors are per‑rule (Rule.anchor_ref / anchor_role)
+        # and per‑tva; resolved on the spot.
         self._target_layer = BoardLayer.BL_B_Cu if config.layer == 'B.Cu' else BoardLayer.BL_F_Cu
         self._planned = None
         self._planned_vias = None
         self._planned_tracks = None
         self.via_planner = ViaPlanner(adapter, config)
-        logger.info(f"Планировщик инициализирован: layer={config.layer}, "
-                    f"якорей в правилах: {len({r.anchor_ref or r.anchor_role for r in config.rules})}")
+        logger.info(_("Planner initialised: layer={layer}, anchors in rules: {anchors}")
+                    .format(layer=config.layer,
+                            anchors=len({r.anchor_ref or r.anchor_role for r in config.rules})))
 
-    # Допуски для проверки "уже на месте" (skip_existing_components) —
-    # достаточно грубые, чтобы не реагировать на шум округления при
-    # повторном чтении координат из IPC, но достаточно точные, чтобы не
-    # спутать с реально другой целевой позицией.
+    # Tolerances for "already in place" checks (skip_existing_components) —
+    # coarse enough to ignore rounding noise from IPC, but tight enough not to
+    # confuse with a truly different target position.
     _POSITION_TOLERANCE_NM = POSITION_TOLERANCE_NM
     _ANGLE_TOLERANCE_DEG = ANGLE_TOLERANCE_DEG
 
@@ -67,29 +68,30 @@ class PlacementPlanner:
             self._planned_vias.extend(planned_vias)
             self._planned_tracks.extend(planned_tracks)
         elif not self.cfg.rules:
-            logger.debug("rules пуст — компоненты/via по ManualSpoke не планируются")
+            logger.debug(_("rules is empty — no ManualSpoke components/vias/tracks planned"))
         else:
-            logger.info("place_components=False – перемещения конденсаторов не планируются")
+            logger.info(_("place_components=False – component moves are not planned"))
 
         if self.cfg.clone_placements:
             clone_placed, clone_vias, clone_tracks = self.clone_calc.compute_raw_positions(self.cfg.clone_placements)
             self._planned.extend(clone_placed)
             self._planned_vias.extend(clone_vias)
             self._planned_tracks.extend(clone_tracks)
-            logger.info(f"ClonePlacement: {len(clone_placed)} компонентов, {len(clone_vias)} via, "
-                       f"{len(clone_tracks)} треков")
+            logger.info(_("ClonePlacement: {count} components, {vias} vias, {tracks} tracks")
+                        .format(count=len(clone_placed), vias=len(clone_vias), tracks=len(clone_tracks)))
 
         moves = []
         skipped = 0
         for info in self._planned:
-            # info.layer — per-компонентный (ClonePositionCalculator уже
-            # учёл template.layer/slot.layer/mirror); None — только у
-            # ManualSpoke-пути (manual_position_calculator.py его не
-            # задаёт), тогда наследуем глобальный target_layer конфига.
+            # info.layer — per‑component (ClonePositionCalculator already accounted for
+            # template.layer/slot.layer/mirror); None — only for ManualSpoke path
+            # (manual_position_calculator.py does not set it), then inherit the global
+            # target_layer from config.
             layer = info.layer if info.layer is not None else self._target_layer
             if self.cfg.skip_existing_components and self._already_in_place(info.ref, info.dest, info.angle_deg, layer):
                 skipped += 1
-                logger.debug(f"  {info.ref}: уже на месте, перемещение пропущено (skip_existing_components)")
+                logger.debug(_("  {ref}: already in place, move skipped (skip_existing_components)")
+                             .format(ref=info.ref))
                 continue
             moves.append(MoveCommand(
                 ref=info.ref,
@@ -98,15 +100,15 @@ class PlacementPlanner:
                 layer=layer
             ))
         if skipped:
-            logger.info(f"Пропущено {skipped} компонентов, уже находящихся на целевой позиции")
-        logger.info(f"plan_moves завершено: {len(moves)} перемещений")
+            logger.info(_("Skipped {count} components already at target position").format(count=skipped))
+        logger.info(_("plan_moves completed: {count} moves").format(count=len(moves)))
         return moves
 
     def plan_vias(self) -> List[ViaCommand]:
-        # Резолв якоря термовиа (anchor_ref/anchor_role/anchor_sheet/
-        # anchor_cluster) целиком внутри via_planner.py (_resolve_thermal_
-        # anchor) — не дублируем эту логику здесь, target_fp=None всегда
-        # означает "резолви сам из cfg.thermal_via_array".
+        # Thermal via anchor resolution (anchor_ref/anchor_role/anchor_sheet/
+        # anchor_cluster) is entirely inside via_planner.py (_resolve_thermal_anchor)
+        # — we do not duplicate that logic here; target_fp=None means "resolve
+        # yourself from cfg.thermal_via_array".
         return self.via_planner.plan_vias(
             planned_components=self._planned,
             planned_vias=self._planned_vias,
@@ -116,12 +118,12 @@ class PlacementPlanner:
 
     def plan_tracks(self) -> List[TrackCommand]:
         """
-        Треки планируются и у ClonePlacement, и у ManualSpoke (net=null в
-        TemplateTrack наследует rule.net — см. spoke_layout._resolve_track).
-        Никакого keepout/термо-планирования, в отличие от plan_vias — треки
-        не двигаются под коллизии, коллизии для протяжённой геометрии
-        сознательно не проверяем сами (см. обсуждение), полагаемся на DRC
-        самого KiCad.
+        Tracks are planned for both ClonePlacement and ManualSpoke (net=None in
+        TemplateTrack inherits rule.net — see spoke_layout._resolve_track).
+        No keepout/thermal planning here, unlike plan_vias — tracks are not
+        moved to avoid collisions; collision checking for long geometry is
+        deliberately not done (see discussion), we rely on KiCad DRC after
+        placement.
         """
         return list(self._planned_tracks or [])
 

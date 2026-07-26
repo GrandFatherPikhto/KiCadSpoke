@@ -1,3 +1,4 @@
+# kicadspoke/placement/executor/move_executor.py
 import logging
 from typing import List, Tuple, Dict
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
@@ -7,6 +8,7 @@ from ..collision import check_collisions as detect_collisions
 from .flip_manager import FlipManager
 from .operation_logger import OperationLogger
 from .base import layer_to_str
+from ...i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -39,36 +41,37 @@ class MoveExecutor:
             ignore_refs = set(self.cfg.anchor_refs)
             conflicts = detect_collisions(moves, all_fps, self.adapter, ignore_refs, collision_margin_mm)
             if conflicts:
-                logger.warning(f"Обнаружено {len(conflicts)} потенциальных коллизий:")
+                logger.warning(_("Detected {count} potential collisions:").format(count=len(conflicts)))
                 for ref1, ref2, dist in conflicts:
-                    logger.warning(f"  {ref1} и {ref2} перекрываются (расст. {dist:.2f} мм)")
+                    logger.warning(_("  {ref1} and {ref2} overlap (distance {dist:.2f} mm)")
+                                   .format(ref1=ref1, ref2=ref2, dist=dist))
             else:
-                logger.info("Проверка коллизий: конфликтов не обнаружено")
+                logger.info(_("Collision check: no conflicts detected"))
 
         fp_by_ref = self.flip_manager.flip_if_needed(moves)
 
         move_batches = [moves[i:i+self.batch_size] for i in range(0, len(moves), self.batch_size)]
-        logger.info(f"Перемещение в {len(move_batches)} батчах")
+        logger.info(_("Moving in {count} batches").format(count=len(move_batches)))
         for idx, batch in enumerate(move_batches, 1):
             def work(batch=batch, fp_by_ref=fp_by_ref):
                 items_to_update = []
                 for cmd in batch:
                     fp = fp_by_ref.get(cmd.ref)
                     if fp is None:
-                        logger.warning(f"  {cmd.ref} не найден, пропуск")
+                        logger.warning(_("  {ref} not found, skipping").format(ref=cmd.ref))
                         continue
                     fp.position = cmd.position
                     fp.orientation = cmd.angle
                     items_to_update.append(fp)
                 if items_to_update:
                     self.adapter.update_items(items_to_update)
-                    logger.debug(f"  обновлено {len(items_to_update)} футпринтов")
-            ok = self.adapter.commit_with_retry(f"Move batch {idx}/{len(move_batches)}", work)
+                    logger.debug(_("  updated {count} footprints").format(count=len(items_to_update)))
+            ok = self.adapter.commit_with_retry(_("Move batch {idx}/{total}").format(idx=idx, total=len(move_batches)), work)
             if not ok:
                 failed_refs.extend(cmd.ref for cmd in batch)
-                logger.error(f"  батч перемещений {idx} провалился")
+                logger.error(_("  move batch {idx} failed").format(idx=idx))
             else:
-                logger.info(f"  батч перемещений {idx} выполнен ({len(batch)} шт.)")
+                logger.info(_("  move batch {idx} completed ({count} items)").format(idx=idx, count=len(batch)))
 
         move_log = [
             {

@@ -1,23 +1,22 @@
 # kicadspoke/geometry/pad_projection.py
 """
-pad_projection.py — предсказание, где окажется конкретный пад компонента,
-если сам компонент перенести в новую позицию dest и повернуть на новый
-угол angle_deg (уже с учётом зеркалирования на back-слой, если оно
-применяется к angle_deg отдельно, выше по стеку).
+pad_projection.py — predicts where a specific pad of a component will end up
+if the component is moved to a new position dest and rotated to a new angle
+angle_deg (already accounting for back‑layer mirroring if applied to the angle
+elsewhere, at a higher level).
 
-Раньше эта логика (и её баг) существовала в ДВУХ местах одновременно:
-power_pin_orienter.py (для выбора facing) и негласно предполагалась (но
-НЕ применялась) в via_planner.py (для позиции stitching-виа — там вместо
-неё использовался просто "старый абсолютный оффсет пада, перенесённый как
-есть", что и приводило к виа на площадках конденсаторов при любом
-изменении угла). Теперь один источник для обоих потребителей — если
-конвенция флипа окажется неверной, чинить в одном месте, а не в двух.
+Previously this logic (and its bug) existed in TWO places simultaneously:
+power_pin_orienter.py (for choosing facing) and was implicitly assumed (but
+NOT applied) in via_planner.py (for stitching via position — there it simply
+used the "old absolute pad offset, shifted as‑is", which placed vias on pads
+whenever the angle changed). Now there is one source for both consumers — if
+the flip convention turns out wrong, it is fixed in one place, not two.
 
-ВАЖНО: needs_flip=True (зеркалирование локального смещения по оси X)
-— это ПОКА НЕПОДТВЕРЖДЁННОЕ эмпирически допущение. См.
-diagnose/test_pad_mirror_convention.py — однократный, но окончательный
-тест на реальной плате, сравнивающий это предсказание с тем, что
-реально показывает KiCad после настоящего флипа+поворота.
+IMPORTANT: needs_flip=True (mirroring the local offset along X) is currently
+an empirically UNCONFIRMED assumption. See
+diagnose/test_pad_mirror_convention.py — a one‑time but definitive test on a
+real board, comparing this prediction with what KiCad actually shows after a
+real flip+rotation.
 """
 from kipy.board_types import FootprintInstance, Pad
 from kipy.geometry import Vector2, Angle
@@ -25,10 +24,10 @@ from kipy.geometry import Vector2, Angle
 
 def local_pad_offset(fp: FootprintInstance, pad: Pad) -> Vector2:
     """
-    Смещение пада относительно центра футпринта в ЕГО СОБСТВЕННОЙ,
-    неповёрнутой системе координат — то есть постоянный, не зависящий от
-    текущего угла факт о геометрии футпринта. Получается «отменой»
-    текущего угла поворота у уже известного абсолютного смещения.
+    Returns the pad offset relative to the footprint centre in the footprint's
+    OWN UNROTATED coordinate system — i.e. a constant geometry fact independent
+    of the current angle. Obtained by "cancelling" the current rotation angle
+    from the known absolute offset.
     """
     origin = Vector2.from_xy(0, 0)
     diff = pad.position - fp.position
@@ -43,15 +42,15 @@ def predict_pad_position(
     needs_flip: bool,
 ) -> Vector2:
     """
-    Предсказывает АБСОЛЮТНУЮ позицию pad, если fp переместить в dest и
-    повернуть на angle_deg (само по себе уже итоговое, включая
-    зеркалирование угла для back-слоя, если оно требовалось — здесь
-    ничего дополнительно с самим angle_deg не делается).
+    Predicts the ABSOLUTE position of the pad if fp is moved to dest and
+    rotated to angle_deg (the angle itself is already final, including any
+    mirroring for the back layer if required — nothing additional is done with
+    the angle here).
 
-    needs_flip: True, если fp физически переезжает на другую сторону
-    платы в этом прогоне (текущий fp.layer отличается от целевого слоя).
-    В этом случае локальное смещение пада зеркалируется по оси X ДО
-    поворота на новый угол — так плата "видна с обратной стороны".
+    needs_flip: True if fp physically moves to the opposite side of the board
+    in this run (the current fp.layer differs from the target layer). In that
+    case the local pad offset is mirrored along the X axis BEFORE applying the
+    new rotation — this is how the board is "seen from the back side".
     """
     origin = Vector2.from_xy(0, 0)
     offset = local_pad_offset(fp, pad)

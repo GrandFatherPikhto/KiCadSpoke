@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Регрессия на находку (2026-07-15): execute_vias() писал в JSON-лог
-ПРИБЛИЗИТЕЛЬНЫЙ owner_ref (всегда от первого элемента батча) для КАЖДОЙ
-созданной via в батче — независимо от того, какой реальной команде она
-соответствовала. Плюс — проверка, что PlacementRegistry.record_created()
-реально вызывается для каждой созданной via с правильным uuid.
+Regression test for a bug found on 2026-07-15: execute_vias() used to write
+an APPROXIMATE owner_ref (always from the first element of the batch) for EACH
+via created in the batch — regardless of which actual command it corresponded to.
+Plus a check that PlacementRegistry.record_created() is actually called for each
+created via with the correct UUID.
 
-Актуализировано под новую архитектуру (2026-07-23): лог теперь пишется
-в execute_tracks, поэтому тест вызывает execute_tracks([]) после via.
+Updated for the new architecture (2026-07-23): the log is now written in
+execute_tracks, so the test calls execute_tracks([]) after executing vias.
 """
 import sys
 import json
@@ -35,8 +35,8 @@ def _make_via(x_mm, net_name, owner_ref, registry_key=None):
 
 
 def test_owner_ref_matches_actual_command_not_first_in_batch():
-    """Батч из 2 via с РАЗНЫМИ owner_ref -- в логе каждая должна получить
-    СВОЙ owner_ref, не owner_ref первой из батча."""
+    """Batch of 2 vias with DIFFERENT owner_ref — each must get its OWN
+    owner_ref in the log, not the owner_ref of the first batch element."""
     net = MagicMock()
     net.name = "GND"
 
@@ -59,7 +59,7 @@ def test_owner_ref_matches_actual_command_not_first_in_batch():
     adapter.create_items.return_value = [created_via_1, created_via_2]
     adapter.commit_with_retry.side_effect = lambda desc, work: (work(), True)[1]
 
-    # Минимальный конфиг (executor'ам нужен только для передачи в дочерние executors)
+    # Minimal config (needed only to pass to child executors)
     cfg = Config(
         layer='F.Cu',
         templates={},
@@ -74,17 +74,17 @@ def test_owner_ref_matches_actual_command_not_first_in_batch():
         executor = BatchExecutor(adapter, cfg, batch_size=10)
 
         via_a = _make_via(1, "GND", owner_ref="C5")
-        via_b = _make_via(2, "GND", owner_ref="C30")  # ДРУГОЙ owner_ref, не C5!
+        via_b = _make_via(2, "GND", owner_ref="C30")  # DIFFERENT owner_ref!
 
-        # Выполняем via и затем вызываем execute_tracks([]) чтобы записать лог
+        # Execute vias and then call execute_tracks([]) to trigger log writing
         executor.execute_vias([via_a, via_b])
-        executor.execute_tracks([])  # <-- запись лога
+        executor.execute_tracks([])  # <-- log is written here
 
         log_files = list(Path("logs").glob("*.json"))
         assert len(log_files) == 1
         data = json.loads(log_files[0].read_text())
         owners = [v["owner_ref"] for v in data["created_vias"]]
-        assert owners == ["C5", "C30"], f"FAIL: owner_ref перепутаны, получили {owners}"
+        assert owners == ["C5", "C30"], f"FAIL: owner_refs mixed up, got {owners}"
     finally:
         os.chdir(old_cwd)
 
@@ -130,8 +130,8 @@ def test_registry_record_created_called_with_correct_uuid_per_via():
         os.chdir(tmpdir)
         executor = BatchExecutor(adapter, cfg, batch_size=10)
         executor.execute_vias([via_a, via_b], registry=registry)
-        # Лог для этого теста не нужен, но если бы вызывали execute_tracks, он бы записался.
-        # Проверяем только вызовы record_created
+        # Log is not needed for this test, but if we called execute_tracks it would be written.
+        # We only check record_created calls.
         assert registry.record_created.call_count == 2
         registry.record_created.assert_any_call(via_a, "uuid-1")
         registry.record_created.assert_any_call(via_b, "uuid-2")

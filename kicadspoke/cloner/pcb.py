@@ -1,16 +1,16 @@
 # kicadspoke/cloner/pcb.py
 """
-Разбор .kicad_pcb: футпринты (с иерархическим path), сегменты, виа,
-таблица цепей — и выборка «всё канала N».
+Parsing .kicad_pcb: footprints (with hierarchical path), segments, vias,
+net table — and extracting "everything of channel N".
 
-Ключ выборки футпринтов — ПЕРВЫЙ сегмент (path "/ch_uuid/.../comp_uuid"),
-сверенный с uuid листа канала из нетлиста. Никакого матчинга по именам.
+Footprint selection key: the FIRST segment (path "/ch_uuid/.../comp_uuid"),
+matched against the channel sheet uuid from the netlist. No name‑based matching.
 
-Сегменты/виа каналу принадлежат ПО ЦЕПИ: цепь с префиксом /Channel_N/ —
-канальная. Элементы ГЛОБАЛЬНЫХ цепей (GND, рельсы) внутри bbox канала
-собираются отдельно (foreign_*): в клон v1 они не входят, но о них надо
-знать — это GND-прошивка и подводы питания, которые после клонирования
-делаются осознанно.
+Segments/vias belong to a channel BY NET: a net with prefix /Channel_N/ is
+channel‑local. Elements of GLOBAL nets (GND, rails) inside the channel bbox
+are collected separately (foreign_*): they are not included in the clone v1,
+but we need to know about them — these are GND stitching and power feeds that
+are made deliberately after cloning.
 """
 
 import logging
@@ -18,6 +18,7 @@ from typing import Dict, List, Tuple
 
 from .sexp import load_file, children, child, atom, sval, is_node
 from .models import PcbFootprint, PcbSegment, PcbVia, ChannelPcbSnapshot
+from ..i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -31,25 +32,25 @@ def _num(x, default=0.0) -> float:
 
 class PcbDocument:
     def __init__(self, pcb_path: str):
-        logger.info(f"читаю плату: {pcb_path}")
+        logger.info(_("Reading board: {path}").format(path=pcb_path))
         self.root = load_file(pcb_path)
         self.net_names: Dict[int, str] = {}
         for n in children(self.root, 'net'):
-            # (net 42 "имя") — только верхнеуровневые объявления
+            # (net 42 "name") — top‑level declarations only
             if len(n) >= 3:
                 self.net_names[int(n[1])] = sval(n[2])
         self._net_ids_by_name = {v: k for k, v in self.net_names.items()}
         self.footprints = self._parse_footprints()
         self.segments = self._parse_segments()
         self.vias = self._parse_vias()
-        # KiCad 10: числовой таблицы цепей в pcb больше нет, цепи по именам
+        # KiCad 10: there is no numeric net table in pcb any more; nets are by name
         used_nets = {s.net_name for s in self.segments} | {v.net_name for v in self.vias}
         used_nets.discard('')
-        logger.info(f"плата: {len(self.footprints)} футпринтов, "
-                    f"{len(self.segments)} сегментов, {len(self.vias)} виа; "
-                    f"цепей в меди: {len(used_nets)}")
+        logger.info(_("Board: {fp} footprints, {seg} segments, {vias} vias; nets in copper: {nets}")
+                    .format(fp=len(self.footprints), seg=len(self.segments),
+                            vias=len(self.vias), nets=len(used_nets)))
 
-    # --- низкоуровневые парсеры ---
+    # --- low‑level parsers ---
 
     def _parse_footprints(self) -> List[PcbFootprint]:
         out = []
@@ -74,9 +75,9 @@ class PcbDocument:
 
     def _net_ref(self, node) -> Tuple[int, str]:
         """
-        (net X)元: в KiCad 10 X может быть числовым id ИЛИ строкой-именем
-        (наблюдается на реальных платах 10.0.4). Возвращаем (id, имя);
-        отсутствующая половина восстанавливается по таблице цепей.
+        (net X): in KiCad 10 X can be a numeric id OR a string name
+        (observed on real boards 10.0.4). Return (id, name); the missing half
+        is recovered from the net table.
         """
         raw = atom(node, 'net', None)
         if raw is None:
@@ -120,7 +121,7 @@ class PcbDocument:
             ))
         return out
 
-    # --- выборка канала ---
+    # --- channel extraction ---
 
     def snapshot_channel(self, channel_name: str, channel_uuid: str,
                          bbox_margin_mm: float = 1.0) -> ChannelPcbSnapshot:
@@ -137,7 +138,7 @@ class PcbDocument:
             if v.net_name.startswith(net_prefix):
                 snap.vias.append(v)
 
-        # Чужаки в границах канала (GND-прошивка, подводы питания)
+        # Foreign objects inside channel bounds (GND stitching, power feeds)
         bbox = snap.bbox_mm()
         if bbox:
             x0, y0, x1, y1 = bbox
@@ -152,8 +153,9 @@ class PcbDocument:
                 if not v.net_name.startswith(net_prefix) and inside(v.x_mm, v.y_mm):
                     snap.foreign_vias.append(v)
 
-        logger.info(f"{channel_name}: {len(snap.footprints)} футпринтов, "
-                    f"{len(snap.segments)} сегментов, {len(snap.vias)} виа; "
-                    f"чужих в bbox: {len(snap.foreign_segments)} сегм., "
-                    f"{len(snap.foreign_vias)} виа")
+        logger.info(_("{channel}: {fp} footprints, {seg} segments, {vias} vias; "
+                      "foreign in bbox: {fseg} segs, {fvia} vias")
+                    .format(channel=channel_name, fp=len(snap.footprints),
+                            seg=len(snap.segments), vias=len(snap.vias),
+                            fseg=len(snap.foreign_segments), fvia=len(snap.foreign_vias)))
         return snap

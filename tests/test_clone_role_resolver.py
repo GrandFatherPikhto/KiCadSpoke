@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Тесты на clone_role_resolver.py — сопоставление роль->ref для TemplatePlacer."""
+"""Tests for clone_role_resolver.py — role‑to‑ref mapping for TemplatePlacer."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -40,21 +40,25 @@ class TestResolveRolesBySelection:
             TemplateComponentSlot(role="LOAD_CAP_2"),
         ])
 
+    def _clone(self, name="crystal2"):
+        return ClonePlacement(name=name, template="crystal", origin_x_mm=0.0, origin_y_mm=0.0)
+
     def test_exact_match_resolves(self):
         adapter = MagicMock()
         adapter.get_selected_items.return_value = [
             _make_fp("Y3", "XTAL"), _make_fp("C20", "LOAD_CAP_1"), _make_fp("C21", "LOAD_CAP_2"),
         ]
         adapter.get_field_value.side_effect = lambda fp, name: fp._role
-        result = resolve_roles_by_selection(adapter, self._template(), "crystal2")
+        result = resolve_roles_by_selection(adapter, self._template(), self._clone())
         assert result == {"XTAL": "Y3", "LOAD_CAP_1": "C20", "LOAD_CAP_2": "C21"}
 
     def test_missing_role_raises(self):
         adapter = MagicMock()
         adapter.get_selected_items.return_value = [_make_fp("Y3", "XTAL"), _make_fp("C20", "LOAD_CAP_1")]
         adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprints.return_value = []
         with pytest.raises(ValidationError, match="LOAD_CAP_2"):
-            resolve_roles_by_selection(adapter, self._template(), "crystal2")
+            resolve_roles_by_selection(adapter, self._template(), self._clone())
 
     def test_extra_role_not_in_template_raises(self):
         adapter = MagicMock()
@@ -64,7 +68,7 @@ class TestResolveRolesBySelection:
         ]
         adapter.get_field_value.side_effect = lambda fp, name: fp._role
         with pytest.raises(ValidationError, match="EXTRA_ROLE"):
-            resolve_roles_by_selection(adapter, self._template(), "crystal2")
+            resolve_roles_by_selection(adapter, self._template(), self._clone())
 
     def test_duplicate_role_in_selection_raises(self):
         adapter = MagicMock()
@@ -73,8 +77,9 @@ class TestResolveRolesBySelection:
             _make_fp("C20", "LOAD_CAP_1"), _make_fp("C21", "LOAD_CAP_2"),
         ]
         adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprints.return_value = adapter.get_selected_items.return_value
         with pytest.raises(ValidationError, match="XTAL"):
-            resolve_roles_by_selection(adapter, self._template(), "crystal2")
+            resolve_roles_by_selection(adapter, self._template(), self._clone())
 
 
 class TestResolveRolesByNets:
@@ -86,8 +91,10 @@ class TestResolveRolesByNets:
         ])
 
     def test_three_identical_filters_not_confused(self):
-        """Ключевой сценарий: 3 физически неразличимых П-фильтра — каждый
-        должен резолвиться в СВОИ, не чужие компоненты."""
+        """
+        Key scenario: 3 physically indistinguishable PI‑filters — each must
+        resolve to its own components, not someone else's.
+        """
         fps = [
             _make_fp("C10", "CAP_IN", ["GPIO12"]), _make_fp("C11", "CAP_OUT", ["GPIO12_FILTERED"]),
             _make_fp("L1", "FERRITE", ["GPIO12", "GPIO12_FILTERED"]),
@@ -114,7 +121,7 @@ class TestResolveRolesByNets:
         assert results["filter_gpio12"] == {"CAP_IN": "C10", "CAP_OUT": "C11", "FERRITE": "L1"}
         assert results["filter_gpio13"] == {"CAP_IN": "C12", "CAP_OUT": "C13", "FERRITE": "L2"}
         assert results["filter_gpio14"] == {"CAP_IN": "C14", "CAP_OUT": "C15", "FERRITE": "L3"}
-        # Ни один ref не должен повториться между разными экземплярами
+        # No ref should repeat across instances
         all_refs = [ref for r in results.values() for ref in r.values()]
         assert len(all_refs) == len(set(all_refs))
 
@@ -133,7 +140,7 @@ class TestResolveRolesByNets:
         assert result == {"DAC_DB1_CAP": "C50"}
 
     def test_explicit_nets_take_priority_over_net_template(self):
-        """ClonePlacement.nets должен побеждать net_template шаблона, если задано и то, и другое."""
+        """ClonePlacement.nets must override template net_template when both are set."""
         tpl = SpokeTemplate(name="t", components=[
             TemplateComponentSlot(role="X", net_template="SHOULD_NOT_BE_USED"),
         ])
@@ -180,19 +187,19 @@ class TestResolveRolesByNets:
             resolve_roles_by_nets(adapter, tpl, clone)
 
     def test_no_role_at_all_gives_distinct_message(self):
-        """Роли на плате вообще нет (ни одного футпринта с таким Role) —
-        сообщение должно явно отличаться от 'есть, но не на той цепи'."""
+        """No component with that Role on the board at all — the message should
+        clearly differ from 'exists but on the wrong net'."""
         tpl = SpokeTemplate(name="t5", components=[TemplateComponentSlot(role="NONEXISTENT_ROLE")])
         adapter = MagicMock()
-        adapter.get_footprints.return_value = []  # вообще ничего на плате
+        adapter.get_footprints.return_value = []  # nothing at all on board
         clone = ClonePlacement(name="z", template="t5", origin_x_mm=0, origin_y_mm=0,
                               nets={"NONEXISTENT_ROLE": "GND"})
-        with pytest.raises(ValidationError, match="НИ ОДНОГО компонента с такой ролью"):
+        with pytest.raises(ValidationError, match="NO component with this role"):
             resolve_roles_by_nets(adapter, tpl, clone)
 
     def test_role_exists_wrong_net_gives_distinct_message_with_real_nets(self):
-        """Компонент(ы) с ролью реально есть, но не на ожидаемой цепи —
-        сообщение должно назвать, на каких цепях они реально сидят."""
+        """Component(s) with the role exist, but not on the expected net — the
+        message must name the nets they actually sit on."""
         tpl = SpokeTemplate(name="t6", components=[TemplateComponentSlot(role="X")])
         fps = [_make_fp("A", "X", ["ACTUAL_NET"])]
         adapter = MagicMock()
@@ -205,13 +212,13 @@ class TestResolveRolesByNets:
             resolve_roles_by_nets(adapter, tpl, clone)
         msg = str(exc_info.value)
         assert "A" in msg
-        assert "ЕСТЬ" in msg  # отличается от "НИ ОДНОГО"
+        assert "exist" in msg  # different from "NO component"
 
     def test_realistic_scenario_some_roles_ok_some_missing_some_wrong_net(self):
         """
-        Реальный сценарий: 4 роли фильтра, где часть компонентов
-        физически не подключена к ожидаемой цепи -- итоговое сообщение
-        должно чётко разграничить каждую роль по причине отказа.
+        Realistic scenario: 4 filter roles, some components missing,
+        some on the wrong net — the final message should clearly separate
+        each role by its reason for failure.
         """
         tpl = SpokeTemplate(name="pi_filter", components=[
             TemplateComponentSlot(role="PI_FILTER_C1", net_template="{NET_IN}"),
@@ -219,12 +226,12 @@ class TestResolveRolesByNets:
             TemplateComponentSlot(role="PI_FILTER_FB", net_template="{NET_OUT}"),
             TemplateComponentSlot(role="FB_FILTER_C3", net_template="{NET_OUT}"),
         ])
-        # PI_FILTER_C1/C2 -- компонентов с такой ролью вообще нет на плате.
-        # PI_FILTER_FB -- есть, но сидит на другой цепи.
-        # FB_FILTER_C3 -- есть и корректно подключена.
+        # PI_FILTER_C1/C2 — no components with that role on the board at all.
+        # PI_FILTER_FB — exists but on a different net.
+        # FB_FILTER_C3 — exists and correctly connected.
         fps = [
-            _make_fp("C99", "PI_FILTER_FB", ["+3V3"]),       # не та цепь (ожидали +3V3_VCCIO)
-            _make_fp("C100", "FB_FILTER_C3", ["+3V3_VCCIO"]),  # верно
+            _make_fp("C99", "PI_FILTER_FB", ["+3V3"]),       # wrong net (expected +3V3_VCCIO)
+            _make_fp("C100", "FB_FILTER_C3", ["+3V3_VCCIO"]),  # correct
         ]
         adapter = MagicMock()
         adapter.get_footprints.return_value = fps
@@ -236,16 +243,15 @@ class TestResolveRolesByNets:
         with pytest.raises(ValidationError) as exc_info:
             resolve_roles_by_nets(adapter, tpl, clone)
         msg = str(exc_info.value)
-        assert "PI_FILTER_C1" in msg and "НИ ОДНОГО" in msg
+        assert "PI_FILTER_C1" in msg and "NO component" in msg
         assert "PI_FILTER_C2" in msg
         assert "PI_FILTER_FB" in msg and "C99" in msg and "+3V3" in msg
-        assert "FB_FILTER_C3" not in msg  # эта роль резолвилась успешно, в проблемах её быть не должно
+        assert "FB_FILTER_C3" not in msg  # this role resolved successfully, so no problem
 
-    # ---------- Новый тест на refs (явный override) ----------
     def test_explicit_refs_override_all_other_resolution(self):
-        """refs в ClonePlacement должен иметь высший приоритет, минуя поиск по цепям."""
+        """refs in ClonePlacement must have highest priority, bypassing net‑based search."""
         tpl = SpokeTemplate(name="t", components=[TemplateComponentSlot(role="X")])
-        # Есть два кандидата на одной цепи, но refs указывает конкретный
+        # Two candidates on the same net, but refs points to a specific one
         fps = [_make_fp("A", "X", ["NET1"]), _make_fp("B", "X", ["NET1"])]
         adapter = MagicMock()
         adapter.get_footprints.return_value = fps
@@ -255,4 +261,4 @@ class TestResolveRolesByNets:
         clone = ClonePlacement(name="c", template="t", origin_x_mm=0, origin_y_mm=0,
                                nets={"X": "NET1"}, refs={"X": "B"})
         result = resolve_roles_by_nets(adapter, tpl, clone)
-        assert result == {"X": "B"}  # Должен взять B, несмотря на неоднозначность
+        assert result == {"X": "B"}  # Must pick B despite ambiguity

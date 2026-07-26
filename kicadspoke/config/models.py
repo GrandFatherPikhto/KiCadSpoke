@@ -1,36 +1,36 @@
 # kicadspoke/config/models.py
 """
-config/models.py — все dataclass'ы конфигурации (шаблоны, ClonePlacement,
-Rule, Config и т.д.), БЕЗ единой строчки логики загрузки/валидации YAML —
-это чисто описание формы данных. Загрузка — в config/loader.py.
+config/models.py — all configuration dataclasses (templates, ClonePlacement,
+Rule, Config, etc.) WITHOUT any YAML loading/validation logic — this is purely
+a description of the data shape. Loading is in config/loader.py.
 
-Разделено рефакторингом из монолитного config.py (652 строки), который
-распухал каждый раз, когда добавлялось новое поле — dataclass и его
-загрузчик правились в одном и том же файле вперемешку с остальными 8
-dataclass'ами и их загрузчиками. Публичный интерфейс пакета не изменился —
-kicadspoke/config/__init__.py реэкспортирует всё отсюда и из loader.py,
-так что `from kicadspoke.config import Config, ClonePlacement, load_config`
-продолжает работать один в один, как раньше.
+Split from monolithic config.py by refactoring. The public interface of the
+package remains unchanged — kicadspoke/config/__init__.py re‑exports everything
+from here and from loader.py, so `from kicadspoke.config import Config, ClonePlacement, load_config`
+continues to work exactly as before.
 """
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 
+from ..i18n import _
+
+
 @dataclass
 class ThermalViaArrayConfig:
-    """Конфигурация массива тепловых via под термопадом IC.
+    """Configuration for a thermal via array under an IC thermal pad.
 
-    name — для --only (см. kicadspoke_cli.py). ОБЯЗАТЕЛЬНО в YAML, если
-    секция thermal_via_array вообще присутствует (см. config/loader.py —
-    фатал, а не тихий фоллбэк на pad/что угодно ещё). Тут в датаклассе
-    Optional только потому, что тестам/внутреннему коду, которые строят
-    ThermalViaArrayConfig() напрямую в Python (мимо загрузчика YAML),
-    имя не нужно вообще — обязательность имени касается ТОЛЬКО ввода
-    человеком через YAML, не самой структуры данных."""
+    name — for --only (see kicadspoke_cli.py). REQUIRED in YAML if the
+    thermal_via_array section is present at all (see config/loader.py — fatal,
+    not a silent fallback). Here in the dataclass it's Optional only because
+    tests/internal code that construct ThermalViaArrayConfig() directly in
+    Python (bypassing the YAML loader) don't need a name — the requirement
+    applies ONLY to human input via YAML, not to the data structure itself.
+    """
     enabled: bool = False
-    anchor_ref: Optional[str] = None          # было str = ""
-    anchor_role: Optional[str] = None         # новое
-    anchor_sheet: Optional[str] = None        # для сужения роли
-    anchor_cluster: Optional[str] = None      # для сужения роли
+    anchor_ref: Optional[str] = None
+    anchor_role: Optional[str] = None
+    anchor_sheet: Optional[str] = None
+    anchor_cluster: Optional[str] = None
     pad: str = ""
     net: str = "GND"
     rows: int = 4
@@ -43,28 +43,26 @@ class ThermalViaArrayConfig:
 
 
 def thermal_via_array_effective_name(tva: "ThermalViaArrayConfig") -> Optional[str]:
-    """Единая точка чтения имени для --only (kicadspoke_cli.py). Просто
-    tva.name — загрузчик (config/loader.py) гарантирует, что оно задано
-    для любого thermal_via_array, реально пришедшего из YAML; None
-    бывает только у ThermalViaArrayConfig(), собранного напрямую в
-    Python в обход загрузчика (тесты) — там имя и не нужно."""
+    """Single point for reading the name for --only. Just tva.name — the loader
+    guarantees it is set for any thermal_via_array that actually came from YAML;
+    None only for manually constructed in tests."""
     return tva.name
 
 
 @dataclass
 class TemplateVia:
     """
-    Via-слот шаблона — координаты ВСЕГДА along/across от нуля СПИЦЫ (не от
-    пада компонента, даже если слот принадлежит конкретной роли компонента!)
-    — та же самая формула (local_to_absolute), что и для позиции самого
-    компонента. net=None означает "взять цепь правила" (rule.net).
+    Via slot in a template — coordinates are ALWAYS along/across from the SPOKE
+    origin (not from the component pad, even if the slot belongs to a specific
+    component role) — same formula (local_to_absolute) as for the component
+    position. net=None means "use the rule net" (rule.net).
 
-    ИЗМЕНЕНО (KiCadSpoke): раньше power_via был единственным полем на
-    уровне спицы, а GND via компонента считалась от РЕАЛЬНОГО пада уже
-    размещённого компонента (требовало чтения живой платы после коммита).
-    Теперь обе идеи — один и тот же слот, чистая геометрия шаблона, без
-    зависимости от живой платы вообще. Списков может быть сколько угодно,
-    на обоих уровнях (spoke.vias и component.vias).
+    CHANGED (KiCadSpoke): previously power_via was the only field at the spoke
+    level, while the GND via of a component was computed from the REAL pad of
+    the already‑placed component (required reading the live board after commit).
+    Now both concepts are the same slot — pure template geometry, independent
+    of the live board. There can be any number of lists at both levels
+    (spoke.vias and component.vias).
     """
     offset_along_mm: float = 0.0
     offset_across_mm: float = 0.0
@@ -76,21 +74,20 @@ class TemplateVia:
 @dataclass
 class TemplateComponentSlot:
     """
-    Один компонент-слот в шаблоне — роль ('HEAVY'/'LIGHT'/'XTAL'/
-    'LOAD_CAP_1' и т.д.), а не конкретный ref. Роли ОБЯЗАНЫ быть уникальны
-    внутри одного шаблона (проверяется фатально при загрузке, см.
-    _load_spoke_template). Конкретный ref подбирается на этапе расстановки
-    из пула компонентов платы: все футпринты, чей РЕАЛЬНЫЙ пад сидит на
-    цепи правила (rule.net) и у кого пользовательское поле Role совпадает
-    с этой ролью (см. placement/services/component_pool.py).
-    Координаты локальные (along/across) — от нуля СПИЦЫ, не от самого
-    компонента. via этого слота — та же локальная система, см. TemplateVia.
+    One component slot in a template — a role ('HEAVY'/'LIGHT'/'XTAL'/
+    'LOAD_CAP_1', etc.), not a specific ref. Roles MUST be unique within a
+    single template (checked fatally during loading, see _load_spoke_template).
+    The actual ref is selected during placement from the component pool:
+    all footprints whose REAL pad sits on the rule net (rule.net) and whose
+    custom Role field matches this role (see placement/services/component_pool.py).
+    Coordinates are local (along/across) — from the SPOKE origin, not from the
+    component itself. Vias in this slot use the same local system (see TemplateVia).
 
-    net_template — ОПЦИОНАЛЬНО, для TemplatePlacer (сопоставление роли
-    по цепям, а не по выделению): ожидаемая цепь этого компонента, тем же
-    синтаксисом плейсхолдеров, что и TemplateVia.net (см.
-    net_resolution.py). Для ManualSpoke/component_pool.py не используется
-    вообще — там роль ищется по (rule.net, Role), без своего поля здесь.
+    net_template — OPTIONAL, for TemplatePlacer (role matching by nets, not by
+    selection): the expected net of this component, with the same placeholder
+    syntax as TemplateVia.net (see net_resolution.py). Not used at all for
+    ManualSpoke/component_pool.py — there the role is looked up by (rule.net, Role)
+    without any field here.
     """
     role: str
     offset_along_mm: float = 0.0
@@ -98,33 +95,30 @@ class TemplateComponentSlot:
     angle_deg: float = 0.0
     vias: List[TemplateVia] = field(default_factory=list)
     net_template: Optional[str] = None
-    # Слой слота — ФАКТ, абсолютный: 'F.Cu' | 'B.Cu'. None = наследовать
-    # layer шаблона. Пишется extract'ом только для компонентов,
-    # выбивающихся из слоя шаблона.
+    # Layer of the slot — FACT, absolute: 'F.Cu' | 'B.Cu'. None = inherit from
+    # template layer. Written by extract only for components that deviate from
+    # the template layer.
     layer: Optional[str] = None
 
 
 @dataclass
 class TemplateTrack:
     """
-    Прямой отрезок медной дорожки в шаблоне — та же локальная система
-    координат (along/across от нуля СПИЦЫ), что и у TemplateVia. Никакой
-    привязки к ролям/падам: как и via, дорожка не имеет пользовательских
-    полей, "чья" она — определить нельзя, доверяем геометрии (все
-    элементы шаблона двигаются/крутятся/зеркалятся одной и той же
-    формулой, см. geometry/clone_geometry.py).
+    Straight copper track segment in the template — same local coordinate
+    system (along/across from spoke origin) as TemplateVia. No association with
+    roles/pads: like a via, a track has no user fields, so we trust geometry
+    (all template elements are moved/rotated/mirrored by the same formula,
+    see geometry/clone_geometry.py).
 
-    Ломаная дорожка — это просто НЕСКОЛЬКО TemplateTrack подряд,
-    стыкующихся концами (ровно так kipy.board_types.Track хранит их и
-    внутри самого KiCad — нет отдельной сущности "полилиния"). Дуги
-    (ArcTrack) сознательно не поддержаны — не нужны для П-фильтров,
-    отдельное расширение при необходимости.
+    A polyline is simply MULTIPLE TemplateTrack segments in sequence, joined
+    end‑to‑end (exactly as kipy.board_types.Track stores them inside KiCad —
+    there is no separate "polyline" entity). ArcTrack is deliberately not
+    supported — not needed for PI‑filters; could be added later if needed.
 
-    Коллизии (не пересекает ли дорожка чужую медь/компонент на новом
-    месте) НЕ проверяются этим инструментом вообще — сознательное
-    решение (см. обсуждение в чате): полагаемся на DRC самого KiCad
-    после расстановки, а не строим свою geometry-проверку отрезок-против-
-    отрезка.
+    Collisions (whether the track crosses other copper/components in the new
+    location) are NOT checked by this tool — deliberate decision (see chat
+    discussion): we rely on KiCad DRC after placement, not on our own segment‑
+    vs‑segment geometry checker.
     """
     start_along_mm: float = 0.0
     start_across_mm: float = 0.0
@@ -132,45 +126,43 @@ class TemplateTrack:
     end_across_mm: float = 0.0
     width_mm: float = 0.25
     net: Optional[str] = None
-    # Слой — тот же паттерн, что у TemplateComponentSlot.layer: None =
-    # наследовать layer шаблона, при mirror инвертируется той же строкой.
+    # Layer — same pattern as TemplateComponentSlot.layer: None = inherit from
+    # template layer, when mirroring it is inverted by the same rule.
     layer: Optional[str] = None
 
 
 @dataclass
 class SpokeTemplate:
     """
-    Шаблон спицы — вся геометрия локальная и поворотоинвариантная:
-    описывается один раз при rotation_deg=0 (условный эталонный борт),
-    дальше конкретная спица поворачивает его целиком на свой угол.
-    Любой из элементов может отсутствовать/быть пустым — например, спица
-    без единой via, или шаблон всего с одним компонентом.
+    Spoke template — all geometry is local and rotation‑invariant: described
+    once at rotation_deg=0 (the reference board orientation), then each actual
+    spoke rotates it as a whole. Any list may be empty — e.g. a spoke with no
+    vias, or a template with just one component.
     """
     name: str
     vias: List[TemplateVia] = field(default_factory=list)
     components: List[TemplateComponentSlot] = field(default_factory=list)
     tracks: List[TemplateTrack] = field(default_factory=list)
-    # Слой шаблона — ФАКТ, абсолютный: 'F.Cu' | 'B.Cu', как снято
-    # экстракцией (пишется автоматически). Компоненты без своего layer
-    # наследуют его. Никакой автоматики сторон: шаблон кладётся буква в
-    # букву; перевернуть целиком — явный mirror у размещения.
+    # Template layer — FACT, absolute: 'F.Cu' | 'B.Cu', as extracted
+    # (written automatically). Components without their own layer inherit it.
+    # No automatic guesswork: the template is placed verbatim; to flip the whole
+    # thing, use explicit mirror on the placement.
     layer: str = 'F.Cu'
 
 
 @dataclass
 class ManualSpoke:
     """
-    Конкретная спица на конкретном паде FPGA. shift_x_mm/shift_y_mm и
-    rotation_deg — ВСЕГДА в обычных координатах KiCad (не локальных),
-    подбираются глазами под конкретный борт. Порядок применения: сначала
-    сдвиг (shift_x, shift_y) от центра пада к нулю спицы, затем поворот
-    получившегося нуля (и всего содержимого шаблона) на rotation_deg.
+    A specific spoke on a specific FPGA pad. shift_x_mm/shift_y_mm and
+    rotation_deg are ALWAYS in KiCad board coordinates (not local), tuned
+    visually for the specific board. Order: first shift (shift_x, shift_y) from
+    the pad centre to the spoke origin, then rotation of the resulting origin
+    (and all template contents) by rotation_deg.
 
-    ВАЖНО: никаких ref компонентов здесь больше нет — конкретные
-    компоненты подбираются автоматически из пула (см.
-    placement/services/component_pool.py) по совпадению реальной цепи
-    (rule.net) и пользовательского поля Role на компоненте, в порядке
-    следования спиц в этом списке.
+    IMPORTANT: no component refs here anymore — concrete components are
+    automatically selected from the pool (see placement/services/component_pool.py)
+    by matching the actual rule net (rule.net) and the custom Role field on the
+    component, in the order of spokes in this list.
     """
     pad: str
     template: str
@@ -183,17 +175,16 @@ class ManualSpoke:
 
 @dataclass
 class Rule:
-    """Правило: выводок спиц вокруг ОДНОГО якорного компонента.
-    anchor_ref ИЛИ anchor_role (взаимоисключающе, ровно одно обязательно) —
-    чей это выводок (пады спиц — его пады). anchor_sheet/anchor_cluster —
-    сужение неоднозначности anchor_role, тот же принцип, что у
-    ClonePlacement (см. config/models.py).
+    """Rule: a cluster of spokes around ONE anchor component.
+    anchor_ref OR anchor_role (mutually exclusive, exactly one required) —
+    whose pads are listed in spokes. anchor_sheet/anchor_cluster narrow
+    ambiguity of anchor_role, same principle as in ClonePlacement.
 
-    name — для --only (см. kicadspoke_cli.py). ОБЯЗАТЕЛЬНО в YAML (см.
-    config/loader.py — фатал, если не задано; net не годится в фоллбэк,
-    он не гарантированно уникален между правилами). В датаклассе
-    Optional только для тестов/внутреннего кода, строящего Rule()
-    напрямую в Python мимо загрузчика — там имя не нужно."""
+    name — for --only. REQUIRED in YAML (fatal if missing; net is not used
+    as a fallback because it is not guaranteed unique between rules).
+    Optional only for tests/internal code constructing Rule() directly
+    in Python bypassing the loader.
+    """
     net: str
     spokes: List[ManualSpoke]
     anchor_ref: Optional[str] = None
@@ -204,39 +195,38 @@ class Rule:
 
 
 def rule_effective_name(rule: "Rule") -> Optional[str]:
-    """Единая точка чтения имени для --only (kicadspoke_cli.py). Просто
-    rule.name — загрузчик гарантирует, что оно задано для любого Rule,
-    реально пришедшего из YAML (см. Rule.name)."""
+    """Single point for reading the name for --only. Just rule.name — the loader
+    guarantees it is set for any Rule that actually came from YAML."""
     return rule.name
 
 
 @dataclass
 class ClonePlacement:
     """
-    Применение шаблона на новом месте (TemplatePlacer/Cloner) — в отличие
-    от ManualSpoke (якорь = номер пада IC), якорь здесь — просто имя,
-    ни с каким конкретным компонентом не связанное (anchor_id в реестре
-    = f"name:{name}"). Два режима позиционирования:
-      - anchor_ref задан: ноль = центр пада anchor_pad (или центр
-        футпринта, если anchor_pad нет), origin_x_mm/origin_y_mm —
-        необязательный ПЛОСКИЙ сдвиг от якоря (без поворота, как shift
-        у ManualSpoke), rotation_deg крутит только содержимое шаблона.
-      - anchor_ref не задан: origin_x_mm/origin_y_mm — АБСОЛЮТНАЯ
-        точка на плате (обязательны), как раньше.
+    Applying a template at a new location (TemplatePlacer/Cloner) — unlike
+    ManualSpoke (anchor = IC pad), the anchor here is just a name, not tied to
+    any specific component (anchor_id in registry = f"name:{name}"). Two
+    positioning modes:
+      - anchor_ref set: origin = centre of anchor_pad (or footprint centre if
+        anchor_pad omitted), origin_x_mm/origin_y_mm is an optional FLAT shift
+        from the anchor (without rotation, like shift in ManualSpoke),
+        rotation_deg rotates only the template contents.
+      - anchor_ref not set: origin_x_mm/origin_y_mm is an ABSOLUTE point on
+        the board (required).
 
-    Сопоставление роль->ref — ЛИБО через текущее выделение на плате
-    (для редких, штучных секций типа одной MCU), ЛИБО через явные цепи
-    (params/nets/net_overrides — для многократно повторяющихся секций
-    вроде П-фильтров или каналов ЦАП). Наличие params ИЛИ nets означает
-    режим "по цепям"; их отсутствие — режим "по выделению".
+    Role→ref mapping — EITHER via the current selection on the board (for rare,
+    one‑off sections like a single MCU), OR via explicit nets
+    (params/nets/net_overrides — for repeated sections like PI‑filters or DAC
+    channels). Presence of params OR nets means "by nets" mode; absence means
+    "by selection".
 
-    template ИЛИ role (взаимоисключающе, ровно одно обязательно):
-      - template: как раньше, ссылка на SpokeTemplate из cfg.templates.
-      - role: для ОДНОКОМПОНЕНТНОГO размещения без единой via/трека —
-        заводить отдельный файл шаблона ради одной роли неудобно (см.
-        обсуждение в чате). ClonePositionCalculator синтезирует
-        одноразовый SpokeTemplate "на лету" (один компонент этой роли,
-        offset (0,0), угол 0) — templates: в YAML вообще не трогается.
+    template OR role (mutually exclusive, exactly one required):
+      - template: as before, reference to a SpokeTemplate from cfg.templates.
+      - role: for a ONE‑COMPONENT placement without a single via/track —
+        creating a separate template file just for one role is cumbersome.
+        ClonePositionCalculator synthesises a temporary SpokeTemplate "on the fly"
+        (one component with that role at (0,0), angle 0) — templates: in YAML
+        is not touched.
     """
     name: str
     origin_x_mm: float
@@ -244,61 +234,59 @@ class ClonePlacement:
     rotation_deg: float = 0.0
     template: Optional[str] = None
     role: Optional[str] = None
-    nets: Dict[str, str] = field(default_factory=dict)      # role -> net (буквально)
-    params: Dict[str, Any] = field(default_factory=dict)     # для {placeholder} в net шаблона
-    net_overrides: Dict[str, str] = field(default_factory=dict)  # финальная подмена resolved-имени
+    nets: Dict[str, str] = field(default_factory=dict)      # role -> net (literal)
+    params: Dict[str, Any] = field(default_factory=dict)    # for {placeholder} in net templates
+    net_overrides: Dict[str, str] = field(default_factory=dict)  # final override of resolved name
     enabled: bool = True
     anchor_ref: Optional[str] = None
     anchor_pad: Optional[str] = None
-    # Альтернатива anchor_ref — якорь по полю Role на плате, а не по
-    # refdes (переживает реаннотацию/перенумерацию — refdes для этого не
-    # надёжен, см. обсуждение). Взаимоисключающе с anchor_ref (фатал при
-    # обоих сразу — см. _check_anchor_fields в load_config). anchor_sheet —
-    # ТОЛЬКО сужение неоднозначности при 2+ кандидатах с одним anchor_role
-    # (сравнение по префиксу имени ЛОКАЛЬНОЙ иерархической цепи вида
-    # '/Channel_0/...' — НЕ через sheet_path/UUID, это эмпирически не
-    # сработало, см. пробные скрипты в чате). Без смысла без anchor_role.
+    # Alternative to anchor_ref — anchor by the Role field on the board, not by
+    # refdes (survives re‑annotation). Mutually exclusive with anchor_ref (fatal
+    # if both are set — see _load_clone_placement). anchor_sheet — ONLY narrows
+    # ambiguity when there are 2+ candidates with the same anchor_role
+    # (comparison by prefix of LOCAL hierarchical net name, e.g. '/Channel_0/...' —
+    # NOT via sheet_path/UUID, which was empirically broken — see chat scripts).
+    # Meaningless without anchor_role.
     anchor_role: Optional[str] = None
     anchor_sheet: Optional[str] = None
-    # Cluster — второе кастомное поле схемы (см. constants.CLUSTER_FIELD_NAME),
-    # физический экземпляр/кластер, независимо от anchor_ref/anchor_role.
-    # Используется в ДВУХ местах: (1) сужение поиска anchor_role (как
-    # anchor_sheet, только по другому полю), (2) сужение неоднозначных
-    # ролей ВНУТРИ шаблона в resolve_roles_by_nets (замена мёртвой
-    # _sheet_key-ступени — типовой случай "4 одинаковых C_IN_BULK на одном
-    # листе, а листа-разделителя у них нет, потому что общая силовая
-    # цепь"). Сравнение — по сегментам ПРЕФИКСА ('Channel_1' матчит и
-    # 'Channel_1', и 'Channel_1/1V2_PLL_PI_FILTER'), не по точному
-    # равенству — иерархия и плоские имена работают одним и тем же кодом.
+    # Cluster — second custom field (see constants.CLUSTER_FIELD_NAME),
+    # physical instance/cluster, independent of anchor_ref/anchor_role.
+    # Used in TWO places: (1) narrowing search for anchor_role (like anchor_sheet,
+    # but via a different field), (2) narrowing ambiguous roles INSIDE the
+    # template in resolve_roles_by_nets (replacing the dead _sheet_key step —
+    # typical case: 4 identical C_IN_BULK on one sheet, but no sheet separator
+    # because they share a common power rail). Comparison is by PREFIX segments
+    # ('Channel_1' matches both 'Channel_1' and 'Channel_1/1V2_PLL_PI_FILTER'),
+    # not by exact equality — hierarchy and flat names work with the same code.
     anchor_cluster: Optional[str] = None
-    # Слой размещения — ФАКТ: None = слой шаблона (кладём буква в букву).
-    # mirror — ОПЕРАЦИЯ, всегда ручная: перевернуть конструкцию целиком
-    # (геометрия в зеркало, углы 180°−φ, все слои инвертируются).
-    # Противоречие двух твоих же слов — фатал при загрузке: mirror без
-    # смены слоя или смена слоя без mirror не имеют физического смысла.
+    # Placement layer — FACT: None = template layer (place verbatim).
+    # mirror — OPERATION, always manual: flip the whole construction
+    # (geometry mirrored, angles 180°−φ, all layers inverted).
+    # Contradiction between the two is fatal at load: mirror without layer change
+    # or layer change without mirror is physically meaningless.
     layer: Optional[str] = None
     mirror: bool = False
-    # Явный override роль -> ref (высший приоритет, минуя поиск по цепям):
-    # последнее средство, когда кандидаты электрически неразличимы
-    # (три одинаковых фильтра в одном листе).
+    # Explicit override role -> ref (highest priority, bypassing net‑based search):
+    # last resort when candidates are electrically indistinguishable
+    # (e.g. three identical filters in one sheet).
     refs: Dict[str, str] = field(default_factory=dict)
-    # Явный запрос режима "по выделению" — НЕ выводится из отсутствия
-    # nets/params (это старое, implicit-поведение остаётся дефолтом для
-    # обратной совместимости, см. clone_uses_selection_mode). Нужен
-    # отдельно от implicit-режима потому, что params используется ТАКЖЕ
-    # для резолва плейсхолдеров via/track (apply_clone_geometry вызывает
-    # resolve_net независимо от режима ролей) — без этого флага заданный
-    # params для одной лишь via молча и незаметно переключал бы весь
-    # clone_placement в режим "по цепям", ломая роли, резолвящиеся по
-    # выделению. by_selection: true + непустой nets — фатал при загрузке
-    # (противоречие: nets вообще не имеет смысла в режиме "по выделению").
+    # Explicit request for selection mode — NOT inferred from absence of nets/params
+    # (that implicit behaviour remains the default for backward compatibility,
+    # see clone_uses_selection_mode). Needed separately from implicit because
+    # params is ALSO used for resolving placeholders in via/track nets
+    # (apply_clone_geometry calls resolve_net regardless of the role mode) —
+    # without this flag, a params intended only for via net resolution would
+    # silently switch the whole clone_placement to "by nets" mode, breaking roles
+    # resolved by selection. by_selection: true + non‑empty nets is fatal at load
+    # (contradiction: nets has no meaning in selection mode).
     by_selection: bool = False
+
 
 @dataclass
 class Config:
-    """Главный конфигурационный объект."""
-    # Слой спиц (ManualSpoke-путь): 'F.Cu' | 'B.Cu'. У clone_placements —
-    # свой layer/mirror per-размещение, это поле их не касается.
+    """Main configuration object."""
+    # Spoke layer (ManualSpoke path): 'F.Cu' | 'B.Cu'. clone_placements have
+    # their own layer/mirror per placement; this field does not affect them.
     layer: str = 'F.Cu'
     templates: Dict[str, SpokeTemplate] = field(default_factory=dict)
     thermal_via_array: ThermalViaArrayConfig = field(default_factory=ThermalViaArrayConfig)
@@ -306,44 +294,41 @@ class Config:
     clone_placements: List[ClonePlacement] = field(default_factory=list)
     place_components: bool = True
     skip_existing_components: bool = False
-    # Параметры поиска свободного места -- сейчас используются только для
-    # термовиа (у power/GND via ручное позиционирование, поиска нет).
+    # Free‑space search parameters — currently used only for thermal vias
+    # (power/GND vias are placed manually, no search).
     via_keepout_clearance_mm: float = 0.2
     via_search_step_mm: float = 0.1
     via_search_max_radius_mm: float = 3.0
     via_search_n_directions: int = 8
-    # Для anchor_sheet (см. ClonePlacement) — словарь {uuid: Sheetname}
-    # строится прямым парсингом *.kicad_sch (sexpdata, тот же формат, что
-    # уже читает cloner), НЕ через kipy — см. обсуждение: sheet_path.
-    # path_human_readable сломан в этой версии KiCad, а UUID из kipy
-    # (path[:-1]) эмпирически подтверждены совпадающими с uuid в
-    # (sheet ...) блоках .kicad_sch. schematic_dir — папка, где лежат
-    # все *.kicad_sch проекта (путь относительно самого YAML-конфига,
-    # как и templates_file); schematic_files — точечные добавки для
-    # листов "на отшибе", не лежащих в schematic_dir.
+    # For anchor_sheet (see ClonePlacement) — dict {uuid: Sheetname}
+    # built by directly parsing *.kicad_sch (sexpdata, same format as cloner),
+    # NOT through kipy — see discussion: sheet_path.path_human_readable is broken
+    # in this KiCad version, and UUID from kipy (path[:-1]) empirically matches
+    # the sheet UUIDs in .kicad_sch. schematic_dir — folder containing all
+    # *.kicad_sch of the project (path relative to the YAML config itself,
+    # like templates_file); schematic_files — extra files for sheets outside
+    # schematic_dir.
     schematic_dir: Optional[str] = None
     schematic_files: List[str] = field(default_factory=list)
-    # Явный override пути к файлам реестра — по умолчанию выводится из
-    # имени САМОГО конфига (registry_path_for_config), что рвётся при
-    # переименовании конфига (реестр молча переезжает на новый путь).
-    # Пути — относительно самого этого YAML, как и templates_file.
+    # Explicit override for registry file paths — by default they are derived
+    # from the CONFIG file name itself (registry_path_for_config), which changes
+    # when the config is renamed. Paths are relative to this YAML, like templates_file.
     registry_path: Optional[str] = None
     track_registry_path: Optional[str] = None
-    # Путь к лог-файлу для `apply` этого конфига (относительно самого YAML,
-    # как и registry_path) — удобно, чтобы не передавать --log-file руками
-    # каждый раз для одного и того же профиля платы. CLI-флаг --log-file,
-    # если указан, ИМЕЕТ ПРИОРИТЕТ над этим полем (см. main() в
-    # kicadspoke_cli.py).
+    # Path to log file for `apply` of this config (relative to this YAML,
+    # like registry_path) — useful to avoid passing --log-file manually each time
+    # for the same board profile. CLI flag --log-file, if given, TAKES PRIORITY
+    # over this field (see main() in kicadspoke_cli.py).
     log_file: Optional[str] = None
-    # Вычисляется в load_config из schematic_dir/schematic_files — НЕ
-    # читается из YAML напрямую. {uuid: Sheetname}, пусто если ни
-    # schematic_dir, ни schematic_files не заданы (и anchor_sheet тогда
-    # использовать нельзя — см. фатал в validation.py).
+    # Computed in load_config from schematic_dir/schematic_files — NOT read from
+    # YAML directly. {uuid: Sheetname}, empty if neither schematic_dir nor
+    # schematic_files are set (and anchor_sheet cannot be used then — fatal in
+    # validation.py).
     sheet_names: Dict[str, str] = field(default_factory=dict)
 
     @property
     def anchor_refs(self) -> set:
-        """Все якорные ref конфига: правила спиц + термовиа."""
+        """All anchor refs in the config: spoke rules + thermal via array."""
         out = {r.anchor_ref for r in self.rules if r.anchor_ref}
         if self.thermal_via_array.enabled and self.thermal_via_array.anchor_ref:
             out.add(self.thermal_via_array.anchor_ref)

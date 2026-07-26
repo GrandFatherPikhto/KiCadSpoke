@@ -56,7 +56,7 @@ def test_clone_placements_loaded_with_all_fields(tmp_path):
     assert cp1.enabled is True
 
     cp2 = cfg.clone_placements[1]
-    assert cp2.rotation_deg == 0.0  # дефолт, не указан в YAML
+    assert cp2.rotation_deg == 0.0
     assert cp2.net_overrides == {"/STM32F4xx/BOOT0": "/STM32F4xx_2/BOOT0"}
 
 
@@ -67,9 +67,9 @@ def test_no_clone_placements_gives_empty_list(tmp_path):
     assert cfg.clone_placements == []
 
 
-# ---------- Новые тесты на поля ClonePlacement ----------
+# ---------- New tests for ClonePlacement fields ----------
 def test_anchor_ref_without_origin(tmp_path):
-    """Якорный режим: указываем anchor_ref, origin_x/y становятся опциональным сдвигом."""
+    """Anchor mode: anchor_ref set, origin_x/y become optional shift."""
     yaml_content = """
 templates:
   t:
@@ -90,8 +90,7 @@ clone_placements:
     assert cp.anchor_pad == "17"
     assert cp.origin_x_mm == 2.5
     assert cp.origin_y_mm == 3.7
-    # origin_x/y обязательны? Нет, они опциональны, но если не указаны, будут 0.0 по умолчанию.
-    # Проверим случай без origin_x/y:
+
 
 def test_anchor_ref_without_origin_uses_default_zero(tmp_path):
     yaml_content = """
@@ -112,7 +111,7 @@ clone_placements:
 
 
 def test_anchor_role_with_anchor_sheet(tmp_path):
-    """Якорь по роли + сужение по листу."""
+    """Anchor by role + sheet narrowing."""
     yaml_content = """
 templates:
   t:
@@ -135,8 +134,27 @@ clone_placements:
     assert cp.origin_y_mm == 0.0
 
 
+def test_anchor_cluster(tmp_path):
+    """Anchor cluster field."""
+    yaml_content = """
+templates:
+  t:
+    components: []
+clone_placements:
+  - name: with_cluster
+    template: t
+    anchor_role: MCU
+    anchor_cluster: FPGA_PWR_BANK
+"""
+    config_file = tmp_path / "anchor_cluster.yaml"
+    config_file.write_text(yaml_content, encoding="utf-8")
+    cfg = load_config(str(config_file))
+    cp = cfg.clone_placements[0]
+    assert cp.anchor_cluster == "FPGA_PWR_BANK"
+
+
 def test_layer_and_mirror(tmp_path):
-    """Слой и зеркало."""
+    """Layer and mirror."""
     yaml_content = """
 templates:
   t:
@@ -159,7 +177,7 @@ clone_placements:
 
 
 def test_nets_and_refs(tmp_path):
-    """Явные nets и refs."""
+    """Explicit nets and refs."""
     yaml_content = """
 templates:
   t:
@@ -186,7 +204,7 @@ clone_placements:
 
 
 def test_by_selection_flag(tmp_path):
-    """Явный режим 'по выделению'."""
+    """Explicit 'by selection' mode."""
     yaml_content = """
 templates:
   t:
@@ -206,7 +224,7 @@ clone_placements:
 
 
 def test_by_selection_and_nets_conflict_raises(tmp_path):
-    """by_selection: true + nets должны вызвать ValidationError."""
+    """by_selection: true + nets should raise ValidationError (message in English)."""
     yaml_content = """
 templates:
   t:
@@ -223,12 +241,12 @@ clone_placements:
 """
     config_file = tmp_path / "conflict.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    with pytest.raises(ValidationError, match="by_selection.*nets"):
+    with pytest.raises(ValidationError, match="by_selection.*true.*nets"):
         load_config(str(config_file))
 
 
 def test_anchor_ref_and_anchor_role_together_raises(tmp_path):
-    """Взаимоисключающие anchor_ref и anchor_role."""
+    """Mutually exclusive anchor_ref and anchor_role."""
     yaml_content = """
 templates:
   t:
@@ -246,7 +264,7 @@ clone_placements:
 
 
 def test_anchor_sheet_without_anchor_role_raises(tmp_path):
-    """anchor_sheet без anchor_role недопустим."""
+    """anchor_sheet without anchor_role is invalid."""
     yaml_content = """
 templates:
   t:
@@ -258,12 +276,12 @@ clone_placements:
 """
     config_file = tmp_path / "sheet_no_role.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    with pytest.raises(ValidationError, match="anchor_sheet без anchor_role"):
+    with pytest.raises(ValidationError, match="anchor_sheet.*anchor_role"):
         load_config(str(config_file))
 
 
 def test_anchor_pad_without_anchor_ref_or_role_raises(tmp_path):
-    """anchor_pad требует anchor_ref или anchor_role."""
+    """anchor_pad requires anchor_ref or anchor_role."""
     yaml_content = """
 templates:
   t:
@@ -275,12 +293,12 @@ clone_placements:
 """
     config_file = tmp_path / "pad_no_anchor.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    with pytest.raises(ValidationError, match="anchor_pad без anchor_ref/anchor_role"):
+    with pytest.raises(ValidationError, match="anchor_pad.*anchor_ref.*anchor_role"):
         load_config(str(config_file))
 
 
 def test_no_anchor_and_no_origin_raises(tmp_path):
-    """Если нет якоря, должны быть origin_x/y."""
+    """If no anchor, origin_x/y must be provided."""
     yaml_content = """
 templates:
   t:
@@ -291,5 +309,58 @@ clone_placements:
 """
     config_file = tmp_path / "no_anchor_no_origin.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    with pytest.raises(ValidationError, match="нет ни якоря, ни абсолютных координат"):
+    with pytest.raises(ValidationError, match="no anchor.*absolute coordinates"):
+        load_config(str(config_file))
+
+
+def test_role_without_template(tmp_path):
+    """Single-component placement using 'role' field instead of template."""
+    yaml_content = """
+templates:
+  t:
+    components: []
+clone_placements:
+  - name: single_role
+    role: LED
+    origin_x_mm: 10.0
+    origin_y_mm: 20.0
+"""
+    config_file = tmp_path / "role_only.yaml"
+    config_file.write_text(yaml_content, encoding="utf-8")
+    cfg = load_config(str(config_file))
+    cp = cfg.clone_placements[0]
+    assert cp.role == "LED"
+    assert cp.template is None
+    assert cp.origin_x_mm == 10.0
+    assert cp.origin_y_mm == 20.0
+
+
+def test_template_and_role_together_raises(tmp_path):
+    """template and role are mutually exclusive."""
+    yaml_content = """
+templates:
+  t:
+    components: []
+clone_placements:
+  - name: both_content
+    template: t
+    role: LED
+"""
+    config_file = tmp_path / "both_content.yaml"
+    config_file.write_text(yaml_content, encoding="utf-8")
+    with pytest.raises(ValidationError, match="template.*role"):
+        load_config(str(config_file))
+
+
+def test_neither_template_nor_role_raises(tmp_path):
+    """At least one of template or role is required."""
+    yaml_content = """
+clone_placements:
+  - name: no_content
+    origin_x_mm: 0
+    origin_y_mm: 0
+"""
+    config_file = tmp_path / "no_content.yaml"
+    config_file.write_text(yaml_content, encoding="utf-8")
+    with pytest.raises(ValidationError, match="neither template nor role"):
         load_config(str(config_file))

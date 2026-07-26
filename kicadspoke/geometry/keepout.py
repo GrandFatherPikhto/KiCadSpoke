@@ -5,24 +5,27 @@ from typing import List, Tuple, Optional
 from kipy.geometry import Vector2
 
 """
-* Класс Rect — AABB-прямоугольник, используется для представления зон занятости (keepout).
-* from_bbox — строит Rect из Box2, полученного от адаптера, с запасом clearance.
-* from_circle — аппроксимирует окружность квадратом (для via).
-* intersects — проверка пересечения двух Rect.
-* point_is_clear — проверяет, свободна ли точка (не пересекает ли окружность via с радиусом via_radius ни один keepout-прямоугольник).
-* build_keepout — принимает список bounding box'ов и строит список Rect с запасом clearance_mm (используется для создания keepout-областей из существующих компонентов и via).
-* find_free_point — ищет свободную точку вокруг идеальной позиции ideal, расширяясь по спирали. Учитывает предпочтительное направление (preferred_direction). Используется для поиска места для via, чтобы избежать коллизий.
+* Rect class — AABB rectangle, used to represent keepout zones.
+* from_bbox — constructs a Rect from a Box2 obtained from the adapter, with clearance margin.
+* from_circle — approximates a circle as a square (for vias).
+* intersects — checks overlap of two Rects.
+* point_is_clear — checks whether a point is free (the via circle of radius via_radius
+  does not intersect any keepout rectangle).
+* build_keepout — takes a list of bounding boxes and builds a list of Rects with clearance_mm
+  (used to create keepout areas from existing components and vias).
+* find_free_point — searches for a free point around the ideal position, expanding in rings.
+  Respects a preferred direction. Used to place vias while avoiding collisions.
 """
 
 class Rect:
-    """Простой AABB-прямоугольник в координатах платы (нм)."""
+    """Simple AABB rectangle in board coordinates (nm)."""
 
     def __init__(self, min_x: float, min_y: float, max_x: float, max_y: float):
         self.min_x, self.min_y, self.max_x, self.max_y = min_x, min_y, max_x, max_y
 
     @classmethod
     def from_bbox(cls, bbox, clearance: int = 0) -> "Rect":
-        """Строит Rect из Box2 (см. adapter.get_bounding_boxes), с запасом clearance с каждой стороны."""
+        """Builds a Rect from a Box2 (see adapter.get_bounding_boxes), with clearance on each side."""
         return cls(
             bbox.pos.x - clearance, bbox.pos.y - clearance,
             bbox.pos.x + bbox.size.x + clearance, bbox.pos.y + bbox.size.y + clearance,
@@ -30,8 +33,8 @@ class Rect:
 
     @classmethod
     def from_circle(cls, center: Vector2, radius: float) -> "Rect":
-        """Грубое (но простое и быстрое) приближение окружности квадратом — для
-        via с её малым диаметром этого достаточно, не нужен точный circle-vs-rect тест."""
+        """Rough (but simple and fast) square approximation of a circle — for vias
+        with their small diameter this is sufficient; no exact circle‑vs‑rect test needed."""
         return cls(center.x - radius, center.y - radius, center.x + radius, center.y + radius)
 
     def intersects(self, other: "Rect") -> bool:
@@ -43,17 +46,16 @@ class Rect:
 
 
 def point_is_clear(point: Vector2, via_radius: float, keepout: List[Rect]) -> bool:
-    """True, если окружность via_radius вокруг point не пересекает ни один keepout-прямоугольник."""
+    """True if the via circle of radius via_radius around point does not intersect any keepout rectangle."""
     via_box = Rect.from_circle(point, via_radius)
     return not any(via_box.intersects(r) for r in keepout)
 
 
 def build_keepout(bboxes, clearance_mm: float, mm_per_unit: int = 1_000_000) -> List[Rect]:
     """
-    Строит список Rect из bounding box'ов (см. adapter.get_bounding_boxes),
-    с запасом clearance_mm с каждой стороны. None-элементы (bbox
-    недоступен для конкретного пада/футпринта) молча пропускаются —
-    вызывающий код может залогировать это отдельно, если нужно.
+    Builds a list of Rects from bounding boxes (see adapter.get_bounding_boxes),
+    with clearance_mm on each side. None elements (bbox unavailable for a particular
+    pad/footprint) are silently skipped — calling code may log this separately if needed.
     """
     clearance = int(clearance_mm * mm_per_unit)
     rects = []
@@ -75,20 +77,17 @@ def find_free_point(
     n_directions: int = 8,
 ) -> Optional[Vector2]:
     """
-    Ищет ближайшую к ideal свободную точку (не задевающую keepout)
-    расширяющимися кольцами: сначала сама ideal, затем кольцо радиусом
-    step_mm, 2*step_mm, ... до max_radius_mm.
+    Searches for the nearest free point (not intersecting keepout) around ideal
+    in expanding rings: first ideal itself, then rings of radius step_mm, 2*step_mm,
+    ... up to max_radius_mm.
 
-    На каждом кольце сперва пробуется preferred_direction (если задано —
-    например, "в сторону центра зоны" для GND-виа по умолчанию), затем
-    n_directions точек равномерно по кругу. Первая подошедшая точка
-    возвращается сразу — не обязательно глобально ближайшая, но
-    гарантированно в пределах текущего (самого маленького из пройденных)
-    кольца.
+    On each ring, it first tries preferred_direction (if set — e.g. "towards the
+    zone centre" for default GND vias), then n_directions points evenly around the
+    circle. The first matching point is returned immediately — not necessarily the
+    globally nearest, but guaranteed to be within the current (smallest checked) ring.
 
-    Возвращает None, если свободного места не нашлось в пределах
-    max_radius_mm — вызывающий код должен считать это предупреждением/
-    ошибкой, а не пытаться поставить виа как попало.
+    Returns None if no free spot is found within max_radius_mm — calling code should
+    treat this as a warning/error, not try to place the via arbitrarily.
     """
     step = step_mm * mm_per_unit
     max_radius = max_radius_mm * mm_per_unit
@@ -129,19 +128,19 @@ def find_free_point_along_line(
     mm_per_unit: int = 1_000_000,
 ) -> Optional[Vector2]:
     """
-    Ищет свободную точку вдоль прямой, проходящей через ideal,
-    с направлением line_direction (единичный вектор).
-    Сначала проверяет ideal, затем отступает в обе стороны с шагом step_mm.
-    Возвращает первую найденную свободную точку или None.
+    Searches for a free point along a straight line through ideal,
+    with direction line_direction (unit vector).
+    First checks ideal, then steps out in both directions with step_mm.
+    Returns the first free point found, or None.
     """
-    step = int(step_mm * mm_per_unit)          # преобразуем в целое
-    max_radius = int(max_radius_mm * mm_per_unit)  # преобразуем в целое
+    step = int(step_mm * mm_per_unit)
+    max_radius = int(max_radius_mm * mm_per_unit)
     dx, dy = line_direction
 
     if point_is_clear(ideal, via_radius, keepout):
         return ideal
 
-    # Проверяем в обе стороны
+    # Check both directions
     for sign in (1, -1):
         r = step
         while r <= max_radius:

@@ -1,9 +1,9 @@
 # kicadspoke/cloner/extract.py
 """
-extract-channel: снимок канала в YAML — компоненты с позициями, дорожки,
-виа, карта близнецов и сводка. Это «глаза» клонера: до всякой записи
-видно, что именно будет клонироваться и что останется за бортом
-(foreign-медь глобальных цепей в границах канала).
+extract-channel: snapshot of a channel in YAML — components with positions,
+tracks, vias, twin map, and summary. This is the cloner's "eyes": before any
+recording it shows exactly what will be cloned and what will be left behind
+(foreign copper of global nets inside the channel bounds).
 """
 
 import logging
@@ -14,6 +14,7 @@ import yaml
 from .netlist import parse_netlist, build_twin_map
 from .pcb import PcbDocument
 from .models import TwinMap, ChannelPcbSnapshot
+from ..i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +73,8 @@ def snapshot_to_dict(snap: ChannelPcbSnapshot, twin: TwinMap) -> Dict[str, Any]:
 
     if snap.foreign_segments or snap.foreign_vias:
         d['foreign_in_bbox'] = {
-            'note': 'медь ГЛОБАЛЬНЫХ цепей в границах канала: в клон не входит, '
-                    'подключение каналов к общим рельсам делается осознанно',
+            'note': _("Copper of GLOBAL nets inside the channel bounds: not included in the clone; "
+                      "channel connections to common rails are made deliberately."),
             'segment_nets': sorted({s.net_name for s in snap.foreign_segments}),
             'via_nets': sorted({v.net_name for v in snap.foreign_vias}),
         }
@@ -85,7 +86,8 @@ def extract_channel(net_path: str, pcb_path: str, channel: str,
     comps, local_by_ch, _ = parse_netlist(net_path)
     twin = build_twin_map(comps, local_by_ch)
     if channel not in twin.channels:
-        raise ValueError(f"канал {channel!r} не найден; есть: {sorted(twin.channels)}")
+        raise ValueError(_("Channel {channel!r} not found; available: {avail}")
+                         .format(channel=channel, avail=sorted(twin.channels)))
 
     doc = PcbDocument(pcb_path)
     snap = doc.snapshot_channel(channel, twin.channels[channel].sheet_uuid)
@@ -93,5 +95,5 @@ def extract_channel(net_path: str, pcb_path: str, channel: str,
 
     with open(output_yaml, 'w', encoding='utf-8') as f:
         yaml.safe_dump(d, f, allow_unicode=True, sort_keys=False, width=100)
-    logger.info(f"снимок {channel} записан: {output_yaml}")
+    logger.info(_("Snapshot of {channel} written: {output}").format(channel=channel, output=output_yaml))
     return d

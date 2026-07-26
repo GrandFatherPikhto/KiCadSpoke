@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """
-Интеграционный тест реестра расстановки целиком: ManualPositionCalculator
-(генерирует registry_key) -> PlacementRegistry.reconcile() -> исполнение.
-Четыре последовательных "прогона" на одном и том же (моковом) состоянии
-реестра между вызовами -- имитация повторного запуска инструмента.
+Integration test for the placement registry end‑to‑end: ManualPositionCalculator
+(generates registry_key) -> PlacementRegistry.reconcile() -> execution.
+Four sequential "runs" on the same (mocked) registry state between calls —
+simulating repeated tool launches.
 
-ВАЖНО: с тех пор, как reconcile() стал проверять существование via по
-ЖИВОЙ плате (adapter.get_vias()), а не слепо доверять JSON — мок должен
-отражать реальное состояние "платы" между прогонами: если прогон создал
-via с uuid X, следующий прогон должен увидеть эту via через get_vias(),
-иначе reconcile() (правильно!) сочтёт её протухшей и пересоздаст. Раньше
-этот тест мокал get_vias() пустым списком навсегда и полагался на старое
-(уже не существующее) поведение "доверяй JSON" — падал молча в новой
-архитектуре, пока не прогнали тесты и не заметили.
+IMPORTANT: since reconcile() started checking via existence on the LIVE board
+(adapter.get_vias()) instead of blindly trusting the JSON — the mock must
+reflect the real "board" state between runs: if a run created a via with UUID X,
+the next run must see that via in get_vias(), otherwise reconcile() (correctly!)
+treats it as stale and recreates it. Previously this test mocked get_vias() as
+always empty and relied on the old (now non‑existent) "trust JSON" behaviour —
+silently failing under the new architecture until the tests were run and noticed.
 """
 import sys
 import tempfile
@@ -44,7 +43,7 @@ def _make_pad(number, x_mm, y_mm, net_name):
 
 
 def _make_live_via(uuid_str, x_mm, y_mm, net_name, drill_mm, diameter_mm):
-    """Живая via на "плате" — ровно те поля, что сверяет PlacementRegistry._live_matches."""
+    """Live via on the "board" — exactly the fields that PlacementRegistry._live_matches checks."""
     via = MagicMock()
     via.id.value = uuid_str
     via.position = Vector2.from_xy(int(x_mm * MM), int(y_mm * MM))
@@ -76,8 +75,8 @@ def test_registry_full_cycle_across_two_runs():
     ic1 = MagicMock()
     ic1.definition.items = [_make_pad("17", 50.0, 50.0, "+3V3")]
 
-    # Живые via "на плате" — мутируемый список, отражающий состояние между
-    # прогонами (создание/удаление). adapter.get_vias() всегда читает ЕГО.
+    # Live vias "on the board" — a mutable list reflecting the state between
+    # runs (creation/deletion). adapter.get_vias() always reads THIS list.
     live_vias = []
 
     adapter = MagicMock()
@@ -85,7 +84,7 @@ def test_registry_full_cycle_across_two_runs():
     adapter.get_pad_by_number.side_effect = lambda fp, num: next(
         (p for p in fp.definition.items if p.number == num), None
     )
-    adapter.get_footprints.return_value = []  # нет компонентов -- только via уровня спицы
+    adapter.get_footprints.return_value = []  # no components -- only spoke‑level vias
     adapter.get_vias.side_effect = lambda: list(live_vias)
 
     def _remove_by_id(uuid_str):
@@ -93,7 +92,7 @@ def test_registry_full_cycle_across_two_runs():
         return True
     adapter.remove_by_id.side_effect = _remove_by_id
 
-    # --- Прогон 1: чистый реестр, via должна быть создана ---
+    # --- Run 1: clean registry, via must be created ---
     cfg1 = _build_cfg(power_via_offset_across=-1.5)
     calc1 = ManualPositionCalculator(adapter, cfg1)
     _, vias1, _ = calc1.compute_raw_positions(cfg1.rules)
@@ -106,22 +105,21 @@ def test_registry_full_cycle_across_two_runs():
     to_create1 = reg1.reconcile(vias1)
     assert len(to_create1) == 1
     reg1.record_created(vias1[0], "uuid-abc")
-    # Симулируем реальное создание via на плате -- иначе следующий прогон
-    # (по новой, живой-плата-как-источник-истины логике) увидит "нет на
-    # плате" и честно пересоздаст, как и должен.
+    # Simulate real via creation on the board -- otherwise the next run
+    # (with the new live‑board‑as‑source‑of‑truth logic) will see "not on board"
+    # and honestly recreate it, as it should.
     live_vias.append(_make_live_via("uuid-abc", 50.0, 48.5, "+3V3", 0.3, 0.6))
 
-    # --- Прогон 2: тот же конфиг, тот же реестр, via реально стоит -- ничего создавать не нужно ---
+    # --- Run 2: same config, same registry, via is really placed -- nothing to create ---
     calc2 = ManualPositionCalculator(adapter, cfg1)
     _, vias2, _ = calc2.compute_raw_positions(cfg1.rules)
     reg2 = PlacementRegistry(adapter, reg_path)
     to_create2 = reg2.reconcile(vias2)
-    assert len(to_create2) == 0, "конфиг не менялся, via реально стоит -- пересоздавать не нужно"
+    assert len(to_create2) == 0, "config unchanged, via is really placed -- no need to recreate"
     adapter.remove_by_id.assert_not_called()
 
-    # --- Прогон 3: пользователь поменял offset_across_mm -- старая via
-    # должна быть удалена по uuid, новая помечена к созданию ---
-    cfg3 = _build_cfg(power_via_offset_across=-3.0)  # другое значение!
+    # --- Run 3: user changed offset_across_mm -- old via must be deleted by UUID, new one marked for creation ---
+    cfg3 = _build_cfg(power_via_offset_across=-3.0)  # different value!
     calc3 = ManualPositionCalculator(adapter, cfg3)
     _, vias3, _ = calc3.compute_raw_positions(cfg3.rules)
     reg3 = PlacementRegistry(adapter, reg_path)
@@ -131,10 +129,8 @@ def test_registry_full_cycle_across_two_runs():
     reg3.record_created(vias3[0], "uuid-def")
     live_vias.append(_make_live_via("uuid-def", 50.0, 47.0, "+3V3", 0.3, 0.6))
 
-    # --- Прогон 4: спицу убрали из конфига вовсе -- prune должен удалить via ---
-    adapter.reset_mock(side_effect=False)  # reset_mock(side_effect=False) сохраняет
-                                           # side_effect у get_vias/remove_by_id,
-                                           # сбрасывает только счётчики вызовов
+    # --- Run 4: spoke removed from config entirely -- prune must delete the via ---
+    adapter.reset_mock()  # resets call counts, keeps side_effect and return_value
     cfg4 = Config(
         layer='B.Cu', templates={},
         thermal_via_array=ThermalViaArrayConfig(enabled=False), rules=[],
@@ -145,6 +141,5 @@ def test_registry_full_cycle_across_two_runs():
     reg4 = PlacementRegistry(adapter, reg_path)
     to_create4 = reg4.reconcile(vias4)
     assert to_create4 == []
-    adapter.remove_by_id.assert_called_once_with("uuid-def")  # protнутая prune'ится
-    assert live_vias == [], "prune должен был реально удалить via со \"платы\""
-    adapter.remove_by_id.assert_called_once_with("uuid-def")
+    adapter.remove_by_id.assert_called_once_with("uuid-def")  # stale via is pruned
+    assert live_vias == [], "prune must have actually deleted the via from the 'board'"

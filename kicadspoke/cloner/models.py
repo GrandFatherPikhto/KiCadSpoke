@@ -1,8 +1,8 @@
 # kicadspoke/cloner/models.py
 """
-Модели клонера каналов. Всё файловое: источник истины — .kicad_pcb /
-.kicad_sch / .net, никакого IPC (см. issue #24966 и почему запись через
-API — рулетка). Координаты — мм, как везде в проекте.
+Channel cloner models. All file‑based: source of truth is .kicad_pcb /
+.kicad_sch / .net, no IPC (see issue #24966 and why writing through the API
+is a gamble). Coordinates are in mm, as everywhere in the project.
 """
 
 from dataclasses import dataclass, field
@@ -11,13 +11,13 @@ from typing import Dict, List, Optional
 
 @dataclass
 class NetlistComponent:
-    """Компонент из нетлиста с иерархическим адресом."""
+    """Component from the netlist with hierarchical addressing."""
     ref: str
     value: str
     footprint: str
     sheet_names: str      # "/Channel_0/DAC Sheet/"
-    sheet_tstamps: str    # "/uuid-канала/uuid-подлиста/"
-    uuid: str             # внутрисхемный uuid символа (хвост tstamps компонента)
+    sheet_tstamps: str    # "/channel-uuid/sublist-uuid/"
+    uuid: str             # in‑schematic uuid of the symbol (tail of tstamps)
 
     @property
     def channel(self) -> Optional[str]:
@@ -26,21 +26,21 @@ class NetlistComponent:
 
     @property
     def inner_path(self) -> str:
-        """Путь внутри канала — общий у близнецов всех каналов."""
+        """Path inside the channel — common to twins of all channels."""
         parts = self.sheet_names.strip("/").split("/")
         return "/" + "/".join(parts[1:]) if len(parts) > 1 else "/"
 
     @property
     def inner_key(self) -> str:
-        """Ключ близнецов: внутриканальный путь + uuid символа в шаблоне листа."""
+        """Twin key: inner path + symbol uuid from the sheet template."""
         return f"{self.inner_path}#{self.uuid}"
 
 
 @dataclass
 class ChannelInfo:
-    """Экземпляр канала: имя, uuid листа в корневой схеме, файл шаблона."""
+    """Channel instance: name, root sheet uuid, template file."""
     name: str             # "Channel_0"
-    sheet_uuid: str       # первый сегмент sheet_tstamps
+    sheet_uuid: str       # first segment of sheet_tstamps
     components: Dict[str, NetlistComponent] = field(default_factory=dict)  # inner_key -> comp
     local_nets: List[str] = field(default_factory=list)
 
@@ -48,7 +48,7 @@ class ChannelInfo:
 @dataclass
 class TwinMap:
     """
-    Соответствие компонентов и цепей между каналами.
+    Component and net mapping between channels.
     components[inner_key][channel_name] -> ref
     """
     channels: Dict[str, ChannelInfo]
@@ -61,7 +61,7 @@ class TwinMap:
         return None
 
     def twin_net(self, net: str, src_ch: str, dst_ch: str) -> str:
-        """Локальная цепь -> цепь близнеца; глобальная возвращается как есть."""
+        """Local net → twin net; global nets are returned as‑is."""
         prefix = f"/{src_ch}/"
         if net.startswith(prefix):
             return f"/{dst_ch}/" + net[len(prefix):]
@@ -112,14 +112,14 @@ class PcbVia:
 
 @dataclass
 class ChannelPcbSnapshot:
-    """Снимок канала на плате: то, что будет клонироваться."""
+    """Snapshot of a channel on the board: what will be cloned."""
     channel: str
     channel_uuid: str
     footprints: List[PcbFootprint] = field(default_factory=list)
     segments: List[PcbSegment] = field(default_factory=list)
     vias: List[PcbVia] = field(default_factory=list)
-    # Глобальные (не-канальные) сегменты/виа внутри bbox канала — кандидаты
-    # на ручное решение (GND-прошивка и т.п.), в клон v1 не входят:
+    # Global (non‑channel) segments/vias inside the channel bbox — candidates
+    # for manual resolution (GND stitching, etc.), not included in clone v1:
     foreign_segments: List[PcbSegment] = field(default_factory=list)
     foreign_vias: List[PcbVia] = field(default_factory=list)
 

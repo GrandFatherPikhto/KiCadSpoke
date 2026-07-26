@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Тесты на закрытие дыры: несколько ClonePlacement в режиме "по выделению"
-в одном прогоне — физически невозможно (в KiCad одно выделение сразу).
+Tests for closing a gap: multiple ClonePlacement in "by selection" mode
+in one run — physically impossible (KiCad has only one active selection at a time).
 """
 import sys
 from pathlib import Path
@@ -37,18 +37,18 @@ class TestCloneUsesSelectionMode:
         assert clone_uses_selection_mode(c) is False
 
     def test_by_selection_explicit_true_overrides_nets(self):
-        """Явный by_selection: true должен считать режим выделения, даже если nets непуст."""
+        """Explicit by_selection: true forces selection mode even if nets are non‑empty."""
         c = ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0,
                            nets={"X": "GND"}, by_selection=True)
         assert clone_uses_selection_mode(c) is True
 
     def test_by_selection_false_with_empty_nets_and_params_implicit_selection(self):
-        """by_selection: false при пустых nets/params — всё равно режим выделения (старое поведение)."""
+        """by_selection: false with empty nets/params — still selection mode (old behaviour)."""
         c = ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0, by_selection=False)
         assert clone_uses_selection_mode(c) is True
 
     def test_anchor_role_does_not_affect_selection_mode(self):
-        """Наличие anchor_role не меняет режим, он определяется nets/params/by_selection."""
+        """anchor_role does not change the mode; it is determined by nets/params/by_selection."""
         c = ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0,
                            anchor_role="SOME_ROLE")
         assert clone_uses_selection_mode(c) is True
@@ -95,19 +95,19 @@ class TestCheckSingleSelectionBasedClone:
             check_single_selection_based_clone(cfg)
 
     def test_by_selection_true_with_nets_counts_as_selection_based(self):
-        """Даже если есть nets, by_selection: true заставляет считать режим выделения."""
+        """Even with nets, by_selection: true makes it count as selection‑based."""
         cfg = _cfg([
             ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0, nets={"X": "GND"}, by_selection=True),
             ClonePlacement(name="b", template="t", origin_x_mm=0, origin_y_mm=0, nets={"Y": "GND"}),
         ])
-        # a - selection-based (by_selection), b - nets-based => конфликта нет
+        # a is selection‑based (by_selection), b is nets‑based => no conflict
         check_single_selection_based_clone(cfg)
 
         cfg2 = _cfg([
             ClonePlacement(name="a", template="t", origin_x_mm=0, origin_y_mm=0, by_selection=True),
             ClonePlacement(name="b", template="t", origin_x_mm=0, origin_y_mm=0, by_selection=True),
         ])
-        # два с by_selection => фатал
+        # two with by_selection => fatal
         with pytest.raises(ValidationError):
             check_single_selection_based_clone(cfg2)
 
@@ -125,4 +125,4 @@ class TestCheckCloneTemplatesExist:
     def test_disabled_clone_missing_template_not_checked(self):
         cfg = _cfg([ClonePlacement(name="a", template="does_not_exist", origin_x_mm=0, origin_y_mm=0,
                                    enabled=False)])
-        check_clone_templates_exist(cfg)  # не должно бросить -- выключена
+        check_clone_templates_exist(cfg)  # should not raise – disabled

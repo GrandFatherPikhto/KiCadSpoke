@@ -1,3 +1,4 @@
+# kicadspoke/placement/executor/track_executor.py
 import logging
 from typing import List, Tuple, Dict, Optional
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
@@ -5,6 +6,7 @@ from ...config import Config
 from ..commands import TrackCommand
 from ...registry import TrackRegistry
 from ...utils.units import MM
+from ...i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ class TrackExecutor:
         created_track_log = []
 
         track_batches = [tracks[i:i+self.batch_size] for i in range(0, len(tracks), self.batch_size)]
-        logger.info(f"Создание треков в {len(track_batches)} батчах")
+        logger.info(_("Creating tracks in {count} batches").format(count=len(track_batches)))
         for idx, batch in enumerate(track_batches, 1):
             def work(batch=batch):
                 new_tracks = []
@@ -28,7 +30,8 @@ class TrackExecutor:
                 for cmd in batch:
                     net = self.adapter.get_net_by_name(cmd.net_name)
                     if net is None:
-                        logger.warning(f"  цепь {cmd.net_name} не найдена для трека у {cmd.owner_ref}")
+                        logger.warning(_("  net {net} not found for track for {owner}")
+                                       .format(net=cmd.net_name, owner=cmd.owner_ref))
                         continue
                     track = self.adapter.create_track(cmd.start, cmd.end, cmd.width_mm, net, cmd.layer)
                     new_tracks.append(track)
@@ -49,12 +52,12 @@ class TrackExecutor:
                         })
                         if registry is not None:
                             registry.record_created(cmd, uuid_str)
-                    logger.debug(f"  создано {len(created)} треков")
-            ok = self.adapter.commit_with_retry(f"Track batch {idx}/{len(track_batches)}", work)
+                    logger.debug(_("  created {count} tracks").format(count=len(created)))
+            ok = self.adapter.commit_with_retry(_("Track batch {idx}/{total}").format(idx=idx, total=len(track_batches)), work)
             if not ok:
                 failed_track_owners.extend(cmd.owner_ref for cmd in batch)
-                logger.error(f"  батч треков {idx} провалился")
+                logger.error(_("  track batch {idx} failed").format(idx=idx))
             else:
-                logger.info(f"  батч треков {idx} выполнен ({len(batch)} шт.)")
+                logger.info(_("  track batch {idx} completed ({count} items)").format(idx=idx, count=len(batch)))
 
         return failed_track_owners, created_track_log

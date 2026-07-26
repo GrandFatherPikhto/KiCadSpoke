@@ -2,30 +2,31 @@
 """
 kicadspoke/diagnostics/get_pad_bbox.py
 
-Диагностический скрипт для получения bounding box'а пада.
-Показывает реальные размеры, которые используются для построения keepout.
+Diagnostic script to get the bounding box of a pad.
+Shows the real dimensions used for keepout construction.
 """
 
 import sys
 from pathlib import Path
 
-# Добавляем корень проекта в sys.path
+# Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import argparse
 import logging
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.utils.units import MM
+from kicadspoke.i18n import _
 
 logger = logging.getLogger(__name__)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Получение bounding box пада")
-    parser.add_argument("--ref", default="IC1", help="Refdes целевого компонента")
-    parser.add_argument("--pad", help="Номер пада (если не указан, покажет все)")
-    parser.add_argument("--timeout", type=int, default=20000, help="Таймаут IPC")
-    parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
+    parser = argparse.ArgumentParser(description=_("Get bounding box of a pad"))
+    parser.add_argument("--ref", default="IC1", help=_("Refdes of the target component"))
+    parser.add_argument("--pad", help=_("Pad number (if not specified, show all)"))
+    parser.add_argument("--timeout", type=int, default=20000, help=_("IPC timeout in ms"))
+    parser.add_argument("--verbose", action="store_true", help=_("Verbose output"))
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -38,40 +39,42 @@ def main():
 
     fp = adapter.get_footprint(args.ref)
     if fp is None:
-        logger.error(f"Компонент {args.ref} не найден")
+        logger.error(_("Component {ref} not found").format(ref=args.ref))
         sys.exit(1)
 
     pads = adapter.get_footprint_pads(fp)
     if not pads:
-        logger.error(f"У {args.ref} нет падов")
+        logger.error(_("{ref} has no pads").format(ref=args.ref))
         sys.exit(1)
 
     if args.pad:
         pads = [p for p in pads if p.number == args.pad]
         if not pads:
-            logger.error(f"Пад {args.pad} не найден у {args.ref}")
+            logger.error(_("Pad {pad} not found on {ref}").format(pad=args.pad, ref=args.ref))
             sys.exit(1)
 
-    # Получаем bounding box'ы для всех падов одним запросом
+    # Get bounding boxes for all pads in one request
     bboxes = adapter.get_bounding_boxes(pads)
-    logger.info(f"Получено {len(bboxes)} bounding box'ов")
+    logger.info(_("Retrieved {count} bounding boxes").format(count=len(bboxes)))
 
     for pad, bbox in zip(pads, bboxes):
         if bbox is None:
-            logger.info(f"Пад {pad.number}: bbox отсутствует")
+            logger.info(_("Pad {num}: bounding box missing").format(num=pad.number))
             continue
         w = bbox.size.x / MM
         h = bbox.size.y / MM
-        logger.info(f"Пад {pad.number}: размер {w:.3f} x {h:.3f} мм, "
-                    f"позиция ({bbox.pos.x/MM:.3f}, {bbox.pos.y/MM:.3f}) мм")
+        logger.info(_("Pad {num}: size {w:.3f} x {h:.3f} mm, position ({x:.3f}, {y:.3f}) mm")
+                    .format(num=pad.number, w=w, h=h,
+                            x=bbox.pos.x/MM, y=bbox.pos.y/MM))
 
-    # Если нужен отдельный пад с более детальной информацией (включая медный слой)
+    # If a specific pad is requested, show more detailed information (copper layer)
     if args.pad:
         pad = pads[0]
         from kicadspoke.geometry.thermal_grid import get_pad_size
         size = get_pad_size(pad)
         if size:
-            logger.info(f"Медный слой пада {pad.number}: {size[0]/MM:.3f} x {size[1]/MM:.3f} мм")
+            logger.info(_("Copper layer of pad {num}: {w:.3f} x {h:.3f} mm")
+                        .format(num=pad.number, w=size[0]/MM, h=size[1]/MM))
 
 
 if __name__ == "__main__":

@@ -1,39 +1,39 @@
 # kicadspoke/net_resolution.py
 """
-net_resolution.py — трёхслойное разрешение имени цепи для клонируемых
-шаблонов (TemplatePlacer), по возрастанию частности:
+net_resolution.py — three‑layer net name resolution for cloned templates
+(TemplatePlacer), in order of increasing specificity:
 
-  1. Литерал ("GND") — как есть, если нет плейсхолдеров.
-  2. Плейсхолдер ("DAC{channel}_DB1") — подставляется из params
-     (str.format), один раз вписанный вручную в шаблон при извлечении/
-     редактировании — НЕ выводится автоматически по какому-либо
-     паттерну.
-  3. net_overrides — применяется ПОВЕРХ результата пп. 1-2, по итоговому
-     (уже подставленному) имени — для точечных исключений вроде
-     иерархических путей (/STM32F4xx/BOOT0), которые не укладываются
-     даже в параметризацию.
+  1. Literal ("GND") — as‑is, no placeholders.
+  2. Placeholder ("DAC{channel}_DB1") — substituted from params
+     (str.format), written manually into the template at extraction/
+     editing time — NOT automatically derived from any pattern.
+  3. net_overrides — applied ON TOP of the result of steps 1‑2, by the
+     resolved (already substituted) name — for point exceptions like
+     hierarchical paths (/STM32F4xx/BOOT0) that do not fit even into
+     parametrisation.
 
-Никакого автоматического угадывания нигде — оба механизма (params и
-net_overrides) требуют явной, руками вписанной настройки.
+No automatic guessing anywhere — both mechanisms (params and net_overrides)
+require explicit, hand‑written configuration.
 """
 from typing import Dict, Any
 from .exceptions import ValidationError, format_fatal_error
+from .i18n import _
 
 
 def resolve_net(net_template: str, params: Dict[str, Any], net_overrides: Dict[str, str]) -> str:
     """
-    net_template — имя цепи как записано в шаблоне (TemplateVia.net),
-    возможно с {placeholder}. params — значения для подстановки (из
-    ClonePlacement.params). net_overrides — точечная подмена итогового
-    имени (из ClonePlacement.net_overrides).
+    net_template — net name as written in the template (TemplateVia.net),
+    possibly with {placeholder}. params — substitution values (from
+    ClonePlacement.params). net_overrides — point override of the final name
+    (from ClonePlacement.net_overrides).
     """
     try:
         resolved = net_template.format(**params)
     except KeyError as e:
         raise ValidationError(format_fatal_error(
-            f"в цепи {net_template!r} есть плейсхолдер, для которого не задан параметр",
-            [f"не хватает параметра {e} — добавьте его в params этого clone_placements, "
-             f"или уберите плейсхолдер из шаблона"]
+            _("net {template!r} has a placeholder with no parameter").format(template=net_template),
+            [_("missing parameter {param} — add it to params of this clone_placement, "
+               "or remove the placeholder from the template").format(param=e)]
         ))
     return net_overrides.get(resolved, resolved)
 
@@ -41,21 +41,20 @@ def resolve_net(net_template: str, params: Dict[str, Any], net_overrides: Dict[s
 def parametrize_net(literal_net: str, net_template_map: Dict[str, str],
                      params: Dict[str, Any]) -> str:
     """
-    Обратная операция к resolve_net — для extract, не для apply.
+    Reverse operation of resolve_net — for extract, not for apply.
 
-    literal_net — реальное имя цепи, снятое с платы (v.net.name).
-    net_template_map — явная, руками написанная карта литерал->паттерн
-    (напр. {"DAC1_DB1": "DAC{channel}_DB1"}), задаётся один раз при
-    extract через --net-template. params — те же params, которыми потом
-    будет резолвиться этот же паттерн при apply (передаются при extract
-    через --param только для проверки, в шаблон НЕ пишутся).
+    literal_net — real net name read from the board (v.net.name).
+    net_template_map — explicit, hand‑written mapping literal->pattern
+    (e.g. {"DAC1_DB1": "DAC{channel}_DB1"}), set once at extract time via
+    --net-template. params — the same params that will later resolve the pattern
+    at apply time (passed to extract via --param only for verification, NOT
+    written to the template).
 
-    НИКАКОГО угадывания позиции плейсхолдера по подстроке — паттерн
-    полностью пишет человек. Единственное, что делает эта функция —
-    проверяет, что написанный паттерн при резолве с данными params даёт
-    обратно ровно тот литерал, с которого его сняли (round-trip), и
-    фатально падает при малейшем расхождении (типичная причина —
-    опечатка в паттерне или не тот параметр).
+    NO guessing of placeholder position by substring — the pattern is fully
+    written by the user. The only thing this function does is check that the
+    written pattern, when resolved with the given params, yields exactly the
+    literal it was taken from (round‑trip), and fatally fails on any mismatch
+    (typical cause: typo in the pattern or wrong parameter).
     """
     if literal_net not in net_template_map:
         return literal_net
@@ -63,9 +62,9 @@ def parametrize_net(literal_net: str, net_template_map: Dict[str, str],
     check = resolve_net(pattern, params, {})
     if check != literal_net:
         raise ValidationError(format_fatal_error(
-            f"--net-template для {literal_net!r} не проходит проверку",
-            [f"паттерн {pattern!r} с params={params} резолвится в {check!r}, "
-             f"а не в {literal_net!r} — опечатка в паттерне или не тот параметр "
-             f"передан через --param"]
+            _("--net-template for {literal!r} fails round‑trip check").format(literal=literal_net),
+            [_("pattern {pattern!r} with params={params} resolves to {check!r}, "
+               "not to {literal!r} — typo in pattern or wrong parameter passed via --param")
+             .format(pattern=pattern, params=params, check=check, literal=literal_net)]
         ))
     return pattern

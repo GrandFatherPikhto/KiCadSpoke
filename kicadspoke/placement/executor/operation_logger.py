@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from ...constants import DEFAULT_LOG_DIR
+from ...i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,8 @@ class OperationLogger:
             filename = self.log_dir / f"operation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
             with open(filename, 'w', encoding='utf-8') as f:
                 json.dump(log_data, f, indent=2, ensure_ascii=False)
-            logger.info(f"Лог операции сохранён в {filename}")
+            logger.info(_("Operation log saved to {file}").format(file=filename))
             return filename
         except Exception as e:
-            logger.error(f"Не удалось сохранить лог операции: {e}")
+            logger.error(_("Failed to save operation log: {e}").format(e=e))
             return None

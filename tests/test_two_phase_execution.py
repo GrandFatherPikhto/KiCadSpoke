@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Регрессия на двухфазное выполнение (execute_moves -> adapter.refresh_board() ->
-plan_vias -> execute_vias), как в kicadspoke_cli.py:cmd_apply.
+Regression test for two‑phase execution (execute_moves -> adapter.refresh_board() ->
+plan_vias -> execute_vias), as in kicadspoke_cli.py:cmd_apply.
 
-ПЕРЕОСМЫСЛЕНО (KiCadSpoke, обобщённые via, 2026-07-15): раньше этот тест
-проверял, что plan_vias() видит РЕАЛЬНЫЙ (перечитанный) пад компонента
-после коммита перемещений — то была защита от бага, при котором GND via
-считалась от старой, ещё не сдвинутой позиции. Теперь via (обоих уровней)
-— чистая геометрия, вычисляется В МОМЕНТ plan_moves(), никакого чтения
-живого пада компонента для неё вообще не требуется — сама проблема,
-от которой защищал этот тест, структурно больше не может возникнуть.
+REVISED (KiCadSpoke, generalised vias, 2026-07-15): previously this test
+checked that plan_vias() sees the REAL (re‑read) pad of the component after
+the move commit — that was protection against a bug where GND vias were
+computed from the old, not‑yet‑moved position. Now vias (at both levels) are
+pure geometry computed AT plan_moves() time; no reading of live component pads
+for vias is required at all — the problem this test protected against can no
+longer arise structurally.
 
-Тест теперь проверяет, что сам двухфазный поток по-прежнему отрабатывает
-целиком без ошибок и даёт геометрически верные позиции (сверено с
-независимым расчётом).
+The test now verifies that the two‑phase flow still runs entirely without
+errors and produces geometrically correct positions (verified against an
+independent calculation).
 """
 import sys
 import math
@@ -95,7 +95,7 @@ def test_two_phase_flow_completes_and_via_geometry_is_correct():
     planner = PlacementPlanner(adapter, cfg)
     executor = BatchExecutor(adapter, cfg, batch_size=10)
 
-    # Тот самый порядок из kicadspoke_cli.py:cmd_apply
+    # The exact order from kicadspoke_cli.py:cmd_apply
     moves = planner.plan_moves()
     assert len(moves) == 1
     executor.execute_moves(moves, check_collisions=False)
@@ -107,7 +107,7 @@ def test_two_phase_flow_completes_and_via_geometry_is_correct():
     assert len(gnd_vias) == 1
     via = gnd_vias[0]
 
-    # via — чистая геометрия от нуля спицы (pad_pos), сверяем независимым расчётом
+    # via — pure geometry from the spoke origin (pad_pos), verified against independent calculation
     expected_offset = rotate_local_offset(0.0, 0.5, 0.0)
     expected_x = pad_pos.x + expected_offset.x
     expected_y = pad_pos.y + expected_offset.y
@@ -115,8 +115,8 @@ def test_two_phase_flow_completes_and_via_geometry_is_correct():
     assert via.position.y == expected_y
     assert via.net_name == "GND"
 
-    # Проверяем, что registry_key заполнен (важно для идемпотентности)
+    # Check that registry_key is filled (important for idempotency)
     assert via.registry_key is not None
-    # Для via уровня компонента роль LIGHT, а не SPOKE_LEVEL
+    # For component‑level vias the role is LIGHT, not SPOKE_LEVEL
     assert "LIGHT" in via.registry_key
     assert SPOKE_LEVEL_ROLE_PLACEHOLDER not in via.registry_key

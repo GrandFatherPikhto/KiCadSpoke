@@ -1,13 +1,13 @@
 # kicadspoke/cloner/netlist.py
 """
-Разбор .net (KiCad 10): компоненты с иерархическими путями, каналы,
-локальные/глобальные цепи и карта близнецов между каналами.
+Parsing .net (KiCad 10): components with hierarchical paths, channels,
+local/global nets, and the twin map between channels.
 
-Ключ близнецов: (путь внутри канала, uuid символа в файле-шаблоне листа).
-Поскольку все Channel_N — экземпляры ОДНОГО channel_tpl.kicad_sch, у
-близнецов эти ключи совпадают побайтово. Refdes для маппинга не
-используется принципиально: нумерация между каналами не монотонна
-(наблюдалось на mishin-coil: FB602->FB1102->FB1602 при C602->C1602->C1102).
+Twin key: (path inside the channel, uuid of the symbol in the sheet template).
+Since all Channel_N are instances of ONE channel_tpl.kicad_sch, twins have
+identical keys byte‑for‑byte. Refdes is NOT used for mapping on principle:
+numbering between channels is non‑monotonic (observed on mishin‑coil:
+FB602->FB1102->FB1602 while C602->C1602->C1102).
 """
 
 import logging
@@ -17,6 +17,7 @@ from typing import Dict, List, Tuple
 
 from .sexp import load_file, children, child, atom
 from .models import NetlistComponent, ChannelInfo, TwinMap
+from ..i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +26,8 @@ CHANNEL_RE = re.compile(r'^/(?P<ch>Channel_\d+)(?:/|$)')
 
 def parse_netlist(net_path: str) -> Tuple[List[NetlistComponent], Dict[str, List[str]], List[str]]:
     """
-    -> (компоненты, локальные цепи по каналам, глобальные цепи).
-    unconnected-* отфильтрованы.
+    -> (components, local nets by channel, global nets).
+    unconnected‑* are filtered out.
     """
     root = load_file(net_path)
     comps_node = child(root, 'components') or []
@@ -53,14 +54,14 @@ def parse_netlist(net_path: str) -> Tuple[List[NetlistComponent], Dict[str, List
         m = CHANNEL_RE.match(name)
         (local_by_ch[m.group('ch')] if m else global_nets).append(name)
 
-    logger.info(f"нетлист: {len(comps)} компонентов, каналов с локальными цепями: "
-                f"{len(local_by_ch)}, глобальных цепей: {len(global_nets)}")
+    logger.info(_("netlist: {comps} components, channels with local nets: {channels}, global nets: {global_nets}")
+                .format(comps=len(comps), channels=len(local_by_ch), global_nets=len(global_nets)))
     return comps, dict(local_by_ch), global_nets
 
 
 def build_twin_map(comps: List[NetlistComponent],
                    local_by_ch: Dict[str, List[str]]) -> TwinMap:
-    """Каналы + карта близнецов. Неполные группы (не во всех каналах) — warning."""
+    """Channels + twin map. Incomplete groups (not present in all channels) are warned."""
     channels: Dict[str, ChannelInfo] = {}
     twin: Dict[str, Dict[str, str]] = defaultdict(dict)
 
@@ -79,9 +80,11 @@ def build_twin_map(comps: List[NetlistComponent],
     incomplete = {k: v for k, v in twin.items() if len(v) != n_ch}
     if incomplete:
         for k, v in list(incomplete.items())[:10]:
-            logger.warning(f"неполная группа близнецов [{k}]: есть только в {sorted(v)}")
-        logger.warning(f"всего неполных групп: {len(incomplete)} — "
-                       f"эти компоненты клонироваться по маппингу не смогут")
-    logger.info(f"каналов: {n_ch} ({', '.join(sorted(channels))}); "
-                f"полных групп близнецов: {len(twin) - len(incomplete)} из {len(twin)}")
+            logger.warning(_("incomplete twin group [{key}]: present only in {channels}")
+                           .format(key=k, channels=sorted(v)))
+        logger.warning(_("total incomplete groups: {count} — these components cannot be cloned by mapping")
+                       .format(count=len(incomplete)))
+    logger.info(_("channels: {count} ({names}); complete twin groups: {complete} of {total}")
+                .format(count=n_ch, names=', '.join(sorted(channels)),
+                        complete=len(twin) - len(incomplete), total=len(twin)))
     return TwinMap(channels=channels, components=dict(twin))

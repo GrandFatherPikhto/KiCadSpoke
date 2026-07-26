@@ -1,29 +1,29 @@
 # kicadspoke/geometry/spoke_layout.py
 """
-spoke_layout.py — разворачивает шаблон спицы в абсолютные координаты платы.
+spoke_layout.py — expands a spoke template into absolute board coordinates.
 
-Порядок применения (зафиксирован в разговоре с пользователем):
-  1. Сдвиг (shift_x_mm, shift_y_mm) от центра пада FPGA к нулю спицы —
-     обычный плоский перенос, БЕЗ поворота.
-  2. Поворот получившегося нуля (и всего содержимого шаблона) на
-     rotation_deg — как единое жёсткое тело.
+Order of application (established in discussion with the user):
+  1. Shift (shift_x_mm, shift_y_mm) from the FPGA pad centre to the spoke origin —
+     a plain translation, WITHOUT rotation.
+  2. Rotation of the resulting origin (and all template contents) by rotation_deg —
+     as a single rigid body.
 
-Оба шага — в обычных координатах KiCad. Внутреннее содержимое шаблона
-(along/across) описано один раз при rotation_deg=0 (условный эталонный
-борт) и одинаково для любой спицы, использующей этот шаблон — поворот
-на месте конкретной спицы полностью снимает необходимость менять знаки
-смещений вручную под конкретный борт корпуса.
+Both steps are in ordinary KiCad coordinates. The internal template contents
+(along/across) are described once at rotation_deg=0 (the reference board) and
+are the same for any spoke using this template — the rotation at the specific
+spoke completely eliminates the need to manually adjust sign offsets for a
+particular package.
 
-Использует ТУ ЖЕ формулу поворота, что и весь остальной проект
-(kipy.geometry.Vector2.rotate(), эмпирически подтверждённую ранее для
-конвенции флипа) — не переизобретает вращение самостоятельно.
+Uses the SAME rotation formula as the rest of the project
+(kipy.geometry.Vector2.rotate(), empirically confirmed earlier for the flip
+convention) — does not reinvent rotation on its own.
 
-ИЗМЕНЕНО (KiCadSpoke, обобщённые via): раньше via уровня компонента
-("GND via") считалась от РЕАЛЬНОГО земляного пада уже размещённого
-компонента — требовало чтения живой платы после коммита перемещений.
-Теперь via (и уровня спицы, и уровня компонента) — ВСЕГДА чистая
-геометрия от нуля спицы, той же формулой, что и позиция самого
-компонента. Никакой зависимости от живой платы для via больше нет.
+CHANGED (KiCadSpoke, generalised vias): previously component‑level vias
+("GND via") were computed from the REAL ground pad of the already‑placed
+component — requiring live board reading after the move commit. Now vias
+(at both spoke and component level) are ALWAYS pure geometry from the spoke
+origin, using the same formula as the component position itself. No more
+dependency on the live board for vias.
 """
 from dataclasses import dataclass, field
 from typing import List, Dict
@@ -37,22 +37,22 @@ _ORIGIN = Vector2.from_xy(0, 0)
 
 def rotate_local_offset(along_mm: float, across_mm: float, rotation_deg: float) -> Vector2:
     """
-    Поворачивает локальный вектор (along, across) на rotation_deg вокруг
-    (0,0) — без переноса, просто повёрнутый вектор смещения в нанометрах.
+    Rotates the local vector (along, across) by rotation_deg around (0,0) —
+    no translation, just a rotated offset vector in nanometres.
     """
     local_vec = Vector2.from_xy(int(along_mm * MM), int(across_mm * MM))
     return local_vec.rotate(Angle.from_degrees(rotation_deg), _ORIGIN)
 
 
 def local_to_absolute(origin: Vector2, along_mm: float, across_mm: float, rotation_deg: float) -> Vector2:
-    """origin (уже после shift) + повёрнутый локальный оффсет (along, across)."""
+    """origin (already after shift) + rotated local offset (along, across)."""
     rotated = rotate_local_offset(along_mm, across_mm, rotation_deg)
     return Vector2.from_xy(origin.x + rotated.x, origin.y + rotated.y)
 
 
 @dataclass
 class ResolvedVia:
-    """Полностью разрешённая via — абсолютная позиция, net уже не None."""
+    """Fully resolved via — absolute position, net is not None."""
     position: Vector2
     net: str
     drill_mm: float
@@ -70,20 +70,19 @@ def _resolve_via(origin: Vector2, via: TemplateVia, rotation_deg: float, rule_ne
 
 @dataclass
 class ResolvedTrack:
-    """Полностью разрешённый прямой отрезок дорожки — обе точки уже абсолютные, net уже не None."""
+    """Fully resolved straight track segment — both points are absolute, net is not None."""
     start: Vector2
     end: Vector2
     width_mm: float
     net: str
-    layer: str  # 'F.Cu' | 'B.Cu', абсолютный — уже разрешён (свой или слоя шаблона, с учётом mirror)
+    layer: str  # 'F.Cu' | 'B.Cu', absolute — already resolved (own or template layer, with mirror considered)
 
 
 def _resolve_track(origin: Vector2, track: TemplateTrack, rotation_deg: float,
                     rule_net: str, template_layer: str) -> ResolvedTrack:
-    """net=None наследует rule_net — та же конвенция, что и у _resolve_via
-    (см. её докстринг). ManualSpoke не поддерживает mirror (в отличие от
-    ClonePlacement), поэтому слой — просто свой или слоя шаблона, без
-    инверсии."""
+    """net=None inherits rule_net — same convention as _resolve_via (see its docstring).
+    ManualSpoke does not support mirror (unlike ClonePlacement), so the layer is
+    simply its own or the template layer, without inversion."""
     return ResolvedTrack(
         start=local_to_absolute(origin, track.start_along_mm, track.start_across_mm, rotation_deg),
         end=local_to_absolute(origin, track.end_along_mm, track.end_across_mm, rotation_deg),
@@ -100,15 +99,15 @@ class ComponentLayout:
     position: Vector2
     angle_deg: float
     vias: List[ResolvedVia] = field(default_factory=list)
-    slot_layer: str = None     # абсолютный слой слота ('F.Cu'/'B.Cu'), None = слой шаблона
+    slot_layer: str = None     # absolute slot layer ('F.Cu'/'B.Cu'), None = template layer
 
 
 @dataclass
 class SpokeLayout:
-    origin: Vector2                                  # ноль спицы (после shift, до поворота)
-    vias: List[ResolvedVia] = field(default_factory=list)     # via уровня спицы (была power_via)
+    origin: Vector2                                  # spoke origin (after shift, before rotation)
+    vias: List[ResolvedVia] = field(default_factory=list)     # spoke‑level vias (formerly power_via)
     components: List[ComponentLayout] = field(default_factory=list)
-    tracks: List[ResolvedTrack] = field(default_factory=list)  # заполняется и ClonePlacement (clone_geometry.py), и ManualSpoke (ниже)
+    tracks: List[ResolvedTrack] = field(default_factory=list)  # filled by both ClonePlacement (clone_geometry.py) and ManualSpoke (below)
 
 
 def apply_spoke_geometry(
@@ -119,11 +118,10 @@ def apply_spoke_geometry(
     role_to_ref: Dict[str, str],
 ) -> SpokeLayout:
     """
-    Считает абсолютные позиции ВСЕГО, что есть в шаблоне для данной
-    спицы, включая via обоих уровней — чистая геометрия, никакого
-    обращения к живой плате. role_to_ref — уже разрешённое СНАРУЖИ (см.
-    component_pool.py) сопоставление роль->ref; эта функция сама не
-    решает, какой ref взять на какую роль — только геометрия.
+    Computes absolute positions of EVERYTHING in the template for this spoke,
+    including vias at both levels — pure geometry, no access to the live board.
+    role_to_ref is already resolved EXTERNALLY (see component_pool.py) — this
+    function does not decide which ref to assign to which role, only geometry.
     """
     origin = Vector2.from_xy(
         pad_position.x + int(spoke.shift_x_mm * MM),

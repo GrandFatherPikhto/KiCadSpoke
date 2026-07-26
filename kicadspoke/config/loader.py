@@ -1,9 +1,8 @@
 # kicadspoke/config/loader.py
 """
-config/loader.py — вся логика загрузки/валидации YAML в dataclass'ы из
-config/models.py: load_config() (точка входа) и все _load_* функции.
-Выделено из монолитного config.py тем же рефакторингом, что и models.py —
-см. его докстринг.
+config/loader.py — all YAML loading/validation logic for dataclasses
+from config/models.py: load_config() (entry point) and all _load_* functions.
+Split from monolithic config.py by the same refactoring as models.py.
 """
 import logging
 import json
@@ -18,6 +17,7 @@ from .models import (
     ThermalViaArrayConfig, TemplateVia, TemplateComponentSlot, TemplateTrack,
     SpokeTemplate, ManualSpoke, Rule, ClonePlacement, Config,
 )
+from ..i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +25,12 @@ def _load_template_via(data: Dict[str, Any]) -> TemplateVia:
     net = data.get('net')
     if net is not None and not isinstance(net, str):
         raise ValidationError(format_fatal_error(
-            f"via.net должен быть строкой, а не {type(net).__name__}",
-            [f"получено: {net!r} (offset_along_mm={data.get('offset_along_mm')}, "
-             f"offset_across_mm={data.get('offset_across_mm')})",
-             "похоже на сломанный YAML — например, net_overrides случайно "
-             "вложен под net: этой via вместо того, чтобы быть отдельным полем "
-             "верхнего уровня у clone_placements (net_overrides — сосед "
-             "template/params у самого clone_placement, не у via)"]
+            _("via.net must be a string, not {type}").format(type=type(net).__name__),
+            [_("got: {net!r} (offset_along_mm={along}, offset_across_mm={across})").format(
+                net=net, along=data.get('offset_along_mm'), across=data.get('offset_across_mm')),
+             _("looks like broken YAML – e.g. net_overrides accidentally nested under "
+               "this via's net instead of being a top-level field of clone_placement "
+               "(net_overrides is a sibling of template/params, not under via)")]
         ))
     return TemplateVia(
         offset_along_mm=data.get('offset_along_mm', 0.0),
@@ -46,15 +45,14 @@ def _load_template_track(data: Dict[str, Any]) -> TemplateTrack:
     net = data.get('net')
     if net is not None and not isinstance(net, str):
         raise ValidationError(format_fatal_error(
-            f"track.net должен быть строкой, а не {type(net).__name__}",
-            [f"получено: {net!r} (start_along_mm={data.get('start_along_mm')}, "
-             f"start_across_mm={data.get('start_across_mm')})",
-             "похоже на сломанный YAML — например, плейсхолдер вида {NET} без "
-             "кавычек: YAML читает его как flow-mapping, а не строку, бери в "
-             "кавычки: net: '{NET}'"]
+            _("track.net must be a string, not {type}").format(type=type(net).__name__),
+            [_("got: {net!r} (start_along_mm={along}, start_across_mm={across})").format(
+                net=net, along=data.get('start_along_mm'), across=data.get('start_across_mm')),
+             _("looks like broken YAML – e.g. placeholder like {{NET}} without quotes: "
+               "YAML reads it as flow-mapping, not a string; use quotes: net: '{{NET}}'")]
         ))
     layer = data.get('layer')
-    _check_layer_value(layer, "у track")
+    _check_layer_value(layer, _("on track"))
     return TemplateTrack(
         start_along_mm=data.get('start_along_mm', 0.0),
         start_across_mm=data.get('start_across_mm', 0.0),
@@ -69,21 +67,21 @@ def _load_template_track(data: Dict[str, Any]) -> TemplateTrack:
 def _check_layer_value(value, where: str):
     if value is not None and value not in ('F.Cu', 'B.Cu'):
         raise ValidationError(format_fatal_error(
-            f"недопустимый layer={value!r} {where}",
-            ["layer — абсолютный слой, 'F.Cu' или 'B.Cu'"]
+            _("invalid layer={value!r} {where}").format(value=value, where=where),
+            [_("layer must be absolute: 'F.Cu' or 'B.Cu'")]
         ))
 
 
 def _load_template_component_slot(data: Dict[str, Any]) -> TemplateComponentSlot:
     if 'side' in data:
         raise ValidationError(format_fatal_error(
-            f"устаревшее поле 'side' у слота {data.get('role')!r}",
-            ["относительный side упразднён (см. обсуждение v116): слой теперь "
-             "ФАКТ и абсолютный — напиши layer: F.Cu или layer: B.Cu, либо "
-             "убери поле, чтобы наследовать layer шаблона"]
+            _("deprecated field 'side' in slot {role!r}").format(role=data.get('role')),
+            [_("relative 'side' is deprecated (see discussion v116): layer is now "
+               "absolute – write layer: F.Cu or layer: B.Cu, or remove the field "
+               "to inherit the template layer")]
         ))
     layer = data.get('layer')
-    _check_layer_value(layer, f"у слота {data.get('role')!r}")
+    _check_layer_value(layer, _("on slot {role!r}").format(role=data.get('role')))
     return TemplateComponentSlot(
         role=data['role'],
         offset_along_mm=data.get('offset_along_mm', 0.0),
@@ -102,20 +100,21 @@ def _load_spoke_template(name: str, data: Dict[str, Any]) -> SpokeTemplate:
     duplicates = {r for r in roles if roles.count(r) > 1}
     if duplicates:
         raise ValidationError(format_fatal_error(
-            f"роль повторяется дважды в шаблоне {name!r}",
-            [f"роль {r!r} встречается {roles.count(r)} раз в components этого шаблона — "
-             f"роли внутри шаблона обязаны быть уникальны (см. anchor_id/template_name/role "
-             f"в реестре расстановки)" for r in sorted(duplicates)]
+            _("role appears twice in template {name!r}").format(name=name),
+            [_("role {role!r} appears {count} times in components of this template – "
+               "roles inside a template must be unique (see anchor_id/template_name/role "
+               "in the placement registry)").format(role=r, count=roles.count(r))
+             for r in sorted(duplicates)]
         ))
 
     if 'reference_side' in data:
         raise ValidationError(format_fatal_error(
-            f"устаревшее поле 'reference_side' в шаблоне {name!r}",
-            ["переименовано (см. обсуждение v116): напиши layer: F.Cu или "
-             "layer: B.Cu — абсолютный слой шаблона, как снято"]
+            _("deprecated field 'reference_side' in template {name!r}").format(name=name),
+            [_("renamed (see discussion v116): use layer: F.Cu or layer: B.Cu – "
+               "absolute template layer, as extracted")]
         ))
     layer = data.get('layer', 'F.Cu')
-    _check_layer_value(layer, f"в шаблоне {name!r}")
+    _check_layer_value(layer, _("in template {name!r}").format(name=name))
 
     return SpokeTemplate(
         name=name,
@@ -143,8 +142,7 @@ _CLONE_PLACEMENT_KNOWN_KEYS = {
     'nets', 'params', 'net_overrides', 'enabled',
     'anchor_ref', 'anchor_pad', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
     'layer', 'mirror', 'refs', 'by_selection',
-    'side',  # устаревшее — распознаётся отдельно ниже, только чтобы дать
-             # осмысленное сообщение про миграцию, а не "неизвестный ключ"
+    'side',  # deprecated – recognised separately to give a migration message
 }
 
 
@@ -152,11 +150,10 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
     name = data.get('name', '?')
     if not data.get('name'):
         raise ValidationError(format_fatal_error(
-            "clone_placement без name",
-            ["у каждого clone_placement обязательно имя — используется в --only "
-             "(kicadspoke_cli.py) для изолированного прогона; напиши name: <строка>. "
-             "Раньше отсутствие name тихо подставляло '?' — это было дырой, а не "
-             "поведением"]
+            _("clone_placement without name"),
+            [_("every clone_placement must have a name – used in --only "
+               "(kicadspoke_cli.py) for isolated runs; write name: <string>. "
+               "Previously missing name would silently substitute '?' – that was a bug")]
         ))
     unknown = set(data.keys()) - _CLONE_PLACEMENT_KNOWN_KEYS
     if unknown:
@@ -164,19 +161,15 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
         for key in sorted(unknown):
             close = difflib.get_close_matches(key, _CLONE_PLACEMENT_KNOWN_KEYS, n=1)
             if not close:
-                # difflib не считает 'pad' похожим на 'anchor_pad' (соотношение
-                # длин слишком разное) — а это самый частый случай именно тут
-                # (anchor_ref/anchor_pad/anchor_role/anchor_sheet все с общим
-                # префиксом anchor_). Добавляем отдельно: подстрока в любую сторону.
                 close = [k for k in sorted(_CLONE_PLACEMENT_KNOWN_KEYS)
                         if key in k or k in key]
-            hint = f" — не имел(а) ли в виду {close[0]!r}?" if close else ""
+            hint = _(" — did you mean {suggestion!r}?").format(suggestion=close[0]) if close else ""
             problems.append(f"{key!r}{hint}")
         raise ValidationError(format_fatal_error(
-            f"неизвестные поля в clone_placement {name!r}",
-            [f"незнакомый ключ молча игнорируется, а не падает — типичный "
-             f"источник тихой ошибки (например, anchor_pad не сработает, "
-             f"если написать просто pad): {', '.join(problems)}"]
+            _("unknown fields in clone_placement {name!r}").format(name=name),
+            [_("unrecognised keys are silently ignored – common source of quiet bugs "
+               "(e.g. 'pad' won't work; use 'anchor_pad'): {problems}")
+             .format(problems=', '.join(problems))]
         ))
 
     anchor_ref = data.get('anchor_ref')
@@ -189,72 +182,68 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
     role = data.get('role')
     if template is not None and role is not None:
         raise ValidationError(format_fatal_error(
-            f"template и role одновременно в clone_placement {name!r}",
-            [f"это два взаимоисключающих способа задать содержимое размещения — "
-             f"либо готовый шаблон (template), либо однокомпонентное размещение "
-             f"по роли (role), не оба сразу"]
+            _("template and role together in clone_placement {name!r}").format(name=name),
+            [_("these are mutually exclusive ways to define the content: "
+               "either a ready-made template (template), or a single-component placement "
+               "by role (role), not both")]
         ))
     if template is None and role is None:
         raise ValidationError(format_fatal_error(
-            f"ни template, ни role не заданы в clone_placement {name!r}",
-            [f"нужен либо template: <имя из templates:>, либо role: <ROLE> для "
-             f"однокомпонентного размещения без отдельного файла шаблона"]
+            _("neither template nor role set in clone_placement {name!r}").format(name=name),
+            [_("need either template: <name from templates:>, or role: <ROLE> for "
+               "a single-component placement without a separate template file")]
         ))
 
     if anchor_ref is not None and anchor_role is not None:
         raise ValidationError(format_fatal_error(
-            f"anchor_ref и anchor_role одновременно в clone_placement {name!r}",
-            [f"это два взаимоисключающих способа задать якорь — либо по refdes "
-             f"(anchor_ref), либо по полю Role (anchor_role), не оба сразу"]
+            _("anchor_ref and anchor_role together in clone_placement {name!r}").format(name=name),
+            [_("these are mutually exclusive ways to define the anchor – either by refdes "
+               "(anchor_ref) or by Role field (anchor_role), not both")]
         ))
 
     if anchor_sheet is not None and anchor_role is None:
         raise ValidationError(format_fatal_error(
-            f"anchor_sheet без anchor_role в clone_placement {name!r}",
-            [f"anchor_sheet={anchor_sheet!r} задан, но anchor_role отсутствует — "
-             f"anchor_sheet только сужает неоднозначность anchor_role, сам по "
-             f"себе якорем не является"]
+            _("anchor_sheet without anchor_role in clone_placement {name!r}").format(name=name),
+            [_("anchor_sheet={sheet!r} is set but anchor_role is missing – "
+               "anchor_sheet only narrows ambiguity of anchor_role, it is not an anchor itself")
+             .format(sheet=anchor_sheet)]
         ))
 
     if anchor_pad is not None and anchor_ref is None and anchor_role is None:
         raise ValidationError(format_fatal_error(
-            f"anchor_pad без anchor_ref/anchor_role в clone_placement {name!r}",
-            [f"anchor_pad={anchor_pad!r} задан, но не указано, чей он — "
-             f"anchor_ref: IC1 или anchor_role: SOME_ROLE"]
+            _("anchor_pad without anchor_ref/anchor_role in clone_placement {name!r}").format(name=name),
+            [_("anchor_pad={pad!r} is set but no anchor specified – "
+               "use anchor_ref: IC1 or anchor_role: SOME_ROLE").format(pad=anchor_pad)]
         ))
 
     has_anchor = anchor_ref is not None or anchor_role is not None
 
-    # В якорном режиме origin_x/y — необязательный сдвиг от якоря (0.0 по
-    # умолчанию, как shift у ManualSpoke). Без якоря — обязательная
-    # абсолютная точка, как раньше.
     if not has_anchor and ('origin_x_mm' not in data or 'origin_y_mm' not in data):
         raise ValidationError(format_fatal_error(
-            f"нет ни якоря, ни абсолютных координат в clone_placement {name!r}",
-            [f"укажи либо origin_x_mm/origin_y_mm (абсолютная точка на плате), "
-             f"либо anchor_ref/anchor_role (+ опционально anchor_pad) для "
-             f"привязки к компоненту"]
+            _("no anchor and no absolute coordinates in clone_placement {name!r}").format(name=name),
+            [_("either set origin_x_mm/origin_y_mm (absolute point on board), "
+               "or anchor_ref/anchor_role (+ optionally anchor_pad) for anchor‑based placement")]
         ))
 
     if 'side' in data:
         raise ValidationError(format_fatal_error(
-            f"устаревшее поле 'side' в clone_placement {name!r}",
-            ["сторона теперь задаётся явной парой: layer: F.Cu|B.Cu (куда "
-             "кладём — факт) + mirror: true (как кладём — операция, только "
-             "при смене слоя относительно шаблона)"]
+            _("deprecated field 'side' in clone_placement {name!r}").format(name=name),
+            [_("side is now set by an explicit pair: layer: F.Cu|B.Cu (where we place – fact) "
+               "+ mirror: true (how we place – operation, only meaningful when the layer changes "
+               "relative to the template)")]
         ))
     by_selection = bool(data.get('by_selection', False))
     nets = data.get('nets', {}) or {}
     if by_selection and nets:
         raise ValidationError(format_fatal_error(
-            f"by_selection: true вместе с непустым nets в clone_placement {name!r}",
-            [f"nets — это явная карта роль->цепь для режима «по цепям», в режиме "
-             f"«по выделению» роли резолвятся мышкой, а не по цепям — nets тут "
-             f"бессмысленен. Убери nets, либо убери by_selection: true"]
+            _("by_selection: true with non-empty nets in clone_placement {name!r}").format(name=name),
+            [_("nets is an explicit role->net mapping for 'by nets' mode; in selection mode "
+               "roles are resolved by mouse selection, not by nets – nets is meaningless here. "
+               "Either remove nets, or remove by_selection: true")]
         ))
 
     layer = data.get('layer')
-    _check_layer_value(layer, f"в clone_placement {name!r}")
+    _check_layer_value(layer, _("in clone_placement {name!r}").format(name=name))
 
     return ClonePlacement(
         name=name,
@@ -280,38 +269,38 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
 
 
 def load_config(path: str) -> Config:
-    logger.info(f"Загрузка конфигурации из {path}")
+    logger.info(_("Loading configuration from {path}").format(path=path))
     with open(path, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f) or {}
 
     if 'target_ref' in data:
         raise ValidationError(format_fatal_error(
-            "устаревшее поле 'target_ref' в корне конфига",
-            ["глобальный target_ref упразднён (см. обсуждение v117): у каждого "
-             "правила спиц теперь свой якорь — напиши anchor_ref: <ref> внутри "
-             "правила в rules; у thermal_via_array — своё поле anchor_ref"]
+            _("deprecated field 'target_ref' at root of config"),
+            [_("global target_ref has been removed (see discussion v117): each spoke "
+               "rule now has its own anchor – write anchor_ref: <ref> inside the rule "
+               "in rules; thermal_via_array has its own anchor_ref field")]
         ))
     if 'side' in data:
         raise ValidationError(format_fatal_error(
-            "устаревшее поле 'side' в корне конфига",
-            ["один язык на весь инструмент: напиши layer: F.Cu или layer: B.Cu "
-             "(слой спиц ManualSpoke-пути; back -> B.Cu)"]
+            _("deprecated field 'side' at root of config"),
+            [_("use layer: F.Cu or layer: B.Cu instead (layer for ManualSpoke rules; "
+               "back -> B.Cu)")]
         ))
     root_layer = data.get('layer', 'F.Cu')
-    _check_layer_value(root_layer, "в корне конфига")
+    _check_layer_value(root_layer, _("at root of config"))
 
     tva_data = data.get('thermal_via_array', {})
     if 'target_ref' in tva_data:
         raise ValidationError(format_fatal_error(
-            "устаревшее поле 'target_ref' в thermal_via_array",
-            ["переименовано для единообразия: напиши anchor_ref"]
+            _("deprecated field 'target_ref' in thermal_via_array"),
+            [_("renamed for consistency: use anchor_ref")]
         ))
     if tva_data and not tva_data.get('name'):
         raise ValidationError(format_fatal_error(
-            "thermal_via_array без name",
-            ["у thermal_via_array обязательно имя — используется в --only "
-             "(kicadspoke_cli.py) для изолированного прогона; напиши "
-             "name: <любая понятная строка>, например name: fpga_thermal"]
+            _("thermal_via_array without name"),
+            [_("thermal_via_array must have a name – used in --only "
+               "(kicadspoke_cli.py) for isolated runs; write name: <any understandable string>, "
+               "e.g. name: fpga_thermal")]
         ))
     thermal_via = ThermalViaArrayConfig(
         enabled=tva_data.get('enabled', False),
@@ -336,24 +325,21 @@ def load_config(path: str) -> Config:
         templates_path = Path(path).parent / templates_file
         if not templates_path.exists():
             raise ValidationError(format_fatal_error(
-                f"templates_file {templates_file!r} не найден",
-                [f"ожидался по пути {templates_path} (относительно самого конфига "
-                 f"{path!r}) — путь пишется относительно расположения ЭТОГО YAML, "
-                 f"не текущей директории запуска"]
+                _("templates_file {file!r} not found").format(file=templates_file),
+                [_("expected at {path} (relative to the config file itself, "
+                   "not the current working directory)").format(path=templates_path)]
             ))
         with open(templates_path, 'r', encoding='utf-8') as f:
             if templates_path.suffix.lower() == '.json':
                 external_templates = json.load(f)
             else:
                 external_templates = yaml.safe_load(f) or {}
-        # Инлайновые templates: (если есть) дополняют/переопределяют внешний
-        # файл, а не наоборот — библиотека как базовый слой, локальные правки
-        # (если вдруг понадобятся) поверх, явно видно в самом конфиге.
         merged = dict(external_templates)
         merged.update(templates_data)
         templates_data = merged
-        logger.info(f"Шаблоны из {templates_file}: {len(external_templates)}, "
-                   f"плюс инлайновых в самом конфиге: {len(data.get('templates', {}) or {})}")
+        logger.info(_("Templates from {file}: {count_ext}, plus inline: {count_inline}")
+                    .format(file=templates_file, count_ext=len(external_templates),
+                            count_inline=len(data.get('templates', {}) or {})))
     templates = {name: _load_spoke_template(name, tdata) for name, tdata in templates_data.items()}
 
     rules = []
@@ -366,29 +352,26 @@ def load_config(path: str) -> Config:
 
         if not rule_data.get('name'):
             raise ValidationError(format_fatal_error(
-                f"правило (цепь {rule_net!r}) без name",
-                ["у каждого правила обязательно имя — используется в --only "
-                 "(kicadspoke_cli.py) для изолированного прогона; напиши "
-                 "name: <любая понятная строка>, например name: fpga_3v3_bank"]
+                _("rule (net {net!r}) without name").format(net=rule_net),
+                [_("every rule must have a name – used in --only for isolated runs; "
+                   "write name: <any understandable string>, e.g. name: fpga_3v3_bank")]
             ))
         if anchor_ref and anchor_role:
             raise ValidationError(format_fatal_error(
-                f"anchor_ref и anchor_role одновременно в правиле (цепь {rule_net!r})",
-                ["это два взаимоисключающих способа задать якорь — либо по refdes "
-                 "(anchor_ref), либо по полю Role (anchor_role), не оба сразу"]
+                _("anchor_ref and anchor_role together in rule (net {net!r})").format(net=rule_net),
+                [_("mutually exclusive: either by refdes (anchor_ref) or by Role field "
+                   "(anchor_role), not both")]
             ))
         if anchor_sheet and not anchor_role:
             raise ValidationError(format_fatal_error(
-                f"anchor_sheet без anchor_role в правиле (цепь {rule_net!r})",
-                ["anchor_sheet только сужает неоднозначность anchor_role, сам по "
-                 "себе якорем не является"]
+                _("anchor_sheet without anchor_role in rule (net {net!r})").format(net=rule_net),
+                [_("anchor_sheet only narrows ambiguity of anchor_role, it is not an anchor itself")]
             ))
         if not anchor_ref and not anchor_role:
             raise ValidationError(format_fatal_error(
-                f"правило (цепь {rule_net!r}) без anchor_ref/anchor_role",
-                ["у правила спиц обязателен якорь — anchor_ref: <ref> (компонент, "
-                 "чьи пады перечислены в spokes), либо anchor_role: <ROLE> (переживает "
-                 "переименование/перенумерацию — раньше это был глобальный target_ref)"]
+                _("rule (net {net!r}) without anchor_ref/anchor_role").format(net=rule_net),
+                [_("a spoke rule must have an anchor – anchor_ref: <ref> (component whose "
+                   "pads are listed in spokes), or anchor_role: <ROLE> (survives re‑annotation)")]
             ))
         spokes = [_load_manual_spoke(spoke_data) for spoke_data in rule_data.get('spokes', [])]
         rules.append(Rule(net=rule_net, spokes=spokes, anchor_ref=anchor_ref,
@@ -397,29 +380,29 @@ def load_config(path: str) -> Config:
 
     clone_placements = [_load_clone_placement(cp) for cp in data.get('clone_placements', [])]
 
-    # Перекрёстная валидация layer/mirror: инструмент ничего не решает за
-    # человека, но противоречие двух его же слов — фатал, не молчаливая каша.
+    # Cross‑validation of layer/mirror
     for cp in clone_placements:
         tpl = templates.get(cp.template)
         if tpl is None:
-            continue  # отсутствие шаблона обрабатывается на этапе размещения
+            continue
         placement_layer = cp.layer if cp.layer is not None else tpl.layer
         layer_changed = placement_layer != tpl.layer
         if cp.mirror and not layer_changed:
             raise ValidationError(format_fatal_error(
-                f"mirror без смены слоя в clone_placement {cp.name!r}",
-                [f"шаблон {cp.template!r} снят с {tpl.layer}, размещение кладётся "
-                 f"на {placement_layer} — зеркало без смены стороны физически не "
-                 f"существует: либо добавь layer: "
-                 f"{'B.Cu' if tpl.layer == 'F.Cu' else 'F.Cu'}, либо убери mirror"]
+                _("mirror without layer change in clone_placement {name!r}").format(name=cp.name),
+                [_("template {tpl!r} is on {tpl_layer}, placement layer is {place_layer} – "
+                   "mirror without changing side is physically meaningless: either set layer to "
+                   "{opposite}, or remove mirror").format(
+                       tpl=cp.template, tpl_layer=tpl.layer, place_layer=placement_layer,
+                       opposite='B.Cu' if tpl.layer == 'F.Cu' else 'F.Cu')]
             ))
         if layer_changed and not cp.mirror:
             raise ValidationError(format_fatal_error(
-                f"слой сменён без mirror в clone_placement {cp.name!r}",
-                [f"шаблон {cp.template!r} снят с {tpl.layer}, а layer размещения — "
-                 f"{placement_layer}: перевёрнутые футпринты на неперевёрнутых "
-                 f"местах дадут кашу; добавь mirror: true (перевернуть целиком) "
-                 f"или убери layer"]
+                _("layer changed without mirror in clone_placement {name!r}").format(name=cp.name),
+                [_("template {tpl!r} is on {tpl_layer}, placement layer is {place_layer} – "
+                   "flipped footprints on non‑flipped sites are nonsense; add mirror: true, "
+                   "or remove the layer override").format(
+                       tpl=cp.template, tpl_layer=tpl.layer, place_layer=placement_layer)]
             ))
 
     schematic_dir = data.get('schematic_dir')
@@ -457,7 +440,8 @@ def load_config(path: str) -> Config:
         log_file=log_file,
     )
     total_spokes = sum(len(r.spokes) for r in cfg.rules)
-    logger.debug(f"Конфигурация загружена: layer={cfg.layer}, "
-                 f"шаблонов={len(cfg.templates)}, правил={len(cfg.rules)}, спиц={total_spokes}, "
-                 f"clone_placements={len(cfg.clone_placements)}")
+    logger.debug(_("Config loaded: layer={layer}, templates={tpl}, rules={rules}, spokes={spokes}, "
+                   "clone_placements={clones}").format(
+                       layer=cfg.layer, tpl=len(cfg.templates), rules=len(cfg.rules),
+                       spokes=total_spokes, clones=len(cfg.clone_placements)))
     return cfg

@@ -1,44 +1,46 @@
 # kicadspoke/validation.py
 """
-validation.py — фатальные предварительные проверки, выполняются ДО
-планирования и любых изменений на плате. При обнаружении проблемы —
-ValidationError с понятным, собранным сразу по всем найденным проблемам
-сообщением (не одна ошибка за прогон, а полный список).
+validation.py — fatal pre‑validation checks, executed BEFORE planning and any
+board modifications. If a problem is found, a ValidationError is raised with a
+clear, consolidated message listing all issues at once (not one error per run).
 
-ИЗМЕНЕНО (KiCadSpoke 4.0): раньше проверялись явные ref в конфиге
-(component1_ref/component2_ref) — их больше нет, компоненты подбираются
-из ComponentPool по (реальная цепь, роль). Основная защита теперь встроена
-в сам ComponentPool.pop() (фатально при нехватке), но здесь — тот же самый
-подсчёт делается ЗАРАНЕЕ, чтобы увидеть все нехватки сразу, а не
-останавливаться на первой попавшейся спице.
+CHANGED (KiCadSpoke 4.0): previously explicit refs in config
+(component1_ref/component2_ref) were checked — they no longer exist; components
+are selected from ComponentPool by (real net, role). The main protection is now
+built into ComponentPool.pop() itself (fatal on shortage), but here we do the
+same accounting IN ADVANCE to see all shortages at once, rather than stopping
+at the first spoke.
 """
 import logging
 import difflib
 from typing import List, Dict, Optional
+
 from .config import Config
 from .kicad.adapter import KiCadBoardAdapter
 from .exceptions import ValidationError, format_fatal_error
 from .net_resolution import resolve_net
 from .placement.services.component_pool import ComponentPool
 from .placement.services.clone_role_resolver import clone_uses_selection_mode
+from .i18n import _
 
 logger = logging.getLogger(__name__)
 
 
 def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     """
-    Каждая спица должна ссылаться на существующий шаблон и существующую
-    площадку целевого компонента — иначе спица просто тихо пропускается
-    (было бы легко не заметить опечатку в имени шаблона/номере пада).
+    Every spoke must reference an existing template and an existing pad of the
+    target component — otherwise the spoke is simply skipped silently (which
+    would make it easy to miss a typo in the template name/pad number).
     """
     problems = []
     anchors = {}
     for rule in cfg.rules:
-        # Резолвим якорь: либо anchor_ref, либо anchor_role
+        # Resolve anchor: either anchor_ref or anchor_role
         if rule.anchor_ref is not None:
             fp = adapter.get_footprint(rule.anchor_ref)
             if fp is None:
-                problems.append(f"правило (цепь {rule.net!r}): якорь {rule.anchor_ref!r} не найден на плате")
+                problems.append(_("rule (net {net!r}): anchor {anchor!r} not found on board")
+                                .format(net=rule.net, anchor=rule.anchor_ref))
             anchors[rule.anchor_ref] = fp
         else:
             from .placement.services.clone_role_resolver import resolve_footprint_by_role
@@ -49,7 +51,7 @@ def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config) -> N
                     rule.anchor_sheet,
                     rule.anchor_cluster,
                     cfg.sheet_names,
-                    label=f"правило (цепь {rule.net!r})"
+                    label=_("rule (net {net!r})").format(net=rule.net)
                 )
                 anchors[f"role:{rule.anchor_role}"] = fp
             except ValidationError as e:
@@ -66,29 +68,35 @@ def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config) -> N
             if not spoke.enabled:
                 continue
             if spoke.template not in cfg.templates:
-                problems.append(f"спица (пад {spoke.pad}, цепь {rule.net!r}): "
-                                f"шаблон {spoke.template!r} не найден в templates")
+                problems.append(_("spoke (pad {pad}, net {net!r}): template {template!r} not found in templates")
+                                .format(pad=spoke.pad, net=rule.net, template=spoke.template))
                 continue
             pad = adapter.get_pad_by_number(target_fp, spoke.pad) if target_fp else None
             if target_fp is not None and pad is None:
                 anchor_name = rule.anchor_ref if rule.anchor_ref is not None else rule.anchor_role
-                problems.append(f"спица (шаблон {spoke.template!r}, цепь {rule.net!r}): "
-                                f"у {anchor_name!r} нет площадки {spoke.pad!r}")
+                problems.append(_("spoke (template {template!r}, net {net!r}): {anchor!r} has no pad {pad!r}")
+                                .format(template=spoke.template, net=rule.net,
+                                        anchor=anchor_name, pad=spoke.pad))
 
     if problems:
-        raise ValidationError(format_fatal_error("спица ссылается на несуществующий шаблон или площадку", problems))
+        raise ValidationError(format_fatal_error(
+            _("spoke references a non‑existent template or pad"),
+            problems
+        ))
+    logger.debug(_("Template/pad checks for spokes: all references valid"))
 
 
 def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     """
-    Для каждой цепи правила заранее считает, сколько компонентов каждой
-    роли требуется всеми её спицами для каждого кластера, и сверяет
-    с реальным количеством компонентов на плате (та же цепь + поле Role + Cluster).
+    For each rule net, pre‑counts how many components of each role are required
+    by all its spokes for each cluster, and checks against the actual number of
+    components on the board (same net + Role field + Cluster field) — fatal with
+    a list of all shortages at once.
     """
     problems = []
 
     for rule in cfg.rules:
-        # Собираем все роли, нужные для этого правила
+        # Collect all roles needed for this rule
         roles_needed = set()
         for spoke in rule.spokes:
             if not spoke.enabled:
@@ -102,20 +110,20 @@ def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None
         if not roles_needed:
             continue
 
-        # Собираем все кластеры, которые используются в спицах (включая None)
+        # Collect all clusters used in spokes (including None)
         clusters_needed = set()
         for spoke in rule.spokes:
             if not spoke.enabled:
                 continue
-            clusters_needed.add(spoke.cluster)  # None допустимо
+            clusters_needed.add(spoke.cluster)  # None is allowed
 
-        # Инициализируем словарь потребностей по кластерам
+        # Initialise requirement dictionary per cluster
         needed_by_cluster: Dict[Optional[str], Dict[str, int]] = {
             cluster: {role: 0 for role in roles_needed}
             for cluster in clusters_needed
         }
 
-        # Заполняем потребности
+        # Fill requirements
         for spoke in rule.spokes:
             if not spoke.enabled:
                 continue
@@ -126,9 +134,8 @@ def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None
             for slot in template.components:
                 needed_by_cluster[cluster][slot.role] += 1
 
-        # Для каждого кластера проверяем достаточность
+        # For each cluster, check sufficiency
         for cluster, needed_counts in needed_by_cluster.items():
-            # Если все нули — пропускаем (не должно быть, но на всякий случай)
             if not any(needed_counts.values()):
                 continue
 
@@ -138,56 +145,61 @@ def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None
                     continue
                 available = pool.remaining_count(role)
                 if available < needed:
-                    cluster_label = f" (кластер {cluster!r})" if cluster is not None else ""
+                    cluster_label = _(" (cluster {cluster!r})").format(cluster=cluster) if cluster is not None else ""
                     problems.append(
-                        f"цепь {rule.net!r}, роль {role!r}{cluster_label}: "
-                        f"нужно {needed}, найдено {available} "
-                        f"(проверьте поле Role и Cluster в схеме и реальное подключение к цепи)"
+                        _("net {net!r}, role {role!r}{cluster}: need {needed}, found {available} "
+                          "(check the Role and Cluster fields in the schematic and the actual net connection)")
+                        .format(net=rule.net, role=role, cluster=cluster_label,
+                                needed=needed, available=available)
                     )
 
     if problems:
-        raise ValidationError(format_fatal_error("не хватает компонентов для ролей шаблона", problems))
-    logger.debug("Проверка достаточности пулов по ролям: всё сходится")
+        raise ValidationError(format_fatal_error(
+            _("not enough components for template roles"),
+            problems
+        ))
+    logger.debug(_("Role pool sufficiency checks passed"))
 
 
 def check_clone_templates_exist(cfg: Config) -> None:
     """
-    Каждый ClonePlacement с template (не role) должен ссылаться на
-    существующий шаблон — чисто конфиговая проверка, живой платы не
-    требует вообще. role-размещения пропускаются: у них template
-    намеренно None, ClonePositionCalculator синтезирует однокомпонентный
-    шаблон на лету, проверять в cfg.templates нечего.
+    Every ClonePlacement with template (not role) must reference an existing
+    template — pure config check, does not require the live board. role‑based
+    placements are skipped: their template is intentionally None, and
+    ClonePositionCalculator synthesises a single‑component template on the fly,
+    so there is nothing to check in cfg.templates.
     """
     problems = []
     for clone in cfg.clone_placements:
         if not clone.enabled or clone.template is None:
             continue
         if clone.template not in cfg.templates:
-            problems.append(f"clone_placements {clone.name!r}: шаблон {clone.template!r} не найден в templates")
+            problems.append(_("clone_placement {name!r}: template {template!r} not found in templates")
+                            .format(name=clone.name, template=clone.template))
     if problems:
-        raise ValidationError(format_fatal_error("clone_placements ссылается на несуществующий шаблон", problems))
-    logger.debug("Проверка шаблонов clone_placements: все ссылки корректны")
+        raise ValidationError(format_fatal_error(
+            _("clone_placement references a non‑existent template"),
+            problems
+        ))
+    logger.debug(_("Clone template existence checks passed"))
 
 
 def check_no_duplicate_clone_anchors(cfg: Config) -> None:
     """
-    Чисто конфиговая проверка (живой платы не требует):
-      1. Имена clone_placements[].name должны быть уникальны — это теперь
-         единственный идентификатор для anchor-less размещений (см.
-         clone_anchor_id) и в любом случае годная гигиена конфига.
-      2. (содержимое, anchor_ref, anchor_pad) среди clone_placements С
-         заданным anchor_ref должен быть уникален — это ровно та
-         identity, по которой теперь живёт реестр (registry.py); если
-         два разных clone_placement случайно указывают один и тот же
-         физический якорь под одним и тем же содержимым, реестр не
-         сможет их различить и будет путать via/треки одного с другим.
-         "Содержимое" — template ИЛИ role (см. ClonePlacement) — два
-         РАЗНЫХ role на одном и том же якоре НЕ дубль (разные компоненты
-         в одной точке — обычное дело), поэтому используем то, что
-         реально задано, а не голый clone.template (он None у role-
-         размещений, и тогда два разных role молча схлопнулись бы в один
-         ключ). Совпадение почти наверняка copy-paste опечатка (забыли
-         поменять anchor_pad во втором блоке), а не осознанное намерение.
+    Pure config check (does not require live board):
+      1. clone_placements[].name must be unique — this is the primary identifier
+         for anchor‑less placements (see clone_anchor_id) and good hygiene.
+      2. (content, anchor_ref, anchor_pad) among clone_placements with
+         anchor_ref set must be unique — this is the identity used by the
+         registry (registry.py). If two different clone_placements accidentally
+         point to the same physical anchor with the same content, the registry
+         will confuse their vias/tracks. This is almost certainly a copy‑paste
+         typo (forgot to change anchor_pad in the second block), not intentional.
+         "Content" is template OR role — two different roles on the same anchor
+         are NOT duplicates (different components at the same point is normal),
+         so we use what is actually set, not clone.template (which is None for
+         role‑based placements, and two different roles would collapse into one
+         key if we only used template).
     """
     problems = []
     seen_names = {}
@@ -197,74 +209,79 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
         if not clone.enabled:
             continue
         if clone.name in seen_names:
-            problems.append(f"имя {clone.name!r} встречается дважды в clone_placements — "
-                            f"имена должны быть уникальны")
+            problems.append(_("name {name!r} appears twice in clone_placements — names must be unique")
+                            .format(name=clone.name))
         seen_names[clone.name] = True
 
-        content_id = clone.template if clone.template is not None else f"role:{clone.role}"
+        content_id = clone.template if clone.template is not None else _("role:{role}").format(role=clone.role)
 
         if clone.anchor_ref is not None:
             key = (content_id, clone.anchor_ref, clone.anchor_pad)
             if key in seen_ref_anchors:
-                problems.append(f"{clone.name!r} и {seen_ref_anchors[key]!r}: оба указывают один и тот же "
-                                f"якорь (template/role={content_id!r}, anchor_ref={clone.anchor_ref!r}, "
-                                f"anchor_pad={clone.anchor_pad!r}) — реестр не сможет различить их via/"
-                                f"треки; похоже на copy-paste опечатку (забыли поменять anchor_pad)")
+                problems.append(
+                    _("{this!r} and {other!r} both point to the same anchor "
+                      "(template/role={content!r}, anchor_ref={ref!r}, anchor_pad={pad!r}) — "
+                      "the registry would confuse their vias/tracks; likely a copy‑paste typo")
+                    .format(this=clone.name, other=seen_ref_anchors[key], content=content_id,
+                            ref=clone.anchor_ref, pad=clone.anchor_pad)
+                )
             seen_ref_anchors[key] = clone.name
 
         if clone.anchor_role is not None:
             key = (content_id, clone.anchor_role, clone.anchor_sheet, clone.anchor_pad)
             if key in seen_role_anchors:
-                problems.append(f"{clone.name!r} и {seen_role_anchors[key]!r}: оба указывают один и тот же "
-                                f"якорь (template/role={content_id!r}, anchor_role={clone.anchor_role!r}, "
-                                f"anchor_sheet={clone.anchor_sheet!r}, anchor_pad={clone.anchor_pad!r}) — "
-                                f"реестр не сможет различить их via/треки; похоже на copy-paste опечатку "
-                                f"(забыли поменять anchor_sheet/anchor_pad)")
+                problems.append(
+                    _("{this!r} and {other!r} both point to the same anchor "
+                      "(template/role={content!r}, anchor_role={role!r}, anchor_sheet={sheet!r}, anchor_pad={pad!r}) — "
+                      "the registry would confuse their vias/tracks; likely a copy‑paste typo")
+                    .format(this=clone.name, other=seen_role_anchors[key], content=content_id,
+                            role=clone.anchor_role, sheet=clone.anchor_sheet, pad=clone.anchor_pad)
+                )
             seen_role_anchors[key] = clone.name
 
     if problems:
-        raise ValidationError(format_fatal_error("clone_placements с неоднозначной identity", problems))
-    logger.debug("Проверка на дубликаты имён/якорей clone_placements: всё сходится")
+        raise ValidationError(format_fatal_error(
+            _("clone_placements with ambiguous identity"),
+            problems
+        ))
+    logger.debug(_("Duplicate clone anchor checks passed"))
 
 
 def check_anchor_sheet_configured(cfg: Config) -> None:
     """
-    Чисто конфиговая проверка. anchor_sheet резолвится через Config.
-    sheet_names (см. sheet_names.py) — если он пуст, значит ни
-    schematic_dir, ни schematic_files не заданы (или заданы, но ни один
-    .kicad_sch не распарсился), и anchor_sheet НИКОГДА ничего не сузит —
-    молча пройдёт мимо, как будто его не было, и neoднозначность
-    anchor_role потом упадёт с менее полезным фаталом. Лучше сказать
-    прямо и сразу, в чём дело.
+    Pure config check. anchor_sheet is resolved via Config.sheet_names.
+    If sheet_names is empty, it means neither schematic_dir nor schematic_files
+    were set (or none of the .kicad_sch files could be parsed), and anchor_sheet
+    will NEVER narrow anything — it will silently do nothing, and later ambiguity
+    of anchor_role will fail with a less helpful fatal. Better to say it upfront.
     """
     users = [c.name for c in cfg.clone_placements if c.enabled and c.anchor_sheet]
     if users and not cfg.sheet_names:
         raise ValidationError(format_fatal_error(
-            "anchor_sheet используется, но словарь листов пуст",
-            [f"clone_placements с anchor_sheet: {users}",
-             "нужен schematic_dir (или schematic_files) в корне конфига — "
-             "путь к папке с *.kicad_sch, относительно самого этого YAML"]
+            _("anchor_sheet is used but sheet name dictionary is empty"),
+            [_("clone_placements with anchor_sheet: {users}").format(users=users),
+             _("you need schematic_dir (or schematic_files) at the root of the config — "
+               "path to the folder with *.kicad_sch files, relative to this YAML")]
         ))
-    logger.debug("Проверка anchor_sheet/sheet_names: всё сходится")
+    logger.debug(_("anchor_sheet/sheet_names check passed"))
 
 
 def check_clone_nets_exist_on_board(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     """
-    Резолвит via.net КАЖДОГО clone_placement (и уровня спицы, и вложенных
-    в components[i].vias — см. apply_clone_geometry) и сверяет результат
-    со словарём реальных цепей платы (adapter.get_all_nets()).
+    Resolves via.net for EACH clone_placement (both spoke‑level and those nested
+    in components[i].vias — see apply_clone_geometry) and checks the result
+    against the real board nets (adapter.get_all_nets()).
 
-    Зачем отдельно от resolve_roles_by_nets: сопоставление роль->ref уже
-    само себя проверяет (кандидат ищется среди реальных падов, несуществующая
-    цепь просто не найдёт кандидатов — фатал есть). А вот via.net идёт в
-    ViaCommand НАПРЯМУЮ, без такой проверки — опечатка в net_overrides
-    или в params, которая всё равно даёт синтаксически валидную строку
-    (например "+3V3_DVD" вместо "+3V3_DVDD"), тихо создаст via на новой,
-    не той цепи, никакой фатал по пути не сработает. Эта проверка — и
-    есть тот самый недостающий словарь.
+    Why separate from resolve_roles_by_nets: role‑to‑ref mapping already checks
+    itself (candidates are searched among real pads, a non‑existent net simply
+    yields no candidates — which is fatal). But via.net goes straight into
+    ViaCommand without such checking — a typo in net_overrides or params that
+    yields a syntactically valid string (e.g. "+3V3_DVD" instead of "+3V3_DVDD")
+    would quietly create a via on the wrong net, with no fatal along the way.
+    This check is that missing dictionary.
 
-    via.net=None не проверяется здесь — это уже фатал в clone_geometry.py
-    (у ClonePlacement нет дефолтной цепи), дублировать незачем.
+    via.net=None is not checked here — that is already fatal in clone_geometry.py
+    (ClonePlacement has no default net), no need to duplicate.
     """
     problems = []
     real_nets = {n.name for n in adapter.get_all_nets()}
@@ -275,55 +292,60 @@ def check_clone_nets_exist_on_board(adapter: KiCadBoardAdapter, cfg: Config) -> 
         try:
             resolved = resolve_net(via.net, clone.params, clone.net_overrides)
         except ValidationError:
-            return  # недостающий параметр — уже своя фатальная ошибка выше по стеку
+            return  # missing parameter — already a fatal error higher up
         if resolved not in real_nets:
             hint = difflib.get_close_matches(resolved, real_nets, n=1)
-            suggestion = f" — похоже на {hint[0]!r}?" if hint else ""
-            problems.append(f"{clone.name!r}, {where}: via.net {via.net!r} резолвится в "
-                            f"{resolved!r}, а такой цепи на плате нет{suggestion}")
+            suggestion = _(" — did you mean {suggestion!r}?").format(suggestion=hint[0]) if hint else ""
+            problems.append(
+                _("{name!r}, {where}: via.net {template!r} resolves to {resolved!r}, "
+                  "but that net does not exist on the board{suggestion}")
+                .format(name=clone.name, where=where, template=via.net,
+                        resolved=resolved, suggestion=suggestion)
+            )
 
     for clone in cfg.clone_placements:
         if not clone.enabled:
             continue
         template = cfg.templates.get(clone.template)
         if template is None:
-            continue  # уже поймано check_clone_templates_exist
+            continue  # already caught by check_clone_templates_exist
         for via in template.vias:
-            _check_via(via, clone, "via уровня спицы")
+            _check_via(via, clone, _("spoke‑level via"))
         for slot in template.components:
             for via in slot.vias:
-                _check_via(via, clone, f"via роли {slot.role!r}")
+                _check_via(via, clone, _("via of role {role!r}").format(role=slot.role))
 
     if problems:
         raise ValidationError(format_fatal_error(
-            "резолвнутая цепь via ссылается на несуществующую цепь платы", problems
+            _("resolved via net references a non‑existent board net"),
+            problems
         ))
-    logger.debug("Проверка via.net clone_placements против реальных цепей платы: всё сходится")
+    logger.debug(_("clone via.net checks against real board nets passed"))
 
 
 def check_single_selection_based_clone(cfg: Config) -> None:
     """
-    В KiCad в любой момент активно ТОЛЬКО ОДНО выделение — значит, за один
-    прогон нельзя обработать больше одного ClonePlacement в режиме "по
-    выделению" (нет ни nets, ни params). Если их больше одного — фатально,
-    с подсказкой либо выключить лишние (enabled: false), либо запускать
-    apply отдельно на каждый через --only NAME.
+    In KiCad only ONE selection is active at any moment — therefore you cannot
+    process more than one ClonePlacement in "by selection" mode (no nets, no params)
+    in a single run. If more than one, fatal with a hint to either disable the
+    extras (enabled: false) or run apply separately for each with --only NAME.
     """
     selection_based = [c.name for c in cfg.clone_placements if c.enabled and clone_uses_selection_mode(c)]
     if len(selection_based) > 1:
         raise ValidationError(format_fatal_error(
-            "несколько clone_placements в режиме «по выделению» в одном прогоне",
-            [f"найдено {len(selection_based)}: {selection_based} — в KiCad активно только одно "
-             f"выделение сразу, обработать все сразу нельзя",
-             "решение: либо enabled: false у всех, кроме одного, либо запускать "
-             "apply отдельно для каждого через --only NAME"]
+            _("multiple clone_placements in 'by selection' mode in one run"),
+            [_("found {count}: {names} — KiCad has only one selection at a time, "
+               "so processing all at once is impossible").format(
+                   count=len(selection_based), names=selection_based),
+             _("solution: either set enabled: false on all but one, or run apply "
+               "separately for each using --only NAME")]
         ))
-    logger.debug("Проверка на множественное выделение в clone_placements: сходится")
+    logger.debug(_("Single selection‑based clone check passed"))
 
 
 def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config) -> None:
-    """Запускает все проверки по порядку — от дешёвых к более полным."""
-    logger.info("Предварительные проверки конфигурации...")
+    """Runs all checks in order — from cheap to more comprehensive."""
+    logger.info(_("Running pre‑validation checks..."))
     check_clone_templates_exist(cfg)
     check_no_duplicate_clone_anchors(cfg)
     check_anchor_sheet_configured(cfg)
@@ -331,4 +353,4 @@ def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config) -> None:
     check_templates_and_pads_exist(adapter, cfg)
     check_role_pool_sufficiency(adapter, cfg)
     check_clone_nets_exist_on_board(adapter, cfg)
-    logger.info("Все предварительные проверки пройдены")
+    logger.info(_("All pre‑validation checks passed"))

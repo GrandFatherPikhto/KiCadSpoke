@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
 """
-diagnostics/diagnostic_charset.py — ищет по всей плате поля Role/Cluster
-(или любые другие через --fields), содержащие символы не из печатной
-ASCII (0x20-0x7E).
+diagnostics/diagnostic_charset.py — scans the entire board for Role/Cluster
+fields (or any other via --fields) containing characters outside printable ASCII
+(0x20-0x7E).
 
-Повод: живая находка на 3CH-AWG-TIA — Role у трёх компонентов (C3, C9,
-C170) содержал кириллическую "С" (U+0421) вместо латинской "C" (U+0043)
-на месте первой буквы (C_IN_BYPASS -> С_IN_BYPASS и т.п.) — очевидно,
-раскладка соскочила на русскую в момент набора значения поля в Eeschema.
-Визуально неотличимо почти в любом шрифте, но ломает точное сравнение
-ролей (component_pool.py/clone_role_resolver.py сравнивают Role строгим
-равенством) — компонент с такой опечаткой не находится ни одним правилом,
-которое ищет "правильную" (латинскую) роль, и наоборот, если её
-переименовать в шаблоне на кириллицу — воспроизвести опечатку руками
-почти невозможно, находится только диффом кодов символов.
+Reason: live find on 3CH-AWG-TIA — Role of three components (C3, C9, C170)
+contained Cyrillic "С" (U+0421) instead of Latin "C" (U+0043) in place of the
+first letter (C_IN_BYPASS -> С_IN_BYPASS etc.) — obviously, the keyboard layout
+switched to Russian while editing the field value in Eeschema. Visually
+indistinguishable in almost any font, but breaks exact role matching
+(component_pool.py/clone_role_resolver.py compare Role strictly byte‑wise) —
+a component with such a typo is not found by any rule that expects the
+"correct" (Latin) role, and conversely, if you rename it in the template to
+Cyrillic — the typo is almost impossible to reproduce manually; it is only
+detected by diffing character codes.
 
-Запуск:
+Run:
     python -m kicadspoke.diagnostics.diagnostic_charset
     python -m kicadspoke.diagnostics.diagnostic_charset --fields Role,Cluster,Value
     python -m kicadspoke.diagnostics.diagnostic_charset --verbose
 
-Код возврата: 0 — не найдено ни одного нелатинского символа, 1 — найдено
-хотя бы одно. Удобно как самостоятельный шаг перед `apply` (аналогично
-`run_all_checks`, но для этого класса опечаток нет отдельной проверки в
-validation.py — она тут, в диагностике, а не в основном пайплайне, чтобы
-не тормозить обычный apply лишним полным проходом по плате ради редкой
-находки).
+Return code: 0 — no non‑ASCII characters found, 1 — at least one found.
+Convenient as a standalone step before `apply` (like run_all_checks, but for
+this class of typos there is no separate check in validation.py — it lives here
+in diagnostics, not in the main pipeline, to avoid slowing down a normal apply
+with an extra full pass over the board for a rare find).
 """
 import argparse
 import logging
@@ -36,6 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
+from kicadspoke.i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -43,30 +43,34 @@ DEFAULT_FIELDS = ["Role", "Cluster"]
 
 
 def find_non_ascii(value: str):
-    """[(индекс, символ, кодпоинт, unicode-имя), ...] для каждого символа
-    вне печатной ASCII (0x20-0x7E) — намеренно узкий диапазон, не просто
-    "не ASCII": табы/переводы строк в однострочных полях Role/Cluster и
-    так недопустимы, но здесь речь именно про подмену буквы похожим
-    символом из другого алфавита, а не про whitespace-мусор."""
+    """Returns [(index, char, codepoint, unicode_name), ...] for each character
+    outside printable ASCII (0x20-0x7E) — deliberately narrow range, not simply
+    "not ASCII": tabs/newlines in single‑line Role/Cluster fields are also
+    invalid, but here we are specifically looking for character substitution
+    from another alphabet, not whitespace junk."""
     bad = []
     for i, ch in enumerate(value):
         if not (0x20 <= ord(ch) <= 0x7E):
             try:
                 name = unicodedata.name(ch)
             except ValueError:
-                name = "БЕЗ ИМЕНИ"
+                name = _("NO NAME")
             bad.append((i, ch, ord(ch), name))
     return bad
 
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Поиск не-ASCII символов (например, кириллических "
-                     "гомоглифов) в полях Role/Cluster по всей плате")
+        description=_("Search for non‑ASCII characters (e.g. Cyrillic homoglyphs) "
+                      "in Role/Cluster fields across the entire board")
+    )
     ap.add_argument("--fields", default=",".join(DEFAULT_FIELDS),
-                     help=f"через запятую, без пробелов (по умолчанию: {','.join(DEFAULT_FIELDS)})")
-    ap.add_argument("--timeout-ms", type=int, default=20000)
-    ap.add_argument("--verbose", action="store_true", help="печатать и чистые поля тоже")
+                    help=_("comma‑separated, no spaces (default: {default})")
+                    .format(default=",".join(DEFAULT_FIELDS)))
+    ap.add_argument("--timeout-ms", type=int, default=20000,
+                    help=_("IPC timeout in ms"))
+    ap.add_argument("--verbose", action="store_true",
+                    help=_("print clean fields as well"))
     args = ap.parse_args()
 
     logging.basicConfig(
@@ -91,27 +95,30 @@ def main():
             if bad:
                 findings.append((ref, field, value, bad))
             elif args.verbose:
-                logger.debug(f"{ref}.{field} = {value!r} — чисто")
+                logger.debug(_("{ref}.{field} = {value!r} — clean")
+                             .format(ref=ref, field=field, value=value))
 
-    print(f"\nПроверено футпринтов: {len(footprints)}, полей на компонент: {fields}")
+    print(_("\nChecked footprints: {count}, fields per component: {fields}")
+          .format(count=len(footprints), fields=fields))
 
     if not findings:
-        print("Не найдено ни одного не-ASCII символа. Всё чисто.")
+        print(_("No non‑ASCII characters found. All clean."))
         return 0
 
-    print(f"\n=== НАЙДЕНО {len(findings)} поле(й) с подозрительными символами ===\n")
+    print(_("\n=== FOUND {count} field(s) with suspicious characters ===\n")
+          .format(count=len(findings)))
     for ref, field, value, bad in findings:
-        print(f"{ref}.{field} = {value!r}")
+        print(_("{ref}.{field} = {value!r}").format(ref=ref, field=field, value=value))
         for i, ch, cp, name in bad:
-            print(f"    позиция {i}: {ch!r} U+{cp:04X} ({name})")
+            print(_("    position {pos}: {ch!r} U+{cp:04X} ({name})")
+                  .format(pos=i, ch=ch, cp=cp, name=name))
     print(
-        "\nЭто не обязательно ошибка (могут быть легитимные Unicode-значения "
-        "в других полях), но для Role/Cluster ожидается чистая ASCII-латиница "
-        "— сравнение ролей в component_pool.py/clone_role_resolver.py "
-        "регистрозависимое и посимвольное, гомоглиф из другого алфавита "
-        "не совпадёт ни с чем. Правьте в Eeschema (Symbol Properties -> "
-        "стереть и перепечатать значение при английской раскладке), затем "
-        "Update PCB from Schematic."
+        _("\nThis is not necessarily an error (there may be legitimate Unicode "
+          "values in other fields), but for Role/Cluster pure ASCII‑Latin is expected — "
+          "role comparisons in component_pool.py/clone_role_resolver.py are case‑sensitive "
+          "and byte‑wise; a homoglyph from another alphabet will never match anything. "
+          "Fix in Eeschema (Symbol Properties -> erase and retype the value with "
+          "the English layout), then Update PCB from Schematic.")
     )
     return 1
 

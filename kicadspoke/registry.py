@@ -1,33 +1,34 @@
 # kicadspoke/registry.py
 """
-registry.py — реестр расстановки via между прогонами.
+registry.py — placement registry for vias and tracks between runs.
 
-Позволяет: (1) не трогать via, которая уже стоит ровно там, где надо;
-(2) если позиция в конфиге изменилась — удалить старую via по
-сохранённому uuid и создать новую на месте; (3) prune — удалить via,
-чьи ключи больше не встречаются в текущем конфиге (спицу/компонент
-убрали из YAML вовсе).
+Allows: (1) not touching a via/track that is already exactly in the right place;
+(2) if the position in the config changed — delete the old via/track by its
+stored UUID and create a new one at the new location; (3) prune — delete
+vias/tracks whose keys no longer appear in the current config (spoke/component
+removed from YAML entirely).
 
-Составной ключ — anchor_id/template_name/role/via_index:
-  anchor_id: f"pad:{spoke_pad}" для KiCadSpoke (якорь = номер пада IC).
-             Задел на будущее: f"ref:{anchor_ref}" для клонирования секций.
-  role: роль компонента (уникальна внутри шаблона, см. config.py) для via
-        уровня компонента, или None для via уровня спицы.
-  via_index: индекс внутри конкретного списка vias (0-based) — раз роли
-        внутри шаблона уникальны, а порядок списка vias стабилен между
-        прогонами, этого достаточно, без дополнительного различения.
+Composite key — anchor_id/template_name/role/index:
+  anchor_id: f"pad:{spoke_pad}" for KiCadSpoke (anchor = IC pad number).
+             Future extension: f"ref:{anchor_ref}" for section cloning.
+  role: component role (unique within template, see config.py) for component‑level
+        vias/tracks, or None for spoke‑level vias/tracks.
+  index: 0‑based index within the specific list (vias or tracks) — since roles
+         within a template are unique and the order of lists is stable between
+         runs, this is sufficient without additional discrimination.
 
-ИЗМЕНЕНО (после жалобы на «глючит немилосердно»): реестр.json — ТОЛЬКО
-индекс key->uuid, не источник истины о позиции/цепи. Раньше "уже стоит
-правильно" решалось сверкой чисел из JSON с числами из того же JSON —
-если via удалили руками, откатили Undo, PCB перечитали из git, или
-прогон упал между record_created() (JSON уже записан) и реальным
-коммитом на плату (см. известные креши IPC на begin_commit/push_commit) —
-JSON врал, что всё стоит, а на плате было пусто. Тихо, до визуального
-осмотра. Теперь reconcile() ОДИН РАЗ читает adapter.get_vias() и live-via
-с сохранённым uuid — источник истины по позиции/цепи/сверлу/диаметру;
-запись в реестре, чей uuid не найден живьём на плате, считается протухшей
-(не фатал — просто пересоздаём, как будто записи не было).
+CHANGED (after reports of "glitches mercilessly"): registry.json is now ONLY
+an index key->uuid, not the source of truth for position/net/parameters.
+Previously "already correctly placed" was decided by comparing numbers from the
+JSON with numbers from the same JSON — if a via was manually deleted, undone,
+PCB reloaded from git, or a run crashed between record_created() (JSON already
+written) and the actual board commit (see known IPC crashes on begin_commit/
+push_commit) — the JSON lied that everything was in place, while the board was
+empty. Silently, until visual inspection. Now reconcile() reads adapter.get_vias()
+once and uses the live via with the stored UUID as the source of truth for
+position/net/drill/diameter; a registry entry whose UUID is not found alive on
+the board is considered stale (not fatal — just recreate as if the entry never
+existed).
 """
 import json
 import logging
@@ -38,8 +39,8 @@ from typing import Dict, List, Optional
 from kipy.board_types import BoardLayer
 from .placement.commands import ViaCommand, TrackCommand
 from .utils.units import MM
-
 from .constants import POSITION_TOLERANCE_MM, SPOKE_LEVEL_ROLE_PLACEHOLDER
+from .i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -48,25 +49,25 @@ _SPOKE_LEVEL_ROLE_PLACEHOLDER = SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 
 def _layer_to_str(layer: BoardLayer) -> str:
-    """BoardLayer -> 'F.Cu'/'B.Cu' — локальная копия (не тянем сюда
-    .placement.executor.base, чтобы не рисковать циклом импортов ради
-    одной строки, см. историю с manual_position_calculator.py)."""
+    """BoardLayer -> 'F.Cu'/'B.Cu' — local copy (don't pull from
+    .placement.executor.base to avoid import cycles)."""
     return "B.Cu" if layer == BoardLayer.BL_B_Cu else "F.Cu"
 
-def make_registry_key(anchor_id: str, template_name: str, role: Optional[str], via_index: int) -> str:
+
+def make_registry_key(anchor_id: str, template_name: str, role: Optional[str], index: int) -> str:
     role_part = role if role is not None else _SPOKE_LEVEL_ROLE_PLACEHOLDER
-    return f"{anchor_id}|{template_name}|{role_part}|{via_index}"
+    return f"{anchor_id}|{template_name}|{role_part}|{index}"
 
 
 def registry_path_for_config(config_path: str) -> str:
-    """<config>.yaml -> <config>.registry.json, рядом с самим конфигом."""
+    """<config>.yaml -> <config>.registry.json, next to the config itself."""
     p = Path(config_path)
     return str(p.with_suffix("").with_suffix(".registry.json"))
 
 
 def track_registry_path_for_config(config_path: str) -> str:
-    """<config>.yaml -> <config>.tracks.registry.json — отдельный файл от via,
-    схема записи другая (две точки+ширина+слой, не drill/diameter)."""
+    """<config>.yaml -> <config>.tracks.registry.json — separate file from vias,
+    record schema is different (two points+width+layer, not drill/diameter)."""
     p = Path(config_path)
     return str(p.with_suffix("").with_suffix(".tracks.registry.json"))
 
@@ -89,8 +90,9 @@ def load_registry(path: str) -> Dict[str, RegistryEntry]:
         raw = json.loads(p.read_text(encoding="utf-8"))
         return {k: RegistryEntry(**v) for k, v in raw.items()}
     except Exception as e:
-        logger.warning(f"Не удалось прочитать реестр {path}: {type(e).__name__}: {e} — "
-                       f"считаю реестр пустым (все via будут созданы заново)")
+        logger.warning(_("Failed to read registry {path}: {type}: {e} — "
+                         "treating registry as empty (all vias will be created anew)")
+                       .format(path=path, type=type(e).__name__, e=e))
         return {}
 
 
@@ -121,8 +123,9 @@ def load_track_registry(path: str) -> Dict[str, TrackRegistryEntry]:
         raw = json.loads(p.read_text(encoding="utf-8"))
         return {k: TrackRegistryEntry(**v) for k, v in raw.items()}
     except Exception as e:
-        logger.warning(f"Не удалось прочитать реестр треков {path}: {type(e).__name__}: {e} — "
-                       f"считаю реестр пустым (все треки будут созданы заново)")
+        logger.warning(_("Failed to read track registry {path}: {type}: {e} — "
+                         "treating registry as empty (all tracks will be created anew)")
+                       .format(path=path, type=type(e).__name__, e=e))
         return {}
 
 
@@ -135,8 +138,8 @@ def save_track_registry(path: str, entries: Dict[str, TrackRegistryEntry]) -> No
 
 class PlacementRegistry:
     """
-    Живёт один прогон: reconcile() один раз перед созданием via,
-    record_created() — по мере успешного создания каждой конкретной via.
+    Lives for one run: reconcile() called once before creating vias,
+    record_created() as each specific via is successfully created.
     """
 
     def __init__(self, adapter, path: str):
@@ -145,7 +148,7 @@ class PlacementRegistry:
         self.entries: Dict[str, RegistryEntry] = load_registry(path)
 
     def _live_matches(self, live_via, via: ViaCommand) -> bool:
-        """Сверка ПЛАНИРУЕМОЙ via с РЕАЛЬНОЙ via на плате (не с записью в JSON)."""
+        """Checks PLANNED via against REAL via on the board (not against JSON entry)."""
         x_mm = via.position.x / MM
         y_mm = via.position.y / MM
         live_x_mm = live_via.position.x / MM
@@ -162,29 +165,27 @@ class PlacementRegistry:
     def reconcile(self, planned_vias: List[ViaCommand],
                  known_anchor_ids: Optional[set] = None) -> List[ViaCommand]:
         """
-        Возвращает подмножество planned_vias, которое РЕАЛЬНО нужно
-        создать (уже стоящие правильно — исключены). Удаляет устаревшие
-        по сохранённому uuid: и те, что изменили позицию/параметры, и те,
-        чей ключ вообще не встретился в этом прогоне (prune).
+        Returns the subset of planned_vias that actually need to be created
+        (already correctly placed ones are excluded). Deletes stale ones by
+        stored UUID: both those whose position/parameters changed, and those
+        whose key does not appear in this run at all (prune).
 
-        Источник истины по "стоит ли уже правильно" — ЖИВАЯ via на плате
-        (adapter.get_vias(), один запрос на весь reconcile), а не
-        сохранённые в JSON числа: запись реестра, чей uuid не находится
-        среди живых via, считается протухшей и пересоздаётся, как будто
-        записи не было вовсе.
+        Source of truth for "is it already placed correctly" is the LIVE via on
+        the board (adapter.get_vias(), one query for the whole reconcile), not
+        the numbers stored in JSON: a registry entry whose UUID is not among the
+        live vias is considered stale and recreated as if it never existed.
 
-        known_anchor_ids — ПОЛНЫЙ (до всякой --only фильтрации) набор
-        anchor_id (см. clone_anchor_id() в clone_position_calculator.py —
-        физическая привязка anchor_ref/anchor_pad, НЕ clone.name,
-        специально: переименование clone_placement не должно тереть
-        историю, если якорь физически тот же). Без него (None) prune
-        ведёт себя по-старому: всё, чего нет в этом прогоне — устарело.
-        С ним — запись, чей anchor_id (целиком, не по имени) всё ещё
-        есть в known_anchor_ids, пропускается (не prune'ится), даже если
-        её не было среди planned_vias ЭТОГО прогона: значит, её просто
-        отфильтровали через --only, а не убрали из YAML. Иначе --only A
-        на одном прогоне и --only B на следующем взаимно удаляли бы via
-        друг друга — реальный баг, пойманный на практике.
+        known_anchor_ids — the FULL (before any --only filtering) set of
+        anchor_id (see clone_anchor_id() in clone_position_calculator.py —
+        physical binding anchor_ref/anchor_pad, NOT clone.name, specifically so
+        that renaming a clone_placement does not erase history if the physical
+        anchor remains the same). Without it (None) prune behaves as before:
+        everything not in this run is stale. With it — an entry whose anchor_id
+        (entirely, not by name) is still in known_anchor_ids is skipped (not
+        pruned), even if it was not among planned_vias in THIS run: it was just
+        filtered out by --only, not removed from YAML. Otherwise --only A in one
+        run and --only B in the next would mutually delete each other's vias —
+        a real bug caught in practice.
         """
         to_create: List[ViaCommand] = []
         seen_keys = set()
@@ -203,23 +204,25 @@ class PlacementRegistry:
 
             live_via = live_by_uuid.get(existing.uuid)
             if live_via is None:
-                logger.warning(f"  {via.registry_key}: в реестре есть запись (uuid "
-                               f"{existing.uuid}), но такой via на плате НЕТ — реестр "
-                               f"рассинхронизирован (удалили руками, Undo, PCB "
-                               f"перечитан из git, или прошлый прогон упал между "
-                               f"записью в реестр и коммитом на плату); пересоздаю "
-                               f"как будто записи не было")
+                logger.warning(_("  {key}: registry has an entry (uuid {uuid}), "
+                                 "but no such via is on the board — registry is out of sync "
+                                 "(manually deleted, Undo, PCB reloaded from git, or previous run "
+                                 "crashed between registry write and board commit); recreating "
+                                 "as if the entry never existed")
+                               .format(key=via.registry_key, uuid=existing.uuid))
                 del self.entries[via.registry_key]
                 to_create.append(via)
                 continue
 
             if self._live_matches(live_via, via):
-                logger.debug(f"  {via.registry_key}: уже стоит правильно (проверено "
-                            f"по живой via {existing.uuid}), пропуск")
+                logger.debug(_("  {key}: already correctly placed (checked against "
+                               "live via {uuid}), skipped")
+                             .format(key=via.registry_key, uuid=existing.uuid))
                 continue
 
-            logger.info(f"  {via.registry_key}: позиция/параметры изменились, "
-                       f"удаляю старую via ({existing.uuid}) и создаю новую")
+            logger.info(_("  {key}: position/parameters changed, deleting old via ({uuid}) "
+                          "and creating a new one")
+                        .format(key=via.registry_key, uuid=existing.uuid))
             self.adapter.remove_by_id(existing.uuid)
             del self.entries[via.registry_key]
             to_create.append(via)
@@ -230,22 +233,23 @@ class PlacementRegistry:
             if (known_anchor_ids is not None
                     and (anchor_id.startswith(('anchor:', 'role:', 'name:')))
                     and anchor_id in known_anchor_ids):
-                logger.debug(f"  {key}: не обработан в этом прогоне (--only "
-                            f"отфильтровал {anchor_id!r}), но он есть в конфиге — "
-                            f"НЕ prune'ится")
+                logger.debug(_("  {key}: not processed in this run (--only filtered "
+                               "{anchor_id!r}), but it is still in the config — NOT pruned")
+                             .format(key=key, anchor_id=anchor_id))
                 continue
             stale_keys.add(key)
 
         for key in stale_keys:
             entry = self.entries.pop(key)
-            logger.info(f"  prune: {key} больше не встречается в конфиге, удаляю via ({entry.uuid})")
+            logger.info(_("  prune: {key} no longer appears in config, deleting via ({uuid})")
+                        .format(key=key, uuid=entry.uuid))
             self.adapter.remove_by_id(entry.uuid)
 
         save_registry(self.path, self.entries)
         return to_create
 
     def record_created(self, via_cmd: ViaCommand, created_uuid: str) -> None:
-        """Вызывается executor'ом сразу после успешного создания конкретной via."""
+        """Called by the executor immediately after successfully creating a specific via."""
         if via_cmd.registry_key is None:
             return
         self.entries[via_cmd.registry_key] = RegistryEntry(
@@ -261,14 +265,13 @@ class PlacementRegistry:
 
 class TrackRegistry:
     """
-    Реестр расстановки треков между прогонами — та же самая логика, что и
-    PlacementRegistry (см. её докстринг: live-плата как источник истины,
-    JSON только индекс key->uuid, prune с учётом known_clone_names), но
-    сверка "совпадает ли" идёт по двум точкам + ширине + слою вместо
-    позиции+drill+diameter. Отдельный класс и отдельный файл на диске
-    (track_registry_path_for_config), а не расширение PlacementRegistry —
-    схема записи слишком разная, совмещать в одной таблице/классе только
-    ради экономии кода не стоит (яснее читать порознь).
+    Track placement registry between runs — same logic as PlacementRegistry
+    (see its docstring: live board as source of truth, JSON only index key->uuid,
+    prune with known_anchor_ids), but matching is by two points + width + layer
+    instead of position+drill+diameter. Separate class and separate file on disk
+    (track_registry_path_for_config) rather than extending PlacementRegistry —
+    the record schema is too different, combining them in one table/class just
+    to save code is not worth it (clearer to read separately).
     """
 
     def __init__(self, adapter, path: str):
@@ -277,7 +280,7 @@ class TrackRegistry:
         self.entries: Dict[str, TrackRegistryEntry] = load_track_registry(path)
 
     def _live_matches(self, live_track, track: TrackCommand) -> bool:
-        """Сверка ПЛАНИРУЕМОГО трека с РЕАЛЬНЫМ треком на плате (не с записью в JSON)."""
+        """Checks PLANNED track against REAL track on the board (not against JSON entry)."""
         start_x_mm, start_y_mm = track.start.x / MM, track.start.y / MM
         end_x_mm, end_y_mm = track.end.x / MM, track.end.y / MM
         live_start_x_mm, live_start_y_mm = live_track.start.x / MM, live_track.start.y / MM
@@ -295,8 +298,8 @@ class TrackRegistry:
 
     def reconcile(self, planned_tracks: List[TrackCommand],
                  known_anchor_ids: Optional[set] = None) -> List[TrackCommand]:
-        """См. PlacementRegistry.reconcile — логика идентична один в один,
-        отличаются только поля сверки (см. _live_matches здесь)."""
+        """See PlacementRegistry.reconcile — logic is identical, only match
+        fields differ (see _live_matches above)."""
         to_create: List[TrackCommand] = []
         seen_keys = set()
         live_by_uuid = {str(t.id.value): t for t in self.adapter.get_tracks()}
@@ -314,20 +317,23 @@ class TrackRegistry:
 
             live_track = live_by_uuid.get(existing.uuid)
             if live_track is None:
-                logger.warning(f"  {track.registry_key}: в реестре треков есть запись (uuid "
-                               f"{existing.uuid}), но такого трека на плате НЕТ — реестр "
-                               f"рассинхронизирован; пересоздаю как будто записи не было")
+                logger.warning(_("  {key}: track registry has an entry (uuid {uuid}), "
+                                 "but no such track is on the board — registry is out of sync; "
+                                 "recreating as if the entry never existed")
+                               .format(key=track.registry_key, uuid=existing.uuid))
                 del self.entries[track.registry_key]
                 to_create.append(track)
                 continue
 
             if self._live_matches(live_track, track):
-                logger.debug(f"  {track.registry_key}: уже стоит правильно (проверено "
-                            f"по живому треку {existing.uuid}), пропуск")
+                logger.debug(_("  {key}: already correctly placed (checked against "
+                               "live track {uuid}), skipped")
+                             .format(key=track.registry_key, uuid=existing.uuid))
                 continue
 
-            logger.info(f"  {track.registry_key}: геометрия/параметры изменились, "
-                       f"удаляю старый трек ({existing.uuid}) и создаю новый")
+            logger.info(_("  {key}: geometry/parameters changed, deleting old track ({uuid}) "
+                          "and creating a new one")
+                        .format(key=track.registry_key, uuid=existing.uuid))
             self.adapter.remove_by_id(existing.uuid)
             del self.entries[track.registry_key]
             to_create.append(track)
@@ -338,22 +344,23 @@ class TrackRegistry:
             if (known_anchor_ids is not None
                     and (anchor_id.startswith(('anchor:', 'role:', 'name:')))
                     and anchor_id in known_anchor_ids):
-                logger.debug(f"  {key}: не обработан в этом прогоне (--only "
-                            f"отфильтровал {anchor_id!r}), но он есть в конфиге — "
-                            f"НЕ prune'ится")
+                logger.debug(_("  {key}: not processed in this run (--only filtered "
+                               "{anchor_id!r}), but it is still in the config — NOT pruned")
+                             .format(key=key, anchor_id=anchor_id))
                 continue
             stale_keys.add(key)
 
         for key in stale_keys:
             entry = self.entries.pop(key)
-            logger.info(f"  prune: {key} больше не встречается в конфиге, удаляю трек ({entry.uuid})")
+            logger.info(_("  prune: {key} no longer appears in config, deleting track ({uuid})")
+                        .format(key=key, uuid=entry.uuid))
             self.adapter.remove_by_id(entry.uuid)
 
         save_track_registry(self.path, self.entries)
         return to_create
 
     def record_created(self, track_cmd: TrackCommand, created_uuid: str) -> None:
-        """Вызывается TrackExecutor'ом сразу после успешного создания конкретного трека."""
+        """Called by TrackExecutor immediately after successfully creating a specific track."""
         if track_cmd.registry_key is None:
             return
         self.entries[track_cmd.registry_key] = TrackRegistryEntry(

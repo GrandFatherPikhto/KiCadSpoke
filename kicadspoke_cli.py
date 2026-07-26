@@ -1,10 +1,10 @@
 #!.venv/bin/python
 """
-placer.py — главный скрипт для расстановки развязывающих конденсаторов.
+kicadspoke_cli.py — main entry point for KiCadSpoke.
 
-Использование:
-    python placer.py decap_placement.yaml [--dry-run] [--timeout-ms 20000] [--batch-size 10]
-    python placer.py undo [--verbose]
+Usage:
+    python kicadspoke_cli.py apply config.yaml [--dry-run] [--timeout-ms 20000] [--batch-size 10]
+    python kicadspoke_cli.py undo [--verbose]
 """
 
 import argparse
@@ -16,14 +16,14 @@ from typing import Dict, Any
 import yaml
 from pathlib import Path
 
-# Добавляем корень проекта в sys.path
+# Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from kicadspoke.config import load_config, rule_effective_name, thermal_via_array_effective_name
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.placement.services.clone_position_calculator import clone_anchor_id
-from kicadspoke.placement.executor import BatchExecutor   # <-- новый путь
+from kicadspoke.placement.executor import BatchExecutor
 from kicadspoke.exceptions import PlacerError
 from kipy.errors import ApiError, ApiStatusCode
 from kicadspoke.undo import undo_last_operation
@@ -32,10 +32,11 @@ from kicadspoke.registry import (PlacementRegistry, registry_path_for_config,
                                  TrackRegistry, track_registry_path_for_config)
 from kicadspoke.template_extraction import extract_template_from_selection
 from kicadspoke.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
+from kicadspoke.i18n import _
 
 
 def setup_logging(verbose: bool = False, log_file: str = None):
-    """Настройка логирования: уровень и вывод в консоль и/или файл."""
+    """Configure logging: level and output to console and/or file."""
     level = logging.DEBUG if verbose else logging.INFO
     handlers = []
     console = logging.StreamHandler(sys.stdout)
@@ -54,10 +55,10 @@ def setup_logging(verbose: bool = False, log_file: str = None):
 
 
 def cmd_apply(args, cfg=None):
-    """Основная команда: применить расстановку."""
+    """Main command: apply placement."""
     logger = logging.getLogger(__name__)
     if cfg is None:
-        logger.info(f"Загрузка конфига: {args.config}")
+        logger.info(_("Loading config: {config}").format(config=args.config))
         cfg = load_config(args.config)
 
     only_names = getattr(args, "only", None)
@@ -83,30 +84,32 @@ def cmd_apply(args, cfg=None):
             lines = []
             for name in sorted(missing):
                 suggestion = difflib.get_close_matches(name, all_names, n=1)
-                hint = f" (может, имелся в виду {suggestion[0]!r}?)" if suggestion else ""
-                lines.append(f"  {name!r} — не найдено ни среди rules, ни среди "
-                            f"clone_placements, ни thermal_via_array{hint}")
-            sys.exit("[ошибка] --only: не найдены имена:\n" + "\n".join(lines) +
-                     f"\nДоступные: {all_names}")
+                hint = _(" (maybe you meant {suggestion!r}?)").format(suggestion=suggestion[0]) if suggestion else ""
+                lines.append(_("  {name!r} — not found among rules, clone_placements, or thermal_via_array{hint}")
+                             .format(name=name, hint=hint))
+            sys.exit(_("[error] --only: names not found:\n{lines}\nAvailable: {all}")
+                     .format(lines="\n".join(lines), all=all_names))
 
         cfg.rules = matched_rules
         cfg.clone_placements = matched_clones
         if not thermal_matches:
             cfg.thermal_via_array.enabled = False
-        logger.info(f"--only {sorted(requested)}: rules={[rule_effective_name(r) for r in matched_rules]}, "
-                   f"clone_placements={[c.name for c in matched_clones]}, "
-                   f"thermal_via_array={'да' if thermal_matches else 'нет'} "
-                   f"(остальное в этом прогоне игнорируется)")
+        logger.info(_("--only {requested}: rules={rules}, clone_placements={clones}, "
+                      "thermal_via_array={thermal} (everything else is ignored in this run)")
+                    .format(requested=sorted(requested),
+                            rules=[rule_effective_name(r) for r in matched_rules],
+                            clones=[c.name for c in matched_clones],
+                            thermal=_("yes") if thermal_matches else _("no")))
 
     all_anchor_ids = {clone_anchor_id(c) for c in cfg.clone_placements}
 
-    logger.info(f"Подключение к KiCad (таймаут {args.timeout_ms} мс)")
+    logger.info(_("Connecting to KiCad (timeout {timeout} ms)").format(timeout=args.timeout_ms))
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
     adapter.refresh_board()
 
     run_all_checks(adapter, cfg)
 
-    logger.info("Планирование расстановки...")
+    logger.info(_("Planning placement..."))
     planner = PlacementPlanner(adapter, cfg)
 
     if args.dry_run:
@@ -114,94 +117,93 @@ def cmd_apply(args, cfg=None):
         vias = planner.plan_vias()
         tracks = planner.plan_tracks()
         print("\n=== DRY RUN ===")
-        print("Перемещения:")
+        print(_("Moves:"))
         for m in moves:
-            print(f"  {m.ref}: ({m.position.x/1e6:.3f}, {m.position.y/1e6:.3f}) мм, угол={m.angle.degrees:.1f}°")
-        print("\nВиа:")
+            print(_("  {ref}: ({x:.3f}, {y:.3f}) mm, angle={angle:.1f}°")
+                  .format(ref=m.ref, x=m.position.x/1e6, y=m.position.y/1e6, angle=m.angle.degrees))
+        print("\n" + _("Vias:"))
         for v in vias:
-            print(f"  via у {v.owner_ref}: ({v.position.x/1e6:.3f}, {v.position.y/1e6:.3f}) мм, net={v.net_name}")
-        print("\nТреки:")
+            print(_("  via for {owner}: ({x:.3f}, {y:.3f}) mm, net={net}")
+                  .format(owner=v.owner_ref, x=v.position.x/1e6, y=v.position.y/1e6, net=v.net_name))
+        print("\n" + _("Tracks:"))
         for t in tracks:
-            print(f"  track у {t.owner_ref}: ({t.start.x/1e6:.3f}, {t.start.y/1e6:.3f}) -> "
-                  f"({t.end.x/1e6:.3f}, {t.end.y/1e6:.3f}) мм, net={t.net_name}, "
-                  f"width={t.width_mm} мм")
-        print("\n(keepout термовиа посчитан по ТЕКУЩИМ позициям конденсаторов, "
-              "не по целевым — может слегка отличаться от боевого прогона)")
-        print("(коллизии треков с чужой медью/компонентами НЕ проверяются этим "
-              "инструментом — полагаемся на DRC самого KiCad после расстановки)")
+            print(_("  track for {owner}: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, net={net}, width={w} mm")
+                  .format(owner=t.owner_ref, sx=t.start.x/1e6, sy=t.start.y/1e6,
+                          ex=t.end.x/1e6, ey=t.end.y/1e6, net=t.net_name, w=t.width_mm))
+        print("\n" + _("(thermal via keepout is computed based on CURRENT component positions, "
+                      "not the target ones — may slightly differ from the real run)"))
+        print(_("(track collisions with other copper/components are NOT checked by this tool — "
+                "rely on KiCad DRC after placement)"))
         return
 
     executor = BatchExecutor(adapter, cfg, batch_size=args.batch_size)
     registry = PlacementRegistry(adapter, cfg.registry_path or registry_path_for_config(args.config))
     track_registry = TrackRegistry(adapter, cfg.track_registry_path or track_registry_path_for_config(args.config))
 
-    # --- Фаза 1: перемещения ---
+    # --- Phase 1: moves ---
     moves = planner.plan_moves()
-    logger.info(f"Запланировано перемещений: {len(moves)}")
-    logger.info("Применение перемещений...")
+    logger.info(_("Planned moves: {count}").format(count=len(moves)))
+    logger.info(_("Applying moves..."))
     failed_refs = executor.execute_moves(
         moves,
         check_collisions=not args.no_collision_check,
         collision_margin_mm=args.collision_margin,
     )
     if failed_refs:
-        logger.warning(f"Не удалось переместить: {sorted(set(failed_refs))}")
+        logger.warning(_("Failed to move: {refs}").format(refs=sorted(set(failed_refs))))
 
-    # --- Перечитываем плату ---
-    logger.info("Обновление данных платы перед планированием виа...")
+    # --- Reload board ---
+    logger.info(_("Reloading board data before planning vias..."))
     adapter.refresh_board()
 
-    # --- Фаза 2: виа ---
+    # --- Phase 2: vias ---
     all_vias = planner.plan_vias()
     vias_to_create = registry.reconcile(all_vias, known_anchor_ids=all_anchor_ids)
-    logger.info(f"Запланировано виа: {len(all_vias)}, из них реально к созданию "
-               f"(реестр отсеял уже стоящие правильно): {len(vias_to_create)}")
-    logger.info("Применение виа...")
+    logger.info(_("Planned vias: {total}, actually to create (registry filtered already correctly placed): {to_create}")
+                .format(total=len(all_vias), to_create=len(vias_to_create)))
+    logger.info(_("Applying vias..."))
     failed_vias = executor.execute_vias(vias_to_create, registry=registry)
     if failed_vias:
-        logger.warning(f"Не удалось создать виа рядом с: {sorted(set(failed_vias))}")
+        logger.warning(_("Failed to create vias near: {refs}").format(refs=sorted(set(failed_vias))))
 
-    # --- Фаза 3: треки ---
+    # --- Phase 3: tracks ---
     all_tracks = planner.plan_tracks()
     tracks_to_create = track_registry.reconcile(all_tracks, known_anchor_ids=all_anchor_ids)
-    logger.info(f"Запланировано треков: {len(all_tracks)}, из них реально к созданию "
-               f"(реестр отсеял уже стоящие правильно): {len(tracks_to_create)}")
-    logger.info("Применение треков...")
+    logger.info(_("Planned tracks: {total}, actually to create (registry filtered already correctly placed): {to_create}")
+                .format(total=len(all_tracks), to_create=len(tracks_to_create)))
+    logger.info(_("Applying tracks..."))
     failed_tracks = executor.execute_tracks(tracks_to_create, registry=track_registry)
     if failed_tracks:
-        logger.warning(f"Не удалось создать треки рядом с: {sorted(set(failed_tracks))}")
+        logger.warning(_("Failed to create tracks near: {refs}").format(refs=sorted(set(failed_tracks))))
 
     if not failed_refs and not failed_vias and not failed_tracks:
-        logger.info("✅ Все операции выполнены успешно")
+        logger.info(_("✅ All operations completed successfully"))
     else:
-        logger.warning("⚠️ Некоторые операции завершились с ошибками – проверьте лог.")
+        logger.warning(_("⚠️ Some operations failed – check the log."))
 
 
 def load_profile(profiles_path: str, top_key: str, profile_name: str) -> Dict[str, Any]:
     """
-    Общий загрузчик именованных профилей CLI-аргументов (для extract и
-    clone-extract — обе команды многословные, обе используют один и тот
-    же механизм). top_key разный для разных команд (extract_profiles /
-    clone_profiles) — так один YAML-файл может держать профили
-    обеих команд сразу, без коллизии имён.
+    Common loader for named CLI profiles (for extract and clone-extract).
+    top_key is different for each command (extract_profiles / clone_profiles).
     """
     p = Path(profiles_path)
     if not p.exists():
-        sys.exit(f"[ошибка] файл профилей {profiles_path!r} не найден")
+        sys.exit(_("[error] profiles file {path!r} not found").format(path=profiles_path))
     with open(p, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     profiles = data.get(top_key, {})
     if profile_name not in profiles:
         available = list(profiles.keys())
-        sys.exit(f"[ошибка] профиль {profile_name!r} не найден в {top_key!r} файла "
-                 f"{profiles_path!r}. Доступные: {available}")
+        sys.exit(_("[error] profile {name!r} not found in {top_key!r} of file {path!r}. Available: {avail}")
+                 .format(name=profile_name, top_key=top_key, path=profiles_path, avail=available))
     return profiles[profile_name]
 
 
 def cmd_extract(args):
-    """Извлекает шаблон спицы из текущего выделения на плате в YAML."""
+    """Extract a spoke template from the current selection on the board."""
     logger = logging.getLogger(__name__)
-    logger.info(f"Подключение к KiCad (таймаут {args.timeout_ms} мс)")
+    logger.info(_("Connecting to KiCad (timeout {timeout} ms)").format(timeout=args.timeout_ms))
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
     adapter.refresh_board()
 
@@ -210,17 +212,18 @@ def cmd_extract(args):
                              or args.origin_by_via_net or args.origin_by_component_role
                              or args.origin_by_component_pad)
     if args.profile and direct_args_given:
-        sys.exit("[ошибка] --profile нельзя сочетать с --name/--output/--param/--net-template/"
-                 "--net-template-role/--origin-by-*: либо всё из профиля, либо всё явными "
-                 "флагами, не вперемешку")
+        sys.exit(_("[error] --profile cannot be combined with --name/--output/--param/--net-template/"
+                   "--net-template-role/--origin-by-*: either all from profile or all as explicit flags, "
+                   "not mixed."))
 
     if args.profile:
         if not args.profiles:
-            sys.exit("[ошибка] --profile указан без --profiles (файла профилей)")
+            sys.exit(_("[error] --profile given without --profiles (profiles file)"))
         prof = load_profile(args.profiles, "extract_profiles", args.profile)
         for required in ("name", "output"):
             if required not in prof:
-                sys.exit(f"[ошибка] в профиле {args.profile!r} нет обязательного поля {required!r}")
+                sys.exit(_("[error] profile {profile!r} missing required field {field!r}")
+                         .format(profile=args.profile, field=required))
         name = prof["name"]
         output = prof["output"]
         params = dict(prof.get("param", {}) or {})
@@ -229,16 +232,17 @@ def cmd_extract(args):
         origin_via_net = prof.get("origin_by_via_net")
         origin_component_role = prof.get("origin_by_component_role")
         origin_component_pad = prof.get("origin_by_component_pad")
-        logger.info(f"Профиль {args.profile!r} из {args.profiles}: name={name}, output={output}")
+        logger.info(_("Profile {profile!r} from {profiles}: name={name}, output={output}")
+                    .format(profile=args.profile, profiles=args.profiles, name=name, output=output))
     else:
         name = args.name
         output = args.output
         if not name or not output:
-            sys.exit("[ошибка] нужны --name и --output (или --profiles/--profile вместо них)")
+            sys.exit(_("[error] need --name and --output (or --profiles/--profile instead)"))
         params = {}
         for item in (args.param or []):
             if "=" not in item:
-                logger.error(f"--param {item!r} — нужен формат KEY=VALUE")
+                logger.error(_("--param {item!r} — need format KEY=VALUE").format(item=item))
                 sys.exit(1)
             k, v = item.split("=", 1)
             params[k] = v
@@ -246,7 +250,7 @@ def cmd_extract(args):
         net_template_map = {}
         for item in (args.net_template or []):
             if "=" not in item:
-                logger.error(f"--net-template {item!r} — нужен формат ЛИТЕРАЛ=ПАТТЕРН")
+                logger.error(_("--net-template {item!r} — need format LITERAL=PATTERN").format(item=item))
                 sys.exit(1)
             literal, pattern = item.split("=", 1)
             net_template_map[literal] = pattern
@@ -254,7 +258,7 @@ def cmd_extract(args):
         net_template_role = {}
         for item in (args.net_template_role or []):
             if "=" not in item:
-                logger.error(f"--net-template-role {item!r} — нужен формат РОЛЬ=ЛИТЕРАЛ")
+                logger.error(_("--net-template-role {item!r} — need format ROLE=LITERAL").format(item=item))
                 sys.exit(1)
             role_key, literal = item.split("=", 1)
             net_template_role[role_key] = literal
@@ -263,8 +267,8 @@ def cmd_extract(args):
         origin_component_pad = args.origin_by_component_pad
 
     if origin_component_pad and not origin_component_role:
-        sys.exit("[ошибка] --origin-by-component-pad без --origin-by-component-role — "
-                 "уточнять пад можно только у роли, которую сначала надо указать")
+        sys.exit(_("[error] --origin-by-component-pad without --origin-by-component-role — "
+                   "you can only refine a pad for a role that you first specify"))
 
     template_dict = extract_template_from_selection(
         adapter, name, params=params, net_template_map=net_template_map,
@@ -281,7 +285,8 @@ def cmd_extract(args):
         with open(output_path, "r", encoding="utf-8") as f:
             existing = (json.load(f) if is_json else yaml.safe_load(f)) or {}
         if name in existing:
-            logger.warning(f"Шаблон {name!r} уже есть в {output_path} — будет перезаписан")
+            logger.warning(_("Template {name!r} already exists in {output} — will be overwritten")
+                           .format(name=name, output=output_path))
 
     existing.update(template_dict)
 
@@ -291,29 +296,29 @@ def cmd_extract(args):
         else:
             yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
-    logger.info(f"✅ Шаблон {name!r} записан в {output_path}")
+    logger.info(_("✅ Template {name!r} written to {output}").format(name=name, output=output_path))
 
 
 def cmd_undo(args):
-    """Откатывает последнюю операцию."""
+    """Undo the last operation."""
     logger = logging.getLogger(__name__)
     log_dir = Path("logs")
     if not log_dir.exists():
-        logger.error("Папка logs не найдена.")
+        logger.error(_("logs directory not found."))
         return
 
     files = sorted(log_dir.glob("operation_*.json"), key=lambda p: p.stat().st_ctime)
     if not files:
-        logger.error("Нет файлов операций для отката.")
+        logger.error(_("No operation files to undo."))
         return
 
     last_file = files[-1]
-    logger.info(f"Откат операции из {last_file.name}")
+    logger.info(_("Undoing operation from {file}").format(file=last_file.name))
     success = undo_last_operation(last_file)
     if success:
-        logger.info("✅ Операция успешно откатана.")
+        logger.info(_("✅ Operation successfully undone."))
     else:
-        logger.error("❌ Не удалось откатить операцию.")
+        logger.error(_("❌ Failed to undo operation."))
 
 
 def main():
@@ -321,98 +326,84 @@ def main():
         sys.argv.insert(1, 'apply')
 
     parser = argparse.ArgumentParser(
-        description="KiCad Decap Placer – расстановка конденсаторов (ручная стратегия)",
-        epilog="Пример: placer.py decap_placement.yaml --dry-run"
+        description=_("KiCad Decap Placer – capacitor placement (manual strategy)"),
+        epilog=_("Example: kicadspoke_cli.py config.yaml --dry-run")
     )
-    subparsers = parser.add_subparsers(dest="command", required=True, help="Подкоманда")
+    subparsers = parser.add_subparsers(dest="command", required=True, help=_("Subcommand"))
 
-    apply_parser = subparsers.add_parser("apply", help="Применить расстановку")
-    apply_parser.add_argument("config", help="YAML конфигурационный файл")
-    apply_parser.add_argument("--dry-run", action="store_true", help="Только распечатать план, не применять")
-    apply_parser.add_argument("--timeout-ms", type=int, default=DEFAULT_TIMEOUT_MS, help="Таймаут IPC, мс")
-    apply_parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="Размер батча для коммитов")
-    apply_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
-    apply_parser.add_argument("--log-file", help="Файл для сохранения логов")
-    apply_parser.add_argument("--no-collision-check", action="store_true", help="Отключить проверку коллизий")
-    apply_parser.add_argument("--collision-margin", type=float, default=0.2, help="Дополнительный зазор при проверке коллизий, мм")
+    apply_parser = subparsers.add_parser("apply", help=_("Apply placement"))
+    apply_parser.add_argument("config", help=_("YAML configuration file"))
+    apply_parser.add_argument("--dry-run", action="store_true", help=_("Only print the plan, do not apply"))
+    apply_parser.add_argument("--timeout-ms", type=int, default=DEFAULT_TIMEOUT_MS, help=_("IPC timeout in ms"))
+    apply_parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help=_("Batch size for commits"))
+    apply_parser.add_argument("--verbose", action="store_true", help=_("Verbose output"))
+    apply_parser.add_argument("--log-file", help=_("File to save logs"))
+    apply_parser.add_argument("--no-collision-check", action="store_true", help=_("Disable collision checking"))
+    apply_parser.add_argument("--collision-margin", type=float, default=0.2, help=_("Extra clearance for collision check in mm"))
     apply_parser.add_argument("--only", action="append", metavar="NAME",
-                              help="Обработать только rules/clone_placements/thermal_via_array с этим "
-                                   "именем (можно повторять — несколько --only сразу). Имя — всегда "
-                                   "явное поле name: этой записи (обязательно в YAML, см. "
-                                   "docs/commands_ru.md). Единственный способ сузить прогон — "
-                                   "всё остальное в этом прогоне полностью игнорируется (не попадает "
-                                   "даже в проверки/лог), для изолированной проверки одного куска "
-                                   "платы без шума от остальных. Без флага — как раньше, применяется всё.")
+                              help=_("Process only rules/clone_placements/thermal_via_array with this name "
+                                     "(can be repeated). The name must be explicitly set in the YAML "
+                                     "(see docs). Everything else is ignored in this run."))
 
-    undo_parser = subparsers.add_parser("undo", help="Откатить последнюю операцию")
-    undo_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
-    undo_parser.add_argument("--log-file", help="Файл для сохранения логов")
+    undo_parser = subparsers.add_parser("undo", help=_("Undo last operation"))
+    undo_parser.add_argument("--verbose", action="store_true", help=_("Verbose output"))
+    undo_parser.add_argument("--log-file", help=_("File to save logs"))
 
     clone_extract = subparsers.add_parser(
         "clone-extract",
-        help="Снимок канала в YAML (файловый клонер, без IPC)")
-    clone_extract.add_argument("--net", help="Путь к .net")
-    clone_extract.add_argument("--pcb", help="Путь к .kicad_pcb")
-    clone_extract.add_argument("--channel", help="Имя канала, напр. Channel_0")
-    clone_extract.add_argument("--output", help="YAML-файл снимка")
+        help=_("Snapshot a channel to YAML (file‑based cloner, no IPC)")
+    )
+    clone_extract.add_argument("--net", help=_("Path to .net file"))
+    clone_extract.add_argument("--pcb", help=_("Path to .kicad_pcb file"))
+    clone_extract.add_argument("--channel", help=_("Channel name, e.g. Channel_0"))
+    clone_extract.add_argument("--output", help=_("YAML snapshot file"))
     clone_extract.add_argument("--profiles", metavar="FILE",
-                               help="YAML-файл именованных профилей clone-extract")
+                               help=_("YAML file with named profiles for clone-extract"))
     clone_extract.add_argument("--profile", metavar="NAME",
-                               help="Взять net/pcb/channel/output из профиля NAME в файле "
-                                    "--profiles, вместо явных флагов (нельзя сочетать с ними)")
-    clone_extract.add_argument("-v", "--verbose", action="store_true")
+                               help=_("Take net/pcb/channel/output from profile NAME in --profiles file "
+                                      "(cannot combine with explicit flags)"))
+    clone_extract.add_argument("-v", "--verbose", action="store_true", help=_("Verbose output"))
 
-    extract_parser = subparsers.add_parser("extract", help="Извлечь шаблон спицы из текущего выделения")
-    extract_parser.add_argument("--name", help="Имя шаблона (ключ в templates:)")
-    extract_parser.add_argument("--output", help="Путь к YAML/JSON-файлу для записи")
+    extract_parser = subparsers.add_parser("extract", help=_("Extract spoke template from current selection"))
+    extract_parser.add_argument("--name", help=_("Template name (key in templates:)"))
+    extract_parser.add_argument("--output", help=_("Output YAML/JSON file"))
     extract_parser.add_argument("--profiles", metavar="FILE",
-                                help="YAML-файл именованных профилей extract (см. --profile)")
+                                help=_("YAML file with named profiles for extract"))
     extract_parser.add_argument("--profile", metavar="NAME",
-                                help="Взять name/output/param/net-template/origin-by-* из "
-                                     "профиля NAME в файле --profiles, вместо явных флагов "
-                                     "(нельзя сочетать с --name и остальными явными флагами)")
-    extract_parser.add_argument("--timeout-ms", type=int, default=20000, help="Таймаут IPC, мс")
-    extract_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")
-    extract_parser.add_argument("--log-file", help="Файл для сохранения логов")
+                                help=_("Take name/output/param/net-template/origin-by-* from profile NAME "
+                                       "in --profiles file (cannot combine with explicit flags)"))
+    extract_parser.add_argument("--timeout-ms", type=int, default=20000, help=_("IPC timeout in ms"))
+    extract_parser.add_argument("--verbose", action="store_true", help=_("Verbose output"))
+    extract_parser.add_argument("--log-file", help=_("File to save logs"))
     extract_parser.add_argument("--param", action="append", metavar="KEY=VALUE",
-                                help="Параметр для проверки --net-template (напр. channel=1); "
-                                     "можно повторять; в шаблон НЕ пишется, нужен только "
-                                     "для round-trip верификации паттернов")
-    extract_parser.add_argument("--net-template", action="append", metavar="ЛИТЕРАЛ=ПАТТЕРН",
-                                help="Явная карта реальная цепь -> паттерн с {placeholder} "
-                                     "(напр. 'DAC1_DB1=DAC{channel}_DB1'); можно повторять; "
-                                     "заполняет net_template ролей и параметризует via.net "
-                                     "прямо при извлечении, вместо ручной правки YAML")
-    extract_parser.add_argument("--net-template-role", action="append", metavar="РОЛЬ=ЛИТЕРАЛ",
-                                help="Для компонента с НЕСКОЛЬКИМИ цепями из --net-template "
-                                     "сразу на падах (дроссель/бусина/предохранитель на стыке "
-                                     "двух рельсов) — явно говорит, какую из них считать "
-                                     "net_template этой роли (напр. 'PI_FILTER_FB=+5V_DIRTY'); "
-                                     "без этого такие роли остаются с пустым net_template, "
-                                     "правится руками в получившемся YAML. Можно повторять. "
-                                     "Фатал, если у роли на самом деле нет такой цепи на падах, "
-                                     "или если литерал не зарегистрирован в --net-template/params")
+                                help=_("Parameter for --net-template verification (e.g. channel=1); "
+                                       "can be repeated; not written to template, only round-trip check"))
+    extract_parser.add_argument("--net-template", action="append", metavar="LITERAL=PATTERN",
+                                help=_("Mapping real net -> pattern with {placeholder} "
+                                       "(e.g. 'DAC1_DB1=DAC{channel}_DB1'); can be repeated; "
+                                       "fills net_template for roles and parametrizes via.net at extraction"))
+    extract_parser.add_argument("--net-template-role", action="append", metavar="ROLE=LITERAL",
+                                help=_("For components with multiple nets from --net-template on pads "
+                                       "(ferrite/inductor/fuse between two rails) – explicitly tells "
+                                       "which net is the role's net_template (e.g. 'PI_FILTER_FB=+5V_DIRTY'); "
+                                       "without this such roles get empty net_template and need manual edit. "
+                                       "Fatal if the role does not actually have that net on its pads, "
+                                       "or if the literal is not registered in --net-template/params."))
     origin_group = extract_parser.add_mutually_exclusive_group()
     origin_group.add_argument("--origin-by-via-net", metavar="NET",
-                              help="Origin шаблона — позиция via на этой цепи (вместо bbox "
-                                   "выделения); фатально, если такой цепи нет в выделении "
-                                   "или она встречается больше одного раза")
+                              help=_("Template origin — position of via on this net (instead of bbox); "
+                                     "fatal if no such via in selection or more than one"))
     origin_group.add_argument("--origin-by-component-role", metavar="ROLE",
-                              help="Origin шаблона — позиция компонента с этой ролью "
-                                   "(вместо bbox выделения); фатально, если роли нет "
-                                   "в выделении")
+                              help=_("Template origin — position of component with this role "
+                                     "(instead of bbox); fatal if role not found in selection"))
     extract_parser.add_argument("--origin-by-component-pad", metavar="PAD",
-                                help="Уточнение --origin-by-component-role: origin — позиция "
-                                     "конкретного пада этого компонента, а не его центр. "
-                                     "Бессмысленен и фатален без --origin-by-component-role")
+                                help=_("Refine --origin-by-component-role: origin is the position of "
+                                       "the specific pad of that component, not its centre. "
+                                       "Fatal without --origin-by-component-role."))
 
     args = parser.parse_args()
 
-    # Конфиг грузим заранее (только для apply), чтобы взять log_file: из
-    # него, если --log-file не передан явно. Ошибки загрузки тут молча
-    # проглатываются — cmd_apply загрузит конфиг заново и упадёт с тем же
-    # PlacerError через обычную обработку ниже (просто без файла лога,
-    # раз мы даже не знаем его путь).
+    # Load config early (only for apply) to pick up log_file from config if --log-file not given.
     cfg = None
     if args.command == "apply":
         try:
@@ -431,46 +422,47 @@ def main():
         elif args.command == "clone-extract":
             direct_given = bool(args.net or args.pcb or args.channel or args.output)
             if args.profile and direct_given:
-                sys.exit("[ошибка] --profile нельзя сочетать с --net/--pcb/--channel/--output")
+                sys.exit(_("[error] --profile cannot be combined with --net/--pcb/--channel/--output"))
             if args.profile:
                 if not args.profiles:
-                    sys.exit("[ошибка] --profile указан без --profiles (файла профилей)")
+                    sys.exit(_("[error] --profile given without --profiles (profiles file)"))
                 prof = load_profile(args.profiles, "clone_profiles", args.profile)
                 for required in ("net", "pcb", "channel", "output"):
                     if required not in prof:
-                        sys.exit(f"[ошибка] в профиле {args.profile!r} нет обязательного поля {required!r}")
+                        sys.exit(_("[error] profile {profile!r} missing required field {field!r}")
+                                 .format(profile=args.profile, field=required))
                 net_path, pcb_path, channel, output = prof["net"], prof["pcb"], prof["channel"], prof["output"]
             else:
                 if not (args.net and args.pcb and args.channel and args.output):
-                    sys.exit("[ошибка] нужны --net/--pcb/--channel/--output (или --profiles/--profile)")
+                    sys.exit(_("[error] need --net/--pcb/--channel/--output (or --profiles/--profile)"))
                 net_path, pcb_path, channel, output = args.net, args.pcb, args.channel, args.output
             from kicadspoke.cloner.extract import extract_channel
             d = extract_channel(net_path, pcb_path, channel, output)
             s = d['summary']
-            print(f"[{channel}] футпринтов: {s['footprints']}, "
-                  f"сегментов: {s['segments']}, виа: {s['vias']} -> {output}")
+            print(_("[{channel}] footprints: {fp}, segments: {seg}, vias: {vias} -> {output}")
+                  .format(channel=channel, fp=s['footprints'], seg=s['segments'],
+                          vias=s['vias'], output=output))
         elif args.command == "extract":
             cmd_extract(args)
         else:
             parser.print_help()
             sys.exit(1)
     except PlacerError as e:
-        logging.error(f"Ошибка: {e}")
+        logging.error(_("Error: {e}").format(e=e))
         sys.exit(1)
     except ApiError as e:
         if e.code == ApiStatusCode.AS_BUSY:
             logging.error(
-                "KiCad занят и не может ответить на запрос прямо сейчас. Обычно "
-                "это значит, что в интерфейсе активен незавершённый инструмент "
-                "(простановка размеров, интерактивная трассировка, перемещение "
-                "мышкой и т.п.) — заверши его (Esc или клик правой кнопкой -> "
-                "Cancel) и запусти команду ещё раз. Плата не тронута."
+                _("KiCad is busy and cannot respond right now. Usually this means an unfinished "
+                  "tool is active in the GUI (dimensioning, interactive routing, move tool, etc.) — "
+                  "finish it (Esc or right-click -> Cancel) and run the command again. "
+                  "The board was not modified.")
             )
         else:
-            logging.error(f"KiCad вернул ошибку API: {e}")
+            logging.error(_("KiCad returned API error: {e}").format(e=e))
         sys.exit(1)
     except Exception as e:
-        logging.exception("Неожиданная ошибка")
+        logging.exception(_("Unexpected error"))
         sys.exit(2)
 
 

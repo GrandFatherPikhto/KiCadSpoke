@@ -1,20 +1,18 @@
 # kicadspoke/sheet_names.py
 """
-sheet_names.py — словарь {uuid: Sheetname} прямым парсингом *.kicad_sch
-(sexpdata, тот же формат, что уже читает kicadspoke.cloner). НЕ через
-kipy — см. обсуждение в чате:
-  - sheet_path.path_human_readable сломан в этой версии KiCad (всегда
-    пустая строка, поле есть в протоколе, но не заполняется).
-  - Прямое сопоставление UUID из fp.sheet_path.path с uuid из (sheet ...)
-    блоков .kicad_sch — эмпирически ПОДТВЕРЖДЕНО: path[:-1] (без
-    последнего элемента — это, предположительно, собственный uuid
-    символа) один в один совпадает с цепочкой листов из файлов схемы,
-    без единого конфликта на реальном проекте (mishin-coil, 331
-    футпринт, 15 групп, 0 конфликтов, 0 нерасшифрованных uuid).
+sheet_names.py — dictionary {uuid: Sheetname} built by direct parsing of
+*.kicad_sch files (sexpdata, same format already read by kicadspoke.cloner).
+NOT via kipy — see discussion:
+  - sheet_path.path_human_readable is broken in this KiCad version (always
+    empty string; the field exists in the protocol but is not filled).
+  - Direct mapping from UUID in fp.sheet_path.path to uuid from (sheet ...)
+    blocks in .kicad_sch — empirically CONFIRMED: path[:-1] (without the last
+    element, presumably the component's own uuid) exactly matches the sheet
+    UUID chain from the schematic files, with zero conflicts on a real project
+    (mishin‑coil, 331 footprints, 15 groups, 0 conflicts, 0 unresolved UUIDs).
 
-Используется только для ClonePlacement.anchor_sheet (сужение
-неоднозначности anchor_role) — вообще не нужен, если anchor_sheet
-никем в конфиге не используется.
+Used only for ClonePlacement.anchor_sheet (narrowing ambiguity of anchor_role) —
+not needed at all if anchor_sheet is not used in the config.
 """
 import glob
 import logging
@@ -25,6 +23,7 @@ from typing import Dict, List, Optional
 import sexpdata
 
 from .exceptions import ValidationError, format_fatal_error
+from .i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +35,15 @@ def _children(node, tag: str) -> List[list]:
 
 
 def _parse_sheet_uuids(path: str) -> Dict[str, str]:
-    """{uuid: Sheetname} из всех (sheet ...) блоков ОДНОГО файла .kicad_sch."""
+    """{uuid: Sheetname} from all (sheet ...) blocks of ONE .kicad_sch file."""
     result = {}
     try:
         with open(path, encoding='utf-8') as f:
             data = sexpdata.load(f)
     except Exception as e:
-        logger.warning(f"не удалось распарсить {path} как .kicad_sch: {type(e).__name__}: {e} — "
-                       f"пропущен, словарь sheet_names будет неполным")
+        logger.warning(_("Failed to parse {path} as .kicad_sch: {type}: {e} — "
+                         "skipped, sheet_name dictionary will be incomplete")
+                       .format(path=path, type=type(e).__name__, e=e))
         return result
     for sheet in _children(data, 'sheet'):
         uuid_nodes = _children(sheet, 'uuid')
@@ -60,14 +60,14 @@ def _parse_sheet_uuids(path: str) -> Dict[str, str]:
 def build_sheet_name_map(config_path: str, schematic_dir: Optional[str],
                          schematic_files: List[str]) -> Dict[str, str]:
     """
-    Собирает {uuid: Sheetname} из schematic_dir (все *.kicad_sch внутри,
-    не рекурсивно — так же, как watchdog в netexp) + schematic_files
-    (точечные добавки для листов "на отшибе"). Оба пути — относительно
-    самого YAML-конфига (config_path), как и templates_file.
+    Builds {uuid: Sheetname} from schematic_dir (all *.kicad_sch inside,
+    non‑recursively — same as netexp's watchdog) + schematic_files (point
+    additions for sheets "on the fringe"). Both paths are relative to the YAML
+    config itself (config_path), like templates_file.
 
-    Пусто, если ни то, ни другое не задано — это НЕ ошибка сама по себе,
-    ошибка (фатал) — только если потом реально понадобится anchor_sheet,
-    а словарь пуст (см. validation.py).
+    Empty if neither is set — this is NOT an error by itself; it becomes fatal
+    later only if anchor_sheet is actually needed and the dictionary is empty
+    (see validation.py).
     """
     base = Path(config_path).parent
     files = []
@@ -76,8 +76,9 @@ def build_sheet_name_map(config_path: str, schematic_dir: Optional[str],
         d = base / schematic_dir
         if not d.is_dir():
             raise ValidationError(format_fatal_error(
-                f"schematic_dir {schematic_dir!r} не найден",
-                [f"ожидалась директория {d} (относительно самого конфига {config_path!r})"]
+                _("schematic_dir {dir!r} not found").format(dir=schematic_dir),
+                [_("expected directory {path} (relative to the config file {config!r})")
+                 .format(path=d, config=config_path)]
             ))
         files.extend(glob.glob(str(d / "*.kicad_sch")))
 
@@ -85,8 +86,9 @@ def build_sheet_name_map(config_path: str, schematic_dir: Optional[str],
         p = base / extra
         if not p.exists():
             raise ValidationError(format_fatal_error(
-                f"schematic_files: файл {extra!r} не найден",
-                [f"ожидался по пути {p} (относительно самого конфига {config_path!r})"]
+                _("schematic_files: file {file!r} not found").format(file=extra),
+                [_("expected at {path} (relative to the config file {config!r})")
+                 .format(path=p, config=config_path)]
             ))
         files.append(str(p))
 
@@ -95,19 +97,20 @@ def build_sheet_name_map(config_path: str, schematic_dir: Optional[str],
         result.update(_parse_sheet_uuids(f))
 
     if files:
-        logger.info(f"sheet_names: {len(files)} файлов .kicad_sch просканировано, "
-                   f"{len(result)} листов в словаре")
+        logger.info(_("sheet_names: scanned {count} .kicad_sch files, "
+                      "{sheets} sheets in dictionary")
+                    .format(count=len(files), sheets=len(result)))
     return result
 
 
 def resolve_sheet_path_names(fp, sheet_names: Dict[str, str]) -> List[Optional[str]]:
     """
-    fp.sheet_path.path[:-1] (без последнего — своего uuid символа),
-    переведено через словарь в человекочитаемые имена. None на позиции,
-    если конкретный uuid не нашёлся в словаре (например, schematic_dir
-    указывает не туда, или лист переименован/удалён после сборки
-    словаря) — вызывающий код должен уметь честно сказать "не совпало",
-    а не тихо считать None подходящим сегментом.
+    fp.sheet_path.path[:-1] (without the last — the component's own uuid),
+    translated via the dictionary into human‑readable names. None at a position
+    if that particular uuid is not found in the dictionary (e.g. schematic_dir
+    points elsewhere, or the sheet was renamed/deleted after the dictionary was
+    built) — calling code must honestly say "no match", not silently treat None
+    as a matching segment.
     """
     path_uuids = [str(u.value) for u in fp.sheet_path.path]
     chain = path_uuids[:-1]
