@@ -1,5 +1,5 @@
 templates_file: templates/3ch-awg-tia.yaml
-schematic_dir: D:/Projects/Python/KiCadSpoke/test_boards/3CH-AWG-TIA
+schematic_dir: ../test_boards/3CH-AWG-TIA
 registry_path: profiles/registries/3ch-awg-tia.json
 track_registry_path: profiles/registries/power_board.tracks.registry.json
 
