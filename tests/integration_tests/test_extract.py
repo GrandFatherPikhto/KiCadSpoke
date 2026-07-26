@@ -15,6 +15,6 @@ def test_extract_template_from_selection(adapter):
         assert "components" in template["test_template"] or "vias" in template["test_template"]
     except ValidationError as e:
         # Если ничего не выделено, это ожидаемо
-        assert "нечего извлекать" in str(e)
+        assert "nothing to extract" in str(e)
     except Exception as e:
         pytest.fail(f"Неожиданное исключение: {e}")

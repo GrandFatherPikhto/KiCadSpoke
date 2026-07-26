@@ -1,9 +1,9 @@
-target_ref: IC1
-side: back
+layer: B.Cu
 
 thermal_via_array:
   enabled: true
-  target_ref: IC1
+  name: ic1_thermal
+  anchor_ref: IC1
   pad: '145'
   net: GND
   rows: 4
@@ -59,6 +59,8 @@ templates:
 
 rules:
 - net: +1V2_VCCINT
+  name: +1V2_VCCINT
+  anchor_ref: IC1
   spokes:
   # Пад 109 -- поставьте в Eeschema поле Role=LIGHT/HEAVY на нужных
   # конденсаторах +1V2_VCCINT, дальше pool сам разберёт, кому какой борт.

@@ -170,7 +170,7 @@ class TestNetTemplateAutoDetect:
         )
         comp = result["t"]["components"][0]
         assert "net_template" not in comp
-        assert "цепей из --net-template" in caplog.text
+        assert "nets from --net-template" in caplog.text
 
 
 class TestNetTemplateRole:
