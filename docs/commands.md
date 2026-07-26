@@ -1,6 +1,6 @@
 # KiCadSpoke Commands (CLI)
 
-This document provides a complete reference for `kicadspoke_cli.py` commands and flags, along with practical examples for typical scenarios. Valid for **v1.22.0** and above.
+This document provides a complete reference for `kicadspoke_cli.py` commands and flags, config generators from `utils/`, and practical examples for typical scenarios. Verified against the code in the `main` branch (the project does not maintain version numbers/tags; refer to the commit date).
 
 ---
 
@@ -37,12 +37,14 @@ python kicadspoke_cli.py apply <config.yaml> [options]
 | `--collision-margin` | Extra clearance for collision checking in mm (default: `0.2`). |
 | `--clone-placement NAME` | Process only the specified clone by name. Useful when multiple clones are in selection mode (only one selection can be active in KiCad at a time) or for debugging a specific placement. |
 
+**About the current production config:** the master config for the `3CH-AWG-TIA` board is `profiles/3ch-awg-tia.yaml` (merged `rules:`, `clone_placements:`, `thermal_via_array`, with a reference to `profiles/templates/3ch-awg-tia.yaml` via `templates_file`). The file `profiles/generated/10CL006YE144C8G.yaml` written by `utils/generate_10cl006.py` is a self‑contained archival version (can be run separately, but is no longer used in `apply` for this board).
+
 ### Examples
 
 #### Standard run (place components, vias, and tracks)
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml
+python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml
 ```
 
 #### Run with verbose logging to a file
@@ -102,7 +104,7 @@ Creates a spoke template from the current selection in the PCB editor. Each sele
 ### Syntax
 
 ```bash
-python kicadspoke_cli.py extract --name <template_name> --output <file> [--timeout-ms] [--verbose] [--log-file] [--param KEY=VALUE] [--net-template LITERAL=PATTERN] [--origin-by-via-net NET] [--origin-by-component-role ROLE] [--profiles FILE] [--profile NAME]
+python kicadspoke_cli.py extract --name <template_name> --output <file> [--timeout-ms] [--verbose] [--log-file] [--param KEY=VALUE] [--net-template LITERAL=PATTERN] [--origin-by-via-net NET] [--origin-by-component-role ROLE] [--origin-by-component-pad PAD] [--profiles FILE] [--profile NAME]
 ```
 
 ### Options
@@ -116,10 +118,11 @@ python kicadspoke_cli.py extract --name <template_name> --output <file> [--timeo
 | `--log-file` | Save logs to a file. |
 | `--param KEY=VALUE` | Sets a parameter for verifying `--net-template` (e.g., `channel=1`). Not written to the template, only used for round‑trip validation. Can be repeated. |
 | `--net-template LITERAL=PATTERN` | Replaces a real net name with a pattern containing placeholders (e.g., `DAC1_DB1=DAC{channel}_DB1`). Can be repeated. |
-| `--origin-by-via-net NET` | Sets the template origin to the position of the via with the specified net (instead of the bbox lower‑left corner). Fatal if no such via exists or if there is more than one. |
-| `--origin-by-component-role ROLE` | Sets the origin to the position of the component with the specified role. |
+| `--origin-by-via-net NET` | Sets the template origin to the position of the via with the specified net (instead of the bbox lower‑left corner). Fatal if no such via exists or if there is more than one. Mutually exclusive with `--origin-by-component-role` (you can specify only one origin method). |
+| `--origin-by-component-role ROLE` | Sets the origin to the position of the component with the specified role. Mutually exclusive with `--origin-by-via-net`. |
+| `--origin-by-component-pad PAD` | Refines `--origin-by-component-role`: origin is the position of the specific pad of that component, not its centre. Without `--origin-by-component-role` it is fatal (you can only specify a pad for an already specified role). |
 | `--profiles FILE` | YAML file with named profiles for `extract`. |
-| `--profile NAME` | Use a profile from the `--profiles` file instead of explicit flags (cannot be combined with `--name`, `--output`, or other direct flags). |
+| `--profile NAME` | Use a profile from the `--profiles` file instead of explicit flags (cannot be combined with `--name`, `--output`, `--param`, `--net-template`, `--origin-by-*` – either everything from the profile or all explicit flags). |
 
 **Important:** Before running, select the desired components, vias, and tracks in the PCB editor. Roles must be unique. When saving as JSON, the file is written **without a `templates:` wrapper**, making it directly usable as a `templates_file` in the main configuration.
 
@@ -220,17 +223,19 @@ The resulting YAML file contains a complete overview of the channel, which can b
 
 ---
 
-## `transform_template.py` – template transformation utility (optional)
+## Utility scripts (`utils/`)
 
-A separate script for post‑processing existing templates (YAML or JSON). It allows rotating, mirroring, and shifting the origin without re‑extracting from the board. Located in the `utils/` folder.
+### `transform_template.py` – template transformation utility (optional)
 
-### Syntax
+A separate script for post‑processing existing templates (YAML or JSON). It allows rotating, mirroring, and shifting the origin without re‑extracting from the board.
+
+#### Syntax
 
 ```bash
 python utils/transform_template.py -i <input_file> -o <output_file> [options]
 ```
 
-### Options
+#### Options
 
 | Flag | Description |
 |------|-------------|
@@ -247,7 +252,9 @@ python utils/transform_template.py -i <input_file> -o <output_file> [options]
 
 **Order of application:** first origin shift (if specified), then rotation and mirroring. This ensures that the target element ends up at (0,0) after all transformations.
 
-### Examples
+**Known limitation:** the script transforms only `vias` and `components`. The `tracks` section (if present – e.g., in `cap_pair_standard` / `cap_pair_standard_clone` in `profiles/templates/3ch-awg-tia.yaml`) **is not read or propagated** to the output – when transforming a template with tracks, they are silently lost in the output file. For templates containing tracks, do not use this script, or manually add the `tracks` section to the output file.
+
+#### Examples
 
 #### Rotate 180° and shift origin to the via with net "GND"
 
@@ -266,6 +273,49 @@ python utils/transform_template.py -i template.yaml -o template_mirrored.yaml --
 ```bash
 python utils/transform_template.py -i template.yaml -o template_shifted.yaml --origin-x 1.5 --origin-y -2.0
 ```
+
+### `generate_10cl006.py` – config generator for 10CL006YE144C8G
+
+A ready‑to‑run script (not an example, actually used in the project). A single source of data – the `BANKS` table (pad/shift/rotation per power rail of the FPGA) and `CLUSTER_MAP` (net → `Cluster` name) inside the file – from which three derived artefacts are generated.
+
+#### Syntax
+
+```bash
+python utils/generate_10cl006.py
+```
+
+No arguments – output paths are hard‑coded inside the script (see `main()`); the `BANKS`/`CLUSTER_MAP` tables and anchor toggles (`USE_ANCHOR_ROLE`, `THERMAL_USE_ANCHOR_ROLE`) are edited directly in the source.
+
+#### What it generates
+
+| File | Purpose |
+|------|---------|
+| `profiles/generated/10CL006YE144C8G.yaml` | Rules‑based config (`ManualSpoke`/`Rule`) – self‑contained and apply‑ready, uses the old inline (approximate) `templates:`. |
+| `profiles/generated/10CL006YE144C8G.clone_placements.yaml` | Equivalent geometry as `clone_placements:` (`ClonePlacement`) – can clone tracks, which `Rule` cannot. Requires template `cap_pair_standard_clone` from `profiles/templates/3ch-awg-tia.yaml` (via `templates_file`). Not automatically included – copy the block manually into `profiles/3ch-awg-tia.yaml` after verifying with `--dry-run`. |
+| `profiles/generated/10CL006YE144C8G.cluster_table.md` | Table `net \| pad \| cluster` (`FPGA_PWR_BANK/<pad>`) – a cheat sheet for manually setting the `Cluster` field in Eeschema (Bulk Edit) for those pads for which proximity‑based resolution is not sufficient. |
+
+`anchor_cluster` in `clone_placements` is always set, even if `Cluster` is not yet assigned in the schematic – the resolver (`clone_role_resolver`) simply skips that narrowing step and falls back to the next one. So the generated file can be run with `apply --dry-run --verbose` before marking `Cluster` in Eeschema; the log will show which pads need explicit tagging.
+
+#### Example
+
+```bash
+python utils/generate_10cl006.py
+# Generated: profiles/generated/10CL006YE144C8G.yaml
+# Generated: profiles/generated/10CL006YE144C8G.clone_placements.yaml
+# Generated: profiles/generated/10CL006YE144C8G.cluster_table.md
+# Total spokes: <N>
+```
+
+### `generate_config.py` – template stub (NOT a ready‑to‑run script)
+
+Unlike `generate_10cl006.py`, this is a **template stub** for writing a similar generator for a new chip, not a working tool. The `TEMPLATE` in it is filled with ellipsis `[...]` instead of real geometry – running it "as is" fails with a YAML serialisation error:
+
+```bash
+python utils/generate_config.py
+# ValueError: dictionary update sequence element #0 has length 1; 2 is required
+```
+
+Use it as a starting point: copy it, replace `TEMPLATE` with a real template (e.g., obtained via `extract`), fill the `FILTERS` list with your own `CloneParams` (`anchor_ref`/`anchor_pad`/`origin_x`/`origin_y`/`rotation_deg`/`params`/`nets`) – and only then run it.
 
 ---
 
@@ -379,11 +429,19 @@ python kicadspoke_cli.py clone-extract --help
 
 ## Quick command examples
 
-### Place decoupling capacitors for an FPGA
+### Place decoupling capacitors for an FPGA (master config for the board)
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --verbose --log-file logs/placer.log
+python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --verbose --log-file logs/placer.log
 ```
+
+### Regenerate generated configs/cluster table for 10CL006
+
+```bash
+python utils/generate_10cl006.py
+```
+
+Then run `apply profiles/3ch-awg-tia.yaml --dry-run --verbose` to verify that the new geometry resolves as expected (see the `generate_10cl006.py` section above).
 
 ### Undo placement
 
