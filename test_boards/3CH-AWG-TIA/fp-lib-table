@@ -1,6 +1,0 @@
-(fp_lib_table
-	(version 7)
-	(lib (name "Custom_Altera_FPGA") (type "KiCad") (uri "D:/Projects/KiCad/Libraries/Custom_Altera_FPGA.pretty") (options "") (descr ""))
-	(lib (name "Custom_AD_DAC") (type "KiCad") (uri "D:/Projects/KiCad/Libraries/Custom_AD_DAC.pretty") (options "") (descr ""))
-	(lib (name "Custom_LDO") (type "KiCad") (uri "D:/Projects/KiCad/Libraries/Custom_LDO.pretty") (options "") (descr ""))
-)
