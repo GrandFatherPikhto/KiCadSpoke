@@ -264,7 +264,7 @@ Options:
 - `--log-file` – save logs to a file.
 - `--no-collision-check` – disable collision checking.
 - `--collision-margin` – margin in mm (default 0.2).
-- `--clone-placement NAME` – process only the specified clone (useful for debugging).
+- `--only NAME` – process only the `rules`/`clone_placements`/`thermal_via_array` with this name (repeatable); everything else is skipped entirely. `name:` is mandatory on every such entry.
 
 ### `extract` – extract template from selection (enhanced)
 
@@ -308,7 +308,7 @@ python kicadspoke_cli.py config.yaml --dry-run
 
 ### 3. Process a single clone (selection mode)
 ```bash
-python kicadspoke_cli.py config.yaml --clone-placement pi_filter_vccio
+python kicadspoke_cli.py config.yaml --only pi_filter_vccio
 ```
 
 ### 4. Extract a template with parametrisation and origin by via

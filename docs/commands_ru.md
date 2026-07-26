@@ -35,8 +35,7 @@ python kicadspoke_cli.py apply <путь_к_конфигу.yaml> [опции]
 | `--log-file` | Сохранять логи в указанный файл. |
 | `--no-collision-check` | Отключить проверку коллизий (если даёт ложные срабатывания). |
 | `--collision-margin` | Дополнительный зазор при проверке коллизий (мм). По умолчанию `0.2`. |
-| `--clone-placement NAME` | Обработать только один клон с указанным именем. Полезно, когда в конфиге несколько клонов в режиме «по выделению» (в KiCad активно только одно выделение) или для отладки конкретного размещения. Нельзя вместе с `--only`. |
-| `--only NAME` | Обработать только `rules`/`clone_placements`/`thermal_via_array` с этим именем (флаг можно повторять). Имя `rule` — его `name:`, а если не задано — `net`; имя `thermal_via_array` — его `name:`, а если не задано — `thermal_<pad>`. Всё остальное в этот прогон не попадает вообще (даже в проверки и лог) — для изолированной проверки одного куска платы без шума от остальных. Незнакомое имя — фатал с подсказкой (`difflib`). Нельзя вместе с `--clone-placement`. |
+| `--only NAME` | Обработать только `rules`/`clone_placements`/`thermal_via_array` с этим именем (флаг можно повторять — несколько `--only` сразу). Единственный способ сузить прогон (замена старому `--clone-placement`, которого больше нет — он не изолировал `rules`/`thermal_via_array`, только `clone_placements`, отсюда и путаница). Имя — всегда явное поле `name:` записи (см. ниже, оно обязательно). Всё, что не совпало, не попадает в этот прогон вообще, даже в проверки и лог — для изолированной проверки одного куска платы без шума от остальных. Незнакомое имя — фатал с подсказкой (`difflib`). |
 
 **`log_file:` в самом конфиге** – необязательное поле в корне YAML (как `templates_file`/
 `registry_path`), путь резолвится относительно самого файла конфига. Если задано – не нужно каждый раз
@@ -47,6 +46,25 @@ log_file: ../logs/placer.log
 ```
 
 **Про текущий боевой конфиг:** мастер-конфиг платы `3CH-AWG-TIA` — `profiles/3ch-awg-tia.yaml` (слиты `rules:`, `clone_placements:`, `thermal_via_array`, ссылка на `profiles/templates/3ch-awg-tia.yaml` через `templates_file`). Файл `profiles/generated/10CL006YE144C8G.yaml`, который пишет `utils/generate_10cl006.py`, — самодостаточный архивный вариант (можно прогнать отдельно, но в `apply` для этой платы больше не используется).
+
+**`name:` — обязательное поле у каждой записи `rules:`, у `thermal_via_array:` (если секция вообще присутствует в конфиге) и у каждого `clone_placements:`.** Используется в `--only`. Раньше `Rule`/`ThermalViaArrayConfig` без `name:` тихо резолвились в `net`/`thermal_<pad>`, а `clone_placement` без `name:` — вообще в литеральную строку `'?'` (реальная дыра, не поведение) — всё это убрано, отсутствие `name:` теперь фатал при загрузке конфига:
+```yaml
+rules:
+- net: +3V3_VCCIO
+  name: +3V3_VCCIO   # обязательно
+  anchor_role: FPGA
+  spokes: [...]
+
+thermal_via_array:
+  name: fpga_thermal   # обязательно, раз секция есть
+  enabled: true
+  ...
+
+clone_placements:
+- name: p5v_pi_filter   # было обязательным и раньше, но не проверялось
+  template: 5v_pi_filter
+  ...
+```
 
 ### Примеры
 
@@ -71,7 +89,7 @@ python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --dry-run
 #### Обработка только одного клона (например, для отладки)
 
 ```bash
-python kicadspoke_cli.py apply templates\pi_filter_vccio.yaml --clone-placement pi_filter_vccio
+python kicadspoke_cli.py apply templates\pi_filter_vccio.yaml --only pi_filter_vccio
 ```
 
 #### Изолированный прогон одного куска платы (--only)
@@ -499,7 +517,7 @@ python -m kicadspoke.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
 1. **Перед первым запуском** выполните `extract` на существующем правильном экземпляре, чтобы получить шаблон. Используйте JSON-формат для удобного подключения через `templates_file`.
 2. **Проверяйте конфигурацию** через `dry-run`, чтобы убедиться, что позиции, via и треки расставляются так, как вы ожидаете.
 3. **Для отладки** используйте `--verbose` и сохраняйте лог в файл.
-4. **При обработке нескольких клонов** в режиме «по выделению» используйте `--clone-placement`, чтобы обрабатывать их по одному.
+4. **При обработке нескольких клонов** в режиме «по выделению» используйте `--only <имя>`, чтобы обрабатывать их по одному.
 5. **Если KiCad падает** при первом запуске, закройте редактор схем или сделайте интерактивную правку в PCB перед запуском (обход issue #24966).
 6. **Для изучения иерархических проектов** перед написанием `ClonePlacement` используйте `clone-extract` – это даст вам точные имена цепей и refdes близнецов.
 7. **Храните шаблоны отдельно** – используйте `templates_file: templates.json` в основном конфиге, чтобы избежать загромождения файла геометрией.
@@ -570,7 +588,7 @@ python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter
 ### Применение клона с внешним файлом шаблонов
 
 ```bash
-python kicadspoke_cli.py apply config_with_templates_file.yaml --clone-placement fpga_filter_1v2_vccint
+python kicadspoke_cli.py apply config_with_templates_file.yaml --only fpga_filter_1v2_vccint
 ```
 
 ### Трансформация шаблона

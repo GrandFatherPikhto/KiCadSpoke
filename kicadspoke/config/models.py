@@ -19,9 +19,13 @@ from typing import Optional, List, Dict, Any
 class ThermalViaArrayConfig:
     """Конфигурация массива тепловых via под термопадом IC.
 
-    name — для --only (см. kicadspoke_cli.py): без явного имени падает на
-    f"thermal_{pad}" (см. config/loader.py) — существующие конфиги без
-    name: продолжают работать без правок."""
+    name — для --only (см. kicadspoke_cli.py). ОБЯЗАТЕЛЬНО в YAML, если
+    секция thermal_via_array вообще присутствует (см. config/loader.py —
+    фатал, а не тихий фоллбэк на pad/что угодно ещё). Тут в датаклассе
+    Optional только потому, что тестам/внутреннему коду, которые строят
+    ThermalViaArrayConfig() напрямую в Python (мимо загрузчика YAML),
+    имя не нужно вообще — обязательность имени касается ТОЛЬКО ввода
+    человеком через YAML, не самой структуры данных."""
     enabled: bool = False
     anchor_ref: Optional[str] = None          # было str = ""
     anchor_role: Optional[str] = None         # новое
@@ -38,11 +42,13 @@ class ThermalViaArrayConfig:
     name: Optional[str] = None
 
 
-def thermal_via_array_effective_name(tva: "ThermalViaArrayConfig") -> str:
-    """См. докстринг ThermalViaArrayConfig.name — единая точка резолва
-    имени для --only (kicadspoke_cli.py), чтобы фоллбэк не разъезжался
-    между местами, которые его читают."""
-    return tva.name or f"thermal_{tva.pad}"
+def thermal_via_array_effective_name(tva: "ThermalViaArrayConfig") -> Optional[str]:
+    """Единая точка чтения имени для --only (kicadspoke_cli.py). Просто
+    tva.name — загрузчик (config/loader.py) гарантирует, что оно задано
+    для любого thermal_via_array, реально пришедшего из YAML; None
+    бывает только у ThermalViaArrayConfig(), собранного напрямую в
+    Python в обход загрузчика (тесты) — там имя и не нужно."""
+    return tva.name
 
 
 @dataclass
@@ -183,9 +189,11 @@ class Rule:
     сужение неоднозначности anchor_role, тот же принцип, что у
     ClonePlacement (см. config/models.py).
 
-    name — для --only (см. kicadspoke_cli.py): без явного имени падает на
-    net (см. config/loader.py) — существующие конфиги без name: продолжают
-    работать без правок, net и так обычно уникален и осмысленен."""
+    name — для --only (см. kicadspoke_cli.py). ОБЯЗАТЕЛЬНО в YAML (см.
+    config/loader.py — фатал, если не задано; net не годится в фоллбэк,
+    он не гарантированно уникален между правилами). В датаклассе
+    Optional только для тестов/внутреннего кода, строящего Rule()
+    напрямую в Python мимо загрузчика — там имя не нужно."""
     net: str
     spokes: List[ManualSpoke]
     anchor_ref: Optional[str] = None
@@ -195,10 +203,11 @@ class Rule:
     name: Optional[str] = None
 
 
-def rule_effective_name(rule: "Rule") -> str:
-    """См. докстринг Rule.name — единая точка резолва имени для --only
-    (kicadspoke_cli.py)."""
-    return rule.name or rule.net
+def rule_effective_name(rule: "Rule") -> Optional[str]:
+    """Единая точка чтения имени для --only (kicadspoke_cli.py). Просто
+    rule.name — загрузчик гарантирует, что оно задано для любого Rule,
+    реально пришедшего из YAML (см. Rule.name)."""
+    return rule.name
 
 
 @dataclass

@@ -61,23 +61,6 @@ def cmd_apply(args, cfg=None):
         cfg = load_config(args.config)
 
     only_names = getattr(args, "only", None)
-    clone_placement_name = getattr(args, "clone_placement", None)
-    if only_names and clone_placement_name:
-        sys.exit("[ошибка] --only и --clone-placement нельзя вместе — --only уже "
-                 "покрывает случай --clone-placement (и заодно rules/thermal_via_array), "
-                 "смешивать оба не нужно")
-
-    if clone_placement_name:
-        name = clone_placement_name
-        matching = [c for c in cfg.clone_placements if c.name == name]
-        if not matching:
-            all_names = [c.name for c in cfg.clone_placements]
-            sys.exit(f"[ошибка] clone_placements с именем {name!r} не найден в конфиге. "
-                    f"Доступные: {all_names}")
-        cfg.clone_placements = matching
-        logger.info(f"--clone-placement {name!r}: обрабатываю только его "
-                   f"(остальные clone_placements в этом прогоне игнорируются)")
-
     if only_names:
         requested = set(only_names)
         matched_rules = [r for r in cfg.rules if rule_effective_name(r) in requested]
@@ -352,20 +335,14 @@ def main():
     apply_parser.add_argument("--log-file", help="Файл для сохранения логов")
     apply_parser.add_argument("--no-collision-check", action="store_true", help="Отключить проверку коллизий")
     apply_parser.add_argument("--collision-margin", type=float, default=0.2, help="Дополнительный зазор при проверке коллизий, мм")
-    apply_parser.add_argument("--clone-placement", metavar="NAME",
-                              help="Обработать только ОДИН clone_placements с этим именем "
-                                   "(остальные игнорируются на этот прогон) — нужно, если несколько "
-                                   "clone_placements в режиме «по выделению»: в KiCad активно только "
-                                   "одно выделение сразу, обработать все разом нельзя. Нельзя вместе "
-                                   "с --only.")
     apply_parser.add_argument("--only", action="append", metavar="NAME",
                               help="Обработать только rules/clone_placements/thermal_via_array с этим "
-                                   "именем (можно повторять — несколько --only сразу). Имя rule — его "
-                                   "name:, а если не задано — net; имя thermal_via_array — его name:, "
-                                   "а если не задано — thermal_<pad>. Всё остальное в этом прогоне "
-                                   "полностью игнорируется (не попадает даже в проверки/лог) — для "
-                                   "изолированной проверки одного куска платы, без шума от остальных. "
-                                   "Нельзя вместе с --clone-placement.")
+                                   "именем (можно повторять — несколько --only сразу). Имя — всегда "
+                                   "явное поле name: этой записи (обязательно в YAML, см. "
+                                   "docs/commands_ru.md). Единственный способ сузить прогон — "
+                                   "всё остальное в этом прогоне полностью игнорируется (не попадает "
+                                   "даже в проверки/лог), для изолированной проверки одного куска "
+                                   "платы без шума от остальных. Без флага — как раньше, применяется всё.")
 
     undo_parser = subparsers.add_parser("undo", help="Откатить последнюю операцию")
     undo_parser.add_argument("--verbose", action="store_true", help="Подробный вывод")

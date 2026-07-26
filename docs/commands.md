@@ -35,8 +35,7 @@ python kicadspoke_cli.py apply <config.yaml> [options]
 | `--log-file` | Save logs to the specified file. |
 | `--no-collision-check` | Disable collision checking (if false positives occur). |
 | `--collision-margin` | Extra clearance for collision checking in mm (default: `0.2`). |
-| `--clone-placement NAME` | Process only the specified clone by name. Useful when multiple clones are in selection mode (only one selection can be active in KiCad at a time) or for debugging a specific placement. Cannot be combined with `--only`. |
-| `--only NAME` | Process only the `rules`/`clone_placements`/`thermal_via_array` with this name (flag can be repeated). A rule's name is its `name:`, falling back to `net` if unset; a `thermal_via_array`'s name is its `name:`, falling back to `thermal_<pad>` if unset. Everything else is excluded from this run entirely (not even touched by validation/logging) – for checking one section of the board in isolation, without noise from the rest. An unknown name is fatal, with a `difflib`-based suggestion. Cannot be combined with `--clone-placement`. |
+| `--only NAME` | Process only the `rules`/`clone_placements`/`thermal_via_array` with this name (flag can be repeated). The only way to narrow a run (replaces the old `--clone-placement`, which is gone – it never isolated `rules`/`thermal_via_array`, only `clone_placements`, hence the confusion). The name is always the entry's explicit `name:` field (see below – it's mandatory). Everything that doesn't match is excluded from this run entirely, not even touched by validation/logging – for checking one section of the board in isolation, without noise from the rest. An unknown name is fatal, with a `difflib`-based suggestion. |
 
 **`log_file:` in the config itself** – an optional root‑level YAML field (like `templates_file`/
 `registry_path`), resolved relative to the config file itself. If set, you don't need to pass
@@ -47,6 +46,25 @@ log_file: ../logs/placer.log
 ```
 
 **About the current production config:** the master config for the `3CH-AWG-TIA` board is `profiles/3ch-awg-tia.yaml` (merged `rules:`, `clone_placements:`, `thermal_via_array`, with a reference to `profiles/templates/3ch-awg-tia.yaml` via `templates_file`). The file `profiles/generated/10CL006YE144C8G.yaml` written by `utils/generate_10cl006.py` is a self‑contained archival version (can be run separately, but is no longer used in `apply` for this board).
+
+**`name:` is a mandatory field on every `rules:` entry, on `thermal_via_array:` (if that section is present at all), and on every `clone_placements:` entry.** Used by `--only`. `Rule`/`ThermalViaArrayConfig` without `name:` used to silently resolve to `net`/`thermal_<pad>`, and a `clone_placement` without `name:` used to silently become the literal string `'?'` (a real hole, not a feature) – all of that is gone; a missing `name:` is now fatal at config-load time:
+```yaml
+rules:
+- net: +3V3_VCCIO
+  name: +3V3_VCCIO   # mandatory
+  anchor_role: FPGA
+  spokes: [...]
+
+thermal_via_array:
+  name: fpga_thermal   # mandatory, if the section is present
+  enabled: true
+  ...
+
+clone_placements:
+- name: p5v_pi_filter   # was already mandatory, just never validated
+  template: 5v_pi_filter
+  ...
+```
 
 ### Examples
 
@@ -71,7 +89,7 @@ python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --dry-run
 #### Process only one clone (e.g., for debugging)
 
 ```bash
-python kicadspoke_cli.py apply templates\pi_filter_vccio.yaml --clone-placement pi_filter_vccio
+python kicadspoke_cli.py apply templates\pi_filter_vccio.yaml --only pi_filter_vccio
 ```
 
 #### Isolated run of a single board section (--only)
@@ -412,7 +430,7 @@ python -m kicadspoke.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
 1. **Before the first run** – use `extract` on a correctly placed instance to obtain a template. Use JSON format for convenient `templates_file` integration.
 2. **Check your configuration** with `--dry-run` to verify positions, vias, and tracks.
 3. **For debugging** – enable `--verbose` and log to a file.
-4. **When handling multiple clones in selection mode** – use `--clone-placement` to process them one at a time.
+4. **When handling multiple clones in selection mode** – use `--only <name>` to process them one at a time.
 5. **If KiCad crashes** on the first run – close the schematic editor or make an interactive edit in PCB before launching (workaround for issue #24966).
 6. **For hierarchical projects** – use `clone-extract` before writing ClonePlacement to get exact net names and twin refdes.
 7. **Store templates separately** – use `templates_file: templates.json` in the main config to keep geometry out of the main file.
@@ -481,7 +499,7 @@ python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter
 ### Apply a clone using an external template file
 
 ```bash
-python kicadspoke_cli.py apply config_with_templates_file.yaml --clone-placement fpga_filter_1v2_vccint
+python kicadspoke_cli.py apply config_with_templates_file.yaml --only fpga_filter_1v2_vccint
 ```
 
 ### Transform a template

@@ -7,14 +7,14 @@ The `kicadspoke/` folder contains the core modules responsible for configuration
 ## 1. `kicadspoke_cli.py` – CLI Entry Point
 
 **Purpose:**  
-Main executable script that processes command-line arguments, initialises logging, loads the configuration (with support for `templates_file`), connects to KiCad, runs pre-validation, invokes the planner and executor, and supports the `undo`, `extract`, `clone-extract` commands and the optional `--clone-placement` flag.
+Main executable script that processes command-line arguments, initialises logging, loads the configuration (with support for `templates_file`), connects to KiCad, runs pre-validation, invokes the planner and executor, and supports the `undo`, `extract`, `clone-extract` commands and the optional `--only` flag.
 
 **Main functions:**
 
 | Function | Description |
 |----------|-------------|
 | `setup_logging(verbose, log_file)` | Configures logging: level (INFO/DEBUG), output to console and/or file. |
-| `cmd_apply(args)` | `apply` command: loads config, connects to KiCad, runs validation, planning, and **three-phase** execution (moves → refresh → vias → tracks). Supports `--dry-run` and `--clone-placement` for processing a single clone. |
+| `cmd_apply(args)` | `apply` command: loads config, connects to KiCad, runs validation, planning, and **three-phase** execution (moves → refresh → vias → tracks). Supports `--dry-run` and `--only <name>[, ...]` for processing only the named `rules`/`clone_placements`/`thermal_via_array`. |
 | `cmd_extract(args)` | `extract` command: extracts a template from the current selection on the board (including **tracks**) and writes it as JSON or YAML. Supports `--param`, `--net-template`, `--origin-by-via-net`, `--origin-by-component-role`, and **profiles** (`--profiles`, `--profile`) for convenient parameter reuse. The format is determined by the file extension; for `.json` the file is written as a flat dictionary without a `templates:` wrapper. |
 | `cmd_undo(args)` | `undo` command: finds the latest JSON log in `logs/`, calls `undo_last_operation()` (removes created vias **and tracks**, restores components). |
 | `main()` | Parses arguments (supports implicit `apply`), configures logging, invokes the appropriate command, catches exceptions. |
@@ -25,7 +25,7 @@ Main executable script that processes command-line arguments, initialises loggin
 **Features:**  
 - Supports four commands: `apply`, `undo`, `extract`, `clone-extract`.
 - In `apply` mode, performs a three-phase process: moves → vias → tracks (with intermediate board reload).
-- The `--clone-placement NAME` flag allows processing only one clone in selection mode (useful for debugging) or when you need to process a specific clone among several.
+- The `--only NAME` flag (repeatable) allows processing only the `rules`/`clone_placements`/`thermal_via_array` with that name — e.g., a single clone in selection mode (useful for debugging), without touching the rest of the config at all. `name:` is mandatory on every such entry.
 - In `extract` mode, uses the current selection in the PCB editor to create a template; extracts components, vias, and tracks. Supports profiles that store parameters (`name`, `output`, `param`, `net_template`, `origin_by_via_net`, `origin_by_component_role`) in a separate YAML file.
 - All exceptions are caught and logged; user‑defined (`PlacerError`) are printed without a stack trace.
 
@@ -142,7 +142,7 @@ Ensures idempotency of via and track placement across runs. Stores information a
 - `anchor_id` for ManualSpoke is `f"pad:{pad}"`, for ClonePlacement it can be `f"name:{clone.name}"`, `f"anchor:{ref}:{pad}"`, or `f"role:{role}:{sheet}:{pad}"` depending on the anchor type.
 - `role` for spoke‑level vias is `__spoke__`.
 - Position tolerance: 0.01 mm.
-- Support for `known_anchor_ids` – when using `--clone-placement`, vias/tracks of other clones are not pruned.
+- Support for `known_anchor_ids` – when using `--only`, vias/tracks of other clones are not pruned.
 - Separate registries for vias and tracks (different files and record structures).
 
 **Used in:** `kicadspoke_cli.py` (during `apply`), `executor/via_executor.py`, and `executor/track_executor.py`.
@@ -211,7 +211,7 @@ Performs fatal checks on the configuration **before** any board modifications. I
 | `check_clone_templates_exist(cfg)` | Checks that every `ClonePlacement` references an existing template (config‑only check, no KiCad connection). |
 | `check_no_duplicate_clone_anchors(cfg)` | Checks uniqueness of `clone_placements` names and uniqueness of physical anchors (combination of `template`, `anchor_ref`, `anchor_pad` or `template`, `anchor_role`, `anchor_sheet`, `anchor_pad`) among enabled clones. Fatal on duplicates. |
 | `check_clone_nets_exist_on_board(adapter, cfg)` | Resolves `via.net` and `track.net` for each `ClonePlacement` and checks the result against actual board nets (`adapter.get_all_nets()`). Catches typos in `params` and `net_overrides`. |
-| `check_single_selection_based_clone(cfg)` | Ensures that no more than one `ClonePlacement` is in selection mode (without `nets`/`params`, or with `by_selection: true`), because KiCad supports only one selection at a time. Suggests using `--clone-placement` for debugging. |
+| `check_single_selection_based_clone(cfg)` | Ensures that no more than one `ClonePlacement` is in selection mode (without `nets`/`params`, or with `by_selection: true`), because KiCad supports only one selection at a time. Suggests using `--only NAME` for debugging. |
 | `run_all_checks(adapter, cfg)` | Runs all checks in order: `check_clone_templates_exist`, `check_no_duplicate_clone_anchors`, `check_single_selection_based_clone`, `check_templates_and_pads_exist`, `check_role_pool_sufficiency`, `check_clone_nets_exist_on_board`. |
 
 **Features:**

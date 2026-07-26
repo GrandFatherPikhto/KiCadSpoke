@@ -173,19 +173,18 @@ class PlacementRegistry:
         среди живых via, считается протухшей и пересоздаётся, как будто
         записи не было вовсе.
 
-        known_anchor_ids — ПОЛНЫЙ (до всякой --clone-placement
-        фильтрации) набор anchor_id (см. clone_anchor_id() в
-        clone_position_calculator.py — физическая привязка anchor_ref/
-        anchor_pad, НЕ clone.name, специально: переименование clone_placement
-        не должно тереть историю, если якорь физически тот же). Без него
-        (None) prune ведёт себя по-старому: всё, чего нет в этом прогоне —
-        устарело. С ним — запись, чей anchor_id (целиком, не по имени)
-        всё ещё есть в known_anchor_ids, пропускается (не prune'ится),
-        даже если её не было среди planned_vias ЭТОГО прогона: значит,
-        её просто отфильтровали через --clone-placement, а не убрали
-        из YAML. Иначе --clone-placement A на одном прогоне и
-        --clone-placement B на следующем взаимно удаляли бы via друг
-        друга — реальный баг, пойманный на практике.
+        known_anchor_ids — ПОЛНЫЙ (до всякой --only фильтрации) набор
+        anchor_id (см. clone_anchor_id() в clone_position_calculator.py —
+        физическая привязка anchor_ref/anchor_pad, НЕ clone.name,
+        специально: переименование clone_placement не должно тереть
+        историю, если якорь физически тот же). Без него (None) prune
+        ведёт себя по-старому: всё, чего нет в этом прогоне — устарело.
+        С ним — запись, чей anchor_id (целиком, не по имени) всё ещё
+        есть в known_anchor_ids, пропускается (не prune'ится), даже если
+        её не было среди planned_vias ЭТОГО прогона: значит, её просто
+        отфильтровали через --only, а не убрали из YAML. Иначе --only A
+        на одном прогоне и --only B на следующем взаимно удаляли бы via
+        друг друга — реальный баг, пойманный на практике.
         """
         to_create: List[ViaCommand] = []
         seen_keys = set()
@@ -231,7 +230,7 @@ class PlacementRegistry:
             if (known_anchor_ids is not None
                     and (anchor_id.startswith(('anchor:', 'role:', 'name:')))
                     and anchor_id in known_anchor_ids):
-                logger.debug(f"  {key}: не обработан в этом прогоне (--clone-placement "
+                logger.debug(f"  {key}: не обработан в этом прогоне (--only "
                             f"отфильтровал {anchor_id!r}), но он есть в конфиге — "
                             f"НЕ prune'ится")
                 continue
@@ -339,7 +338,7 @@ class TrackRegistry:
             if (known_anchor_ids is not None
                     and (anchor_id.startswith(('anchor:', 'role:', 'name:')))
                     and anchor_id in known_anchor_ids):
-                logger.debug(f"  {key}: не обработан в этом прогоне (--clone-placement "
+                logger.debug(f"  {key}: не обработан в этом прогоне (--only "
                             f"отфильтровал {anchor_id!r}), но он есть в конфиге — "
                             f"НЕ prune'ится")
                 continue

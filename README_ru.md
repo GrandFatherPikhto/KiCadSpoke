@@ -280,7 +280,7 @@ python kicadspoke_cli.py apply config.yaml [options]
 - `--log-file` – сохранять логи в файл.
 - `--no-collision-check` – отключить проверку коллизий.
 - `--collision-margin` – зазор при проверке коллизий (мм, по умолчанию 0.2).
-- `--clone-placement NAME` – обработать только указанный клон (полезно для отладки).
+- `--only NAME` – обработать только `rules`/`clone_placements`/`thermal_via_array` с этим именем (можно повторять); всё остальное в этот прогон не попадает вообще. `name:` обязателен у каждой такой записи.
 
 ### `extract` – извлечь шаблон из выделения (расширенный)
 
@@ -328,7 +328,7 @@ python kicadspoke_cli.py config.yaml --dry-run
 
 ### 3. Обработка одного клона при нескольких в режиме выделения
 ```bash
-python kicadspoke_cli.py config.yaml --clone-placement pi_filter_vccio
+python kicadspoke_cli.py config.yaml --only pi_filter_vccio
 ```
 
 ### 4. Извлечение шаблона с параметризацией и origin по via

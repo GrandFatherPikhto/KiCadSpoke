@@ -13,6 +13,7 @@ thermal_via_array:
   pattern: grid
   drill_mm: 0.3
   diameter_mm: 0.5
+  name: fpga_thermal
 templates:
   cap_pair_standard:
     vias:
@@ -136,6 +137,7 @@ rules:
   anchor_role: FPGA
   anchor_sheet: null
   anchor_cluster: null
+  name: +3V3_VCCIO
 - net: +1V2_VCCINT
   spokes:
   - pad: '5'
@@ -198,6 +200,7 @@ rules:
   anchor_role: FPGA
   anchor_sheet: null
   anchor_cluster: null
+  name: +1V2_VCCINT
 - net: +1V2_VCCD_PLL
   spokes:
   - pad: '37'
@@ -218,6 +221,7 @@ rules:
   anchor_role: FPGA
   anchor_sheet: null
   anchor_cluster: null
+  name: +1V2_VCCD_PLL
 - net: +2V5_VCCA
   spokes:
   - pad: '35'
@@ -238,3 +242,4 @@ rules:
   anchor_role: FPGA
   anchor_sheet: null
   anchor_cluster: null
+  name: +2V5_VCCA

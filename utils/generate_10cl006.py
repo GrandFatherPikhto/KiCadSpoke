@@ -109,10 +109,13 @@ def build_rules():
             )
             for pad, sx, sy, rot in spokes_table
         ]
+        # name: обязателен в YAML (см. config/loader.py — --only в
+        # kicadspoke_cli.py) — здесь его и генерируем, чтобы получившийся
+        # profiles/generated/10CL006YE144C8G.yaml грузился без ручной правки.
         if USE_ANCHOR_ROLE:
-            rules.append(Rule(net=net, spokes=spokes, anchor_role=ANCHOR_ROLE))
+            rules.append(Rule(net=net, spokes=spokes, anchor_role=ANCHOR_ROLE, name=net))
         else:
-            rules.append(Rule(net=net, spokes=spokes, anchor_ref=ANCHOR_REF))
+            rules.append(Rule(net=net, spokes=spokes, anchor_ref=ANCHOR_REF, name=net))
     return rules
 
 
@@ -186,6 +189,7 @@ def write_yaml(data, path):
 def main():
     # --- 1. rules-based конфиг (как раньше) ---
     thermal_via = ThermalViaArrayConfig(
+        name='fpga_thermal',  # обязателен в YAML, см. комментарий у build_rules()
         enabled=True,
         anchor_ref=THERMAL_ANCHOR_REF if not THERMAL_USE_ANCHOR_ROLE else None,
         anchor_role=THERMAL_ANCHOR_ROLE if THERMAL_USE_ANCHOR_ROLE else None,

@@ -307,7 +307,7 @@ def check_single_selection_based_clone(cfg: Config) -> None:
     прогон нельзя обработать больше одного ClonePlacement в режиме "по
     выделению" (нет ни nets, ни params). Если их больше одного — фатально,
     с подсказкой либо выключить лишние (enabled: false), либо запускать
-    apply отдельно на каждый через --clone-placement NAME.
+    apply отдельно на каждый через --only NAME.
     """
     selection_based = [c.name for c in cfg.clone_placements if c.enabled and clone_uses_selection_mode(c)]
     if len(selection_based) > 1:
@@ -316,7 +316,7 @@ def check_single_selection_based_clone(cfg: Config) -> None:
             [f"найдено {len(selection_based)}: {selection_based} — в KiCad активно только одно "
              f"выделение сразу, обработать все сразу нельзя",
              "решение: либо enabled: false у всех, кроме одного, либо запускать "
-             "apply отдельно для каждого через --clone-placement NAME"]
+             "apply отдельно для каждого через --only NAME"]
         ))
     logger.debug("Проверка на множественное выделение в clone_placements: сходится")
 

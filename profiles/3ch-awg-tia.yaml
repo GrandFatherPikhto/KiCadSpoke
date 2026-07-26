@@ -11,6 +11,7 @@ log_file: ../logs/3ch-awg-tia.log
 layer: B.Cu
 
 thermal_via_array:
+  name: fpga_thermal
   enabled: true
   anchor_role: FPGA
   pad: '145'
@@ -24,6 +25,7 @@ thermal_via_array:
 
 rules:
 - net: +3V3_VCCIO
+  name: +3V3_VCCIO
   anchor_role: FPGA
   spokes:
   - pad: '17'
@@ -99,6 +101,7 @@ rules:
     rotation_deg: 0.0
     cluster: FPGA_PWR_BANK
 - net: +1V2_VCCINT
+  name: +1V2_VCCINT
   anchor_role: FPGA
   spokes:
   - pad: '5'
@@ -150,6 +153,7 @@ rules:
     rotation_deg: 0.0
     cluster: FPGA_PWR_BANK
 - net: +1V2_VCCD_PLL
+  name: +1V2_VCCD_PLL
   anchor_role: FPGA
   spokes:
   - pad: '37'
@@ -165,6 +169,7 @@ rules:
     rotation_deg: 0.0
     cluster: FPGA_PWR_BANK
 - net: +2V5_VCCA
+  name: +2V5_VCCA
   anchor_role: FPGA
   spokes:
   - pad: '35'

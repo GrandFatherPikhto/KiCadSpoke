@@ -150,6 +150,14 @@ _CLONE_PLACEMENT_KNOWN_KEYS = {
 
 def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
     name = data.get('name', '?')
+    if not data.get('name'):
+        raise ValidationError(format_fatal_error(
+            "clone_placement без name",
+            ["у каждого clone_placement обязательно имя — используется в --only "
+             "(kicadspoke_cli.py) для изолированного прогона; напиши name: <строка>. "
+             "Раньше отсутствие name тихо подставляло '?' — это было дырой, а не "
+             "поведением"]
+        ))
     unknown = set(data.keys()) - _CLONE_PLACEMENT_KNOWN_KEYS
     if unknown:
         problems = []
@@ -298,6 +306,13 @@ def load_config(path: str) -> Config:
             "устаревшее поле 'target_ref' в thermal_via_array",
             ["переименовано для единообразия: напиши anchor_ref"]
         ))
+    if tva_data and not tva_data.get('name'):
+        raise ValidationError(format_fatal_error(
+            "thermal_via_array без name",
+            ["у thermal_via_array обязательно имя — используется в --only "
+             "(kicadspoke_cli.py) для изолированного прогона; напиши "
+             "name: <любая понятная строка>, например name: fpga_thermal"]
+        ))
     thermal_via = ThermalViaArrayConfig(
         enabled=tva_data.get('enabled', False),
         anchor_ref=tva_data.get('anchor_ref'),
@@ -349,6 +364,13 @@ def load_config(path: str) -> Config:
         anchor_sheet = rule_data.get('anchor_sheet')
         anchor_cluster = rule_data.get('anchor_cluster')
 
+        if not rule_data.get('name'):
+            raise ValidationError(format_fatal_error(
+                f"правило (цепь {rule_net!r}) без name",
+                ["у каждого правила обязательно имя — используется в --only "
+                 "(kicadspoke_cli.py) для изолированного прогона; напиши "
+                 "name: <любая понятная строка>, например name: fpga_3v3_bank"]
+            ))
         if anchor_ref and anchor_role:
             raise ValidationError(format_fatal_error(
                 f"anchor_ref и anchor_role одновременно в правиле (цепь {rule_net!r})",
