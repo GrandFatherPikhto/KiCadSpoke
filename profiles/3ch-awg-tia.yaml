@@ -2,6 +2,7 @@ templates_file: templates/3ch-awg-tia.yaml
 schematic_dir: ../test_boards/3CH-AWG-TIA
 registry_path: profiles/registries/3ch-awg-tia.json
 track_registry_path: profiles/registries/power_board.tracks.registry.json
+log_file: ../logs/placer.log
 
 # Слой ManualSpoke-пути (rules ниже) — глобальный, из
 # profiles/generated/10CL006YE144C8G.yaml, откуда сюда же перенесены

@@ -410,6 +410,10 @@ def load_config(path: str) -> Config:
     if track_registry_path:
         track_registry_path = str(Path(path).parent / track_registry_path)
 
+    log_file = data.get('log_file')
+    if log_file:
+        log_file = str(Path(path).parent / log_file)
+
     cfg = Config(
         layer=root_layer,
         templates=templates,
@@ -427,6 +431,7 @@ def load_config(path: str) -> Config:
         sheet_names=sheet_names,
         registry_path=registry_path,
         track_registry_path=track_registry_path,
+        log_file=log_file,
     )
     total_spokes = sum(len(r.spokes) for r in cfg.rules)
     logger.debug(f"Конфигурация загружена: layer={cfg.layer}, "

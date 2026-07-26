@@ -297,6 +297,12 @@ class Config:
     # Пути — относительно самого этого YAML, как и templates_file.
     registry_path: Optional[str] = None
     track_registry_path: Optional[str] = None
+    # Путь к лог-файлу для `apply` этого конфига (относительно самого YAML,
+    # как и registry_path) — удобно, чтобы не передавать --log-file руками
+    # каждый раз для одного и того же профиля платы. CLI-флаг --log-file,
+    # если указан, ИМЕЕТ ПРИОРИТЕТ над этим полем (см. main() в
+    # kicadspoke_cli.py).
+    log_file: Optional[str] = None
     # Вычисляется в load_config из schematic_dir/schematic_files — НЕ
     # читается из YAML напрямую. {uuid: Sheetname}, пусто если ни
     # schematic_dir, ни schematic_files не заданы (и anchor_sheet тогда

@@ -52,11 +52,12 @@ def setup_logging(verbose: bool = False, log_file: str = None):
     logging.basicConfig(level=logging.DEBUG, handlers=handlers)
 
 
-def cmd_apply(args):
+def cmd_apply(args, cfg=None):
     """Основная команда: применить расстановку."""
     logger = logging.getLogger(__name__)
-    logger.info(f"Загрузка конфига: {args.config}")
-    cfg = load_config(args.config)
+    if cfg is None:
+        logger.info(f"Загрузка конфига: {args.config}")
+        cfg = load_config(args.config)
 
     all_anchor_ids = {clone_anchor_id(c) for c in cfg.clone_placements}
     if getattr(args, "clone_placement", None):
@@ -354,11 +355,24 @@ def main():
 
     args = parser.parse_args()
 
-    setup_logging(verbose=getattr(args, "verbose", False), log_file=getattr(args, "log_file", None))
+    # Конфиг грузим заранее (только для apply), чтобы взять log_file: из
+    # него, если --log-file не передан явно. Ошибки загрузки тут молча
+    # проглатываются — cmd_apply загрузит конфиг заново и упадёт с тем же
+    # PlacerError через обычную обработку ниже (просто без файла лога,
+    # раз мы даже не знаем его путь).
+    cfg = None
+    if args.command == "apply":
+        try:
+            cfg = load_config(args.config)
+        except Exception:
+            cfg = None
+
+    log_file = getattr(args, "log_file", None) or (cfg.log_file if cfg else None)
+    setup_logging(verbose=getattr(args, "verbose", False), log_file=log_file)
 
     try:
         if args.command == "apply":
-            cmd_apply(args)
+            cmd_apply(args, cfg=cfg)
         elif args.command == "undo":
             cmd_undo(args)
         elif args.command == "clone-extract":
