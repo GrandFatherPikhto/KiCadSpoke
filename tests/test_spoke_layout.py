@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from kipy.geometry import Vector2
 
 from kicadspoke.config import (
-    ManualSpoke, SpokeTemplate, TemplateVia, TemplateComponentSlot
+    ManualSpoke, SpokeTemplate, TemplateVia, TemplateComponentSlot, TemplateTrack
 )
 from kicadspoke.geometry.spoke_layout import apply_spoke_geometry, rotate_local_offset
 
@@ -183,3 +183,73 @@ class TestApplySpokeGeometry:
         assert len(layout.components) == 3
         refs = {c.ref for c in layout.components}
         assert refs == {"Y1", "C15", "C16"}
+
+
+class TestSpokeLevelTracks:
+    """ManualSpoke теперь расставляет и tracks: (не только via/components) --
+    net=None в TemplateTrack наследует rule_net, той же конвенцией, что и
+    у TemplateVia (см. TestApplySpokeGeometry.test_spoke_level_via_present).
+    Это критично: один и тот же шаблон (cap_pair_standard) переиспользуется
+    несколькими Rule с РАЗНЫМ net -- литерал сломал бы 3 из 4 правил."""
+
+    def _template_with_tracks(self):
+        return SpokeTemplate(
+            name="t",
+            layer="B.Cu",
+            tracks=[
+                TemplateTrack(start_along_mm=-1.0, start_across_mm=1.5,
+                              end_along_mm=-1.0, end_across_mm=2.7,
+                              width_mm=0.65, net="GND"),
+                TemplateTrack(start_along_mm=-1.0, start_across_mm=-1.1,
+                              end_along_mm=-2.0, end_across_mm=-2.1,
+                              width_mm=0.65, net=None),
+            ],
+        )
+
+    def test_track_net_none_inherits_rule_net(self):
+        pad_pos = Vector2.from_xy(50 * MM, 50 * MM)
+        spoke = ManualSpoke(pad="1", template="t", rotation_deg=0.0)
+        layout = apply_spoke_geometry(pad_pos, spoke, self._template_with_tracks(),
+                                      rule_net="+1V2_VCCINT", role_to_ref={})
+        assert len(layout.tracks) == 2
+        gnd_track = next(t for t in layout.tracks if t.width_mm == 0.65 and t.net == "GND")
+        power_track = next(t for t in layout.tracks if t.net != "GND")
+        assert gnd_track.net == "GND"  # литерал не тронут
+        assert power_track.net == "+1V2_VCCINT"  # None -> rule_net этого конкретного правила
+
+    def test_same_template_different_rule_net_gives_different_track_net(self):
+        """Тот же шаблон, два разных Rule -- силовой трек следует за rule_net каждого."""
+        pad_pos = Vector2.from_xy(0, 0)
+        tpl = self._template_with_tracks()
+        for net in ("+3V3_VCCIO", "+2V5_VCCA"):
+            layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", template="t"),
+                                          tpl, rule_net=net, role_to_ref={})
+            power_track = next(t for t in layout.tracks if t.net != "GND")
+            assert power_track.net == net
+
+    def test_track_geometry_matches_local_to_absolute(self):
+        pad_pos = Vector2.from_xy(50 * MM, 50 * MM)
+        spoke = ManualSpoke(pad="1", template="t", rotation_deg=90.0)
+        layout = apply_spoke_geometry(pad_pos, spoke, self._template_with_tracks(),
+                                      rule_net="GND", role_to_ref={})
+        gnd_track = next(t for t in layout.tracks if t.net == "GND")
+        ex_start, ey_start = _real_rotate(-1.0, 1.5, 90.0)
+        ex_end, ey_end = _real_rotate(-1.0, 2.7, 90.0)
+        assert abs((gnd_track.start.x - pad_pos.x) / MM - ex_start) < 1e-3
+        assert abs((gnd_track.start.y - pad_pos.y) / MM - ey_start) < 1e-3
+        assert abs((gnd_track.end.x - pad_pos.x) / MM - ex_end) < 1e-3
+        assert abs((gnd_track.end.y - pad_pos.y) / MM - ey_end) < 1e-3
+
+    def test_track_layer_inherits_template_layer_when_unset(self):
+        pad_pos = Vector2.from_xy(0, 0)
+        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", template="t"),
+                                      self._template_with_tracks(), rule_net="GND", role_to_ref={})
+        assert all(t.layer == "B.Cu" for t in layout.tracks)
+
+    def test_missing_tracks_gives_empty_list(self):
+        """Шаблон без tracks: вообще -- не должен падать, просто пустой список."""
+        pad_pos = Vector2.from_xy(0, 0)
+        tpl = SpokeTemplate(name="no_tracks", vias=[TemplateVia(offset_along_mm=0.0)])
+        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", template="no_tracks"),
+                                      tpl, rule_net="GND", role_to_ref={})
+        assert layout.tracks == []

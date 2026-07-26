@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from kipy.geometry import Vector2, Angle
 
-from ..config import ManualSpoke, SpokeTemplate, TemplateVia
+from ..config import ManualSpoke, SpokeTemplate, TemplateVia, TemplateTrack
 from ..utils.units import MM
 
 _ORIGIN = Vector2.from_xy(0, 0)
@@ -78,6 +78,21 @@ class ResolvedTrack:
     layer: str  # 'F.Cu' | 'B.Cu', абсолютный — уже разрешён (свой или слоя шаблона, с учётом mirror)
 
 
+def _resolve_track(origin: Vector2, track: TemplateTrack, rotation_deg: float,
+                    rule_net: str, template_layer: str) -> ResolvedTrack:
+    """net=None наследует rule_net — та же конвенция, что и у _resolve_via
+    (см. её докстринг). ManualSpoke не поддерживает mirror (в отличие от
+    ClonePlacement), поэтому слой — просто свой или слоя шаблона, без
+    инверсии."""
+    return ResolvedTrack(
+        start=local_to_absolute(origin, track.start_along_mm, track.start_across_mm, rotation_deg),
+        end=local_to_absolute(origin, track.end_along_mm, track.end_across_mm, rotation_deg),
+        width_mm=track.width_mm,
+        net=track.net or rule_net,
+        layer=track.layer or template_layer,
+    )
+
+
 @dataclass
 class ComponentLayout:
     ref: str
@@ -93,7 +108,7 @@ class SpokeLayout:
     origin: Vector2                                  # ноль спицы (после shift, до поворота)
     vias: List[ResolvedVia] = field(default_factory=list)     # via уровня спицы (была power_via)
     components: List[ComponentLayout] = field(default_factory=list)
-    tracks: List[ResolvedTrack] = field(default_factory=list)  # только у ClonePlacement (clone_geometry.py); ManualSpoke не заполняет
+    tracks: List[ResolvedTrack] = field(default_factory=list)  # заполняется и ClonePlacement (clone_geometry.py), и ManualSpoke (ниже)
 
 
 def apply_spoke_geometry(
@@ -118,6 +133,8 @@ def apply_spoke_geometry(
     layout = SpokeLayout(origin=origin)
 
     layout.vias = [_resolve_via(origin, v, spoke.rotation_deg, rule_net) for v in template.vias]
+    layout.tracks = [_resolve_track(origin, t, spoke.rotation_deg, rule_net, template.layer)
+                      for t in template.tracks]
 
     for slot in template.components:
         ref = role_to_ref.get(slot.role)

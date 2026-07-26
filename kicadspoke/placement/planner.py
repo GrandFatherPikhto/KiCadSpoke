@@ -60,11 +60,12 @@ class PlacementPlanner:
         self._planned_tracks = []
 
         if self.cfg.place_components and self.cfg.rules:
-            placed, planned_vias = self.position_calc.compute_raw_positions(
+            placed, planned_vias, planned_tracks = self.position_calc.compute_raw_positions(
                 self.cfg.rules
             )
             self._planned.extend(placed)
             self._planned_vias.extend(planned_vias)
+            self._planned_tracks.extend(planned_tracks)
         elif not self.cfg.rules:
             logger.debug("rules пуст — компоненты/via по ManualSpoke не планируются")
         else:
@@ -115,10 +116,10 @@ class PlacementPlanner:
 
     def plan_tracks(self) -> List[TrackCommand]:
         """
-        Треки планируются только у ClonePlacement (ManualSpoke их не
-        поддерживает вообще — см. TemplateTrack в config.py). Никакого
-        keepout/термо-планирования, в отличие от plan_vias — треки не
-        двигаются под коллизии, коллизии для протяжённой геометрии
+        Треки планируются и у ClonePlacement, и у ManualSpoke (net=null в
+        TemplateTrack наследует rule.net — см. spoke_layout._resolve_track).
+        Никакого keepout/термо-планирования, в отличие от plan_vias — треки
+        не двигаются под коллизии, коллизии для протяжённой геометрии
         сознательно не проверяем сами (см. обсуждение), полагаемся на DRC
         самого KiCad.
         """

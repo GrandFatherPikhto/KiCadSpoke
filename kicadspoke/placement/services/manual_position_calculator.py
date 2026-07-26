@@ -7,7 +7,7 @@ from kipy.board_types import FootprintInstance, BoardLayer
 from ...config import Config, Rule
 from ...kicad.adapter import KiCadBoardAdapter
 from ...geometry.spoke_layout import apply_spoke_geometry
-from ..commands import PlacedComponentInfo, ViaCommand
+from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand
 from ...registry import make_registry_key
 from .component_pool import ComponentPool
 from ..interfaces import IPositionCalculator
@@ -31,9 +31,10 @@ class ManualPositionCalculator(IPositionCalculator):
     def compute_raw_positions(
         self,
         rules: List[Rule],
-    ) -> Tuple[List[PlacedComponentInfo], List[ViaCommand]]:
+    ) -> Tuple[List[PlacedComponentInfo], List[ViaCommand], List[TrackCommand]]:
         components_result: List[PlacedComponentInfo] = []
         vias_result: List[ViaCommand] = []
+        tracks_result: List[TrackCommand] = []
 
         for rule in rules:
             # --- Резолвим якорь (anchor_ref или anchor_role) ---
@@ -128,6 +129,21 @@ class ManualPositionCalculator(IPositionCalculator):
                     logger.debug(f"  via спицы (пад {spoke.pad}): "
                                 f"({via.position.x/1e6:.3f}, {via.position.y/1e6:.3f}) мм, net={via.net}")
 
+                # Треки уровня спицы (net=null в шаблоне наследует rule.net —
+                # см. spoke_layout._resolve_track). Только уровень спицы:
+                # TemplateComponentSlot треков не несёт, только via.
+                for track_index, track in enumerate(layout.tracks):
+                    track_layer = BoardLayer.BL_B_Cu if track.layer == 'B.Cu' else BoardLayer.BL_F_Cu
+                    tracks_result.append(TrackCommand(
+                        start=track.start, end=track.end, width_mm=track.width_mm,
+                        net_name=track.net, layer=track_layer, owner_ref=anchor_ref_resolved,
+                        registry_key=make_registry_key(anchor_id, spoke.template, None, track_index),
+                    ))
+                    logger.debug(f"  track спицы (пад {spoke.pad}): "
+                                f"({track.start.x/1e6:.3f}, {track.start.y/1e6:.3f}) -> "
+                                f"({track.end.x/1e6:.3f}, {track.end.y/1e6:.3f}) мм, "
+                                f"net={track.net}, layer={track.layer}")
+
                 for comp_layout in layout.components:
                     components_result.append(PlacedComponentInfo(
                         ref=comp_layout.ref, dest=comp_layout.position, angle_deg=comp_layout.angle_deg,
@@ -146,4 +162,4 @@ class ManualPositionCalculator(IPositionCalculator):
                         logger.debug(f"    via {comp_layout.ref}: "
                                     f"({via.position.x/1e6:.3f}, {via.position.y/1e6:.3f}) мм, net={via.net}")
 
-        return components_result, vias_result
+        return components_result, vias_result, tracks_result

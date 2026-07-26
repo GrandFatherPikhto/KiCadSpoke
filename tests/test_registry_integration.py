@@ -96,7 +96,7 @@ def test_registry_full_cycle_across_two_runs():
     # --- Прогон 1: чистый реестр, via должна быть создана ---
     cfg1 = _build_cfg(power_via_offset_across=-1.5)
     calc1 = ManualPositionCalculator(adapter, cfg1)
-    _, vias1 = calc1.compute_raw_positions(cfg1.rules)
+    _, vias1, _ = calc1.compute_raw_positions(cfg1.rules)
     assert len(vias1) == 1
     key = vias1[0].registry_key
     expected_key = f"pad:17|t|{SPOKE_LEVEL_ROLE_PLACEHOLDER}|0"
@@ -113,7 +113,7 @@ def test_registry_full_cycle_across_two_runs():
 
     # --- Прогон 2: тот же конфиг, тот же реестр, via реально стоит -- ничего создавать не нужно ---
     calc2 = ManualPositionCalculator(adapter, cfg1)
-    _, vias2 = calc2.compute_raw_positions(cfg1.rules)
+    _, vias2, _ = calc2.compute_raw_positions(cfg1.rules)
     reg2 = PlacementRegistry(adapter, reg_path)
     to_create2 = reg2.reconcile(vias2)
     assert len(to_create2) == 0, "конфиг не менялся, via реально стоит -- пересоздавать не нужно"
@@ -123,7 +123,7 @@ def test_registry_full_cycle_across_two_runs():
     # должна быть удалена по uuid, новая помечена к созданию ---
     cfg3 = _build_cfg(power_via_offset_across=-3.0)  # другое значение!
     calc3 = ManualPositionCalculator(adapter, cfg3)
-    _, vias3 = calc3.compute_raw_positions(cfg3.rules)
+    _, vias3, _ = calc3.compute_raw_positions(cfg3.rules)
     reg3 = PlacementRegistry(adapter, reg_path)
     to_create3 = reg3.reconcile(vias3)
     assert len(to_create3) == 1
@@ -140,7 +140,7 @@ def test_registry_full_cycle_across_two_runs():
         thermal_via_array=ThermalViaArrayConfig(enabled=False), rules=[],
     )
     calc4 = ManualPositionCalculator(adapter, cfg4)
-    _, vias4 = calc4.compute_raw_positions(cfg4.rules)
+    _, vias4, _ = calc4.compute_raw_positions(cfg4.rules)
     assert vias4 == []
     reg4 = PlacementRegistry(adapter, reg_path)
     to_create4 = reg4.reconcile(vias4)
