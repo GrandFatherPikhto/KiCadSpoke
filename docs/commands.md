@@ -35,7 +35,8 @@ python kicadspoke_cli.py apply <config.yaml> [options]
 | `--log-file` | Save logs to the specified file. |
 | `--no-collision-check` | Disable collision checking (if false positives occur). |
 | `--collision-margin` | Extra clearance for collision checking in mm (default: `0.2`). |
-| `--clone-placement NAME` | Process only the specified clone by name. Useful when multiple clones are in selection mode (only one selection can be active in KiCad at a time) or for debugging a specific placement. |
+| `--clone-placement NAME` | Process only the specified clone by name. Useful when multiple clones are in selection mode (only one selection can be active in KiCad at a time) or for debugging a specific placement. Cannot be combined with `--only`. |
+| `--only NAME` | Process only the `rules`/`clone_placements`/`thermal_via_array` with this name (flag can be repeated). A rule's name is its `name:`, falling back to `net` if unset; a `thermal_via_array`'s name is its `name:`, falling back to `thermal_<pad>` if unset. Everything else is excluded from this run entirely (not even touched by validation/logging) – for checking one section of the board in isolation, without noise from the rest. An unknown name is fatal, with a `difflib`-based suggestion. Cannot be combined with `--clone-placement`. |
 
 **`log_file:` in the config itself** – an optional root‑level YAML field (like `templates_file`/
 `registry_path`), resolved relative to the config file itself. If set, you don't need to pass
@@ -71,6 +72,16 @@ python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --dry-run
 
 ```bash
 python kicadspoke_cli.py apply templates\pi_filter_vccio.yaml --clone-placement pi_filter_vccio
+```
+
+#### Isolated run of a single board section (--only)
+
+```bash
+# Only one clone_placement, no FPGA spokes or thermal vias in the log
+python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --dry-run
+
+# Multiple names at once (a rule via its net-fallback + a thermal_via_array via its thermal_<pad>-fallback)
+python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only +3V3_VCCIO --only thermal_145
 ```
 
 #### Disable collision checking

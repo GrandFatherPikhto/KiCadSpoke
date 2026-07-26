@@ -35,7 +35,8 @@ python kicadspoke_cli.py apply <путь_к_конфигу.yaml> [опции]
 | `--log-file` | Сохранять логи в указанный файл. |
 | `--no-collision-check` | Отключить проверку коллизий (если даёт ложные срабатывания). |
 | `--collision-margin` | Дополнительный зазор при проверке коллизий (мм). По умолчанию `0.2`. |
-| `--clone-placement NAME` | Обработать только один клон с указанным именем. Полезно, когда в конфиге несколько клонов в режиме «по выделению» (в KiCad активно только одно выделение) или для отладки конкретного размещения. |
+| `--clone-placement NAME` | Обработать только один клон с указанным именем. Полезно, когда в конфиге несколько клонов в режиме «по выделению» (в KiCad активно только одно выделение) или для отладки конкретного размещения. Нельзя вместе с `--only`. |
+| `--only NAME` | Обработать только `rules`/`clone_placements`/`thermal_via_array` с этим именем (флаг можно повторять). Имя `rule` — его `name:`, а если не задано — `net`; имя `thermal_via_array` — его `name:`, а если не задано — `thermal_<pad>`. Всё остальное в этот прогон не попадает вообще (даже в проверки и лог) — для изолированной проверки одного куска платы без шума от остальных. Незнакомое имя — фатал с подсказкой (`difflib`). Нельзя вместе с `--clone-placement`. |
 
 **`log_file:` в самом конфиге** – необязательное поле в корне YAML (как `templates_file`/
 `registry_path`), путь резолвится относительно самого файла конфига. Если задано – не нужно каждый раз
@@ -71,6 +72,16 @@ python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --dry-run
 
 ```bash
 python kicadspoke_cli.py apply templates\pi_filter_vccio.yaml --clone-placement pi_filter_vccio
+```
+
+#### Изолированный прогон одного куска платы (--only)
+
+```bash
+# Только один clone_placement, без FPGA-спиц и без термовиа в логе
+python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --dry-run
+
+# Несколько имён сразу (rule по net-фоллбэку + thermal_via_array по thermal_<pad>-фоллбэку)
+python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only +3V3_VCCIO --only thermal_145
 ```
 
 #### Отключение проверки коллизий
