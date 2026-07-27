@@ -6,3 +6,10 @@ boards_dir: test_boards
 runs: 10
 startup_wait: 30.0
 settle_delay: 0.0
+
+# Только для Windows (читается, только если os.name == "nt" — на Linux запуск
+# по Flatpak app id, путь к бинарнику не нужен). Если на машине несколько
+# версий KiCad бок о бок — проверьте, что путь ведёт именно на KiCad 10, а не
+# на старую 9.x.
+windows:
+  kicad_exe: "C:\\Users\\grand\\AppData\\Local\\Programs\\KiCad\\10.0\\bin\\kicad.exe"

@@ -20,6 +20,16 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent))
 
+# Translated/typographic text (em dashes, non-breaking hyphens, degree signs, ...)
+# can't be encoded by legacy console codepages (e.g. Windows cp1251/cp866), which
+# crashes the logging StreamHandler mid-run with UnicodeEncodeError. UTF-8 can
+# encode any codepoint, so this removes the crash regardless of the terminal;
+# whether it also *displays* correctly still depends on the terminal itself.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 from kicadspoke.config import load_config, rule_effective_name, thermal_via_array_effective_name
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner

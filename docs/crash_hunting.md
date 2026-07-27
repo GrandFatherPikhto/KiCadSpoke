@@ -35,6 +35,11 @@ Status: reproduced on KiCad 10.0.4 and 10.0.5, on both Windows and Linux (Flatpa
 still crashes" and that the exact trigger is `begin_commit()` (not any write) are queued for a follow-up post
 to the GitLab issue; we're deliberately accumulating more data before posting (see `techdocs/status/`).
 
+**Measured data point (2026-07-27, native Windows, KiCad 10.0, `repeat_first_write_crash.py` after the
+Windows port + `AS_BUSY` fix above):** 10 runs with both Schematic Editor and PCB Editor open — 1/10 crashed
+(10%), the rest `ok`. A separate run with only the PCB Editor open — 10/10 `ok`, 0% — a clean confirmation of
+the Schematic-Editor precondition above, this time on native Windows rather than Linux/Flatpak.
+
 ### #24970 — crash in `LIB_BUFFER::GetDerivedSymbolNames`
 
 A separate null dereference, unrelated to the IPC path: it fires inside a `SELECTION_TOOL` coroutine while
@@ -94,24 +99,42 @@ reliably; on a warmed-up system it becomes intermittent") — a single run (cras
 statistically. This script runs N identical iterations in a row and reports the crash percentage, turning an
 anecdote into a measured rate.
 
+**Cross-platform (Windows/Linux)** — was Linux/Flatpak-only until 2026-07-27; `kill_kicad()`/`launch_kicad()`
+now branch on `os.name`, same convention as `list_kicad_pids()` in `diagnose_first_write_crash.py`.
+
 Per-iteration cycle:
 
-1. Kill KiCad if running (`pkill -x kicad`).
-2. Clean up leftovers — invokes `tools/clean_kicad_crash_state.py` as a subprocess.
-3. Launch KiCad with the given project (`flatpak run org.kicad.KiCad <project>`).
+1. Kill KiCad if running — `taskkill /IM kicad.exe /F` on Windows, `pkill -x kicad` on Linux.
+2. Clean up leftovers — invokes `tools/clean_kicad_crash_state.py` as a subprocess. **Still Linux/Flatpak-only
+   under the hood** (see below) — on Windows this step is a safe no-op (prints a warning, doesn't crash), it
+   just doesn't actually clean anything yet.
+3. Launch KiCad with the given project — on Linux, `flatpak run org.kicad.KiCad <project>` (app id, no path
+   needed); on Windows there's no equivalent app-id launch, so it runs `<kicad_exe> <project>` with an
+   explicit, mandatory path from the config/`--kicad-exe` — deliberately not auto-detected across install
+   locations/versions (same "explicit beats silent guessing" convention as the rest of the project).
 4. Wait for IPC readiness — **not just `ping()`**, but also a successful `get_board()` (otherwise there's a
    race: `ping()` answers as soon as the base API server comes up, well before pcbnew actually loads the board
    and registers its handler — this used to produce false `ApiError: no handler available` results that were
    mistaken for a crash).
 5. One no-op transaction (`begin_commit → update_items → push_commit`) — the same production path as step 9
-   of `diagnose_first_write_crash.py`.
-6. Record whether it crashed (dropped connection) or not.
+   of `diagnose_first_write_crash.py`. An `ApiError` with code `AS_BUSY` ("KiCad is busy and cannot
+   respond...") is **not** the #24966 crash — it's a separate readiness race: `get_board()` (a read) in step
+   4 already succeeds before pcbnew is ready to accept **editing** commands, and this window turned out to be
+   noticeably wider on native Windows than on Linux/Flatpak, where it didn't show up at all (found
+   2026-07-27, chasing a run that reported 100% "crash" on Windows while the same board was a clean 100% OK
+   on Linux). Retried here with backoff, the same technique as `commit_with_retry` in production
+   (`kicadspoke/kicad/adapter.py`) — not counted as a crash.
+6. Record the outcome: `ok` / `crash` (dropped connection — this one is actually #24966) / `busy` (still busy
+   after all retries — reported separately, not as a crash).
 7. Kill KiCad, next iteration.
 
-**Config:** by default reads `crash_config.yaml` from the repo root (alongside `dir_checker.yaml`,
-`generated_config.yaml`, etc.) — no need to type `--project` by hand every time. KiCad projects live under
-`test_boards/`, which is entirely gitignored (test boards are local/per-machine), but `crash_config.yaml`
-itself is an ordinary tracked file — it only holds a path string, not the project itself:
+**Config:** by default reads `crash_config.yaml` from the repo root — no need to type `--project`/
+`--kicad-exe` by hand every time. Shared fields (`project`, `boards_dir`, `runs`, `startup_wait`,
+`settle_delay`) live at the top level, one value for both OSes; the Windows-only `kicad_exe` lives under a
+nested `windows:` key, read only when `os.name == "nt"` — Linux has no equivalent field at all (launch is by
+Flatpak app id, no path needed). KiCad projects live under `test_boards/`, which is entirely gitignored (test
+boards are local/per-machine), but `crash_config.yaml` itself is an ordinary tracked file — it only holds
+path strings, not the project itself:
 
 ```yaml
 # crash_config.yaml
@@ -120,6 +143,9 @@ boards_dir: test_boards
 runs: 10
 startup_wait: 30.0
 settle_delay: 0.0
+
+windows:
+  kicad_exe: "C:\\Users\\<you>\\AppData\\Local\\Programs\\KiCad\\10.0\\bin\\kicad.exe"
 ```
 
 Any CLI flag overrides the corresponding config field.
@@ -133,6 +159,9 @@ python tools/repeat_first_write_crash.py --settle-delay 30
 
 # A different config (e.g. for another test board)
 python tools/repeat_first_write_crash.py --config crash_config_power_board.yaml
+
+# Windows, kicad_exe outside the config (e.g. a second KiCad version installed side by side)
+python tools/repeat_first_write_crash.py --kicad-exe "C:\Program Files\KiCad\9.0\bin\kicad.exe"
 ```
 
 **Parameters:**
@@ -143,9 +172,13 @@ python tools/repeat_first_write_crash.py --config crash_config_power_board.yaml
 - `--boards-dir` — forwarded to `clean_kicad_crash_state.py` (default `test_boards` / from config).
 - `--startup-wait` — timeout waiting for IPC readiness, seconds (default 30 / from config).
 - `--settle-delay` — pause after IPC readiness before the transaction, seconds (tests hypothesis H1).
+- `--kicad-exe` — path to `kicad.exe` (overrides `kicad_exe` from the config; **mandatory on Windows**,
+  fatal with a usage hint if missing there; ignored on Linux).
 
-**Output:** a line of `OK`/`CRASH` per attempt, followed by a summary (total runs, skipped due to startup
-timeout, crash percentage).
+**Output:** a line of `OK`/`CRASH`/`BUSY` per attempt, followed by a summary (total runs counted towards the
+crash rate, how many never came up in time, how many stayed busy through all retries, crash percentage — the
+crash percentage is computed over `ok + crash` only, `busy`/timed-out runs are excluded so they don't dilute
+or inflate the #24966 statistic with unrelated noise).
 
 **Important note on the "Schematic Editor open" condition:** whether the schematic editor reopens
 automatically on project launch depends on whether the `.kicad_pro` project itself remembered its open
@@ -154,8 +187,10 @@ windows from last time. If it doesn't, open the Schematic Editor by hand once an
 step, a run of this script silently tests a **different** scenario (PCB Editor only), where the bug does not
 reproduce.
 
-**Dependencies:** `flatpak`, `pkill`/`pgrep` on `PATH`; invokes `tools/clean_kicad_crash_state.py` as a
-subprocess (the path is hardcoded relative to the repo root — run from the repo root). Linux/Flatpak-specific.
+**Dependencies:** on Linux, `flatpak`, `pkill`/`pgrep` on `PATH`; on Windows, nothing beyond the standard
+library (`taskkill` ships with Windows) plus a correct `kicad_exe` path. Invokes
+`tools/clean_kicad_crash_state.py` as a subprocess (the path is hardcoded relative to the repo root — run
+from the repo root) — that script itself stays Linux/Flatpak-only for now (see above).
 
 ---
 

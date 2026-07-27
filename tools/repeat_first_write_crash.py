@@ -1,49 +1,79 @@
 #!/usr/bin/env python3
 """
-repeat_first_write_crash.py — гоняет N попыток "первая транзакция после
-чистого старта KiCad" подряд и считает процент падений.
+repeat_first_write_crash.py — runs N attempts of "first transaction after a
+clean KiCad start" in a row and reports the crash percentage.
 
-ЗАЧЕМ: баг #24966 (checkForBusy/m_frame null) интермиттентный — сам
-оригинальный отчёт отмечает "on a freshly rebooted Windows it reproduces
-reliably; on a warmed-up system it becomes intermittent". Один прогон
-(упало/не упало) статистически ничего не доказывает — ни для проверки
-самого бага, ни для проверки гипотетических воркэраундов. Нужна серия
-одинаковых попыток и доля падений, не единичный анекдот.
+WHY: bug #24966 (checkForBusy/m_frame null) is intermittent — the original
+report itself notes "on a freshly rebooted Windows it reproduces reliably;
+on a warmed-up system it becomes intermittent". A single run (crash / no
+crash) proves nothing statistically — neither for the bug itself nor for
+testing hypothetical workarounds. Needs a series of identical attempts and
+a crash rate, not a single anecdote.
 
-Цикл на итерацию:
-  1. Убить KiCad (если запущен) — pkill -x kicad.
-  2. Почистить хвосты — utils/clean_kicad_crash_state.py.
-  3. Запустить KiCad с указанным проектом (flatpak run ... <project>).
-  4. Подождать готовности IPC (ping с ретраями).
-  5. Одна no-op транзакция: begin_commit -> update_items -> push_commit
-     (ровно боевой путь adapter.commit_with_retry, не голый update_items —
-     см. diagnose_first_write_crash.py и разбор 2026-07-26).
-  6. Записать: упало или нет (по ConnectionError/обрыву соединения).
-  7. Убить KiCad, следующая итерация.
+Cross-platform (Windows/Linux). Per-iteration cycle:
+  1. Kill KiCad if running — taskkill /IM kicad.exe /F on Windows, pkill -x
+     kicad on Linux.
+  2. Clean up leftovers — tools/clean_kicad_crash_state.py (currently only
+     actually cleans Flatpak/Linux leftovers — safe no-op with a warning on
+     Windows, doesn't crash).
+  3. Launch KiCad with the given project — on Windows via the explicit
+     kicad_exe path (mandatory in the config/--kicad-exe, there is no
+     single app id like Flatpak's), on Linux — flatpak run ... <project>.
+  4. Wait for IPC readiness (ping + get_board() with retries).
+  5. One no-op transaction: begin_commit -> update_items -> push_commit
+     (exactly the production path of adapter.commit_with_retry, not a bare
+     update_items — see diagnose_first_write_crash.py and the 2026-07-26
+     analysis). An ApiError with code AS_BUSY ("KiCad is busy and cannot
+     respond...") is NOT the #24966 crash — it's a separate readiness race:
+     get_board() (a read) in step 4 already succeeds before pcbnew is ready
+     to accept EDITING commands; this race window turned out to be
+     noticeably wider on native Windows than on Linux/Flatpak, where it
+     didn't show up at all (analysis 2026-07-27). Retried here with
+     backoff, the same technique as commit_with_retry in production — not
+     counted as a crash.
+  6. Record the outcome: ok / crash (dropped connection — this one is
+     actually #24966) / busy (still busy after all retries — reported
+     separately, not as a crash).
+  7. Kill KiCad, next iteration.
 
-ВАЖНО: "Schematic Editor открыт в сессии" — условие из issue #24966.
-Открывается ли он автоматически при запуске проекта — зависит от того,
-запомнил ли сам ПРОЕКТ открытые окна с прошлого раза. Если нет — открой
-Schematic Editor руками один раз и сохрани проект (File -> Save Project),
-тогда KiCad будет переоткрывать его сам при следующих стартах цикла.
+IMPORTANT: "Schematic Editor open in the session" is the precondition from
+issue #24966. Whether it reopens automatically on project launch depends on
+whether the PROJECT itself remembered its open windows from last time. If
+not, open the Schematic Editor by hand once and save the project (File ->
+Save Project) — KiCad will then reopen it automatically on every subsequent
+cycle start.
 
-Конфиг (необязательный): по умолчанию читает crash_config.yaml из корня репозитория (project, boards_dir,
-runs, startup_wait, settle_delay) — так не нужно каждый раз набирать --project руками. Любой CLI-флаг
-переопределяет соответствующее поле конфига.
+Config (optional): by default reads crash_config.yaml from the repo root —
+shared fields (project, boards_dir, runs, startup_wait, settle_delay) at
+the top level, the Windows-only kicad_exe under a nested windows: key (read
+only if os.name == "nt"; Linux has no such key at all, launch is by Flatpak
+app id, no path needed). Any CLI flag overrides the corresponding config
+field.
 
-Запуск:
-  python tools/repeat_first_write_crash.py                      # всё из crash_config.yaml
-  python tools/repeat_first_write_crash.py --runs 20             # конфиг + переопределение runs
-  python tools/repeat_first_write_crash.py --project <...> --runs 10 --settle-delay 30   # тест гипотезы H1
+Usage:
+  python tools/repeat_first_write_crash.py                      # everything from crash_config.yaml
+  python tools/repeat_first_write_crash.py --runs 20             # config + override runs
+  python tools/repeat_first_write_crash.py --project <...> --runs 10 --settle-delay 30   # test hypothesis H1
   python tools/repeat_first_write_crash.py --config other_crash_config.yaml
+  python tools/repeat_first_write_crash.py --kicad-exe "<path to kicad.exe>"   # Windows, outside the config
 """
 import argparse
+import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 import yaml
+
+# Legacy console codepages (Windows cp1251/cp866) can't encode every character
+# this script prints (Cyrillic text, typographic dashes) — UTF-8 can encode
+# any codepoint, so this avoids both mojibake and outright UnicodeEncodeError
+# crashes regardless of the terminal (see kicadspoke_cli.py for the same fix).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
 
 FLATPAK_APP_ID = "org.kicad.KiCad"
 DEFAULT_CONFIG_PATH = "crash_config.yaml"
@@ -58,7 +88,12 @@ def load_config(path: str) -> dict:
 
 
 def kill_kicad():
-    subprocess.run(["pkill", "-x", "kicad"], capture_output=True)
+    if os.name == "nt":
+        # /IM matches the exact image name kicad.exe, /F forces termination.
+        # No-op (non-zero exit, swallowed) if kicad.exe isn't running.
+        subprocess.run(["taskkill", "/IM", "kicad.exe", "/F"], capture_output=True)
+    else:
+        subprocess.run(["pkill", "-x", "kicad"], capture_output=True)
 
 
 def clean_state(boards_dir: Path):
@@ -68,23 +103,40 @@ def clean_state(boards_dir: Path):
     )
 
 
-def launch_kicad(project_path: str):
-    subprocess.Popen(
-        ["flatpak", "run", FLATPAK_APP_ID, project_path],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    )
+def launch_kicad(project_path: str, kicad_exe: str = None):
+    """Linux: launched by Flatpak app id, no path needed. Windows: there is no
+    equivalent app-id launch, so the actual kicad.exe path is required
+    explicitly (kicad_exe in the config or --kicad-exe) — no silent guessing
+    across install locations/versions, same "explicit beats guessing"
+    convention as the rest of the project (e.g. --net-template-role)."""
+    if os.name == "nt":
+        if not kicad_exe:
+            sys.exit("[error] Windows requires kicad_exe (path to kicad.exe) in the "
+                      "config or via --kicad-exe, e.g.:\n"
+                      r'  kicad_exe: "C:\Users\<you>\AppData\Local\Programs\KiCad\10.0\bin\kicad.exe"'
+                      "\n  (or wherever your KiCad 10 install actually lives — there can be "
+                      "more than one KiCad version installed side by side, double-check "
+                      "which one you mean)")
+        subprocess.Popen(
+            [kicad_exe, project_path],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    else:
+        subprocess.Popen(
+            ["flatpak", "run", FLATPAK_APP_ID, project_path],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
 
 
 def wait_for_ipc(timeout_s: float) -> bool:
     """
-    ВАЖНО: одного ping() недостаточно — он отвечает, как только поднялся
-    сам KiCad-процесс с базовым API-сервером, ЗАДОЛГО до того, как
-    pcbnew реально загрузит плату и зарегистрирует свой обработчик.
-    Если стучаться раньше — get_board() падает с
-    'ApiError: no handler available for request of type ...
-    GetOpenDocuments' — это НЕ баг #24966 (тот рвёт соединение, а не
-    отвечает вежливым ApiError), а гонка готовности. Поэтому ждём именно
-    get_board(), а не только ping().
+    IMPORTANT: ping() alone isn't enough — it answers as soon as the KiCad
+    process itself comes up with the base API server, well BEFORE pcbnew
+    actually loads the board and registers its handler. Knocking earlier
+    makes get_board() fail with 'ApiError: no handler available for request
+    of type ... GetOpenDocuments' — this is NOT bug #24966 (that one drops
+    the connection, not a polite ApiError), just a readiness race. So we
+    wait for get_board() specifically, not just ping().
     """
     import kipy
     deadline = time.monotonic() + timeout_s
@@ -99,24 +151,49 @@ def wait_for_ipc(timeout_s: float) -> bool:
     return False
 
 
-def try_commit_once() -> bool:
-    """True = транзакция прошла без падения, False = упало."""
+def try_commit_once(busy_retries: int = 5, busy_backoff_s: float = 2.0) -> str:
+    """Returns "ok" / "crash" / "busy". "busy" (ApiError with code AS_BUSY,
+    "KiCad is busy and cannot respond...") is NOT the #24966 crash (that one
+    drops the connection, ConnectionError) — it's a separate race:
+    get_board() in wait_for_ipc() already succeeds while pcbnew still isn't
+    ready to accept EDITING commands (see the 2026-07-27 analysis — this
+    window turned out wider on Windows than it had time to show up on
+    Linux). Retried with backoff, the same technique as _mutating_call in
+    kicadspoke/kicad/adapter.py (production code). If busy never clears
+    within all retries — counted as a separate outcome, not mixed into the
+    real-crash statistics."""
     import kipy
-    try:
-        k = kipy.KiCad(timeout_ms=15000)
-        board = k.get_board()
-        fps = list(board.get_footprints())
-        if not fps:
-            print("  [предупреждение] на плате нет футпринтов — тест невозможен, считаю OK")
-            return True
-        fp = fps[0]
-        commit = board.begin_commit()
-        board.update_items([fp])
-        board.push_commit(commit, "repeat_first_write_crash: no-op")
-        return True
-    except Exception as e:
-        print(f"  -> упало: {type(e).__name__}: {e}")
-        return False
+    from kipy.errors import ApiError, ApiStatusCode
+    last_exc = None
+    for attempt in range(1 + busy_retries):
+        try:
+            k = kipy.KiCad(timeout_ms=15000)
+            board = k.get_board()
+            fps = list(board.get_footprints())
+            if not fps:
+                print("  [предупреждение] на плате нет футпринтов — тест невозможен, считаю OK")
+                return "ok"
+            fp = fps[0]
+            commit = board.begin_commit()
+            board.update_items([fp])
+            board.push_commit(commit, "repeat_first_write_crash: no-op")
+            return "ok"
+        except ApiError as e:
+            if e.code == ApiStatusCode.AS_BUSY and attempt < busy_retries:
+                wait = busy_backoff_s * (attempt + 1)
+                print(f"  [занято] KiCad ещё не готов принимать запись, "
+                      f"жду {wait:.1f}с [{attempt + 1}/{busy_retries}]")
+                time.sleep(wait)
+                last_exc = e
+                continue
+            if e.code == ApiStatusCode.AS_BUSY:
+                print(f"  -> так и не отпустило busy за {busy_retries} ретраев: {e}")
+                return "busy"
+            print(f"  -> упало: {type(e).__name__}: {e}")
+            return "crash"
+        except Exception as e:
+            print(f"  -> упало: {type(e).__name__}: {e}")
+            return "crash"
 
 
 def main():
@@ -130,6 +207,9 @@ def main():
                      help="Таймаут ожидания готовности IPC, с (переопределяет config)")
     ap.add_argument("--settle-delay", type=float, default=None,
                      help="Пауза после готовности IPC перед транзакцией, тест гипотезы H1 (переопределяет config)")
+    ap.add_argument("--kicad-exe", default=None,
+                     help="Путь к kicad.exe (переопределяет config; обязателен на Windows, "
+                          "на Linux игнорируется — там запуск по Flatpak app id)")
     args = ap.parse_args()
 
     config = load_config(args.config)
@@ -141,6 +221,7 @@ def main():
     boards_dir = args.boards_dir or config.get("boards_dir", "test_boards")
     startup_wait = args.startup_wait if args.startup_wait is not None else config.get("startup_wait", 30.0)
     settle_delay = args.settle_delay if args.settle_delay is not None else config.get("settle_delay", 0.0)
+    kicad_exe = args.kicad_exe or config.get("windows", {}).get("kicad_exe")
 
     results = []
     for i in range(1, runs + 1):
@@ -148,32 +229,37 @@ def main():
         kill_kicad()
         time.sleep(1.0)
         clean_state(Path(boards_dir))
-        launch_kicad(project)
+        launch_kicad(project, kicad_exe)
 
         if not wait_for_ipc(startup_wait):
             print("  -> KiCad не поднялся за отведённое время, пропуск")
-            results.append(None)
+            results.append("timeout")
             continue
 
         if settle_delay > 0:
             time.sleep(settle_delay)
 
-        ok = try_commit_once()
-        results.append(ok)
-        print(f"  -> {'OK' if ok else 'CRASH'}")
+        outcome = try_commit_once()
+        results.append(outcome)
+        print(f"  -> {outcome.upper()}")
 
     kill_kicad()
 
-    total = len([r for r in results if r is not None])
-    crashes = len([r for r in results if r is False])
-    skipped = results.count(None)
+    # "busy" (never cleared within all retries) and "timeout" (never came up
+    # at all) are NOT #24966 crashes — separate outcomes, kept out of the
+    # crash rate so they don't add noise to it.
+    ok = results.count("ok")
+    crashes = results.count("crash")
+    busy = results.count("busy")
+    timeout = results.count("timeout")
+    total = ok + crashes
     print()
     print("===== ИТОГ =====")
-    print(f"Прогонов: {total} (пропущено из-за таймаута старта: {skipped})")
+    print(f"Прогонов: {total} (не поднялся: {timeout}, не отпустило busy: {busy})")
     if total:
         print(f"Падений: {crashes} ({crashes / total * 100:.0f}%)")
     else:
-        print("Падений: н/д (ни один прогон не поднялся)")
+        print("Падений: н/д (ни один прогон не завершился ok/crash)")
 
 
 if __name__ == "__main__":
