@@ -15,7 +15,7 @@ from ..exceptions import ValidationError, format_fatal_error
 from ..sheet_names import build_sheet_name_map
 from .models import (
     ThermalViaArrayConfig, TemplateVia, TemplateComponentSlot, TemplateTrack,
-    SpokeTemplate, ManualSpoke, Rule, ClonePlacement, Config,
+    SpokeTemplate, ManualSpoke, Rule, ClonePlacement, Config, rule_effective_name,
 )
 from ..i18n import _
 
@@ -350,12 +350,6 @@ def load_config(path: str) -> Config:
         anchor_sheet = rule_data.get('anchor_sheet')
         anchor_cluster = rule_data.get('anchor_cluster')
 
-        if not rule_data.get('name'):
-            raise ValidationError(format_fatal_error(
-                _("rule (net {net!r}) without name").format(net=rule_net),
-                [_("every rule must have a name – used in --only for isolated runs; "
-                   "write name: <any understandable string>, e.g. name: fpga_3v3_bank")]
-            ))
         if anchor_ref and anchor_role:
             raise ValidationError(format_fatal_error(
                 _("anchor_ref and anchor_role together in rule (net {net!r})").format(net=rule_net),
@@ -376,7 +370,28 @@ def load_config(path: str) -> Config:
         spokes = [_load_manual_spoke(spoke_data) for spoke_data in rule_data.get('spokes', [])]
         rules.append(Rule(net=rule_net, spokes=spokes, anchor_ref=anchor_ref,
                           anchor_role=anchor_role, anchor_sheet=anchor_sheet,
-                          anchor_cluster=anchor_cluster, name=rule_data.get('name')))
+                          anchor_cluster=anchor_cluster, name=rule_data.get('name'),
+                          enabled=rule_data.get('enabled', True)))
+
+    # Fatal on collision: two rules resolving to the same --only identity
+    # (same net, neither disambiguated with an explicit name) would silently
+    # both match the same --only call — catch it at load time, not at --only
+    # time, and point at exactly which rules collided.
+    seen_names: Dict[str, List[str]] = {}
+    for rule in rules:
+        seen_names.setdefault(rule_effective_name(rule), []).append(
+            rule.anchor_ref or rule.anchor_role or "?"
+        )
+    for effective_name, anchors in seen_names.items():
+        if len(anchors) > 1:
+            raise ValidationError(format_fatal_error(
+                _("{count} rules resolve to the same --only identity {name!r} "
+                  "(anchors: {anchors})").format(count=len(anchors), name=effective_name,
+                                                  anchors=", ".join(anchors)),
+                [_("give at least one of them an explicit name: to disambiguate "
+                   "(e.g. name: {name}_a) – --only cannot tell them apart otherwise")
+                 .format(name=effective_name)]
+            ))
 
     clone_placements = [_load_clone_placement(cp) for cp in data.get('clone_placements', [])]
 

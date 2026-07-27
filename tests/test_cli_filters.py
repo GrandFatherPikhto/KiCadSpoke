@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+"""Tests for the pure (no KiCad adapter) apply filters: enabled/--only/--cluster —
+kicadspoke_cli.py:drop_disabled_rules/apply_only_filter/apply_cluster_filter.
+Order matters: enabled wins UNCONDITIONALLY, before --only/--cluster (see the
+Rule docstring in config/models.py) — --only cannot resurrect a disabled rule."""
+import sys
+import logging
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import pytest
+from kicadspoke.config import Config, Rule, ManualSpoke, ClonePlacement, ThermalViaArrayConfig
+from kicadspoke_cli import (
+    _split_comma_values, _matches_any_cluster,
+    drop_disabled_rules, apply_only_filter, apply_cluster_filter,
+)
+
+logger = logging.getLogger("test_cli_filters")
+
+
+def _cfg(rules=None, clone_placements=None, thermal_via_array=None):
+    return Config(rules=rules or [], clone_placements=clone_placements or [],
+                  thermal_via_array=thermal_via_array or ThermalViaArrayConfig())
+
+
+class TestSplitCommaValues:
+    def test_none_or_empty(self):
+        assert _split_comma_values(None) == []
+        assert _split_comma_values([]) == []
+
+    def test_repeated_flag(self):
+        assert _split_comma_values(["a", "b"]) == ["a", "b"]
+
+    def test_comma_within_one_occurrence(self):
+        assert _split_comma_values(["a,b"]) == ["a", "b"]
+
+    def test_mixed_repeat_and_comma(self):
+        assert _split_comma_values(["a,b", "c"]) == ["a", "b", "c"]
+
+    def test_strips_whitespace(self):
+        assert _split_comma_values([" a , b "]) == ["a", "b"]
+
+
+class TestMatchesAnyCluster:
+    def test_none_candidate_never_matches(self):
+        assert _matches_any_cluster(None, ["Channel_0"]) is False
+
+    def test_exact_match(self):
+        assert _matches_any_cluster("Channel_0", ["Channel_0"]) is True
+
+    def test_segment_prefix_match(self):
+        assert _matches_any_cluster("Channel_0/DAC_OA/OA", ["Channel_0"]) is True
+
+    def test_no_false_prefix_on_partial_segment(self):
+        assert _matches_any_cluster("Channel_10", ["Channel_1"]) is False
+
+    def test_matches_any_of_several_wanted(self):
+        assert _matches_any_cluster("Channel_2/X", ["Channel_0", "Channel_2"]) is True
+
+
+class TestDropDisabledRules:
+    def test_disabled_rule_dropped(self):
+        cfg = _cfg(rules=[
+            Rule(net="GND", spokes=[], anchor_role="FPGA", enabled=False),
+            Rule(net="+3V3_VCCIO", spokes=[], anchor_role="FPGA", enabled=True),
+        ])
+        drop_disabled_rules(cfg, logger)
+        assert [r.net for r in cfg.rules] == ["+3V3_VCCIO"]
+
+    def test_only_cannot_resurrect_disabled_rule(self):
+        """enabled:false wins unconditionally — --only naming the very same
+        rule must NOT bring it back (it's not even "not found", it plain
+        doesn't exist for this run, same as if deleted from the YAML)."""
+        cfg = _cfg(rules=[
+            Rule(net="GND", spokes=[], anchor_role="FPGA", enabled=False),
+        ])
+        drop_disabled_rules(cfg, logger)
+        with pytest.raises(SystemExit):
+            apply_only_filter(cfg, ["GND"], logger)
+        assert cfg.rules == []
+
+
+class TestApplyOnlyFilter:
+    def test_no_only_names_is_noop(self):
+        cfg = _cfg(rules=[Rule(net="GND", spokes=[], anchor_role="FPGA")])
+        apply_only_filter(cfg, [], logger)
+        assert len(cfg.rules) == 1
+
+    def test_matches_by_net_when_name_unset(self):
+        cfg = _cfg(rules=[
+            Rule(net="GND", spokes=[], anchor_role="FPGA"),
+            Rule(net="+3V3_VCCIO", spokes=[], anchor_role="FPGA"),
+        ])
+        apply_only_filter(cfg, ["GND"], logger)
+        assert [r.net for r in cfg.rules] == ["GND"]
+
+    def test_matches_by_explicit_name(self):
+        cfg = _cfg(rules=[
+            Rule(net="GND", spokes=[], anchor_role="FPGA", name="fpga_gnd"),
+        ])
+        apply_only_filter(cfg, ["fpga_gnd"], logger)
+        assert len(cfg.rules) == 1
+
+    def test_matches_clone_placement_by_name(self):
+        cfg = _cfg(clone_placements=[
+            ClonePlacement(name="p5v_pi_filter", origin_x_mm=0.0, origin_y_mm=0.0, template="t"),
+            ClonePlacement(name="other", origin_x_mm=0.0, origin_y_mm=0.0, template="t"),
+        ])
+        apply_only_filter(cfg, ["p5v_pi_filter"], logger)
+        assert [c.name for c in cfg.clone_placements] == ["p5v_pi_filter"]
+
+    def test_unknown_name_exits_fatal(self):
+        cfg = _cfg(rules=[Rule(net="GND", spokes=[], anchor_role="FPGA")])
+        with pytest.raises(SystemExit):
+            apply_only_filter(cfg, ["typo_name"], logger)
+
+
+class TestApplyClusterFilter:
+    def test_no_cluster_paths_is_noop(self):
+        cfg = _cfg(rules=[Rule(net="GND", spokes=[
+            ManualSpoke(pad="1", template="t", cluster="Channel_0"),
+        ], anchor_role="FPGA")])
+        apply_cluster_filter(cfg, [], logger)
+        assert len(cfg.rules[0].spokes) == 1
+
+    def test_narrows_spokes_within_rule(self):
+        cfg = _cfg(rules=[Rule(net="GND", spokes=[
+            ManualSpoke(pad="1", template="t", cluster="Channel_0"),
+            ManualSpoke(pad="2", template="t", cluster="Channel_1"),
+        ], anchor_role="FPGA")])
+        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        assert len(cfg.rules) == 1
+        assert [s.pad for s in cfg.rules[0].spokes] == ["1"]
+
+    def test_rule_dropped_entirely_if_no_spoke_matches(self):
+        # A matching clone_placement keeps the overall filter from fataling
+        # on "matched nothing anywhere" — isolates just the rule-dropping behaviour.
+        cfg = _cfg(
+            rules=[Rule(net="GND", spokes=[
+                ManualSpoke(pad="1", template="t", cluster="Channel_1"),
+            ], anchor_role="FPGA")],
+            clone_placements=[ClonePlacement(name="ch0", origin_x_mm=0.0, origin_y_mm=0.0,
+                                             template="t", anchor_cluster="Channel_0")],
+        )
+        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        assert cfg.rules == []
+
+    def test_original_rule_object_not_mutated(self):
+        """dataclasses.replace makes a copy — the caller's original Rule.spokes
+        list must stay untouched (relevant if the same cfg is reused/logged)."""
+        original = Rule(net="GND", spokes=[
+            ManualSpoke(pad="1", template="t", cluster="Channel_0"),
+            ManualSpoke(pad="2", template="t", cluster="Channel_1"),
+        ], anchor_role="FPGA")
+        cfg = _cfg(rules=[original])
+        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        assert len(original.spokes) == 2
+
+    def test_clone_placement_narrowed_by_anchor_cluster(self):
+        cfg = _cfg(clone_placements=[
+            ClonePlacement(name="ch0", origin_x_mm=0.0, origin_y_mm=0.0, template="t",
+                          anchor_cluster="Channel_0"),
+            ClonePlacement(name="ch1", origin_x_mm=0.0, origin_y_mm=0.0, template="t",
+                          anchor_cluster="Channel_1"),
+        ])
+        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        assert [c.name for c in cfg.clone_placements] == ["ch0"]
+
+    def test_thermal_via_array_narrowed_by_anchor_cluster(self):
+        # A matching clone_placement keeps the overall filter from fataling
+        # on "matched nothing anywhere" — isolates just the thermal behaviour.
+        cfg = _cfg(
+            clone_placements=[ClonePlacement(name="ch0", origin_x_mm=0.0, origin_y_mm=0.0,
+                                             template="t", anchor_cluster="Channel_0")],
+            thermal_via_array=ThermalViaArrayConfig(
+                enabled=True, anchor_role="FPGA", pad="145", name="fpga_thermal",
+                anchor_cluster="Channel_1",
+            ),
+        )
+        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        assert cfg.thermal_via_array.enabled is False
+
+    def test_no_match_anywhere_exits_fatal(self):
+        cfg = _cfg(rules=[Rule(net="GND", spokes=[
+            ManualSpoke(pad="1", template="t", cluster="Channel_1"),
+        ], anchor_role="FPGA")])
+        with pytest.raises(SystemExit):
+            apply_cluster_filter(cfg, ["Channel_9"], logger)
+
+    def test_only_and_cluster_compose_as_and(self):
+        cfg = _cfg(rules=[
+            Rule(net="GND", spokes=[
+                ManualSpoke(pad="1", template="t", cluster="Channel_0"),
+                ManualSpoke(pad="2", template="t", cluster="Channel_1"),
+            ], anchor_role="FPGA", name="fpga_gnd"),
+            Rule(net="+3V3_VCCIO", spokes=[
+                ManualSpoke(pad="3", template="t", cluster="Channel_0"),
+            ], anchor_role="FPGA"),
+        ])
+        apply_only_filter(cfg, ["fpga_gnd"], logger)
+        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        assert len(cfg.rules) == 1
+        assert [s.pad for s in cfg.rules[0].spokes] == ["1"]

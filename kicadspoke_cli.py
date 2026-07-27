@@ -8,11 +8,12 @@ Usage:
 """
 
 import argparse
+import dataclasses
 import difflib
 import sys
 import logging
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 import yaml
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from kicadspoke.config import load_config, rule_effective_name, thermal_via_arra
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.placement.services.clone_position_calculator import clone_anchor_id
+from kicadspoke.placement.services.component_pool import _cluster_prefix_match
 from kicadspoke.placement.executor import BatchExecutor
 from kicadspoke.exceptions import PlacerError
 from kipy.errors import ApiError, ApiStatusCode
@@ -33,6 +35,23 @@ from kicadspoke.registry import (PlacementRegistry, registry_path_for_config,
 from kicadspoke.template_extraction import extract_template_from_selection
 from kicadspoke.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
 from kicadspoke.i18n import _
+
+
+def _split_comma_values(raw: Optional[List[str]]) -> List[str]:
+    """--only/--cluster accept both repeating the flag and comma‑separated
+    values within one occurrence (e.g. --only a,b --only c -> [a, b, c])."""
+    if not raw:
+        return []
+    result = []
+    for item in raw:
+        result.extend(part.strip() for part in item.split(",") if part.strip())
+    return result
+
+
+def _matches_any_cluster(candidate: Optional[str], wanted: List[str]) -> bool:
+    if candidate is None:
+        return False
+    return any(_cluster_prefix_match(candidate, w) for w in wanted)
 
 
 def setup_logging(verbose: bool = False, log_file: str = None):
@@ -54,6 +73,101 @@ def setup_logging(verbose: bool = False, log_file: str = None):
     logging.basicConfig(level=logging.DEBUG, handlers=handlers)
 
 
+def drop_disabled_rules(cfg, logger) -> None:
+    """enabled: false always wins, dropped before --only/--cluster ever see
+    it — enabled means "does not exist on the board right now", not
+    "excluded from this particular run" (see Rule docstring in config/models.py).
+    Pure cfg mutation, no adapter — kept separate from cmd_apply so it's
+    unit‑testable without a live KiCad connection."""
+    disabled_rules = [r for r in cfg.rules if not r.enabled]
+    cfg.rules = [r for r in cfg.rules if r.enabled]
+    for r in disabled_rules:
+        logger.info(_("Rule {name!r} (net {net!r}): enabled=false, skipped entirely")
+                    .format(name=rule_effective_name(r), net=r.net))
+
+
+def apply_only_filter(cfg, only_names: List[str], logger) -> None:
+    """--only: whole-block selection by identity (rule name-or-net, clone_placement
+    name, thermal_via_array name). sys.exit on unmatched names. Pure cfg mutation."""
+    if not only_names:
+        return
+    requested = set(only_names)
+    matched_rules = [r for r in cfg.rules if rule_effective_name(r) in requested]
+    matched_clones = [c for c in cfg.clone_placements if c.name in requested]
+    thermal_matches = (cfg.thermal_via_array.enabled and
+                       thermal_via_array_effective_name(cfg.thermal_via_array) in requested)
+
+    found_names = ({rule_effective_name(r) for r in matched_rules}
+                   | {c.name for c in matched_clones}
+                   | ({thermal_via_array_effective_name(cfg.thermal_via_array)}
+                      if thermal_matches else set()))
+    missing = requested - found_names
+    if missing:
+        all_names = sorted(
+            {rule_effective_name(r) for r in cfg.rules}
+            | {c.name for c in cfg.clone_placements}
+            | ({thermal_via_array_effective_name(cfg.thermal_via_array)}
+               if cfg.thermal_via_array.enabled else set())
+        )
+        lines = []
+        for name in sorted(missing):
+            suggestion = difflib.get_close_matches(name, all_names, n=1)
+            hint = _(" (maybe you meant {suggestion!r}?)").format(suggestion=suggestion[0]) if suggestion else ""
+            lines.append(_("  {name!r} — not found among rules, clone_placements, or thermal_via_array{hint}")
+                         .format(name=name, hint=hint))
+        sys.exit(_("[error] --only: names not found:\n{lines}\nAvailable: {all}")
+                 .format(lines="\n".join(lines), all=all_names))
+
+    cfg.rules = matched_rules
+    cfg.clone_placements = matched_clones
+    if not thermal_matches:
+        cfg.thermal_via_array.enabled = False
+    logger.info(_("--only {requested}: rules={rules}, clone_placements={clones}, "
+                  "thermal_via_array={thermal} (everything else is ignored in this run)")
+                .format(requested=sorted(requested),
+                        rules=[rule_effective_name(r) for r in matched_rules],
+                        clones=[c.name for c in matched_clones],
+                        thermal=_("yes") if thermal_matches else _("no")))
+
+
+def apply_cluster_filter(cfg, cluster_paths: List[str], logger) -> None:
+    """--cluster — a second, independent selection axis (physical instance /
+    Cluster field, not name). Composes with --only via AND only, never OR:
+    if you need "this OR that", just run apply twice — the registry makes
+    repeated runs safe (already‑placed items are not duplicated). Pure cfg
+    mutation, no adapter."""
+    if not cluster_paths:
+        return
+    matched_clones = [c for c in cfg.clone_placements
+                      if _matches_any_cluster(c.anchor_cluster, cluster_paths)]
+    thermal_matches = (cfg.thermal_via_array.enabled and
+                       _matches_any_cluster(cfg.thermal_via_array.anchor_cluster, cluster_paths))
+
+    narrowed_rules = []
+    for r in cfg.rules:
+        kept_spokes = [s for s in r.spokes if _matches_any_cluster(s.cluster, cluster_paths)]
+        if kept_spokes:
+            narrowed_rules.append(dataclasses.replace(r, spokes=kept_spokes))
+        else:
+            logger.debug(_("Rule {name!r}: no spokes match --cluster {paths}, rule dropped")
+                         .format(name=rule_effective_name(r), paths=cluster_paths))
+
+    if not narrowed_rules and not matched_clones and not thermal_matches:
+        sys.exit(_("[error] --cluster {paths}: matched nothing among rules' spokes, "
+                   "clone_placements, or thermal_via_array").format(paths=cluster_paths))
+
+    cfg.rules = narrowed_rules
+    cfg.clone_placements = matched_clones
+    if not thermal_matches:
+        cfg.thermal_via_array.enabled = False
+    logger.info(_("--cluster {paths}: rules={rules} (spokes narrowed), "
+                  "clone_placements={clones}, thermal_via_array={thermal}")
+                .format(paths=cluster_paths,
+                        rules=[rule_effective_name(r) for r in narrowed_rules],
+                        clones=[c.name for c in matched_clones],
+                        thermal=_("yes") if thermal_matches else _("no")))
+
+
 def cmd_apply(args, cfg=None):
     """Main command: apply placement."""
     logger = logging.getLogger(__name__)
@@ -61,45 +175,9 @@ def cmd_apply(args, cfg=None):
         logger.info(_("Loading config: {config}").format(config=args.config))
         cfg = load_config(args.config)
 
-    only_names = getattr(args, "only", None)
-    if only_names:
-        requested = set(only_names)
-        matched_rules = [r for r in cfg.rules if rule_effective_name(r) in requested]
-        matched_clones = [c for c in cfg.clone_placements if c.name in requested]
-        thermal_matches = (cfg.thermal_via_array.enabled and
-                           thermal_via_array_effective_name(cfg.thermal_via_array) in requested)
-
-        found_names = ({rule_effective_name(r) for r in matched_rules}
-                       | {c.name for c in matched_clones}
-                       | ({thermal_via_array_effective_name(cfg.thermal_via_array)}
-                          if thermal_matches else set()))
-        missing = requested - found_names
-        if missing:
-            all_names = sorted(
-                {rule_effective_name(r) for r in cfg.rules}
-                | {c.name for c in cfg.clone_placements}
-                | ({thermal_via_array_effective_name(cfg.thermal_via_array)}
-                   if cfg.thermal_via_array.enabled else set())
-            )
-            lines = []
-            for name in sorted(missing):
-                suggestion = difflib.get_close_matches(name, all_names, n=1)
-                hint = _(" (maybe you meant {suggestion!r}?)").format(suggestion=suggestion[0]) if suggestion else ""
-                lines.append(_("  {name!r} — not found among rules, clone_placements, or thermal_via_array{hint}")
-                             .format(name=name, hint=hint))
-            sys.exit(_("[error] --only: names not found:\n{lines}\nAvailable: {all}")
-                     .format(lines="\n".join(lines), all=all_names))
-
-        cfg.rules = matched_rules
-        cfg.clone_placements = matched_clones
-        if not thermal_matches:
-            cfg.thermal_via_array.enabled = False
-        logger.info(_("--only {requested}: rules={rules}, clone_placements={clones}, "
-                      "thermal_via_array={thermal} (everything else is ignored in this run)")
-                    .format(requested=sorted(requested),
-                            rules=[rule_effective_name(r) for r in matched_rules],
-                            clones=[c.name for c in matched_clones],
-                            thermal=_("yes") if thermal_matches else _("no")))
+    drop_disabled_rules(cfg, logger)
+    apply_only_filter(cfg, _split_comma_values(getattr(args, "only", None)), logger)
+    apply_cluster_filter(cfg, _split_comma_values(getattr(args, "cluster", None)), logger)
 
     all_anchor_ids = {clone_anchor_id(c) for c in cfg.clone_placements}
 
@@ -341,9 +419,16 @@ def main():
     apply_parser.add_argument("--no-collision-check", action="store_true", help=_("Disable collision checking"))
     apply_parser.add_argument("--collision-margin", type=float, default=0.2, help=_("Extra clearance for collision check in mm"))
     apply_parser.add_argument("--only", action="append", metavar="NAME",
-                              help=_("Process only rules/clone_placements/thermal_via_array with this name "
-                                     "(can be repeated). The name must be explicitly set in the YAML "
-                                     "(see docs). Everything else is ignored in this run."))
+                              help=_("Process only rules/clone_placements/thermal_via_array with this "
+                                     "identity (rule name if set, else its net; clone_placement/"
+                                     "thermal_via_array name). Repeatable and/or comma-separated "
+                                     "(--only a,b --only c). Everything else is ignored in this run."))
+    apply_parser.add_argument("--cluster", action="append", metavar="PATH",
+                              help=_("Process only spokes/clone_placements/thermal_via_array whose "
+                                     "Cluster (anchor_cluster / spoke cluster) matches this path or "
+                                     "prefix (segment-wise, e.g. 'Channel_0' also matches "
+                                     "'Channel_0/DAC_OA'). Repeatable and/or comma-separated. "
+                                     "Combines with --only via AND (run apply twice for OR)."))
 
     undo_parser = subparsers.add_parser("undo", help=_("Undo last operation"))
     undo_parser.add_argument("--verbose", action="store_true", help=_("Verbose output"))

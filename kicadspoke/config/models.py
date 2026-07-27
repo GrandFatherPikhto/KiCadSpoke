@@ -175,15 +175,25 @@ class ManualSpoke:
 
 @dataclass
 class Rule:
-    """Rule: a cluster of spokes around ONE anchor component.
+    """Rule: a group of spokes around ONE anchor component, all on one net.
     anchor_ref OR anchor_role (mutually exclusive, exactly one required) —
     whose pads are listed in spokes. anchor_sheet/anchor_cluster narrow
     ambiguity of anchor_role, same principle as in ClonePlacement.
 
-    name — for --only. REQUIRED in YAML (fatal if missing; net is not used
-    as a fallback because it is not guaranteed unique between rules).
-    Optional only for tests/internal code constructing Rule() directly
-    in Python bypassing the loader.
+    name — OPTIONAL, for --only. Defaults to net when not set (see
+    rule_effective_name). An explicit name is only needed to give a rule a
+    more readable label than its net; it is NOT a grouping mechanism — do not
+    reuse the same name across several rules to "bundle" them for --only, use
+    a shared Cluster (anchor_cluster / spoke.cluster) for that instead. The
+    loader fatals if two rules resolve to the same effective name (see
+    config/loader.py) — add a distinguishing name: to one of them.
+
+    enabled — whole‑rule switch (default True), same convention as
+    ManualSpoke.enabled/ClonePlacement.enabled/ThermalViaArrayConfig.enabled.
+    Always wins over --only/--cluster: a disabled rule is dropped before any
+    CLI selection is applied, it cannot be resurrected by naming it explicitly
+    on the command line — enabled: false means "does not exist on the board
+    right now", not "excluded from this particular run".
     """
     net: str
     spokes: List[ManualSpoke]
@@ -192,12 +202,13 @@ class Rule:
     anchor_sheet: Optional[str] = None
     anchor_cluster: Optional[str] = None
     name: Optional[str] = None
+    enabled: bool = True
 
 
-def rule_effective_name(rule: "Rule") -> Optional[str]:
-    """Single point for reading the name for --only. Just rule.name — the loader
-    guarantees it is set for any Rule that actually came from YAML."""
-    return rule.name
+def rule_effective_name(rule: "Rule") -> str:
+    """Single point for reading the identity used for --only: the explicit
+    name if set, otherwise the net (net is guaranteed present on any Rule)."""
+    return rule.name or rule.net
 
 
 @dataclass
