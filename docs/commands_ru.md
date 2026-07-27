@@ -498,46 +498,13 @@ python -m kicadspoke.diagnostics.test_create_one_via --remove
 
 ### Тест на краш KiCad при первой записи (issue #24966)
 
-`kicadspoke/diagnostics/diagnose_first_write_crash.py` — диагностическая «лесенка»: пошагово выполняет чтения
-через kipy (connect → ping → version → open_documents → get_board → чтение футпринтов → повторное чтение),
-а на последней ступени — **no-op транзакция** `begin_commit()` → `update_items([fp])` без каких-либо изменений
-→ `push_commit()`, ровно тот путь, что реально использует `adapter.commit_with_retry()` в бою (см.
-[issue_lib_buffer_new.md](issues/issue_lib_buffer_new.md)). После каждой ступени снимается «пульс» (`ping` +
-сверка списка PID `kicad.exe`), чтобы точно увидеть, на каком шаге и в какой момент процесс умер. Лог
-пишется построчно с flush — последняя строка честна, даже если KiCad умрёт мгновенно.
-
-**Важное исправление (2026-07-26):** раньше ступень 9 делала голый `update_items()` без `begin_commit`/
-`push_commit` — и проходила чисто даже там, где реальный `apply` живьём падал на Linux/KiCad 10.0.5 ровно
-на `begin_commit()` для первой транзакции сессии (флипы до этого используют отдельный API-путь,
-`run_action("...InteractiveEdit.flip")`, не через commit — они не "лечат" уязвимое состояние). Теперь
-ступень 9 честно оборачивает no-op запись в такую же транзакцию, как в бою.
-
-Различает три гипотезы (докстринг скрипта): H1 — гонка первой записи с ленивой инициализацией (чтения
-переживаются, умирает только запись, лечится/сдвигается `--delay`); H2 — зомби-инстанс от прошлой сессии
-(в снапшоте окружения видно больше одного `kicad.exe` или торчат старые `KICAD_API_SOCKET`/`KICAD_API_TOKEN`);
-H3 — падение не привязано к записи, умирает уже на чтении.
+Полное описание (параметры, гипотезы H1-H3, вывод, зависимости) вынесено в отдельный документ:
+[docs/diagnose_first_write_crash_ru.md](diagnose_first_write_crash_ru.md).
 
 ```bash
-# Полная лесенка: чтения + no-op запись (ступень 9) — может уронить KiCad, в этом и цель теста
-python -m kicadspoke.diagnostics.diagnose_first_write_crash
-
-# Только чтения (без записи) – безопасно, если KiCad открыт
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8
-
-# Тест с паузой 30 секунд перед записью (проверка гипотезы H1 о гонке)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
-
-# Повторить no-op запись 3 раза подряд (проверить, стабильна ли запись после первой удачной)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --repeat 3
-
-# Свой путь к лог-файлу и таймаут IPC (по умолчанию лог — diag_<timestamp>.log, таймаут 15000 мс)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --log diag.log --timeout-ms 20000
+python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # только чтения, безопасно
+python -m kicadspoke.diagnostics.diagnose_first_write_crash             # полный тест, может уронить KiCad
 ```
-
-Снимок PID `kicad.exe` на Windows берётся через `tasklist`, на остальных ОС (Linux/macOS) — через
-опциональный `psutil` (в `requirements.txt` не входит); без него эта часть диагностики (обнаружение
-зомби-инстансов, гипотеза H2) молча отключается, но `ping`-пульс и сама лесенка чтений/записи работают как
-обычно.
 
 ### Вывод информации о выделенных компонентах
 

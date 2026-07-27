@@ -160,13 +160,16 @@ Thanks to the `IBoardAdapter` interface, the code does not depend on a specific 
 
 ### Known Issues
 
-- **KiCad crash on first write (#24966)** – if the schematic editor is open and no interactive edits have been made. The adapter logs a warning and treats a `ConnectionError` as a probable crash.
+- **KiCad crash on first write (#24966)** – the session's first `begin_commit()`/`push_commit()` transaction can crash KiCad if the Schematic Editor is open. The adapter logs a warning and treats a `ConnectionError` as a probable crash. Full write-up: [crash_hunting.md](crash_hunting.md).
 - **“KiCad is busy”** – occurs when KiCad is busy with a modal dialog or a long operation. The adapter automatically retries up to 3 times with delays.
 - **Stale UUIDs** – when deleting a via/track via `remove_by_id()`, if the object is already gone, the method returns `False` and logs a warning.
 
 ### Diagnostic Tools
 
-For debugging connection issues and crashes, it is recommended to use the diagnostic script `diagnose_first_write_crash.py` (see `diagnostics.md`) and the external crash‑capture script `hunt-proc.ps1` to intercept crash dumps.
+For debugging connection issues and crashes, use the diagnostic script `diagnose_first_write_crash.py` (see
+[diagnose_first_write_crash.md](diagnose_first_write_crash.md)) and the external crash‑capture script
+`hunt-proc.ps1` to intercept crash dumps. For the full crash-hunting toolkit (including the `tools/` cleanup
+and repeated-run scripts, and how to capture a core dump) see [crash_hunting.md](crash_hunting.md).
 
 ---
 

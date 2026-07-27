@@ -327,15 +327,18 @@ python kicadspoke_cli.py undo --verbose
 ## Diagnostics and Known Issues
 
 ### KiCad Bug #24966 (crash on first write via IPC)
-When the Schematic Editor is open and no interactive edit has been made in the session, calling `Board.update_items()` (even with no changes) can crash KiCad (null pointer in `API_HANDLER_EDITOR::checkForBusy`).
+When the Schematic Editor is open, the session's first `begin_commit()`/`push_commit()` transaction (even a
+no-op one) can crash KiCad (null pointer in `API_HANDLER_EDITOR::checkForBusy`).
 
 **Symptoms:** KiCad silently closes, client gets `ConnectionError: Error receiving reply from KiCad: Timed out`.
 
-**Workaround:** close the schematic editor or perform any interactive edit in PCB (move a component and save) before running `apply`. The tool includes a warning and retries, but the crash remains a KiCad defect.
+**Workaround:** close the schematic editor before running `apply`. The tool includes a warning and retries,
+but the crash remains a KiCad defect. Full write-up, a related bug (#24970), and the full crash-hunting
+toolkit — see [docs/crash_hunting.md](./docs/crash_hunting.md).
 
 ### Diagnostic scripts
 `kicadspoke/diagnostics/` includes:
-- `diagnose_first_write_crash.py` – reproduces the crash ladder.
+- `diagnose_first_write_crash.py` – reproduces the crash ladder, see [docs/diagnose_first_write_crash.md](./docs/diagnose_first_write_crash.md).
 - `test_custom_fields.py` – checks `Role` field reading.
 - `test_move_one_cap.py`, `test_flip_one_cap.py`, `test_create_one_via.py`, `test_pad_mirror_convention.py`, `get_selected_component.py`, `get_pad_bbox.py`, `diagnostic_keepout.py`.
 
@@ -379,7 +382,8 @@ Detailed documentation is in the `docs/` folder:
 - [Top‑level modules](./docs/uplevel_modules.md)
 - [File‑based cloner](./docs/cloner.md)
 - [Diagnostics](./docs/diagnostics.md)
-- [How to catch and analyze a KiCad crash dump (Windows + Linux)](./docs/coredump_howto.md)
+- [KiCad crash hunting toolkit (#24966 / #24970) — includes core dump capture (Windows + Linux)](./docs/crash_hunting.md)
+- [`diagnose_first_write_crash.py` reference](./docs/diagnose_first_write_crash.md)
 
 > **Note:** some of these files may be missing if they haven't been created yet. The actual list is always available in the `docs/` folder.
 

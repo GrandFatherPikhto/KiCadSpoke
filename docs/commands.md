@@ -441,15 +441,12 @@ python -m kicadspoke.diagnostics.test_create_one_via --remove
 
 ### Test for KiCad crash on first write (issue #24966)
 
+Full reference (parameters, hypotheses, output, dependencies) moved to a standalone document:
+[docs/diagnose_first_write_crash.md](diagnose_first_write_crash.md).
+
 ```bash
-# Read‑only (no writes) – safe if KiCad is open
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8
-
-# Full test (reads + write) – may crash KiCad (use with caution)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash
-
-# Test with a 30‑second pause before the write (checks the race hypothesis)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
+python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # read-only, safe
+python -m kicadspoke.diagnostics.diagnose_first_write_crash             # full test, may crash KiCad
 ```
 
 ### Display information about selected components

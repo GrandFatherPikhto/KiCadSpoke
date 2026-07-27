@@ -27,9 +27,15 @@ reliably; on a warmed-up system it becomes intermittent". Один прогон
 Schematic Editor руками один раз и сохрани проект (File -> Save Project),
 тогда KiCad будет переоткрывать его сам при следующих стартах цикла.
 
+Конфиг (необязательный): по умолчанию читает crash_config.yaml из корня репозитория (project, boards_dir,
+runs, startup_wait, settle_delay) — так не нужно каждый раз набирать --project руками. Любой CLI-флаг
+переопределяет соответствующее поле конфига.
+
 Запуск:
-  python utils/repeat_first_write_crash.py --project test_boards/3CH-AWG-TIA/3CH-AWG-TIA.kicad_pro --runs 10
-  python utils/repeat_first_write_crash.py --project <...> --runs 10 --settle-delay 30   # тест гипотезы H1
+  python tools/repeat_first_write_crash.py                      # всё из crash_config.yaml
+  python tools/repeat_first_write_crash.py --runs 20             # конфиг + переопределение runs
+  python tools/repeat_first_write_crash.py --project <...> --runs 10 --settle-delay 30   # тест гипотезы H1
+  python tools/repeat_first_write_crash.py --config other_crash_config.yaml
 """
 import argparse
 import subprocess
@@ -37,7 +43,18 @@ import sys
 import time
 from pathlib import Path
 
+import yaml
+
 FLATPAK_APP_ID = "org.kicad.KiCad"
+DEFAULT_CONFIG_PATH = "crash_config.yaml"
+
+
+def load_config(path: str) -> dict:
+    p = Path(path)
+    if not p.exists():
+        return {}
+    with p.open(encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
 
 def kill_kicad():
@@ -46,7 +63,7 @@ def kill_kicad():
 
 def clean_state(boards_dir: Path):
     subprocess.run(
-        [sys.executable, "utils/clean_kicad_crash_state.py", "--boards-dir", str(boards_dir)],
+        [sys.executable, "tools/clean_kicad_crash_state.py", "--boards-dir", str(boards_dir)],
         capture_output=True,
     )
 
@@ -104,29 +121,42 @@ def try_commit_once() -> bool:
 
 def main():
     ap = argparse.ArgumentParser(description="Серия попыток first-write краша для оценки доли падений")
-    ap.add_argument("--project", required=True, help="Путь к .kicad_pro для запуска")
-    ap.add_argument("--runs", type=int, default=10, help="Сколько итераций (по умолчанию 10)")
-    ap.add_argument("--boards-dir", default="test_boards", help="Для clean_kicad_crash_state.py")
-    ap.add_argument("--startup-wait", type=float, default=30.0, help="Таймаут ожидания готовности IPC, с")
-    ap.add_argument("--settle-delay", type=float, default=0.0,
-                     help="Пауза после готовности IPC перед транзакцией (тест гипотезы H1 о гонке)")
+    ap.add_argument("--config", default=DEFAULT_CONFIG_PATH,
+                     help=f"Путь к YAML-конфигу (по умолчанию {DEFAULT_CONFIG_PATH})")
+    ap.add_argument("--project", default=None, help="Путь к .kicad_pro (переопределяет config)")
+    ap.add_argument("--runs", type=int, default=None, help="Сколько итераций (переопределяет config)")
+    ap.add_argument("--boards-dir", default=None, help="Для clean_kicad_crash_state.py (переопределяет config)")
+    ap.add_argument("--startup-wait", type=float, default=None,
+                     help="Таймаут ожидания готовности IPC, с (переопределяет config)")
+    ap.add_argument("--settle-delay", type=float, default=None,
+                     help="Пауза после готовности IPC перед транзакцией, тест гипотезы H1 (переопределяет config)")
     args = ap.parse_args()
 
+    config = load_config(args.config)
+
+    project = args.project or config.get("project")
+    if not project:
+        ap.error(f"--project не задан ни в CLI, ни в {args.config}")
+    runs = args.runs if args.runs is not None else config.get("runs", 10)
+    boards_dir = args.boards_dir or config.get("boards_dir", "test_boards")
+    startup_wait = args.startup_wait if args.startup_wait is not None else config.get("startup_wait", 30.0)
+    settle_delay = args.settle_delay if args.settle_delay is not None else config.get("settle_delay", 0.0)
+
     results = []
-    for i in range(1, args.runs + 1):
-        print(f"=== попытка {i}/{args.runs} ===")
+    for i in range(1, runs + 1):
+        print(f"=== попытка {i}/{runs} ===")
         kill_kicad()
         time.sleep(1.0)
-        clean_state(Path(args.boards_dir))
-        launch_kicad(args.project)
+        clean_state(Path(boards_dir))
+        launch_kicad(project)
 
-        if not wait_for_ipc(args.startup_wait):
+        if not wait_for_ipc(startup_wait):
             print("  -> KiCad не поднялся за отведённое время, пропуск")
             results.append(None)
             continue
 
-        if args.settle_delay > 0:
-            time.sleep(args.settle_delay)
+        if settle_delay > 0:
+            time.sleep(settle_delay)
 
         ok = try_commit_once()
         results.append(ok)

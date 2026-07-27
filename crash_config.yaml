@@ -1,0 +1,8 @@
+# Конфиг для tools/repeat_first_write_crash.py (issue #24966).
+# Все поля переопределяются одноимёнными CLI-флагами (--project, --runs, ...) —
+# то, что задано в командной строке, всегда побеждает конфиг.
+project: test_boards/3CH-AWG-TIA/3CH-AWG-TIA.kicad_pro
+boards_dir: test_boards
+runs: 10
+startup_wait: 30.0
+settle_delay: 0.0

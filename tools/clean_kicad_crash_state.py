@@ -15,12 +15,12 @@ clean_kicad_crash_state.py — чистит "хвосты" от рухнувше
   2. Протухшие записи в cache/tmp/org.kicad.kicad/instances/.
   3. Project lock-файлы (*.lck) в указанной директории плат (по
      умолчанию test_boards/ в текущей директории — запускать из корня
-     репозитория, как и остальные скрипты в utils/).
+     репозитория, как и остальные скрипты в tools/).
 
 Запуск:
-  python utils/clean_kicad_crash_state.py
-  python utils/clean_kicad_crash_state.py --dry-run
-  python utils/clean_kicad_crash_state.py --boards-dir path/to/boards
+  python tools/clean_kicad_crash_state.py
+  python tools/clean_kicad_crash_state.py --dry-run
+  python tools/clean_kicad_crash_state.py --boards-dir path/to/boards
 """
 import argparse
 import subprocess

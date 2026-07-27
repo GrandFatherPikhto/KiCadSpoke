@@ -347,15 +347,20 @@ python kicadspoke_cli.py undo --verbose
 ## Диагностика и известные проблемы
 
 ### Баг KiCad #24966 (крах на первой записи IPC)
-При открытом редакторе схем и отсутствии интерактивных правок в текущей сессии KiCad вызов `Board.update_items()` (даже без изменений) может привести к падению KiCad (null pointer в `API_HANDLER_EDITOR::checkForBusy`). Это связано с тем, что запрос направляется в обработчик схемы, который не инициализирован.
+При открытом редакторе схем первая транзакция сессии (`begin_commit()`/`push_commit()`, даже no-op) может
+привести к падению KiCad (null pointer в `API_HANDLER_EDITOR::checkForBusy`).
 
 **Симптомы:** KiCad молча закрывается, клиент получает `ConnectionError: Error receiving reply from KiCad: Timed out`.
 
-**Обход:** перед запуском `apply` либо закройте редактор схем, либо выполните любое интерактивное действие в PCB (подвиньте компонент и сохраните). В коде предусмотрено предупреждение (`check_write_crash_risk`) и повторные попытки с задержкой, но крах остаётся возможным – это дефект самого KiCad.
+**Обход:** перед запуском `apply` закройте редактор схем. В коде предусмотрено предупреждение
+(`check_write_crash_risk`) и повторные попытки с задержкой, но крах остаётся возможным – это дефект самого
+KiCad. Полный разбор, связанный баг (#24970) и весь набор инструментов охоты за крашами — см.
+[docs/crash_hunting_ru.md](./docs/crash_hunting_ru.md).
 
 ### Диагностические скрипты
 В папке `kicadspoke/diagnostics/` находятся скрипты для отладки:
-- `diagnose_first_write_crash.py` – воспроизводит лесенку чтений/записи для локализации краша.
+- `diagnose_first_write_crash.py` – воспроизводит лесенку чтений/записи для локализации краша, см.
+  [docs/diagnose_first_write_crash_ru.md](./docs/diagnose_first_write_crash_ru.md).
 - `test_custom_fields.py` – проверяет чтение поля `Role`.
 - `test_move_one_cap.py` – минимальный тест перемещения компонента.
 - `test_flip_one_cap.py` – тест флипа через GUI action.
@@ -404,7 +409,8 @@ kicadspoke/
 - [Модули верхнего уровня](./docs/uplevel_modules_ru.md)
 - [Файловый клонер](./docs/cloner_ru.md)
 - [Диагностика](./docs/diagnostics_ru.md)
-- [Как поймать и разобрать краш-дамп KiCad (Windows + Linux)](./docs/coredump_howto_ru.md)
+- [Охота за крашами KiCad (#24966 / #24970) — включая снятие core dump (Windows + Linux)](./docs/crash_hunting_ru.md)
+- [Справка по `diagnose_first_write_crash.py`](./docs/diagnose_first_write_crash_ru.md)
 
 > **Примечание:** некоторые из перечисленных файлов могут отсутствовать, если они ещё не созданы или были объединены. Актуальный список документации всегда можно найти в папке `docs/`.
 
