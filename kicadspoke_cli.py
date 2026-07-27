@@ -270,10 +270,21 @@ def cmd_apply(args, cfg=None):
         logger.warning(_("⚠️ Some operations failed – check the log."))
 
 
-def load_profile(profiles_path: str, top_key: str, profile_name: str) -> Dict[str, Any]:
+def load_profile(profiles_path: str, top_key: str, profile_name: str,
+                  root_defaults: Optional[List[str]] = None) -> Dict[str, Any]:
     """
     Common loader for named CLI profiles (for extract and clone-extract).
     top_key is different for each command (extract_profiles / clone_profiles).
+
+    root_defaults — field names that, if set at the ROOT of the file (sibling
+    to top_key, e.g. output: next to extract_profiles:) and not already set
+    on the selected profile itself, are merged in as a fallback. For fields
+    that are almost always the same across every profile in the file (e.g.
+    every extract_profiles entry for one board writes into the same template
+    file) — set it once at the root instead of repeating it per profile; a
+    profile that genuinely needs a different value still overrides it as
+    before, just by setting the field directly. Empty/None (default) — no
+    change from the old behaviour, used as-is by clone-extract.
     """
     p = Path(profiles_path)
     if not p.exists():
@@ -285,7 +296,11 @@ def load_profile(profiles_path: str, top_key: str, profile_name: str) -> Dict[st
         available = list(profiles.keys())
         sys.exit(_("[error] profile {name!r} not found in {top_key!r} of file {path!r}. Available: {avail}")
                  .format(name=profile_name, top_key=top_key, path=profiles_path, avail=available))
-    return profiles[profile_name]
+    prof = dict(profiles[profile_name])
+    for field in (root_defaults or []):
+        if field not in prof and field in data:
+            prof[field] = data[field]
+    return prof
 
 
 def cmd_extract(args):
@@ -307,14 +322,16 @@ def cmd_extract(args):
     if args.profile:
         if not args.profiles:
             sys.exit(_("[error] --profile given without --profiles (profiles file)"))
-        prof = load_profile(args.profiles, "extract_profiles", args.profile)
-        for required in ("name", "output"):
-            if required not in prof:
-                sys.exit(_("[error] profile {profile!r} missing required field {field!r}")
-                         .format(profile=args.profile, field=required))
-        name = prof["name"]
+        prof = load_profile(args.profiles, "extract_profiles", args.profile, root_defaults=["output"])
+        if "output" not in prof:
+            sys.exit(_("[error] profile {profile!r} missing required field {field!r}")
+                     .format(profile=args.profile, field="output"))
+        # name: defaults to the profile's own key — only set it explicitly when
+        # the template name must differ from the profile name (e.g. several
+        # profiles feeding the same shared template, like cap_pair_standard).
+        name = prof.get("name", args.profile)
         output = prof["output"]
-        params = dict(prof.get("param", {}) or {})
+        params = dict(prof.get("params", {}) or {})
         net_template_map = dict(prof.get("net_template", {}) or {})
         net_template_role = dict(prof.get("net_template_role", {}) or {})
         origin_via_net = prof.get("origin_by_via_net")

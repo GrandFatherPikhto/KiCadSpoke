@@ -9,10 +9,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
+import yaml
 from kicadspoke.config import Config, Rule, ManualSpoke, ClonePlacement, ThermalViaArrayConfig
 from kicadspoke_cli import (
     _split_comma_values, _matches_any_cluster,
     drop_disabled_rules, apply_only_filter, apply_cluster_filter,
+    load_profile,
 )
 
 logger = logging.getLogger("test_cli_filters")
@@ -201,3 +203,48 @@ class TestApplyClusterFilter:
         apply_cluster_filter(cfg, ["Channel_0"], logger)
         assert len(cfg.rules) == 1
         assert [s.pad for s in cfg.rules[0].spokes] == ["1"]
+
+
+class TestLoadProfileRootDefaults:
+    """root_defaults on load_profile — a field set once at the file's root
+    (sibling to top_key) fills in for any profile that doesn't set it itself;
+    a profile that does set it keeps its own value. Added 2026-07-27 so
+    extract_profiles entries stop repeating the same output: in every block."""
+
+    def _write(self, tmp_path, data):
+        p = tmp_path / "profiles.yaml"
+        p.write_text(yaml.safe_dump(data), encoding="utf-8")
+        return str(p)
+
+    def test_root_default_fills_missing_field(self, tmp_path):
+        path = self._write(tmp_path, {
+            "output": "shared.yaml",
+            "extract_profiles": {"a": {"name": "a"}},
+        })
+        prof = load_profile(path, "extract_profiles", "a", root_defaults=["output"])
+        assert prof["output"] == "shared.yaml"
+
+    def test_profile_own_value_wins_over_root_default(self, tmp_path):
+        path = self._write(tmp_path, {
+            "output": "shared.yaml",
+            "extract_profiles": {"a": {"name": "a", "output": "own.yaml"}},
+        })
+        prof = load_profile(path, "extract_profiles", "a", root_defaults=["output"])
+        assert prof["output"] == "own.yaml"
+
+    def test_no_root_defaults_requested_unchanged(self, tmp_path):
+        """Old call sites (e.g. clone-extract) that don't pass root_defaults
+        see no behaviour change — a root-level output: is simply not merged in."""
+        path = self._write(tmp_path, {
+            "output": "shared.yaml",
+            "extract_profiles": {"a": {"name": "a"}},
+        })
+        prof = load_profile(path, "extract_profiles", "a")
+        assert "output" not in prof
+
+    def test_missing_root_field_just_absent(self, tmp_path):
+        path = self._write(tmp_path, {
+            "extract_profiles": {"a": {"name": "a"}},
+        })
+        prof = load_profile(path, "extract_profiles", "a", root_defaults=["output"])
+        assert "output" not in prof

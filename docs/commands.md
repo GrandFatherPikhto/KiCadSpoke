@@ -195,6 +195,13 @@ python kicadspoke_cli.py extract --name <template_name> --output <file> [--timeo
 
 **Important:** Before running, select the desired components, vias, and tracks in the PCB editor. Roles must be unique. When saving as JSON, the file is written **without a `templates:` wrapper**, making it directly usable as a `templates_file` in the main configuration.
 
+**Inside a profile** (`extract_profiles:` in the `--profiles` file): `output:` can be set once at the file's
+root – a shared default for every profile, a specific profile only needs to set its own if it writes
+somewhere else. `name:` is optional – it defaults to the profile's own key, set it explicitly only when the
+template name must differ from the profile name. The parameters for `--net-template` verification use the
+key `params:` (not `param:` – deliberately the same key name as `clone_placements` uses, to remove that
+mismatch as a copy‑paste trap).
+
 ### Examples
 
 #### Extract a template to JSON with net parametrisation and origin by via
@@ -211,11 +218,17 @@ python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter
 
 In `extract_profiles.yaml`:
 ```yaml
+# output: shared by every profile below – set it once here if they all write
+# to the same file; a profile that needs a different one just sets its own
+# output: directly, overriding this value.
+output: templates/my_filter.json
+
 extract_profiles:
   my_filter:
-    name: my_filter
-    output: templates/my_filter.json
-    param:
+    # name: not needed – defaults to the profile's own key ("my_filter").
+    # Set it explicitly only if the template name must differ from the
+    # profile name (e.g. several profiles feeding one shared template).
+    params:
       PWR_IN: '+3V3'
       PWR_OUT: '+3V3_VCCIO'
     net_template:
