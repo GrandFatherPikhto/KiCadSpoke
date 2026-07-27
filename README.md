@@ -384,6 +384,7 @@ Detailed documentation is in the `docs/` folder:
 - [Diagnostics](./docs/diagnostics.md)
 - [KiCad crash hunting toolkit (#24966 / #24970) — includes core dump capture (Windows + Linux)](./docs/crash_hunting.md)
 - [`diagnose_first_write_crash.py` reference](./docs/diagnose_first_write_crash.md)
+- [Internationalization (i18n) — gettext/Babel](./docs/i18n.md)
 
 > **Note:** some of these files may be missing if they haven't been created yet. The actual list is always available in the `docs/` folder.
 

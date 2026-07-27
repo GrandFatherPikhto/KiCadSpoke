@@ -194,7 +194,9 @@ class TestResolveRolesByNets:
         adapter.get_footprints.return_value = []  # nothing at all on board
         clone = ClonePlacement(name="z", template="t5", origin_x_mm=0, origin_y_mm=0,
                               nets={"NONEXISTENT_ROLE": "GND"})
-        with pytest.raises(ValidationError, match="NO component with this role"):
+        # Message text is translated (see kicadspoke/i18n.py) — match either
+        # locale the project ships (en/ru), not just the raw English msgid.
+        with pytest.raises(ValidationError, match="NO component with this role|НЕТ ни одного компонента с этой ролью"):
             resolve_roles_by_nets(adapter, tpl, clone)
 
     def test_role_exists_wrong_net_gives_distinct_message_with_real_nets(self):
@@ -212,7 +214,7 @@ class TestResolveRolesByNets:
             resolve_roles_by_nets(adapter, tpl, clone)
         msg = str(exc_info.value)
         assert "A" in msg
-        assert "exist" in msg  # different from "NO component"
+        assert "exist" in msg or "есть на плате" in msg  # different from "NO component"
 
     def test_realistic_scenario_some_roles_ok_some_missing_some_wrong_net(self):
         """
@@ -243,7 +245,7 @@ class TestResolveRolesByNets:
         with pytest.raises(ValidationError) as exc_info:
             resolve_roles_by_nets(adapter, tpl, clone)
         msg = str(exc_info.value)
-        assert "PI_FILTER_C1" in msg and "NO component" in msg
+        assert "PI_FILTER_C1" in msg and ("NO component" in msg or "НЕТ ни одного компонента" in msg)
         assert "PI_FILTER_C2" in msg
         assert "PI_FILTER_FB" in msg and "C99" in msg and "+3V3" in msg
         assert "FB_FILTER_C3" not in msg  # this role resolved successfully, so no problem

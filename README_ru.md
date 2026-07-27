@@ -411,6 +411,7 @@ kicadspoke/
 - [Диагностика](./docs/diagnostics_ru.md)
 - [Охота за крашами KiCad (#24966 / #24970) — включая снятие core dump (Windows + Linux)](./docs/crash_hunting_ru.md)
 - [Справка по `diagnose_first_write_crash.py`](./docs/diagnose_first_write_crash_ru.md)
+- [Интернационализация (i18n) — gettext/Babel](./docs/i18n_ru.md)
 
 > **Примечание:** некоторые из перечисленных файлов могут отсутствовать, если они ещё не созданы или были объединены. Актуальный список документации всегда можно найти в папке `docs/`.
 

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  kicadspoke\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-27 02:19+0300\n"
+"POT-Creation-Date: 2026-07-27 14:13+0300\n"
 "PO-Revision-Date: 2026-07-27 12:00+0000\n"
 "Last-Translator: \n"
 "Language: en\n"
@@ -12,26 +12,25 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.10.3\n"
 
-#: kicadspoke_cli.py:61
-#, python-brace-format
-msgid "Loading config: {config}"
+#: kicadspoke_cli.py:85
+msgid "Rule {name!r} (net {net!r}): enabled=false, skipped entirely"
 msgstr ""
 
-#: kicadspoke_cli.py:87
+#: kicadspoke_cli.py:115
 #, python-brace-format
 msgid " (maybe you meant {suggestion!r}?)"
 msgstr ""
 
-#: kicadspoke_cli.py:88
+#: kicadspoke_cli.py:116
 #, python-brace-format
 msgid ""
 "  {name!r} — not found among rules, clone_placements, or "
 "thermal_via_array{hint}"
 msgstr ""
 
-#: kicadspoke_cli.py:90
+#: kicadspoke_cli.py:118
 #, python-brace-format
 msgid ""
 "[error] --only: names not found:\n"
@@ -39,239 +38,260 @@ msgid ""
 "Available: {all}"
 msgstr ""
 
-#: kicadspoke_cli.py:97
+#: kicadspoke_cli.py:125
 #, python-brace-format
 msgid ""
 "--only {requested}: rules={rules}, clone_placements={clones}, "
 "thermal_via_array={thermal} (everything else is ignored in this run)"
 msgstr ""
 
-#: kicadspoke_cli.py:102
+#: kicadspoke_cli.py:130 kicadspoke_cli.py:168
 msgid "yes"
 msgstr ""
 
-#: kicadspoke_cli.py:102
+#: kicadspoke_cli.py:130 kicadspoke_cli.py:168
 msgid "no"
 msgstr ""
 
-#: kicadspoke_cli.py:106 kicadspoke_cli.py:206
+#: kicadspoke_cli.py:152
+msgid "Rule {name!r}: no spokes match --cluster {paths}, rule dropped"
+msgstr ""
+
+#: kicadspoke_cli.py:156
+msgid ""
+"[error] --cluster {paths}: matched nothing among rules' spokes, "
+"clone_placements, or thermal_via_array"
+msgstr ""
+
+#: kicadspoke_cli.py:163
+msgid ""
+"--cluster {paths}: rules={rules} (spokes narrowed), "
+"clone_placements={clones}, thermal_via_array={thermal}"
+msgstr ""
+
+#: kicadspoke_cli.py:175
+#, python-brace-format
+msgid "Loading config: {config}"
+msgstr ""
+
+#: kicadspoke_cli.py:184 kicadspoke_cli.py:284
 #, python-brace-format
 msgid "Connecting to KiCad (timeout {timeout} ms)"
 msgstr ""
 
-#: kicadspoke_cli.py:112
+#: kicadspoke_cli.py:190
 msgid "Planning placement..."
 msgstr ""
 
-#: kicadspoke_cli.py:120
+#: kicadspoke_cli.py:198
 msgid "Moves:"
 msgstr ""
 
-#: kicadspoke_cli.py:122
+#: kicadspoke_cli.py:200
 #, python-brace-format
 msgid "  {ref}: ({x:.3f}, {y:.3f}) mm, angle={angle:.1f}°"
 msgstr ""
 
-#: kicadspoke_cli.py:124
+#: kicadspoke_cli.py:202
 msgid "Vias:"
 msgstr ""
 
-#: kicadspoke_cli.py:126
+#: kicadspoke_cli.py:204
 #, python-brace-format
 msgid "  via for {owner}: ({x:.3f}, {y:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadspoke_cli.py:128
+#: kicadspoke_cli.py:206
 msgid "Tracks:"
 msgstr ""
 
-#: kicadspoke_cli.py:130
+#: kicadspoke_cli.py:208
 #, python-brace-format
 msgid ""
 "  track for {owner}: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
 "net={net}, width={w} mm"
 msgstr ""
 
-#: kicadspoke_cli.py:133
+#: kicadspoke_cli.py:211
 msgid ""
 "(thermal via keepout is computed based on CURRENT component positions, "
 "not the target ones — may slightly differ from the real run)"
 msgstr ""
 
-#: kicadspoke_cli.py:135
+#: kicadspoke_cli.py:213
 msgid ""
 "(track collisions with other copper/components are NOT checked by this "
 "tool — rely on KiCad DRC after placement)"
 msgstr ""
 
-#: kicadspoke_cli.py:145
+#: kicadspoke_cli.py:223
 #, python-brace-format
 msgid "Planned moves: {count}"
 msgstr ""
 
-#: kicadspoke_cli.py:146
+#: kicadspoke_cli.py:224
 msgid "Applying moves..."
 msgstr ""
 
-#: kicadspoke_cli.py:153
+#: kicadspoke_cli.py:231
 #, python-brace-format
 msgid "Failed to move: {refs}"
 msgstr ""
 
-#: kicadspoke_cli.py:156
+#: kicadspoke_cli.py:234
 msgid "Reloading board data before planning vias..."
 msgstr ""
 
-#: kicadspoke_cli.py:162
+#: kicadspoke_cli.py:240
 #, python-brace-format
 msgid ""
 "Planned vias: {total}, actually to create (registry filtered already "
 "correctly placed): {to_create}"
 msgstr ""
 
-#: kicadspoke_cli.py:164
+#: kicadspoke_cli.py:242
 msgid "Applying vias..."
 msgstr ""
 
-#: kicadspoke_cli.py:167
+#: kicadspoke_cli.py:245
 #, python-brace-format
 msgid "Failed to create vias near: {refs}"
 msgstr ""
 
-#: kicadspoke_cli.py:172
+#: kicadspoke_cli.py:250
 #, python-brace-format
 msgid ""
 "Planned tracks: {total}, actually to create (registry filtered already "
 "correctly placed): {to_create}"
 msgstr ""
 
-#: kicadspoke_cli.py:174
+#: kicadspoke_cli.py:252
 msgid "Applying tracks..."
 msgstr ""
 
-#: kicadspoke_cli.py:177
+#: kicadspoke_cli.py:255
 #, python-brace-format
 msgid "Failed to create tracks near: {refs}"
 msgstr ""
 
-#: kicadspoke_cli.py:180
+#: kicadspoke_cli.py:258
 msgid "✅ All operations completed successfully"
 msgstr ""
 
-#: kicadspoke_cli.py:182
+#: kicadspoke_cli.py:260
 msgid "⚠️ Some operations failed – check the log."
 msgstr ""
 
-#: kicadspoke_cli.py:192
+#: kicadspoke_cli.py:270
 #, python-brace-format
 msgid "[error] profiles file {path!r} not found"
 msgstr ""
 
-#: kicadspoke_cli.py:198
+#: kicadspoke_cli.py:276
 #, python-brace-format
 msgid ""
 "[error] profile {name!r} not found in {top_key!r} of file {path!r}. "
 "Available: {avail}"
 msgstr ""
 
-#: kicadspoke_cli.py:215
+#: kicadspoke_cli.py:293
 msgid ""
 "[error] --profile cannot be combined with --name/--output/--param/--net-"
 "template/--net-template-role/--origin-by-*: either all from profile or "
 "all as explicit flags, not mixed."
 msgstr ""
 
-#: kicadspoke_cli.py:221 kicadspoke_cli.py:428
+#: kicadspoke_cli.py:299 kicadspoke_cli.py:513
 msgid "[error] --profile given without --profiles (profiles file)"
 msgstr ""
 
-#: kicadspoke_cli.py:225 kicadspoke_cli.py:432
+#: kicadspoke_cli.py:303 kicadspoke_cli.py:517
 #, python-brace-format
 msgid "[error] profile {profile!r} missing required field {field!r}"
 msgstr ""
 
-#: kicadspoke_cli.py:235
+#: kicadspoke_cli.py:313
 #, python-brace-format
 msgid "Profile {profile!r} from {profiles}: name={name}, output={output}"
 msgstr ""
 
-#: kicadspoke_cli.py:241
+#: kicadspoke_cli.py:319
 msgid "[error] need --name and --output (or --profiles/--profile instead)"
 msgstr ""
 
-#: kicadspoke_cli.py:245
+#: kicadspoke_cli.py:323
 #, python-brace-format
 msgid "--param {item!r} — need format KEY=VALUE"
 msgstr ""
 
-#: kicadspoke_cli.py:253
+#: kicadspoke_cli.py:331
 #, python-brace-format
 msgid "--net-template {item!r} — need format LITERAL=PATTERN"
 msgstr ""
 
-#: kicadspoke_cli.py:261
+#: kicadspoke_cli.py:339
 #, python-brace-format
 msgid "--net-template-role {item!r} — need format ROLE=LITERAL"
 msgstr ""
 
-#: kicadspoke_cli.py:270
+#: kicadspoke_cli.py:348
 msgid ""
 "[error] --origin-by-component-pad without --origin-by-component-role — "
 "you can only refine a pad for a role that you first specify"
 msgstr ""
 
-#: kicadspoke_cli.py:288
+#: kicadspoke_cli.py:366
 #, python-brace-format
 msgid "Template {name!r} already exists in {output} — will be overwritten"
 msgstr ""
 
-#: kicadspoke_cli.py:299
+#: kicadspoke_cli.py:377
 #, python-brace-format
 msgid "✅ Template {name!r} written to {output}"
 msgstr ""
 
-#: kicadspoke_cli.py:307
+#: kicadspoke_cli.py:385
 msgid "logs directory not found."
 msgstr ""
 
-#: kicadspoke_cli.py:312
+#: kicadspoke_cli.py:390
 msgid "No operation files to undo."
 msgstr ""
 
-#: kicadspoke_cli.py:316
+#: kicadspoke_cli.py:394
 #, python-brace-format
 msgid "Undoing operation from {file}"
 msgstr ""
 
-#: kicadspoke_cli.py:319
+#: kicadspoke_cli.py:397
 msgid "✅ Operation successfully undone."
 msgstr ""
 
-#: kicadspoke_cli.py:321
+#: kicadspoke_cli.py:399
 msgid "❌ Failed to undo operation."
 msgstr ""
 
-#: kicadspoke_cli.py:329
+#: kicadspoke_cli.py:407
 msgid "KiCad Decap Placer – capacitor placement (manual strategy)"
 msgstr ""
 
-#: kicadspoke_cli.py:330
+#: kicadspoke_cli.py:408
 msgid "Example: kicadspoke_cli.py config.yaml --dry-run"
 msgstr ""
 
-#: kicadspoke_cli.py:332
+#: kicadspoke_cli.py:410
 msgid "Subcommand"
 msgstr ""
 
-#: kicadspoke_cli.py:334
+#: kicadspoke_cli.py:412
 msgid "Apply placement"
 msgstr ""
 
-#: kicadspoke_cli.py:335
+#: kicadspoke_cli.py:413
 msgid "YAML configuration file"
 msgstr ""
 
-#: kicadspoke_cli.py:336
+#: kicadspoke_cli.py:414
 msgid "Only print the plan, do not apply"
 msgstr ""
 
@@ -282,101 +302,111 @@ msgstr ""
 #: kicadspoke/diagnostics/test_flip_one_cap.py:58
 #: kicadspoke/diagnostics/test_move_one_cap.py:55
 #: kicadspoke/diagnostics/test_pad_mirror_convention.py:84
-#: kicadspoke_cli.py:337 kicadspoke_cli.py:375
+#: kicadspoke_cli.py:415 kicadspoke_cli.py:460
 msgid "IPC timeout in ms"
 msgstr ""
 
-#: kicadspoke_cli.py:338
+#: kicadspoke_cli.py:416
 msgid "Batch size for commits"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_pad_bbox.py:29 kicadspoke_cli.py:339
-#: kicadspoke_cli.py:349 kicadspoke_cli.py:365 kicadspoke_cli.py:376
+#: kicadspoke/diagnostics/get_pad_bbox.py:29 kicadspoke_cli.py:417
+#: kicadspoke_cli.py:434 kicadspoke_cli.py:450 kicadspoke_cli.py:461
 msgid "Verbose output"
 msgstr ""
 
-#: kicadspoke_cli.py:340 kicadspoke_cli.py:350 kicadspoke_cli.py:377
+#: kicadspoke_cli.py:418 kicadspoke_cli.py:435 kicadspoke_cli.py:462
 msgid "File to save logs"
 msgstr ""
 
-#: kicadspoke_cli.py:341
+#: kicadspoke_cli.py:419
 msgid "Disable collision checking"
 msgstr ""
 
-#: kicadspoke_cli.py:342
+#: kicadspoke_cli.py:420
 msgid "Extra clearance for collision check in mm"
 msgstr ""
 
-#: kicadspoke_cli.py:344
+#: kicadspoke_cli.py:422
 msgid ""
-"Process only rules/clone_placements/thermal_via_array with this name (can"
-" be repeated). The name must be explicitly set in the YAML (see docs). "
-"Everything else is ignored in this run."
+"Process only rules/clone_placements/thermal_via_array with this identity "
+"(rule name if set, else its net; clone_placement/thermal_via_array name)."
+" Repeatable and/or comma-separated (--only a,b --only c). Everything else"
+" is ignored in this run."
 msgstr ""
 
-#: kicadspoke_cli.py:348
+#: kicadspoke_cli.py:427
+msgid ""
+"Process only spokes/clone_placements/thermal_via_array whose Cluster "
+"(anchor_cluster / spoke cluster) matches this path or prefix (segment-"
+"wise, e.g. 'Channel_0' also matches 'Channel_0/DAC_OA'). Repeatable "
+"and/or comma-separated. Combines with --only via AND (run apply twice for"
+" OR)."
+msgstr ""
+
+#: kicadspoke_cli.py:433
 msgid "Undo last operation"
 msgstr ""
 
-#: kicadspoke_cli.py:354
+#: kicadspoke_cli.py:439
 msgid "Snapshot a channel to YAML (file‑based cloner, no IPC)"
 msgstr ""
 
-#: kicadspoke_cli.py:356
+#: kicadspoke_cli.py:441
 msgid "Path to .net file"
 msgstr ""
 
-#: kicadspoke_cli.py:357
+#: kicadspoke_cli.py:442
 msgid "Path to .kicad_pcb file"
 msgstr ""
 
-#: kicadspoke_cli.py:358
+#: kicadspoke_cli.py:443
 msgid "Channel name, e.g. Channel_0"
 msgstr ""
 
-#: kicadspoke_cli.py:359
+#: kicadspoke_cli.py:444
 msgid "YAML snapshot file"
 msgstr ""
 
-#: kicadspoke_cli.py:361
+#: kicadspoke_cli.py:446
 msgid "YAML file with named profiles for clone-extract"
 msgstr ""
 
-#: kicadspoke_cli.py:363
+#: kicadspoke_cli.py:448
 msgid ""
 "Take net/pcb/channel/output from profile NAME in --profiles file (cannot "
 "combine with explicit flags)"
 msgstr ""
 
-#: kicadspoke_cli.py:367
+#: kicadspoke_cli.py:452
 msgid "Extract spoke template from current selection"
 msgstr ""
 
-#: kicadspoke_cli.py:368
+#: kicadspoke_cli.py:453
 msgid "Template name (key in templates:)"
 msgstr ""
 
-#: kicadspoke_cli.py:369
+#: kicadspoke_cli.py:454
 msgid "Output YAML/JSON file"
 msgstr ""
 
-#: kicadspoke_cli.py:371
+#: kicadspoke_cli.py:456
 msgid "YAML file with named profiles for extract"
 msgstr ""
 
-#: kicadspoke_cli.py:373
+#: kicadspoke_cli.py:458
 msgid ""
 "Take name/output/param/net-template/origin-by-* from profile NAME in "
 "--profiles file (cannot combine with explicit flags)"
 msgstr ""
 
-#: kicadspoke_cli.py:379
+#: kicadspoke_cli.py:464
 msgid ""
 "Parameter for --net-template verification (e.g. channel=1); can be "
 "repeated; not written to template, only round-trip check"
 msgstr ""
 
-#: kicadspoke_cli.py:382
+#: kicadspoke_cli.py:467
 #, python-brace-format
 msgid ""
 "Mapping real net -> pattern with {placeholder} (e.g. "
@@ -384,7 +414,7 @@ msgid ""
 "roles and parametrizes via.net at extraction"
 msgstr ""
 
-#: kicadspoke_cli.py:386
+#: kicadspoke_cli.py:471
 msgid ""
 "For components with multiple nets from --net-template on pads "
 "(ferrite/inductor/fuse between two rails) – explicitly tells which net is"
@@ -394,44 +424,44 @@ msgid ""
 "registered in --net-template/params."
 msgstr ""
 
-#: kicadspoke_cli.py:394
+#: kicadspoke_cli.py:479
 msgid ""
 "Template origin — position of via on this net (instead of bbox); fatal if"
 " no such via in selection or more than one"
 msgstr ""
 
-#: kicadspoke_cli.py:397
+#: kicadspoke_cli.py:482
 msgid ""
 "Template origin — position of component with this role (instead of bbox);"
 " fatal if role not found in selection"
 msgstr ""
 
-#: kicadspoke_cli.py:400
+#: kicadspoke_cli.py:485
 msgid ""
 "Refine --origin-by-component-role: origin is the position of the specific"
 " pad of that component, not its centre. Fatal without --origin-by-"
 "component-role."
 msgstr ""
 
-#: kicadspoke_cli.py:425
+#: kicadspoke_cli.py:510
 msgid "[error] --profile cannot be combined with --net/--pcb/--channel/--output"
 msgstr ""
 
-#: kicadspoke_cli.py:437
+#: kicadspoke_cli.py:522
 msgid "[error] need --net/--pcb/--channel/--output (or --profiles/--profile)"
 msgstr ""
 
-#: kicadspoke_cli.py:442
+#: kicadspoke_cli.py:527
 #, python-brace-format
 msgid "[{channel}] footprints: {fp}, segments: {seg}, vias: {vias} -> {output}"
 msgstr ""
 
-#: kicadspoke_cli.py:451
+#: kicadspoke_cli.py:536
 #, python-brace-format
 msgid "Error: {e}"
 msgstr ""
 
-#: kicadspoke_cli.py:456
+#: kicadspoke_cli.py:541
 msgid ""
 "KiCad is busy and cannot respond right now. Usually this means an "
 "unfinished tool is active in the GUI (dimensioning, interactive routing, "
@@ -439,12 +469,12 @@ msgid ""
 "command again. The board was not modified."
 msgstr ""
 
-#: kicadspoke_cli.py:462
+#: kicadspoke_cli.py:547
 #, python-brace-format
 msgid "KiCad returned API error: {e}"
 msgstr ""
 
-#: kicadspoke_cli.py:465
+#: kicadspoke_cli.py:550
 msgid "Unexpected error"
 msgstr ""
 
@@ -1366,55 +1396,56 @@ msgstr ""
 
 #: kicadspoke/config/loader.py:355
 #, python-brace-format
-msgid "rule (net {net!r}) without name"
-msgstr ""
-
-#: kicadspoke/config/loader.py:356
-msgid ""
-"every rule must have a name – used in --only for isolated runs; write "
-"name: <any understandable string>, e.g. name: fpga_3v3_bank"
-msgstr ""
-
-#: kicadspoke/config/loader.py:361
-#, python-brace-format
 msgid "anchor_ref and anchor_role together in rule (net {net!r})"
 msgstr ""
 
-#: kicadspoke/config/loader.py:362
+#: kicadspoke/config/loader.py:356
 msgid ""
 "mutually exclusive: either by refdes (anchor_ref) or by Role field "
 "(anchor_role), not both"
 msgstr ""
 
-#: kicadspoke/config/loader.py:367
+#: kicadspoke/config/loader.py:361
 #, python-brace-format
 msgid "anchor_sheet without anchor_role in rule (net {net!r})"
 msgstr ""
 
-#: kicadspoke/config/loader.py:368
+#: kicadspoke/config/loader.py:362
 msgid ""
 "anchor_sheet only narrows ambiguity of anchor_role, it is not an anchor "
 "itself"
 msgstr ""
 
-#: kicadspoke/config/loader.py:372
+#: kicadspoke/config/loader.py:366
 #, python-brace-format
 msgid "rule (net {net!r}) without anchor_ref/anchor_role"
 msgstr ""
 
-#: kicadspoke/config/loader.py:373
+#: kicadspoke/config/loader.py:367
 msgid ""
 "a spoke rule must have an anchor – anchor_ref: <ref> (component whose "
 "pads are listed in spokes), or anchor_role: <ROLE> (survives "
 "re‑annotation)"
 msgstr ""
 
-#: kicadspoke/config/loader.py:392
+#: kicadspoke/config/loader.py:388
+msgid ""
+"{count} rules resolve to the same --only identity {name!r} (anchors: "
+"{anchors})"
+msgstr ""
+
+#: kicadspoke/config/loader.py:391
+msgid ""
+"give at least one of them an explicit name: to disambiguate (e.g. name: "
+"{name}_a) – --only cannot tell them apart otherwise"
+msgstr ""
+
+#: kicadspoke/config/loader.py:407
 #, python-brace-format
 msgid "mirror without layer change in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:393
+#: kicadspoke/config/loader.py:408
 #, python-brace-format
 msgid ""
 "template {tpl!r} is on {tpl_layer}, placement layer is {place_layer} – "
@@ -1422,12 +1453,12 @@ msgid ""
 "to {opposite}, or remove mirror"
 msgstr ""
 
-#: kicadspoke/config/loader.py:401
+#: kicadspoke/config/loader.py:416
 #, python-brace-format
 msgid "layer changed without mirror in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:402
+#: kicadspoke/config/loader.py:417
 #, python-brace-format
 msgid ""
 "template {tpl!r} is on {tpl_layer}, placement layer is {place_layer} – "
@@ -1435,7 +1466,7 @@ msgid ""
 "or remove the layer override"
 msgstr ""
 
-#: kicadspoke/config/loader.py:443
+#: kicadspoke/config/loader.py:458
 #, python-brace-format
 msgid ""
 "Config loaded: layer={layer}, templates={tpl}, rules={rules}, "
@@ -3195,4 +3226,22 @@ msgstr ""
 #, python-brace-format
 msgid "Total spokes: {count}"
 msgstr ""
+
+#~ msgid ""
+#~ "Process only rules/clone_placements/thermal_via_array "
+#~ "with this name (can be repeated). "
+#~ "The name must be explicitly set in"
+#~ " the YAML (see docs). Everything else"
+#~ " is ignored in this run."
+#~ msgstr ""
+
+#~ msgid "rule (net {net!r}) without name"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "every rule must have a name – "
+#~ "used in --only for isolated runs; "
+#~ "write name: <any understandable string>, "
+#~ "e.g. name: fpga_3v3_bank"
+#~ msgstr ""
 

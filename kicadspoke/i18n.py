@@ -8,25 +8,42 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent.parent
 LOCALE_DIR = ROOT_DIR / "locales"
 
-# Глобальная функция перевода, будет установлена в setup_i18n
+# Global translation function, installed by setup_i18n().
 _ = gettext.gettext  # fallback
 
 def detect_language() -> str:
     """
-    Определяет язык из переменных окружения или системной локали (Windows fallback).
-    Приоритет: LC_ALL > LANG. Если ни одна не задана или не начинается с 'ru' → английский.
-    На Windows, если переменные не заданы, смотрим системную локаль (GetUserDefaultUILanguage).
+    Detects the language from environment variables, or the system locale on
+    Windows as a fallback.
+
+    Precedence follows the standard POSIX/gettext order for message language
+    (LANGUAGE is a gettext extension, takes priority over the LC_* family;
+    LC_ALL overrides all other LC_* categories; LC_MESSAGES is the POSIX
+    category specifically for message language, more precise than the
+    catch-all LANG): LANGUAGE > LC_ALL > LC_MESSAGES > LANG. Deliberately
+    simple binary rule, not full multi-language: if none of these are set, or
+    none of them start with 'ru', the result is English.
     """
-    # 1. Переменные окружения (Unix-стиль, приоритет над системным)
-    lang_env = os.environ.get("LC_ALL") or os.environ.get("LANG")
+    # 1. LANGUAGE is a colon-separated priority list (gettext extension);
+    #    only the first entry matters for our binary ru/non-ru choice.
+    language_env = os.environ.get("LANGUAGE")
+    if language_env:
+        first = language_env.split(":")[0]
+        if first:
+            return "ru" if first.startswith("ru") else "en"
+
+    # 2. Standard POSIX locale variables, in their real precedence order.
+    lang_env = (os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES")
+                or os.environ.get("LANG"))
     if lang_env:
         return "ru" if lang_env.startswith("ru") else "en"
 
-    # 2. Windows fallback (если переменные не заданы)
+    # 3. Windows fallback (none of the above are set) — Windows normally
+    #    doesn't populate LANG/LC_* itself, unlike a POSIX shell.
     if sys.platform == "win32":
         try:
             import ctypes
-            # LCID для русского языка = 1049 (0x419)
+            # LCID for Russian = 1049 (0x419)
             lcid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
             if lcid == 1049:
                 return "ru"
@@ -39,14 +56,14 @@ def detect_language() -> str:
         except Exception:
             pass
 
-    # 3. По умолчанию английский
+    # 4. Default: English.
     return "en"
 
 
 def setup_i18n():
     """
-    Инициализирует gettext: выбирает язык, загружает перевод, устанавливает _() глобально.
-    Возвращает выбранный код языка.
+    Initializes gettext: picks the language, loads the translation, installs
+    _() globally. Returns the selected language code.
     """
     global _
     lang = detect_language()
@@ -60,6 +77,5 @@ def setup_i18n():
     except Exception:
         translation = gettext.NullTranslations()
     translation.install()
-    _ = translation.gettext  # теперь _ доступна как глобальная функция в модуле
-    # print(lang)
+    _ = translation.gettext  # _ is now available as a module-level global
     return lang

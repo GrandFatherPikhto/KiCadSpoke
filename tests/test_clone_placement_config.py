@@ -309,7 +309,9 @@ clone_placements:
 """
     config_file = tmp_path / "no_anchor_no_origin.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    with pytest.raises(ValidationError, match="no anchor.*absolute coordinates"):
+    # Message text is translated (see kicadspoke/i18n.py) — match either
+    # locale the project ships (en/ru), not just the raw English msgid.
+    with pytest.raises(ValidationError, match="no anchor.*absolute coordinates|нет ни якоря.*абсолютных координат"):
         load_config(str(config_file))
 
 
@@ -362,5 +364,5 @@ clone_placements:
 """
     config_file = tmp_path / "no_content.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    with pytest.raises(ValidationError, match="neither template nor role"):
+    with pytest.raises(ValidationError, match="neither template nor role|ни template, ни role"):
         load_config(str(config_file))

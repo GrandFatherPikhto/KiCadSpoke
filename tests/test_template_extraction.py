@@ -170,7 +170,9 @@ class TestNetTemplateAutoDetect:
         )
         comp = result["t"]["components"][0]
         assert "net_template" not in comp
-        assert "nets from --net-template" in caplog.text
+        # Message text is translated (see kicadspoke/i18n.py) — match either
+        # locale the project ships (en/ru), not just the raw English msgid.
+        assert "nets from --net-template" in caplog.text or "цепей из --net-template" in caplog.text
 
 
 class TestNetTemplateRole:
