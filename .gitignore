@@ -86,6 +86,8 @@ test-boards
 test_boards
 
 *.txt
+kicad-spoke.txt
+kicad_spoke.txt
 
 # ─────────────────────────────── i18n ───────────────────────────────
 # Temporary extraction file regenerated (and deleted) by tools/update_i18n.py
