@@ -188,6 +188,32 @@ class TestNoDuplicateCloneAnchors:
         with pytest.raises(ValidationError, match="a"):
             check_no_duplicate_clone_anchors(cfg)
 
+    def test_same_anchor_different_origin_is_not_a_duplicate(self):
+        """Regression (found 2026-07-27): two clones legitimately sharing one
+        physical anchor (e.g. a connector pad) but offset to opposite sides
+        via origin_x_mm/origin_y_mm must NOT be flagged — this must match
+        clone_anchor_id's identity exactly, or the registry and this check
+        disagree on what counts as a duplicate."""
+        clones = [
+            ClonePlacement(name="p5v", template="t", origin_x_mm=7.0, origin_y_mm=-6.0,
+                           anchor_role="CONN_PM5V", anchor_pad="1"),
+            ClonePlacement(name="n5v", template="t", origin_x_mm=7.0, origin_y_mm=6.0,
+                           anchor_role="CONN_PM5V", anchor_pad="1"),
+        ]
+        cfg = _cfg(rules=[], clone_placements=clones)
+        check_no_duplicate_clone_anchors(cfg)
+
+    def test_same_anchor_same_origin_role_based_raises(self):
+        clones = [
+            ClonePlacement(name="a", template="t", origin_x_mm=1.0, origin_y_mm=2.0,
+                           anchor_role="CONN_PM5V", anchor_pad="1"),
+            ClonePlacement(name="b", template="t", origin_x_mm=1.0, origin_y_mm=2.0,
+                           anchor_role="CONN_PM5V", anchor_pad="1"),
+        ]
+        cfg = _cfg(rules=[], clone_placements=clones)
+        with pytest.raises(ValidationError, match="b.*a"):
+            check_no_duplicate_clone_anchors(cfg)
+
 
 class TestCloneNetsExistOnBoard:
     def _make_net_mock(self, name):

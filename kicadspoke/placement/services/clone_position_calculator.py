@@ -6,11 +6,13 @@ because that interface is designed specifically for the pad‑anchored ManualSpo
 model (target_fp/rules/side); ClonePlacement works fundamentally differently.
 
 anchor_id for the registry (see registry.py) is built from PHYSICAL binding
-(anchor_ref/anchor_pad), not from clone.name — for the same reason that refdes
-is not a reliable key: the name is arbitrary and can change (renaming a
-clone_placement should not erase vias/tracks if the physical anchor remains the
-same). Only if anchor_ref is not set at all (absolute coordinate mode, a rare
-case) — we have no choice but to use clone.name, the only available identifier.
+(anchor_ref/anchor_pad, PLUS the origin_x_mm/origin_y_mm offset — see
+clone_anchor_id), not from clone.name — for the same reason that refdes is not
+a reliable key: the name is arbitrary and can change (renaming a
+clone_placement should not erase vias/tracks if the physical anchor and offset
+remain the same). Only if anchor_ref is not set at all (absolute coordinate
+mode, a rare case) — we have no choice but to use clone.name, the only
+available identifier.
 """
 import logging
 from typing import List, Tuple, Optional
@@ -38,19 +40,31 @@ def clone_anchor_id(clone: ClonePlacement) -> str:
     """
     Identity of clone_placement for the registry — physical binding, not name.
     Priority order matches anchor resolution order:
-      anchor_ref set -> "anchor:{ref}:{pad}"
-      anchor_role set -> "role:{anchor_role}:{anchor_sheet}:{pad}"
+      anchor_ref set -> "anchor:{ref}:{pad}:{origin_x}:{origin_y}"
+      anchor_role set -> "role:{anchor_role}:{anchor_sheet}:{pad}:{origin_x}:{origin_y}"
         (anchor_role is also resilient to renaming/re‑annotation, like anchor_ref
         to clone.name changes; anchor_sheet is included because it is part of the
         anchor search conditions — changing anchor_sheet also changes the physical
         placement)
       neither (absolute coordinates) -> "name:{clone.name}",
         the only available identifier in this mode.
+
+    origin_x_mm/origin_y_mm are included in the anchor_ref/anchor_role branches
+    (found 2026-07-27): two clone_placements can legitimately share the same
+    physical anchor point and differ only by this flat offset — e.g. a positive
+    and a negative power-filter instance both anchored to the same connector
+    pad, mirrored to opposite sides. Without the offset in the key, both
+    resolved to the identical registry identity, so enabling the second one
+    made the registry think its vias/tracks had merely "moved" and dragged the
+    first instance's already-placed items onto itself instead of creating
+    independent ones. check_no_duplicate_clone_anchors (validation.py) uses
+    the same extended key, for the same reason.
     """
     if clone.anchor_ref is not None:
-        return f"anchor:{clone.anchor_ref}:{clone.anchor_pad or ''}"
+        return f"anchor:{clone.anchor_ref}:{clone.anchor_pad or ''}:{clone.origin_x_mm:.4f}:{clone.origin_y_mm:.4f}"
     if clone.anchor_role is not None:
-        return f"role:{clone.anchor_role}:{clone.anchor_sheet or ''}:{clone.anchor_pad or ''}"
+        return (f"role:{clone.anchor_role}:{clone.anchor_sheet or ''}:{clone.anchor_pad or ''}"
+                f":{clone.origin_x_mm:.4f}:{clone.origin_y_mm:.4f}")
     return f"name:{clone.name}"
 
 

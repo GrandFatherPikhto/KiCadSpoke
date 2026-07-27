@@ -189,17 +189,24 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
     Pure config check (does not require live board):
       1. clone_placements[].name must be unique — this is the primary identifier
          for anchor‑less placements (see clone_anchor_id) and good hygiene.
-      2. (content, anchor_ref, anchor_pad) among clone_placements with
-         anchor_ref set must be unique — this is the identity used by the
-         registry (registry.py). If two different clone_placements accidentally
-         point to the same physical anchor with the same content, the registry
-         will confuse their vias/tracks. This is almost certainly a copy‑paste
-         typo (forgot to change anchor_pad in the second block), not intentional.
-         "Content" is template OR role — two different roles on the same anchor
-         are NOT duplicates (different components at the same point is normal),
-         so we use what is actually set, not clone.template (which is None for
-         role‑based placements, and two different roles would collapse into one
-         key if we only used template).
+      2. (content, anchor_ref, anchor_pad, origin_x_mm, origin_y_mm) among
+         clone_placements with anchor_ref set must be unique — this mirrors
+         the identity used by the registry (registry.py, see clone_anchor_id).
+         If two different clone_placements accidentally point to the same
+         physical anchor AND the same offset, the registry will confuse their
+         vias/tracks. This is almost certainly a copy‑paste typo (forgot to
+         change anchor_pad or origin_x_mm/origin_y_mm in the second block),
+         not intentional. "Content" is template OR role — two different roles
+         on the same anchor are NOT duplicates (different components at the
+         same point is normal), so we use what is actually set, not
+         clone.template (which is None for role‑based placements, and two
+         different roles would collapse into one key if we only used
+         template). origin_x_mm/origin_y_mm is included (found 2026-07-27)
+         because it's legitimate for two clones to share an anchor and differ
+         only by this offset (e.g. a positive/negative filter pair mirrored
+         off the same connector pad) — without it in the key, that legitimate
+         case was indistinguishable from a real duplicate, both to this check
+         and to the registry itself.
     """
     problems = []
     seen_names = {}
@@ -214,28 +221,34 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
         seen_names[clone.name] = True
 
         content_id = clone.template if clone.template is not None else _("role:{role}").format(role=clone.role)
+        origin = (round(clone.origin_x_mm, 4), round(clone.origin_y_mm, 4))
 
         if clone.anchor_ref is not None:
-            key = (content_id, clone.anchor_ref, clone.anchor_pad)
+            key = (content_id, clone.anchor_ref, clone.anchor_pad, origin)
             if key in seen_ref_anchors:
                 problems.append(
-                    _("{this!r} and {other!r} both point to the same anchor "
-                      "(template/role={content!r}, anchor_ref={ref!r}, anchor_pad={pad!r}) — "
-                      "the registry would confuse their vias/tracks; likely a copy‑paste typo")
+                    _("{this!r} and {other!r} both point to the same anchor with the same offset "
+                      "(template/role={content!r}, anchor_ref={ref!r}, anchor_pad={pad!r}, "
+                      "origin=({ox}, {oy}) mm) — the registry would confuse their vias/tracks; "
+                      "likely a copy‑paste typo (if this is intentional, give them different "
+                      "origin_x_mm/origin_y_mm)")
                     .format(this=clone.name, other=seen_ref_anchors[key], content=content_id,
-                            ref=clone.anchor_ref, pad=clone.anchor_pad)
+                            ref=clone.anchor_ref, pad=clone.anchor_pad, ox=origin[0], oy=origin[1])
                 )
             seen_ref_anchors[key] = clone.name
 
         if clone.anchor_role is not None:
-            key = (content_id, clone.anchor_role, clone.anchor_sheet, clone.anchor_pad)
+            key = (content_id, clone.anchor_role, clone.anchor_sheet, clone.anchor_pad, origin)
             if key in seen_role_anchors:
                 problems.append(
-                    _("{this!r} and {other!r} both point to the same anchor "
-                      "(template/role={content!r}, anchor_role={role!r}, anchor_sheet={sheet!r}, anchor_pad={pad!r}) — "
-                      "the registry would confuse their vias/tracks; likely a copy‑paste typo")
+                    _("{this!r} and {other!r} both point to the same anchor with the same offset "
+                      "(template/role={content!r}, anchor_role={role!r}, anchor_sheet={sheet!r}, "
+                      "anchor_pad={pad!r}, origin=({ox}, {oy}) mm) — the registry would confuse "
+                      "their vias/tracks; likely a copy‑paste typo (if this is intentional, give "
+                      "them different origin_x_mm/origin_y_mm)")
                     .format(this=clone.name, other=seen_role_anchors[key], content=content_id,
-                            role=clone.anchor_role, sheet=clone.anchor_sheet, pad=clone.anchor_pad)
+                            role=clone.anchor_role, sheet=clone.anchor_sheet, pad=clone.anchor_pad,
+                            ox=origin[0], oy=origin[1])
                 )
             seen_role_anchors[key] = clone.name
 
