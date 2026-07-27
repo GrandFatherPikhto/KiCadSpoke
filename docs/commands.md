@@ -18,6 +18,19 @@ If no command is given, `apply` is assumed.
 
 Loads the configuration, connects to KiCad, performs validation, planning, and **three‑phase execution** (moves → vias → tracks).
 
+**Move ordering (dependency chain).** Within the moves phase, `rules`/`clone_placements` are not all
+planned from one snapshot any more — each item's anchor (`anchor_ref`/`anchor_role`) is resolved against
+the board, and if that anchor is a ref that ANOTHER item in the same run is about to place, the producer
+is planned, moved, and committed first; only then is the dependent item planned against the real,
+post‑move board. Items with no such dependency (anchored on something nobody in this run moves, or on an
+absolute coordinate) go first, in their YAML order. Found via a real bug (2026‑07‑27): a clone anchored on
+a role inside another clone's own template landed at that role's OLD position, not where the same run was
+about to move it to. A config where two or more items anchor on each other's output has no valid order and
+is a fatal `ValidationError` before anything is touched on the board (see
+`kicadspoke/placement/dependency_order.py`). `apply --dry-run` prints the resolved order but, since it
+never actually moves anything, still plans every item from one unchanged snapshot — positions for items
+later in the chain may come out different in a real (non‑dry‑run) apply; the dry‑run output says so.
+
 ### Syntax
 
 ```bash

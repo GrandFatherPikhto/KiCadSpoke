@@ -30,7 +30,11 @@ class BatchExecutor:
                        check_collisions: bool = True,
                        collision_margin_mm: float = 0.2) -> List[str]:
         failed_refs, move_log = self.move_executor.execute_moves(moves, check_collisions, collision_margin_mm)
-        self._pending_move_log = move_log
+        # extend, not overwrite: cmd_apply's per-item loop calls execute_moves
+        # once per dependency-order item, all before the single execute_tracks()
+        # flush at the end (see dependency_order.py) — a plain assignment here
+        # would lose every item's move log except the last.
+        self._pending_move_log.extend(move_log)
         return failed_refs
 
     def execute_vias(self, vias: List[ViaCommand], registry: Optional[PlacementRegistry] = None) -> List[str]:

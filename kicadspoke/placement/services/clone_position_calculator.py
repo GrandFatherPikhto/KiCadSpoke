@@ -36,6 +36,24 @@ from ...i18n import _
 logger = logging.getLogger(__name__)
 
 
+def resolve_clone_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, clone: ClonePlacement) -> Optional[str]:
+    """
+    Resolves clone's anchor to a concrete ref, WITHOUT resolving anchor_pad
+    position — used by dependency_order.py to build the producer/consumer
+    graph for a whole apply run before any planning happens. Mirrors the
+    anchor branch of ClonePositionCalculator._resolve_anchor, but only needs
+    identity here, not position; pad existence is still checked later, at real
+    plan time, same as before (a deliberate read-twice trade-off — this module
+    is explicitly not performance sensitive, see dependency_order.py).
+    """
+    if clone.anchor_ref is not None:
+        return clone.anchor_ref
+    if clone.anchor_role is not None:
+        fp = resolve_anchor_by_role(adapter, clone, cfg.sheet_names)
+        return fp.reference_field.text.value
+    return None
+
+
 def clone_anchor_id(clone: ClonePlacement) -> str:
     """
     Identity of clone_placement for the registry — physical binding, not name.

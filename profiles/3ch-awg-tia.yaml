@@ -294,12 +294,19 @@ clone_placements:
   - name: p5v_led_spoke
     enabled: true
     template: led_spoke
-    # cluster: Led_P5V
-    anchor_role: C_OUT_BYPASS
-    anchor_pad: '1'
-    origin_x_mm: 5.0
+    # Anchor = та же роль/пад, что origin_by_component_role/pad у led_spoke
+    # в extract_profiles ниже (R_LED, pad '2') — это НЕ связано автоматически,
+    # совпадение выбрано намеренно: тогда origin_x_mm/origin_y_mm честно 0/0,
+    # без подбора вектора anchor->ноль_шаблона руками (см. clone_geometry.py:
+    # origin = anchor_position + (origin_x_mm, origin_y_mm), и всё —
+    # origin_by_component_role/pad клонирование вообще не читает).
+    # R1 на плате несёт Cluster: Led_P5V (проверено через adapter) — как раз
+    # то, что было закомментировано в extract_profiles ниже.
+    anchor_cluster: Led_P5V
+    anchor_role: R_LED
+    anchor_pad: '2'
+    origin_x_mm: 0.0
     origin_y_mm: 0.0
-    anchor_cluster: In_Pi_Filter_Pos
     params:
       PWR_IN: '+5V'
       PWR_OUT: '/Power/+5V_LED'

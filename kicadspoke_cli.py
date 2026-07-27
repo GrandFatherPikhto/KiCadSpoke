@@ -33,6 +33,7 @@ if hasattr(sys.stderr, "reconfigure"):
 from kicadspoke.config import load_config, rule_effective_name, thermal_via_array_effective_name
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner
+from kicadspoke.placement.dependency_order import resolve_execution_order
 from kicadspoke.placement.services.clone_position_calculator import clone_anchor_id
 from kicadspoke.placement.services.component_pool import _cluster_prefix_match
 from kicadspoke.placement.executor import BatchExecutor
@@ -197,14 +198,18 @@ def cmd_apply(args, cfg=None):
 
     run_all_checks(adapter, cfg)
 
-    logger.info(_("Planning placement..."))
+    logger.info(_("Resolving item execution order (dependency chain — see dependency_order.py)..."))
+    items = resolve_execution_order(adapter, cfg)
+    logger.info(_("Execution order: {order}").format(order=" -> ".join(it.label for it in items)))
+
     planner = PlacementPlanner(adapter, cfg)
 
     if args.dry_run:
-        moves = planner.plan_moves()
+        moves = planner.plan_items(items)
         vias = planner.plan_vias()
         tracks = planner.plan_tracks()
         print("\n=== DRY RUN ===")
+        print(_("Order: {order}").format(order=" -> ".join(it.label for it in items)))
         print(_("Moves:"))
         for m in moves:
             print(_("  {ref}: ({x:.3f}, {y:.3f}) mm, angle={angle:.1f}°")
@@ -222,21 +227,38 @@ def cmd_apply(args, cfg=None):
                       "not the target ones — may slightly differ from the real run)"))
         print(_("(track collisions with other copper/components are NOT checked by this tool — "
                 "rely on KiCad DRC after placement)"))
+        print(_("(items later in the dependency chain above are ALSO planned from the CURRENT "
+                "board, not the post-move board of their prerequisite — a real apply may place "
+                "them differently; rerun without --dry-run for the true chained result)"))
         return
 
     executor = BatchExecutor(adapter, cfg, batch_size=args.batch_size)
     registry = PlacementRegistry(adapter, cfg.registry_path or registry_path_for_config(args.config))
     track_registry = TrackRegistry(adapter, cfg.track_registry_path or track_registry_path_for_config(args.config))
 
-    # --- Phase 1: moves ---
-    moves = planner.plan_moves()
-    logger.info(_("Planned moves: {count}").format(count=len(moves)))
-    logger.info(_("Applying moves..."))
-    failed_refs = executor.execute_moves(
-        moves,
-        check_collisions=not args.no_collision_check,
-        collision_margin_mm=args.collision_margin,
-    )
+    # --- Phase 1: moves, one dependency-order item at a time ---
+    # Each item is planned against the board as it is RIGHT NOW (refreshed
+    # right after the previous item's moves were committed), so an item
+    # anchored on something an EARLIER item in this run is about to move sees
+    # its real, post-move position — not a stale pre-run snapshot. See
+    # dependency_order.py for why this matters (found via p5v_led_spoke).
+    planner.begin_planning()
+    failed_refs = []
+    for idx, item in enumerate(items):
+        if idx > 0:
+            adapter.refresh_board()
+        if item.anchor_ref is not None and item.anchor_ref in failed_refs:
+            logger.warning(_("{label}: anchor {ref!r} failed to move earlier in this run — "
+                             "this item's placement is based on its OLD position")
+                           .format(label=item.label, ref=item.anchor_ref))
+        item_moves = planner.plan_item(item)
+        logger.info(_("  {label}: {count} moves").format(label=item.label, count=len(item_moves)))
+        item_failed = executor.execute_moves(
+            item_moves,
+            check_collisions=not args.no_collision_check,
+            collision_margin_mm=args.collision_margin,
+        )
+        failed_refs.extend(item_failed)
     if failed_refs:
         logger.warning(_("Failed to move: {refs}").format(refs=sorted(set(failed_refs))))
 
@@ -244,7 +266,9 @@ def cmd_apply(args, cfg=None):
     logger.info(_("Reloading board data before planning vias..."))
     adapter.refresh_board()
 
-    # --- Phase 2: vias ---
+    # --- Phase 2: vias (via/track CREATION does not need per-item ordering —
+    # only anchor resolution does; positions were already fixed above, per
+    # item, against the correct board state) ---
     all_vias = planner.plan_vias()
     vias_to_create = registry.reconcile(all_vias, known_anchor_ids=all_anchor_ids)
     logger.info(_("Planned vias: {total}, actually to create (registry filtered already correctly placed): {to_create}")

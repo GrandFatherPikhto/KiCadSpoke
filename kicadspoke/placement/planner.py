@@ -55,10 +55,70 @@ class PlacementPlanner:
         angle_diff = abs((fp.orientation.degrees - angle_deg + 180) % 360 - 180)
         return angle_diff <= self._ANGLE_TOLERANCE_DEG
 
-    def plan_moves(self) -> List[MoveCommand]:
+    def begin_planning(self) -> None:
+        """Resets the accumulated plan — call once before either plan_moves()
+        (single-snapshot, dry-run) or a series of plan_item() calls (real
+        apply, one per dependency_order.Item — see cmd_apply)."""
         self._planned = []
         self._planned_vias = []
         self._planned_tracks = []
+
+    def plan_item(self, item) -> List[MoveCommand]:
+        """
+        Plans ONE dependency_order.Item (rule or clone_placement) against the
+        board as it is RIGHT NOW — the caller is responsible for calling
+        adapter.refresh_board() beforehand if an earlier item in this same run
+        may have changed it (see dependency_order.py / cmd_apply's per-item
+        loop). Accumulates into self._planned/_planned_vias/_planned_tracks so
+        that plan_vias()/plan_tracks(), called once after the whole loop
+        finishes, return the combined result for the run exactly as before —
+        via/track CREATION does not need to be interleaved between items,
+        only moves do (vias/tracks are pure geometry already anchored to
+        positions resolved at this point).
+        """
+        if item.kind == 'rule':
+            placed, vias, tracks = self.position_calc.compute_raw_positions([item.obj])
+        else:
+            placed, vias, tracks = self.clone_calc.compute_raw_positions([item.obj])
+        self._planned.extend(placed)
+        self._planned_vias.extend(vias)
+        self._planned_tracks.extend(tracks)
+        return self.moves_from_placed(placed)
+
+    def moves_from_placed(self, placed: List) -> List[MoveCommand]:
+        moves = []
+        skipped = 0
+        for info in placed:
+            layer = info.layer if info.layer is not None else self._target_layer
+            if self.cfg.skip_existing_components and self._already_in_place(info.ref, info.dest, info.angle_deg, layer):
+                skipped += 1
+                logger.debug(_("  {ref}: already in place, move skipped (skip_existing_components)")
+                             .format(ref=info.ref))
+                continue
+            moves.append(MoveCommand(
+                ref=info.ref,
+                position=info.dest,
+                angle=Angle.from_degrees(info.angle_deg),
+                layer=layer
+            ))
+        if skipped:
+            logger.info(_("Skipped {count} components already at target position").format(count=skipped))
+        return moves
+
+    def plan_items(self, items) -> List[MoveCommand]:
+        """Convenience for dry-run: plan_item() for every item in dependency
+        order, from a single unchanged board snapshot (no execution/refresh
+        between items — see the caveat cmd_apply prints in --dry-run output),
+        returning the combined move list. Real apply uses plan_item() directly,
+        one at a time, interleaved with execution and adapter.refresh_board()."""
+        self.begin_planning()
+        moves: List[MoveCommand] = []
+        for item in items:
+            moves.extend(self.plan_item(item))
+        return moves
+
+    def plan_moves(self) -> List[MoveCommand]:
+        self.begin_planning()
 
         if self.cfg.place_components and self.cfg.rules:
             placed, planned_vias, planned_tracks = self.position_calc.compute_raw_positions(
@@ -80,27 +140,11 @@ class PlacementPlanner:
             logger.info(_("ClonePlacement: {count} components, {vias} vias, {tracks} tracks")
                         .format(count=len(clone_placed), vias=len(clone_vias), tracks=len(clone_tracks)))
 
-        moves = []
-        skipped = 0
-        for info in self._planned:
-            # info.layer — per‑component (ClonePositionCalculator already accounted for
-            # template.layer/slot.layer/mirror); None — only for ManualSpoke path
-            # (manual_position_calculator.py does not set it), then inherit the global
-            # target_layer from config.
-            layer = info.layer if info.layer is not None else self._target_layer
-            if self.cfg.skip_existing_components and self._already_in_place(info.ref, info.dest, info.angle_deg, layer):
-                skipped += 1
-                logger.debug(_("  {ref}: already in place, move skipped (skip_existing_components)")
-                             .format(ref=info.ref))
-                continue
-            moves.append(MoveCommand(
-                ref=info.ref,
-                position=info.dest,
-                angle=Angle.from_degrees(info.angle_deg),
-                layer=layer
-            ))
-        if skipped:
-            logger.info(_("Skipped {count} components already at target position").format(count=skipped))
+        # info.layer — per‑component (ClonePositionCalculator already accounted for
+        # template.layer/slot.layer/mirror); None — only for ManualSpoke path
+        # (manual_position_calculator.py does not set it), then inherit the global
+        # target_layer from config.
+        moves = self.moves_from_placed(self._planned)
         logger.info(_("plan_moves completed: {count} moves").format(count=len(moves)))
         return moves
 

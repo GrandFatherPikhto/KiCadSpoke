@@ -1,7 +1,7 @@
 # kicadspoke/placement/services/manual_position_calculator.py
 
 import logging
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from kipy.board_types import FootprintInstance, BoardLayer
 
 from ...config import Config, Rule
@@ -14,6 +14,24 @@ from ..interfaces import IPositionCalculator
 from ...i18n import _
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) -> Optional[str]:
+    """
+    Resolves rule's anchor to a concrete ref — see resolve_clone_anchor_ref in
+    clone_position_calculator.py, same rationale (used by dependency_order.py
+    to build the producer/consumer graph before any planning happens).
+    """
+    if rule.anchor_ref is not None:
+        return rule.anchor_ref
+    if rule.anchor_role is not None:
+        from .clone_role_resolver import resolve_footprint_by_role
+        fp = resolve_footprint_by_role(
+            adapter, rule.anchor_role, rule.anchor_sheet, rule.anchor_cluster,
+            cfg.sheet_names, label=_("rule (net {net!r})").format(net=rule.net),
+        )
+        return fp.reference_field.text.value
+    return None
 
 
 class ManualPositionCalculator(IPositionCalculator):
