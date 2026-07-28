@@ -13,7 +13,7 @@ import difflib
 import sys
 import logging
 import json
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 import yaml
 from pathlib import Path
 
@@ -45,7 +45,7 @@ from kicadspoke.undo import undo_last_operation
 from kicadspoke.validation import run_all_checks
 from kicadspoke.registry import (PlacementRegistry, registry_path_for_config,
                                  TrackRegistry, track_registry_path_for_config)
-from kicadspoke.template_extraction import extract_template_from_selection
+from kicadspoke.template_extraction import extract_template_from_selection, render_uncertain_comments
 from kicadspoke.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
 from kicadspoke.i18n import _
 
@@ -382,6 +382,11 @@ def cmd_extract(args):
     else:
         name = args.name
         output = args.output
+        if not name:
+            try:
+                name = input(_("Template name (key under templates:): ")).strip()
+            except EOFError:
+                name = ""
         if not name or not output:
             sys.exit(_("[error] need --name and --output (or --profiles/--profile instead)"))
         params = {}
@@ -415,12 +420,14 @@ def cmd_extract(args):
         sys.exit(_("[error] --origin-by-component-pad without --origin-by-component-role — "
                    "you can only refine a pad for a role that you first specify"))
 
+    annotations: List[Tuple[str, str, str]] = []
     template_dict = extract_template_from_selection(
         adapter, name, params=params, net_template_map=net_template_map,
         origin_via_net=origin_via_net,
         origin_component_role=origin_component_role,
         origin_component_pad=origin_component_pad,
         net_template_role=net_template_role,
+        annotations=annotations,
     )
 
     output_path = Path(output)
@@ -439,7 +446,10 @@ def cmd_extract(args):
         if is_json:
             json.dump(existing, f, indent=2, ensure_ascii=False)
         else:
-            yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
+            text = yaml.dump(existing, allow_unicode=True, sort_keys=False, default_flow_style=False)
+            if annotations:
+                text = render_uncertain_comments(text, name, annotations)
+            f.write(text)
 
     logger.info(_("✅ Template {name!r} written to {output}").format(name=name, output=output_path))
 

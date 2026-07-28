@@ -31,6 +31,7 @@ Roles (Role field) MUST be unique within the selection — fatal error at
 extraction time, not only during later template loading.
 """
 import logging
+import re
 from typing import List, Dict, Any, Optional, Tuple
 from kipy.board_types import FootprintInstance, Via, Track
 from kipy.geometry import Vector2
@@ -204,6 +205,7 @@ def extract_template_from_selection(
     origin_component_pad: Optional[str] = None,
     net_template_role: Optional[Dict[str, str]] = None,
     items: Optional[List[Any]] = None,
+    annotations: Optional[List[Tuple[str, str, str]]] = None,
 ) -> Dict[str, Any]:
     """
     Builds a dict {name: {vias: [...], components: [...], tracks: [...]}}
@@ -245,6 +247,15 @@ def extract_template_from_selection(
     without this parameter net_template remains empty until manual YAML editing.
     No guessing here either: if the role is in net_template_role but the
     specified net is not actually on the component's pads — fatal, not silent.
+
+    annotations — OPTIONAL output parameter (list appended to in place, same
+    "explicit opt-in" shape as items above). When given, every case where
+    net_template could not be determined unambiguously (see "N nets from
+    --net-template on pads" warning below) also appends a
+    (role, field_name, hint) tuple, so the caller (kicadspoke_cli.py's
+    cmd_extract) can render it as a commented placeholder line in the
+    written YAML via render_uncertain_comments() instead of leaving the gap
+    only visible in the log.
     """
     params = params or {}
     net_template_role = net_template_role or {}
@@ -365,11 +376,16 @@ def extract_template_from_selection(
             if len(mapped) == 1:
                 slot["net_template"] = parametrize_net(mapped[0], net_template_map, params)
             elif len(mapped) > 1:
+                hint = _("could not determine automatically — {count} matching nets on pads "
+                         "({nets}) — fill in manually or use --net-template-role {role}=<net>") \
+                    .format(count=len(mapped), nets=mapped, role=role)
                 logger.warning(_("  {ref} (role {role}): {count} nets from --net-template on pads "
                                  "({nets}) — net_template not set, fill it manually in the "
                                  "resulting YAML, or use --net-template-role {role}=<net> in advance")
                                .format(ref=fp.reference_field.text.value, role=role,
                                        count=len(mapped), nets=mapped))
+                if annotations is not None:
+                    annotations.append((role, "net_template", hint))
         components.append(slot)
         logger.debug(_("  {ref} (role {role}): along={along}, across={across}, angle={angle}{layer}{net}")
                      .format(ref=fp.reference_field.text.value, role=role,
@@ -423,3 +439,63 @@ def extract_template_from_selection(
                 .format(name=name, comp=len(components), vias=len(spoke_vias), tracks=len(spoke_tracks)))
     result = {"vias": spoke_vias, "components": components, "tracks": spoke_tracks, "layer": tpl_layer_str}
     return {name: result}
+
+
+def render_uncertain_comments(yaml_text: str, name: str,
+                               annotations: List[Tuple[str, str, str]]) -> str:
+    """
+    Post-processes yaml.dump() output for cmd_extract: for every
+    (role, field, hint) in annotations, inserts a commented-out placeholder
+    line ("# field: hint") right after the component block for that role,
+    scoped to the section under the top-level `name:` key only —
+    cmd_extract's `existing` dict may hold OTHER, previously extracted
+    templates in the same output file, and a role from THIS extraction must
+    never accidentally match a same-named role belonging to a different
+    template.
+
+    Text-based, not a YAML-aware round-trip: the only producer of this text
+    is our own yaml.dump(sort_keys=False, default_flow_style=False) call in
+    cmd_extract, so the indentation shape (list items at indent 2, their
+    fields at indent 4) is known and stable — a full round-trip library
+    (ruamel.yaml) would be overkill for annotating output we generate
+    ourselves.
+    """
+    if not annotations:
+        return yaml_text
+    lines = yaml_text.splitlines(keepends=True)
+
+    def body(line: str) -> str:
+        return line.rstrip("\n")
+
+    name_pattern = re.compile(r'^(["\']?)' + re.escape(name) + r'\1:\s*$')
+    start = None
+    for i, line in enumerate(lines):
+        if name_pattern.match(body(line)):
+            start = i + 1
+            break
+    if start is None:
+        return yaml_text
+    end = len(lines)
+    for i in range(start, len(lines)):
+        b = body(lines[i])
+        if b.strip() and not b[0].isspace():
+            end = i
+            break
+
+    block = lines[start:end]
+    for role, field, hint in annotations:
+        role_pattern = re.compile(r'^  - role: (["\']?)' + re.escape(role) + r'\1\s*$')
+        role_idx = next((i for i, line in enumerate(block)
+                         if role_pattern.match(body(line))), None)
+        if role_idx is None:
+            continue
+        insert_at = len(block)
+        for i in range(role_idx + 1, len(block)):
+            b = body(block[i])
+            leading = len(b) - len(b.lstrip(' '))
+            if b.strip() and leading < 4:
+                insert_at = i
+                break
+        block.insert(insert_at, f"    # {field}: {hint}\n")
+
+    return "".join(lines[:start] + block + lines[end:])

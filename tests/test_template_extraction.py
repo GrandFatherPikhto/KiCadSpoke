@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import FootprintInstance, Via, Group
 
-from kicadspoke.template_extraction import extract_template_from_selection
+from kicadspoke.template_extraction import extract_template_from_selection, render_uncertain_comments
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.exceptions import ValidationError
 
@@ -217,6 +217,36 @@ class TestNetTemplateAutoDetect:
         # locale the project ships (en/ru), not just the raw English msgid.
         assert "nets from --net-template" in caplog.text or "цепей из --net-template" in caplog.text
 
+    def test_two_matching_nets_appends_annotation_when_requested(self):
+        fb = _make_fp("FB1", 0, 0, 0, "PI_FILTER_FB", pad_nets=["+5V_DIRTY", "+5V"])
+        adapter = _make_adapter([fb])
+        annotations = []
+
+        result = extract_template_from_selection(
+            adapter, "t", params={"PWR_IN": "+5V_DIRTY", "PWR_OUT": "+5V"},
+            net_template_map={"+5V_DIRTY": "{PWR_IN}", "+5V": "{PWR_OUT}"},
+            annotations=annotations,
+        )
+        comp = result["t"]["components"][0]
+        assert "net_template" not in comp
+        assert len(annotations) == 1
+        role, field, hint = annotations[0]
+        assert role == "PI_FILTER_FB"
+        assert field == "net_template"
+        assert "+5V" in hint and "+5V_DIRTY" in hint
+
+    def test_single_matching_net_leaves_annotations_empty(self):
+        cap = _make_fp("C1", 0, 0, 0, "C_IN_BULK", pad_nets=["+5V_DIRTY", "GND"])
+        adapter = _make_adapter([cap])
+        annotations = []
+
+        extract_template_from_selection(
+            adapter, "t", params={"PWR_IN": "+5V_DIRTY"},
+            net_template_map={"+5V_DIRTY": "{PWR_IN}"},
+            annotations=annotations,
+        )
+        assert annotations == []
+
 
 class TestNetTemplateRole:
     """net_template_role — явное указание, какую из нескольких цепей на
@@ -272,3 +302,67 @@ class TestNetTemplateRole:
         by_role = {c["role"]: c for c in result["t"]["components"]}
         assert by_role["C_IN_BULK"]["net_template"] == "{PWR_IN}"
         assert by_role["PI_FILTER_FB"]["net_template"] == "{PWR_IN}"
+
+
+class TestRenderUncertainComments:
+    """render_uncertain_comments — текстовая пост-обработка yaml.dump()
+    вывода cmd_extract: закомментированная строка-подсказка после блока
+    компонента с нужной ролью, см. handoff про auto-guess extract."""
+
+    @staticmethod
+    def _dump(data):
+        import yaml
+        return yaml.dump(data, allow_unicode=True, sort_keys=False, default_flow_style=False)
+
+    def test_inserts_comment_after_matching_role_block(self):
+        data = {"my_tpl": {"components": [
+            {"role": "A", "offset_along_mm": 1.0, "angle_deg": 0.0},
+            {"role": "B", "offset_along_mm": 2.0, "angle_deg": 90.0},
+        ], "vias": [], "tracks": [], "layer": "F.Cu"}}
+        text = self._dump(data)
+        annotations = [("B", "net_template", "could not determine automatically")]
+
+        out = render_uncertain_comments(text, "my_tpl", annotations)
+
+        lines = out.splitlines()
+        b_idx = next(i for i, l in enumerate(lines) if l.strip() == "- role: B")
+        # comment must be inside B's block (before the next top-level dedent)
+        # and must not appear anywhere before B's block (i.e. not attached to A).
+        a_idx = next(i for i, l in enumerate(lines) if l.strip() == "- role: A")
+        assert not any("# net_template" in l for l in lines[a_idx:b_idx])
+        comment_idx = next(i for i, l in enumerate(lines) if "# net_template" in l)
+        assert comment_idx > b_idx
+        assert "could not determine automatically" in lines[comment_idx]
+        # must land before the next sibling key (vias:), i.e. still part of B's block
+        vias_idx = next(i for i, l in enumerate(lines) if l.strip() == "vias: []")
+        assert comment_idx < vias_idx
+
+    def test_same_role_in_different_template_is_not_touched(self):
+        data = {
+            "tpl_one": {"components": [{"role": "X", "offset_along_mm": 0.0, "angle_deg": 0.0}],
+                        "vias": [], "tracks": [], "layer": "F.Cu"},
+            "tpl_two": {"components": [{"role": "X", "offset_along_mm": 0.0, "angle_deg": 0.0}],
+                        "vias": [], "tracks": [], "layer": "F.Cu"},
+        }
+        text = self._dump(data)
+        annotations = [("X", "net_template", "hint for tpl_two only")]
+
+        out = render_uncertain_comments(text, "tpl_two", annotations)
+
+        lines = out.splitlines()
+        one_start = next(i for i, l in enumerate(lines) if l.strip() == "tpl_one:")
+        two_start = next(i for i, l in enumerate(lines) if l.strip() == "tpl_two:")
+        comment_idx = next(i for i, l in enumerate(lines) if "# net_template" in l)
+        assert two_start < comment_idx
+        assert not (one_start < comment_idx < two_start)
+
+    def test_no_annotations_returns_text_unchanged(self):
+        text = self._dump({"t": {"components": [], "vias": [], "tracks": [], "layer": "F.Cu"}})
+        assert render_uncertain_comments(text, "t", []) == text
+
+    def test_unknown_role_is_silently_skipped(self):
+        data = {"t": {"components": [{"role": "A", "offset_along_mm": 0.0, "angle_deg": 0.0}],
+                       "vias": [], "tracks": [], "layer": "F.Cu"}}
+        text = self._dump(data)
+        out = render_uncertain_comments(text, "t", [("NOT_PRESENT", "net_template", "hint")])
+        assert out == text
