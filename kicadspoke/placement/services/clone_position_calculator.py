@@ -185,10 +185,12 @@ class ClonePositionCalculator:
             # (see clone_role_resolver.py).
             if clone_uses_selection_mode(clone):
                 role_to_ref = resolve_roles_by_selection(self.adapter, template, clone,
-                                                         anchor_position=anchor_position)
+                                                         anchor_position=anchor_position,
+                                                         sheet_names=self.cfg.sheet_names)
             else:
                 role_to_ref = resolve_roles_by_nets(self.adapter, template, clone,
-                                                    anchor_position=anchor_position)
+                                                    anchor_position=anchor_position,
+                                                    sheet_names=self.cfg.sheet_names)
 
             # Placement side: own layer of the clone or global from config.
             # mirror — explicit manual operation; correctness of layer/mirror pair

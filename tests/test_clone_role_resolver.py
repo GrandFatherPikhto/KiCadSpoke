@@ -266,6 +266,107 @@ class TestResolveRolesByNets:
         assert result == {"X": "B"}  # Must pick B despite ambiguity
 
 
+def _make_fp_with_sheet(ref, role, nets, sheet_uuid):
+    """Like _make_fp, but also carries sheet_path (see _make_anchor_fp) — for
+    testing anchor_sheet narrowing of TEMPLATE roles (resolve_roles_by_nets),
+    as opposed to anchor resolution (resolve_anchor_by_role)."""
+    fp = _make_fp(ref, role, nets)
+    fp.sheet_path.path = [MagicMock(value=sheet_uuid), MagicMock(value=f"{ref}-own-uuid")]
+    return fp
+
+
+class TestResolveRolesByNetsAnchorSheet:
+    """anchor_sheet narrowing for ambiguous TEMPLATE roles (added 2026-07-28):
+    a GLOBAL net (e.g. +3V3, shared by every instance of a role board‑wide,
+    unlike a per‑channel hierarchical net) leaves candidates=all instances,
+    and Cluster can't help when the schematic reuses one physical section per
+    channel via a hierarchical sheet (Cluster is then shared across every
+    instance too) — anchor_sheet is the only signal left, same mechanism
+    already used for anchor resolution itself (see TestResolveAnchorByRole)."""
+
+    def _template(self):
+        return SpokeTemplate(name="pi_filter", components=[TemplateComponentSlot(role="CAP_IN")])
+
+    def test_narrows_ambiguous_global_net_to_one(self):
+        fps = [
+            _make_fp_with_sheet("C10", "CAP_IN", ["+3V3"], "sheet-uuid-0"),
+            _make_fp_with_sheet("C20", "CAP_IN", ["+3V3"], "sheet-uuid-1"),
+            _make_fp_with_sheet("C30", "CAP_IN", ["+3V3"], "sheet-uuid-2"),
+        ]
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = fps
+        adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprint_pads.side_effect = _get_pads
+        adapter.get_selected_items.return_value = []
+        sheet_names = {"sheet-uuid-0": "Channel_0", "sheet-uuid-1": "Channel_1", "sheet-uuid-2": "Channel_2"}
+
+        clone = ClonePlacement(name="c1", template="pi_filter", origin_x_mm=0, origin_y_mm=0,
+                               nets={"CAP_IN": "+3V3"}, anchor_sheet="Channel_1")
+        result = resolve_roles_by_nets(adapter, self._template(), clone, sheet_names=sheet_names)
+        assert result == {"CAP_IN": "C20"}
+
+    def test_anchor_sheet_placeholder_substituted_from_params(self):
+        fps = [
+            _make_fp_with_sheet("C10", "CAP_IN", ["+3V3"], "sheet-uuid-0"),
+            _make_fp_with_sheet("C20", "CAP_IN", ["+3V3"], "sheet-uuid-1"),
+        ]
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = fps
+        adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprint_pads.side_effect = _get_pads
+        adapter.get_selected_items.return_value = []
+        sheet_names = {"sheet-uuid-0": "Channel_0", "sheet-uuid-1": "Channel_1"}
+
+        clone = ClonePlacement(name="c1", template="pi_filter", origin_x_mm=0, origin_y_mm=0,
+                               nets={"CAP_IN": "+3V3"}, anchor_sheet="Channel_{channel}",
+                               params={"channel": 1})
+        result = resolve_roles_by_nets(adapter, self._template(), clone, sheet_names=sheet_names)
+        assert result == {"CAP_IN": "C20"}
+
+    def test_insufficient_narrowing_raises_mentioning_anchor_sheet(self):
+        """Two candidates share the same sheet — anchor_sheet narrows 3 -> 2,
+        not enough; the fatal message must say so instead of the old
+        Cluster-only wording."""
+        fps = [
+            _make_fp_with_sheet("C10", "CAP_IN", ["+3V3"], "sheet-uuid-0"),
+            _make_fp_with_sheet("C11", "CAP_IN", ["+3V3"], "sheet-uuid-0"),
+            _make_fp_with_sheet("C20", "CAP_IN", ["+3V3"], "sheet-uuid-1"),
+        ]
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = fps
+        adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprint_pads.side_effect = _get_pads
+        adapter.get_selected_items.return_value = []
+        sheet_names = {"sheet-uuid-0": "Channel_0", "sheet-uuid-1": "Channel_1"}
+
+        clone = ClonePlacement(name="c1", template="pi_filter", origin_x_mm=0, origin_y_mm=0,
+                               nets={"CAP_IN": "+3V3"}, anchor_sheet="Channel_0")
+        with pytest.raises(ValidationError, match="anchor_sheet") as exc_info:
+            resolve_roles_by_nets(adapter, self._template(), clone, sheet_names=sheet_names)
+        msg = str(exc_info.value)
+        assert "C10" in msg and "C11" in msg and "C20" not in msg
+
+    def test_no_anchor_sheet_or_cluster_falls_back_to_old_hint(self):
+        """Regression: neither anchor_sheet nor anchor_cluster set — hint text
+        must still make sense (updated wording, not just 'Cluster not set')."""
+        fps = [
+            _make_fp("A", "CAP_IN", ["+3V3"]),
+            _make_fp("B", "CAP_IN", ["+3V3"]),
+        ]
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = fps
+        adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprint_pads.side_effect = _get_pads
+        adapter.get_selected_items.return_value = []
+
+        clone = ClonePlacement(name="c1", template="pi_filter", origin_x_mm=0, origin_y_mm=0,
+                               nets={"CAP_IN": "+3V3"})
+        with pytest.raises(ValidationError, match="anchor_sheet") as exc_info:
+            resolve_roles_by_nets(adapter, self._template(), clone)
+        msg = str(exc_info.value)
+        assert "neither anchor_sheet nor Cluster set" in msg or "не задан" in msg
+
+
 def _make_anchor_fp(ref, role, sheet_uuid):
     fp = MagicMock(spec=FootprintInstance)
     fp.reference_field.text.value = ref
