@@ -35,6 +35,7 @@ from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.placement.dependency_order import resolve_execution_order
 from kicadspoke.placement.services.clone_position_calculator import clone_anchor_id
+from kicadspoke.placement.services.via_planner import thermal_anchor_id
 from kicadspoke.placement.services.component_pool import _cluster_prefix_match
 from kicadspoke.placement.executor import BatchExecutor
 from kicadspoke.exceptions import PlacerError
@@ -187,10 +188,23 @@ def cmd_apply(args, cfg=None):
         cfg = load_config(args.config)
 
     drop_disabled_rules(cfg, logger)
+
+    # known_anchor_ids for registry.reconcile(): the FULL set (before --only/
+    # --cluster narrow this particular run), excluding disabled clone_placements
+    # (enabled: false means "does not exist", same convention as rules — see
+    # drop_disabled_rules). MUST be captured before apply_only_filter/
+    # apply_cluster_filter mutate cfg.clone_placements/cfg.thermal_via_array.enabled
+    # below, or the whole point of known_anchor_ids (protecting a temporarily
+    # filtered-out item's vias/tracks from being pruned as "stale") silently does
+    # nothing (found 2026-07-28 while chasing orphaned ldo_adj_subsystem tracks —
+    # was computed AFTER filtering, so a --only/--cluster run would prune
+    # everything else's vias instead of preserving them as documented).
+    all_anchor_ids = {clone_anchor_id(c) for c in cfg.clone_placements if c.enabled}
+    if cfg.thermal_via_array.enabled:
+        all_anchor_ids.add(thermal_anchor_id(cfg.thermal_via_array))
+
     apply_only_filter(cfg, _split_comma_values(getattr(args, "only", None)), logger)
     apply_cluster_filter(cfg, _split_comma_values(getattr(args, "cluster", None)), logger)
-
-    all_anchor_ids = {clone_anchor_id(c) for c in cfg.clone_placements}
 
     logger.info(_("Connecting to KiCad (timeout {timeout} ms)").format(timeout=args.timeout_ms))
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)

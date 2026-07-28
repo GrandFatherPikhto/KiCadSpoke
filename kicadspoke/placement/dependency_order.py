@@ -69,6 +69,8 @@ def _build_items(adapter: KiCadBoardAdapter, cfg: Config) -> List[Item]:
         ))
 
     for clone in cfg.clone_placements:
+        if not clone.enabled:
+            continue
         anchor_ref = resolve_clone_anchor_ref(adapter, cfg, clone)
         placed, _vias, _tracks = clone_calc.compute_raw_positions([clone])
         items.append(Item(

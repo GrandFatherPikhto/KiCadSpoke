@@ -186,6 +186,18 @@ class PlacementRegistry:
         filtered out by --only, not removed from YAML. Otherwise --only A in one
         run and --only B in the next would mutually delete each other's vias —
         a real bug caught in practice.
+
+        IMPORTANT (found 2026-07-28): known_anchor_ids protection only applies
+        to an anchor_id that was NOT SEEN AT ALL this run (--only/--cluster
+        excluded the whole item). If the item WAS processed this run (its
+        anchor_id appears among seen_keys) but a SPECIFIC key under it is
+        missing from planned_vias — e.g. its template's via/track list shrank
+        or got reordered — that key is genuinely stale and must be pruned, not
+        protected just because the item as a whole is still "known". Before
+        this distinction existed, editing a template's via/track list left the
+        orphaned old entries stuck on the board forever (real case: 3 tracks
+        from an earlier ldo_adj_subsystem revision, at indices no longer used
+        by the current template, never got cleaned up run after run).
         """
         to_create: List[ViaCommand] = []
         seen_keys = set()
@@ -227,11 +239,18 @@ class PlacementRegistry:
             del self.entries[via.registry_key]
             to_create.append(via)
 
+        seen_anchor_ids = {key.split('|', 1)[0] for key in seen_keys}
+
         stale_keys = set()
         for key in set(self.entries.keys()) - seen_keys:
             anchor_id = key.split('|', 1)[0]
-            if (known_anchor_ids is not None
-                    and (anchor_id.startswith(('anchor:', 'role:', 'name:')))
+            # anchor_id WAS seen this run -> the item itself was processed,
+            # this specific key just isn't part of its current plan anymore
+            # (template edited) -> genuinely stale, prune below, known_anchor_ids
+            # does not apply here (see IMPORTANT note above).
+            if (anchor_id not in seen_anchor_ids
+                    and known_anchor_ids is not None
+                    and anchor_id.startswith(('anchor:', 'role:', 'name:', 'thermal:'))
                     and anchor_id in known_anchor_ids):
                 logger.debug(_("  {key}: not processed in this run (--only filtered "
                                "{anchor_id!r}), but it is still in the config — NOT pruned")
@@ -338,11 +357,17 @@ class TrackRegistry:
             del self.entries[track.registry_key]
             to_create.append(track)
 
+        seen_anchor_ids = {key.split('|', 1)[0] for key in seen_keys}
+
         stale_keys = set()
         for key in set(self.entries.keys()) - seen_keys:
             anchor_id = key.split('|', 1)[0]
-            if (known_anchor_ids is not None
-                    and (anchor_id.startswith(('anchor:', 'role:', 'name:')))
+            # See PlacementRegistry.reconcile's IMPORTANT note: known_anchor_ids
+            # only protects items not seen AT ALL this run, not stale keys within
+            # an item that WAS processed but whose template shrank/reordered.
+            if (anchor_id not in seen_anchor_ids
+                    and known_anchor_ids is not None
+                    and anchor_id.startswith(('anchor:', 'role:', 'name:', 'thermal:'))
                     and anchor_id in known_anchor_ids):
                 logger.debug(_("  {key}: not processed in this run (--only filtered "
                                "{anchor_id!r}), but it is still in the config — NOT pruned")

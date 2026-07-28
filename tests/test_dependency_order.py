@@ -75,6 +75,29 @@ def _cfg(clones):
     )
 
 
+def test_disabled_clone_is_skipped_entirely():
+    """A disabled clone_placement anchored on a role that doesn't exist on the
+    board at all would fatal if resolved (see resolve_footprint_by_role) — it
+    must be skipped BEFORE anchor resolution is even attempted, not just
+    excluded from execution later (compute_raw_positions already no-ops for
+    it, but _build_items used to still call resolve_clone_anchor_ref on it
+    unconditionally)."""
+    anchor1 = _make_fp("ANCHOR1")
+    p1 = _make_fp("P1", role="PRODUCED_ROLE", nets=["NET_A"])
+
+    clone_enabled = _clone("clone_a", "ANCHOR1", "producer_tpl", {"PRODUCED_ROLE": "NET_A"})
+    clone_disabled = ClonePlacement(
+        name="clone_disabled", template="consumer_tpl", origin_x_mm=0.0, origin_y_mm=0.0,
+        anchor_role="NONEXISTENT_ROLE", enabled=False,
+    )
+    cfg = _cfg([clone_enabled, clone_disabled])
+
+    adapter = _adapter_for([anchor1, p1])
+    items = resolve_execution_order(adapter, cfg)
+
+    assert [it.label for it in items] == ["clone_placement 'clone_a'"]
+
+
 def test_no_dependencies_keeps_original_order():
     """Two clones anchored on stable, pre-existing components — neither
     produces the other's anchor — order must be unchanged (stable sort)."""

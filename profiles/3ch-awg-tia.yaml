@@ -296,6 +296,15 @@ extract_profiles:
     origin_by_component_pad: '1'
 
 clone_placements:
+  # - name: 3v3_ldo
+  #   enabled: true
+  #   role: LDO_3V3
+  #   anchor_role: CONN_PM5V
+  #   anchor_pad: '1'
+  #   origin_x_mm: 7.0
+  #   origin_y_mm: 6.0
+
+
   - name: p5v_pi_filter
     enabled: true
     template: 5v_pi_filter
@@ -422,7 +431,7 @@ clone_placements:
       PWR_IN: '-2V5_DIRTY'
       PWR_OUT: '-2V5'
 
-  - name: p1v2_fpga_in_pi_filter
+  - name: p1v2_vccint_fpga_in_pi_filter
     enabled: true
     template: fpga_in_pi_filter
     # anchor_cluster делает ДВОЙНУЮ работу: сужает и якорь (FPGA — не нужно,
@@ -435,9 +444,45 @@ clone_placements:
     # правильно затегированы в схеме — переименовывать роли не нужно).
     anchor_cluster: Pi_Filter_1V2_VCCINT
     anchor_role: FPGA
-    anchor_pad: '29'
-    origin_x_mm: -10.0
-    origin_y_mm:  0.0
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm:  2.0
     params:
       PWR_IN: '+1V2'
       PWR_OUT: '+1V2_VCCINT'
+
+  - name: p3v3_fpga_in_pi_filter
+    enabled: true
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_3V3_VCCIO
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm: 8.0
+    params:
+      PWR_IN: '+3V3'
+      PWR_OUT: '+3V3_VCCIO'
+
+  - name: p2v5_vcca_fpga_in_pi_filter
+    enabled: true
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_1V2_VCCA_P2V5
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm: 14.0
+    params:
+      PWR_IN: '+2V5'
+      PWR_OUT: '+2V5_VCCA'
+
+  - name: p1v2_vcd_pll_fpga_in_pi_filter
+    enabled: true
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_1V2_VCCD_PLL
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm:  20.0
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '+1V2_VCCD_PLL'      

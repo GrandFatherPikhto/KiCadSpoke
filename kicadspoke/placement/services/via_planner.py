@@ -5,7 +5,7 @@ from typing import List, Optional, Set, Tuple
 from kipy.board_types import FootprintInstance, BoardLayer
 from kipy.geometry import Vector2
 
-from ...config import Config
+from ...config import Config, ThermalViaArrayConfig
 from ...geometry.keepout import Rect, build_keepout, find_free_point
 from ...geometry.thermal_grid import compute_thermal_via_grid
 from ...kicad.adapter import KiCadBoardAdapter
@@ -17,6 +17,12 @@ from .clone_role_resolver import resolve_footprint_by_role
 from ...i18n import _
 
 logger = logging.getLogger(__name__)
+
+
+def thermal_anchor_id(tva: ThermalViaArrayConfig) -> str:
+    """Registry identity for thermal vias — single point shared with
+    kicadspoke_cli.py (known_anchor_ids), so the two never drift apart."""
+    return f"thermal:{tva.name}"
 
 
 class ViaPlanner(IViaPlanner):
@@ -175,9 +181,24 @@ class ViaPlanner(IViaPlanner):
         exclude = {(target_fp.reference_field.text.value, tva.pad)}
         keepout_excl = self._build_keepout(target_fp, planned, exclude=exclude)
         via_radius = tva.diameter_mm / 2.0 * MM
+        # anchor_id/index give thermal vias a real registry_key (found 2026-07-28:
+        # they never had one, so PlacementRegistry.reconcile() always treated them
+        # as "to_create" — every apply run stacked a fresh set of vias on top of
+        # the previous run's, 384 duplicates accumulated at 16 grid points before
+        # this was caught). Index is the position in the IDEAL grid (points), not
+        # in the filtered result list, so it stays stable across runs even when a
+        # point is skipped (keepout/already-exists) — same convention as
+        # component-slot vias (see clone_position_calculator.py).
+        # Local import: registry.py imports .placement.commands at module
+        # level, which (via the placement package __init__) would otherwise
+        # create a circular import if this were a top-level import here — same
+        # reason manual_position_calculator.py imports clone_role_resolver
+        # locally instead of at module top.
+        from ...registry import make_registry_key
+        anchor_id = thermal_anchor_id(tva)
         result = []
         skipped = 0
-        for p in points:
+        for index, p in enumerate(points):
             if self.cfg.skip_existing_components and self._via_already_exists(existing_vias, p, tva.net):
                 skipped += 1
                 continue
@@ -193,7 +214,8 @@ class ViaPlanner(IViaPlanner):
                                .format(x=p.x/MM, y=p.y/MM))
                 continue
             result.append(ViaCommand(free_p, tva.drill_mm, tva.diameter_mm, tva.net,
-                                     target_fp.reference_field.text.value))
+                                     target_fp.reference_field.text.value,
+                                     registry_key=make_registry_key(anchor_id, "thermal_via_array", None, index)))
         if skipped:
             logger.info(_("Skipped {count} thermal vias already present on the board").format(count=skipped))
         logger.info(_("Planned {count} thermal vias on {pad}").format(count=len(result), pad=tva.pad))
