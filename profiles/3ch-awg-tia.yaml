@@ -1,193 +1,16 @@
 templates_file: templates/3ch-awg-tia.yaml
 schematic_dir: ../test_boards/3CH-AWG-TIA
+include:
+  - subsystems/thermal_vias.yaml
+  - subsystems/fpga_spokes.yaml
+  - subsystems/led_spokes.yaml
+  - subsystems/ldo.yaml
+  - subsystems/filters.yaml
+  - subsystems/extracts.yaml
+
 registry_path: profiles/registries/3ch-awg-tia.json
 track_registry_path: profiles/registries/power_board.tracks.registry.json
 log_file: ../logs/3ch-awg-tia.log
-
-# Слой ManualSpoke-пути (rules ниже) — глобальный, из
-# profiles/generated/10CL006YE144C8G.yaml, откуда сюда же перенесены
-# thermal_via_array и rules, чтобы `apply profiles/3ch-awg-tia.yaml`
-# одной командой ставил и спицы FPGA, и остальное (clone_placements).
-layer: B.Cu
-
-thermal_via_array:
-  name: fpga_thermal
-  enabled: true
-  anchor_role: FPGA
-  pad: '145'
-  net: GND
-  rows: 4
-  cols: 4
-  margin_mm: 0.5
-  pattern: grid
-  drill_mm: 0.3
-  diameter_mm: 0.5
-
-rules:
-- net: +3V3_VCCIO
-  name: +3V3_VCCIO
-  anchor_role: FPGA
-  enabled: true
-  spokes:
-  - pad: '17'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: -0.5
-    rotation_deg: 90.0
-    cluster: FPGA_PWR_BANK
-  - pad: '26'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: -2.4
-    rotation_deg: 90.0
-    cluster: FPGA_PWR_BANK
-  - pad: '40'
-    template: cap_pair_standard
-    shift_x_mm: 1.3
-    shift_y_mm: 0.0
-    rotation_deg: 180.0
-    cluster: FPGA_PWR_BANK
-  - pad: '47'
-    template: cap_pair_standard
-    shift_x_mm: 2.5
-    shift_y_mm: 0.0
-    rotation_deg: 180.0
-    cluster: FPGA_PWR_BANK
-  - pad: '56'
-    template: cap_pair_standard
-    shift_x_mm: 0.3
-    shift_y_mm: 0.0
-    rotation_deg: 180.0
-    cluster: FPGA_PWR_BANK
-  - pad: '62'
-    template: cap_pair_standard
-    shift_x_mm: 2.0
-    shift_y_mm: 0.0
-    rotation_deg: 180.0
-    cluster: FPGA_PWR_BANK
-  - pad: '81'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: -1.0
-    rotation_deg: 270.0
-    cluster: FPGA_PWR_BANK
-  - pad: '93'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: 0.0
-    rotation_deg: 270.0
-    cluster: FPGA_PWR_BANK
-  - pad: '117'
-    template: cap_pair_standard
-    shift_x_mm: -2.0
-    shift_y_mm: 0.0
-    rotation_deg: 0.0
-    cluster: FPGA_PWR_BANK
-  - pad: '122'
-    template: cap_pair_standard
-    shift_x_mm: -1.8
-    shift_y_mm: 0.0
-    rotation_deg: 0.0
-    cluster: FPGA_PWR_BANK
-  - pad: '130'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: 0.0
-    rotation_deg: 0.0
-    cluster: FPGA_PWR_BANK
-  - pad: '139'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: 0.0
-    rotation_deg: 0.0
-    cluster: FPGA_PWR_BANK
-- net: +1V2_VCCINT
-  name: +1V2_VCCINT
-  anchor_role: FPGA
-  enabled: true
-  spokes:
-  - pad: '5'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: 0.0
-    rotation_deg: 90.0
-    cluster: FPGA_PWR_BANK
-  - pad: '29'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: -1.5
-    rotation_deg: 90.0
-    cluster: FPGA_PWR_BANK
-  - pad: '45'
-    template: cap_pair_standard
-    shift_x_mm: 1.0
-    shift_y_mm: 0.0
-    rotation_deg: 180.0
-    cluster: FPGA_PWR_BANK
-  - pad: '61'
-    template: cap_pair_standard
-    shift_x_mm: -0.0
-    shift_y_mm: 0.0
-    rotation_deg: 180.0
-    cluster: FPGA_PWR_BANK
-  - pad: '78'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: 0.0
-    rotation_deg: 270.0
-    cluster: FPGA_PWR_BANK
-  - pad: '102'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: 1.0
-    rotation_deg: 270.0
-    cluster: FPGA_PWR_BANK
-  - pad: '116'
-    template: cap_pair_standard
-    shift_x_mm: -0.3
-    shift_y_mm: 0.0
-    rotation_deg: 0.0
-    cluster: FPGA_PWR_BANK
-  - pad: '134'
-    template: cap_pair_standard
-    shift_x_mm: -0.3
-    shift_y_mm: 0.0
-    rotation_deg: 0.0
-    cluster: FPGA_PWR_BANK
-- net: +1V2_VCCD_PLL
-  name: +1V2_VCCD_PLL
-  anchor_role: FPGA
-  enabled: true
-  spokes:
-  - pad: '37'
-    template: cap_pair_standard
-    shift_x_mm: 0.5
-    shift_y_mm: 0.0
-    rotation_deg: 180.0
-    cluster: FPGA_PWR_BANK
-  - pad: '109'
-    template: cap_pair_standard
-    shift_x_mm: -1.5
-    shift_y_mm: 0.0
-    rotation_deg: 0.0
-    cluster: FPGA_PWR_BANK
-- net: +2V5_VCCA
-  name: +2V5_VCCA
-  anchor_role: FPGA
-  enabled: true
-  spokes:
-  - pad: '35'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: -2.0
-    rotation_deg: 90.0
-    cluster: FPGA_PWR_BANK
-  - pad: '107'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: 1.0
-    rotation_deg: 270.0
-    cluster: FPGA_PWR_BANK
 
 # output: общий для всех extract_profiles ниже (все пишут в один и тот же файл
 # шаблонов этой платы) — задан один раз здесь, чтобы не повторять в каждом
@@ -196,293 +19,79 @@ rules:
 # в kicadspoke_cli.py, root_defaults).
 output: profiles/templates/3ch-awg-tia.yaml
 
-extract_profiles:
-  # name: не нужен, если совпадает с ключом профиля (берётся автоматически,
-  # см. root_defaults/name в kicadspoke_cli.py:cmd_extract) — писать явно,
-  # только когда имя шаблона должно ОТличаться от имени профиля, как ниже
-  # у fpga_pwr_bank. params (не param — единый ключ с clone_placements,
-  # раньше был param: именно тут, отдельная опечатка-ловушка) используется
-  # только для верификации round-trip у --net-template, в шаблон не пишется.
-  fpga_pwr_bank:
-    # Выделить в PCB: 2 конденсатора спицы (Role=C_OUT_BYPASS/C_OUT_BULK)
-    # + их GND-via + via уровня спицы (сеть "+3V3_VCCIO") + разведённые
-    # дорожки между ними. FPGA (IC1) в выделение НЕ включать — попадёт
-    # в шаблон как компонент роли FPGA и исчерпает пул на первой же спице.
-    name: cap_pair_standard   # ИМЯ ШАБЛОНА отличается от имени профиля — оставляем явно
-    # via-net дал неоднозначность (2 via на +3V3_VCCIO в выделении —
-    # проверь, не зацепило ли рамкой соседнюю спицу). Роль компонента
-    # внутри выделения уникальна по построению (extract сам фатально
-    # падает на дублирующихся ролях) — надёжнее.
-    origin_by_component_role: C_OUT_BYPASS
-
-  5v_pi_filter:
-    params:
-      PWR_IN: '+5V_DIRTY'
-      PWR_OUT: '+5V'
-    net_template:
-      # ЛИТЕРАЛ: ПАТТЕРН (см. --net-template в docs/commands_ru.md и
-      # net_resolution.parametrize_net) — раньше здесь было наоборот
-      # (паттерн: литерал), из-за чего параметризация цепей молча не
-      # срабатывала (parametrize_net тихо возвращает литерал как есть,
-      # если его нет среди ключей — без ошибки, без предупреждения).
-      '+5V_DIRTY': '{PWR_IN}'
-      '+5V': '{PWR_OUT}'
-    # FB1 (роль PI_FILTER_FB) сидит между двумя рельсами сразу — на его
-    # падах ОБЕ цепи из net_template выше, extract сам не выберет.
-    # Явно говорим: net_template этой роли — {PWR_IN}. Без этой строки
-    # extract каждый раз молча оставляет net_template у PI_FILTER_FB
-    # пустым (см. warning при извлечении).
-    net_template_role:
-      PI_FILTER_FB: '+5V_DIRTY'
-    origin_by_component_role: C_IN_BULK
-    origin_by_component_pad: '1'
-
-  led_spoke:
-    # cluster: Led_P5V
-    params:
-      PWR_IN: '+5V'
-      PWR_OUT: '/Power/+5V_LED'
-    net_template_role:
-      'R_LED': '+5V'
-      'LED': '/Power/+5V_LED'
-    origin_by_component_role: R_LED
-    origin_by_component_pad: '2'
-
-  ldo_adj_subsystem:
-    params:
-      PWR_IN: '+5V'
-      PWR_OUT: '+2V5_DIRTY'
-      PWR_ADJ: '/Power/+2V5_ADJ'
-    net_template_role:
-      'C_IN_BYPASS': '+5V'
-      'C_ADJ_BULK': '/Power/+2V5_ADJ'
-      'D_PROT_ADJ': '/Power/+2V5_ADJ'
-      'D_PROT_BACK': '+2V5_DIRTY'
-      'R_FB_BOT': '/Power/+2V5_ADJ'
-      'R_FB_TOP': '/Power/+2V5_ADJ'
-      # Сама LDO (U3) висит на всех трёх цепях сразу (IN/OUT/ADJ) — без
-      # этой строки net_template у роли пуст, apply падает fatal'ом
-      # ("no net for mapping"). PWR_OUT — цепь, которую эта LDO
-      # непосредственно регулирует, самый однозначный выбор.
-      'LDO_ADJ': '+2V5_DIRTY'
-    origin_by_component_role: 'C_IN_BYPASS'
-    origin_by_component_pad: '2'
-
-  2v5_adj_pi_filter:
-    params:
-      PWR_IN: '+2V5_DIRTY'
-      PWR_OUT: '+2V5'
-    net_template:
-      '+2V5_DIRTY': '{PWR_IN}'
-      '+2V5': '{PWR_OUT}'
-    net_template_role:
-      C_IN_BYPASS: '+2V5_DIRTY'
-      PI_FILTER_FB: '+2V5'
-      C_OUT_BULK: '+2V5'
-    origin_by_component_role: 'C_IN_BYPASS'
-    origin_by_component_pad: '1'
-
-  fpga_in_pi_filter:
-    params:
-      PWR_IN: '+1V2'
-      PWR_OUT: '+1V2_VCCINT'
-    net_template_role:
-      C_IN_BYPASS: '+1V2'
-      C_OUT_BYPASS: '+1V2_VCCINT'
-      C_OUT_BULK: '+1V2_VCCINT'
-      C_IN_BULK: '+1V2'
-      FB_PI_FLT: '+1V2_VCCINT'
-    origin_by_component_role: 'C_OUT_BYPASS'
-    origin_by_component_pad: '1'
-
 clone_placements:
-  # - name: 3v3_ldo
-  #   enabled: true
-  #   role: LDO_3V3
-  #   anchor_role: CONN_PM5V
-  #   anchor_pad: '1'
-  #   origin_x_mm: 7.0
-  #   origin_y_mm: 6.0
-
-
-  - name: p5v_pi_filter
+  
+  - name: channel_0_ad9707
     enabled: true
-    template: 5v_pi_filter
-    # C_IN_BULK как anchor_role неоднозначен на плате (второй такой же
-    # в Cluster=In_Pi_Filter_Neg) — anchor_cluster сужает до нужного.
-    # anchor_pad: '1' — тот же пад, что был origin_by_component_pad при
-    # extract, чтобы якорь совпал с нулём координат самого шаблона.
-    anchor_role: CONN_PM5V
-    anchor_pad: '1'
-    origin_x_mm: 7.0
-    origin_y_mm: -6.0
-    # anchor_role: C_IN_BULK
-    anchor_cluster: In_Pi_Filter_Pos
-    # params (не param!) — ключ ClonePlacement, отличается от param: в
-    # extract_profiles (это разные структуры). Наличие params включает
-    # режим "по цепям" — все роли шаблона резолвятся по net_template,
-    # не по выделению на плате.
+    anchor_sheet: Channel_0
+    anchor_role: FPGA
+    role: AD_DAC
+    # Без nets/params role AD_DAC уходит в режим "по выделению" (см.
+    # clone_uses_selection_mode) — а он неоднозначен на плате (IC2/IC3/IC4,
+    # одна и та же Role с трёх инстансов channel.kicad_sch). anchor_sheet
+    # сужает только сам якорь (FPGA — он один, сужать и не нужно), но НЕ
+    # сужает роль ВНУТРИ шаблона — для этого явный net с {channel}.
+    nets:
+      AD_DAC: '/Channel_{channel}/DAC/DAC_OUT_P'
     params:
-      PWR_IN: '+5V_DIRTY'
-      PWR_OUT: '+5V'
+      channel: 0
+    origin_x_mm: 0.0
+    origin_y_mm: 25.0
+    rotation_deg: 270.0
 
-  - name: n5v_pi_filter
+  - name: channel_1_ad9707
     enabled: true
-    template: 5v_pi_filter
-    # C_IN_BULK как anchor_role неоднозначен на плате (второй такой же
-    # в Cluster=In_Pi_Filter_Neg) — anchor_cluster сужает до нужного.
-    # anchor_pad: '1' — тот же пад, что был origin_by_component_pad при
-    # extract, чтобы якорь совпал с нулём координат самого шаблона.
-    anchor_role: CONN_PM5V
-    anchor_pad: '1'
-    origin_x_mm: 7.0
-    origin_y_mm: 6.0
-    # anchor_role: C_IN_BULK
-    anchor_cluster: In_Pi_Filter_Neg
-    # params (не param!) — ключ ClonePlacement, отличается от param: в
-    # extract_profiles (это разные структуры). Наличие params включает
-    # режим "по цепям" — все роли шаблона резолвятся по net_template,
-    # не по выделению на плате.
+    anchor_sheet: Channel_1
+    anchor_role: FPGA
+    role: AD_DAC
+    nets:
+      AD_DAC: '/Channel_{channel}/DAC/DAC_OUT_P'
     params:
-      PWR_IN: '-5V_DIRTY'
-      PWR_OUT: '-5V'
-
-  - name: p5v_led_spoke
-    enabled: true
-    template: led_spoke
-    # Anchor — C_OUT_BYPASS (C9), тот же компонент, что и origin_by_component_role
-    # у p5v_pi_filter при extract: R1/D1 физически должны стоять РЯДОМ с
-    # фильтром (3 мм от C9), не оставаться там, где R1 УЖЕ стоит на плате
-    # (пробовали anchor_role: R_LED/Cluster Led_P5V — геометрически
-    # самосогласованно, но LED так и оставался в 349 мм от фильтра, там же,
-    # где стоял раньше, а не переезжал к нему). anchor_cluster сужает
-    # C_OUT_BYPASS до фильтра p5v (второй такой же в In_Pi_Filter_Neg).
-    # Работает КОРРЕКТНО только благодаря dependency_order.py — p5v_pi_filter
-    # производит C9 и планируется раньше, так что анкор видит его новую,
-    # а не устаревшую позицию.
-    anchor_cluster: In_Pi_Filter_Pos
-    anchor_role: C_OUT_BYPASS
-    anchor_pad: '1'
-    origin_x_mm: 3.0
+      channel: 1
+    origin_x_mm: 25.0
     origin_y_mm: 0.0
-    params:
-      PWR_IN: '+5V'
-      PWR_OUT: '/Power/+5V_LED'
+    rotation_deg: 0.0
 
-  - name: n5v_led_spoke
+  - name: channel_2_ad9707
     enabled: true
-    template: led_spoke
-    anchor_cluster: In_Pi_Filter_Neg
-    anchor_role: C_OUT_BYPASS
-    anchor_pad: '1'
-    origin_x_mm: 3.0
-    origin_y_mm: 0.0
+    anchor_sheet: Channel_2
+    anchor_role: FPGA
+    role: AD_DAC
+    nets:
+      AD_DAC: '/Channel_{channel}/DAC/DAC_OUT_P'
     params:
-      PWR_IN: '-5V'
-      PWR_OUT: '/Power/-5V_LED'
+      channel: 2
+    origin_x_mm:  0.0
+    origin_y_mm: -25.0
+    rotation_deg: 90.0
 
-  - name: p2v5_dirty_ldo
+  - name: channel_0_r_term_p
     enabled: true
-    template: ldo_adj_subsystem
-    anchor_cluster: In_Pi_Filter_Pos
-    anchor_role: C_OUT_BYPASS
-    anchor_pad: '1'
-    origin_x_mm: 9.0
-    origin_y_mm: -3.0
-    params:
-      PWR_IN: '+5V'
-      PWR_OUT: '+2V5_DIRTY'
-      PWR_ADJ: '/Power/+2V5_ADJ'
-
-  - name: n2v5_dirty_ldo
-    enabled: true
-    template: ldo_adj_subsystem
-    anchor_cluster: In_Pi_Filter_Neg
-    anchor_role: C_OUT_BYPASS
-    anchor_pad: '1'
-    origin_x_mm: 9.0
+    # anchor_sheet теперь тоже параметризуется через {params} (см.
+    # resolve_anchor_by_role/resolve_placeholder) — узнаёт нужный IC2/IC3/IC4
+    # по имени листа-инстанса, не только по nets.
+    anchor_sheet: 'Channel_{channel}'
+    role: R_TERM_P
+    anchor_role: AD_DAC
+    anchor_pad: '21'
+    origin_x_mm: 0.5
     origin_y_mm: 3.0
+    rotation_deg: 270.0
+    nets:
+      R_TERM_P: '/Channel_{channel}/DAC/DAC_OUT_P'
     params:
-      PWR_IN: '-5V'
-      PWR_OUT: '-2V5_DIRTY'
-      PWR_ADJ: '/Power/-2V5_ADJ'
+      channel: 0
 
-  - name: p2v5_adj_pi_filter
+  - name: channel_0_r_term_n
     enabled: true
-    template: 2v5_adj_pi_filter
-    anchor_cluster: LDO_Subsystem_P2V5
-    anchor_role: D_PROT_BACK
-    anchor_pad: '2'
-    origin_x_mm: 7.0
-    origin_y_mm: 0.0
+    anchor_sheet: 'Channel_{channel}'
+    role: R_TERM_N
+    anchor_role: AD_DAC
+    anchor_pad: '20'
+    origin_x_mm: -0.5
+    origin_y_mm: 3.0
+    rotation_deg: 270.0
+    nets:
+      R_TERM_N: '/Channel_{channel}/DAC/DAC_OUT_N'
     params:
-      PWR_IN: '+2V5_DIRTY'
-      PWR_OUT: '+2V5'
-
-  - name: n2v5_adj_pi_filter
-    enabled: true
-    template: 2v5_adj_pi_filter
-    anchor_cluster: LDO_Subsystem_N2V5
-    anchor_role: D_PROT_BACK
-    anchor_pad: '2'
-    origin_x_mm: 7.0
-    origin_y_mm: 0.0
-    params:
-      PWR_IN: '-2V5_DIRTY'
-      PWR_OUT: '-2V5'
-
-  - name: p1v2_vccint_fpga_in_pi_filter
-    enabled: true
-    template: fpga_in_pi_filter
-    # anchor_cluster делает ДВОЙНУЮ работу: сужает и якорь (FPGA — не нужно,
-    # роль и так уникальна на плате), и роли C_OUT_BULK/C_OUT_BYPASS ВНУТРИ
-    # шаблона (нужно ОБЯЗАТЕЛЬНО — этот же net +1V2_VCCINT несут ещё и 16
-    # конденсаторов FPGA-спиц, Cluster=FPGA_PWR_BANK). anchor_cluster: FPGA
-    # их не отсеивал (не совпадает ни с одним Cluster), резолвер уходил на
-    # физическую близость к якорю и утаскивал ближайший к FPGA конденсатор
-    # спицы вместо собственных C89/C81 (Cluster=Pi_Filter_1V2_VCCINT, уже
-    # правильно затегированы в схеме — переименовывать роли не нужно).
-    anchor_cluster: Pi_Filter_1V2_VCCINT
-    anchor_role: FPGA
-    anchor_pad: '1'
-    origin_x_mm: -8.0
-    origin_y_mm:  2.0
-    params:
-      PWR_IN: '+1V2'
-      PWR_OUT: '+1V2_VCCINT'
-
-  - name: p3v3_fpga_in_pi_filter
-    enabled: true
-    template: fpga_in_pi_filter
-    anchor_cluster: Pi_Filter_3V3_VCCIO
-    anchor_role: FPGA
-    anchor_pad: '1'
-    origin_x_mm: -8.0
-    origin_y_mm: 8.0
-    params:
-      PWR_IN: '+3V3'
-      PWR_OUT: '+3V3_VCCIO'
-
-  - name: p2v5_vcca_fpga_in_pi_filter
-    enabled: true
-    template: fpga_in_pi_filter
-    anchor_cluster: Pi_Filter_1V2_VCCA_P2V5
-    anchor_role: FPGA
-    anchor_pad: '1'
-    origin_x_mm: -8.0
-    origin_y_mm: 14.0
-    params:
-      PWR_IN: '+2V5'
-      PWR_OUT: '+2V5_VCCA'
-
-  - name: p1v2_vcd_pll_fpga_in_pi_filter
-    enabled: true
-    template: fpga_in_pi_filter
-    anchor_cluster: Pi_Filter_1V2_VCCD_PLL
-    anchor_role: FPGA
-    anchor_pad: '1'
-    origin_x_mm: -8.0
-    origin_y_mm:  20.0
-    params:
-      PWR_IN: '+1V2'
-      PWR_OUT: '+1V2_VCCD_PLL'      
+      channel: 0

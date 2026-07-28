@@ -1,0 +1,126 @@
+clone_placements:
+  - name: p5v_pi_filter
+    enabled: false
+    template: 5v_pi_filter
+    # C_IN_BULK как anchor_role неоднозначен на плате (второй такой же
+    # в Cluster=In_Pi_Filter_Neg) — anchor_cluster сужает до нужного.
+    # anchor_pad: '1' — тот же пад, что был origin_by_component_pad при
+    # extract, чтобы якорь совпал с нулём координат самого шаблона.
+    anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: 7.0
+    origin_y_mm: -6.0
+    # anchor_role: C_IN_BULK
+    anchor_cluster: In_Pi_Filter_Pos
+    # params (не param!) — ключ ClonePlacement, отличается от param: в
+    # extract_profiles (это разные структуры). Наличие params включает
+    # режим "по цепям" — все роли шаблона резолвятся по net_template,
+    # не по выделению на плате.
+    params:
+      PWR_IN: '+5V_DIRTY'
+      PWR_OUT: '+5V'
+
+  - name: n5v_pi_filter
+    enabled: false
+    template: 5v_pi_filter
+    anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: 7.0
+    origin_y_mm: 6.0
+    # anchor_role: C_IN_BULK
+    anchor_cluster: In_Pi_Filter_Neg
+    params:
+      PWR_IN: '-5V_DIRTY'
+      PWR_OUT: '-5V'
+
+  - name: 1v2_ldo_out_pi_filter
+    enabled: false
+    template: ldo_out_pi_filter
+    anchor_role: LDO_1V2
+    anchor_pad: '2'
+    anchor_cluster: Pi_Filter_Out_1V2
+    origin_x_mm: 10.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+1V2_DIRTY'
+      PWR_OUT: '+1V2'
+
+  - name: p2v5_adj_pi_filter
+    enabled: false
+    template: 2v5_adj_pi_filter
+    anchor_cluster: LDO_Subsystem_P2V5
+    anchor_role: D_PROT_BACK
+    anchor_pad: '2'
+    origin_x_mm: 7.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+2V5_DIRTY'
+      PWR_OUT: '+2V5'
+
+  - name: n2v5_adj_pi_filter
+    enabled: false
+    template: 2v5_adj_pi_filter
+    anchor_cluster: LDO_Subsystem_N2V5
+    anchor_role: D_PROT_BACK
+    anchor_pad: '2'
+    origin_x_mm: 7.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '-2V5_DIRTY'
+      PWR_OUT: '-2V5'
+
+  - name: p1v2_vccint_fpga_in_pi_filter
+    enabled: false
+    template: fpga_in_pi_filter
+    # anchor_cluster делает ДВОЙНУЮ работу: сужает и якорь (FPGA — не нужно,
+    # роль и так уникальна на плате), и роли C_OUT_BULK/C_OUT_BYPASS ВНУТРИ
+    # шаблона (нужно ОБЯЗАТЕЛЬНО — этот же net +1V2_VCCINT несут ещё и 16
+    # конденсаторов FPGA-спиц, Cluster=FPGA_PWR_BANK). anchor_cluster: FPGA
+    # их не отсеивал (не совпадает ни с одним Cluster), резолвер уходил на
+    # физическую близость к якорю и утаскивал ближайший к FPGA конденсатор
+    # спицы вместо собственных C89/C81 (Cluster=Pi_Filter_1V2_VCCINT, уже
+    # правильно затегированы в схеме — переименовывать роли не нужно).
+    anchor_cluster: Pi_Filter_1V2_VCCINT
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm:  2.0
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '+1V2_VCCINT'
+
+  - name: p3v3_fpga_in_pi_filter
+    enabled: false
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_3V3_VCCIO
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm: 8.0
+    params:
+      PWR_IN: '+3V3'
+      PWR_OUT: '+3V3_VCCIO'
+
+  - name: p2v5_vcca_fpga_in_pi_filter
+    enabled: false
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_1V2_VCCA_P2V5
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm: 14.0
+    params:
+      PWR_IN: '+2V5'
+      PWR_OUT: '+2V5_VCCA'
+
+  - name: p1v2_vcd_pll_fpga_in_pi_filter
+    enabled: false
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_1V2_VCCD_PLL
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm:  20.0
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '+1V2_VCCD_PLL'

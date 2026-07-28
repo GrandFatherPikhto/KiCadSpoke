@@ -1,0 +1,13 @@
+thermal_via_array:
+  name: fpga_thermal
+  enabled: false
+  anchor_role: FPGA
+  pad: '145'
+  net: GND
+  rows: 4
+  cols: 4
+  margin_mm: 0.5
+  pattern: grid
+  drill_mm: 0.3
+  diameter_mm: 0.5
+
