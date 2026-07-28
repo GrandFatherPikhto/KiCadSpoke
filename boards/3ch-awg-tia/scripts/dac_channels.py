@@ -108,7 +108,30 @@ def build() -> list:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--apply", action="store_true",
+                        help="also apply to the live board via kicadspoke.author.apply_config() "
+                             "(connects to KiCad over IPC) after writing the YAML")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="with --apply, only print the plan, don't touch the board")
+    args = parser.parse_args()
+
     clones = build()
     OUTPUT.parent.mkdir(exist_ok=True)
     dump_clone_placements(clones, str(OUTPUT))
     print(f"wrote {len(clones)} clone_placements to {OUTPUT}")
+
+    if args.apply:
+        # boards/3ch-awg-tia.yaml (not OUTPUT itself) is the config_path passed
+        # to apply_config() — it's the one that carries schematic_dir/
+        # templates_file and (via include:) picks up OUTPUT, and it's what
+        # registry identity is keyed off (see apply_config's docstring in
+        # kicadspoke/author.py) — passing OUTPUT here would derive a
+        # different, wrong registry file.
+        from kicadspoke.author import apply_config
+        from kicadspoke.config import load_config
+        ROOT_CONFIG = HERE.parent / "3ch-awg-tia.yaml"
+        cfg = load_config(str(ROOT_CONFIG))
+        apply_config(cfg, str(ROOT_CONFIG), dry_run=args.dry_run)
