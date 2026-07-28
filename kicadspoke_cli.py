@@ -442,6 +442,7 @@ def cmd_extract(args):
 
     existing.update(template_dict)
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         if is_json:
             json.dump(existing, f, indent=2, ensure_ascii=False)
