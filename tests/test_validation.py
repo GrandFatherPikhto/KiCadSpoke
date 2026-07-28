@@ -214,6 +214,36 @@ class TestNoDuplicateCloneAnchors:
         with pytest.raises(ValidationError, match="b.*a"):
             check_no_duplicate_clone_anchors(cfg)
 
+    def test_same_anchor_different_cluster_is_not_a_duplicate(self):
+        """Regression (found 2026-07-28): p5v_led_spoke/n5v_led_spoke share
+        identical anchor_role/anchor_sheet/anchor_pad/origin and differ ONLY
+        by anchor_cluster (Pos vs Neg, the field that actually picks which
+        physical component the anchor resolves to) — must NOT be flagged,
+        must match clone_anchor_id's identity exactly."""
+        clones = [
+            ClonePlacement(name="p5v_led", template="t", origin_x_mm=3.0, origin_y_mm=0.0,
+                           anchor_role="C_OUT_BYPASS", anchor_pad="1",
+                           anchor_cluster="In_Pi_Filter_Pos"),
+            ClonePlacement(name="n5v_led", template="t", origin_x_mm=3.0, origin_y_mm=0.0,
+                           anchor_role="C_OUT_BYPASS", anchor_pad="1",
+                           anchor_cluster="In_Pi_Filter_Neg"),
+        ]
+        cfg = _cfg(rules=[], clone_placements=clones)
+        check_no_duplicate_clone_anchors(cfg)
+
+    def test_same_anchor_same_cluster_role_based_raises(self):
+        clones = [
+            ClonePlacement(name="a", template="t", origin_x_mm=3.0, origin_y_mm=0.0,
+                           anchor_role="C_OUT_BYPASS", anchor_pad="1",
+                           anchor_cluster="In_Pi_Filter_Pos"),
+            ClonePlacement(name="b", template="t", origin_x_mm=3.0, origin_y_mm=0.0,
+                           anchor_role="C_OUT_BYPASS", anchor_pad="1",
+                           anchor_cluster="In_Pi_Filter_Pos"),
+        ]
+        cfg = _cfg(rules=[], clone_placements=clones)
+        with pytest.raises(ValidationError, match="b.*a"):
+            check_no_duplicate_clone_anchors(cfg)
+
 
 class TestCloneNetsExistOnBoard:
     def _make_net_mock(self, name):

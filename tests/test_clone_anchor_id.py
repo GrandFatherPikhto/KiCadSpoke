@@ -36,6 +36,18 @@ class TestCloneAnchorId:
                                     origin_x_mm=7.0, origin_y_mm=-6.0))
         assert a == b
 
+    def test_anchor_role_includes_cluster(self):
+        """Found 2026-07-28: p5v_led_spoke/n5v_led_spoke share identical
+        anchor_role/anchor_sheet/anchor_pad/origin and differ ONLY by
+        anchor_cluster (Pos vs Neg) — must not collapse to the same id."""
+        a = clone_anchor_id(_clone(anchor_role="C_OUT_BYPASS", anchor_pad="1",
+                                    anchor_cluster="In_Pi_Filter_Pos",
+                                    origin_x_mm=3.0, origin_y_mm=0.0))
+        b = clone_anchor_id(_clone(anchor_role="C_OUT_BYPASS", anchor_pad="1",
+                                    anchor_cluster="In_Pi_Filter_Neg",
+                                    origin_x_mm=3.0, origin_y_mm=0.0))
+        assert a != b
+
     def test_name_mode_unaffected_by_offset(self):
         """No anchor_ref/anchor_role at all -> identity is name-based, as before."""
         a = clone_anchor_id(_clone(name="x", origin_x_mm=1.0, origin_y_mm=2.0))

@@ -206,7 +206,12 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
          only by this offset (e.g. a positive/negative filter pair mirrored
          off the same connector pad) — without it in the key, that legitimate
          case was indistinguishable from a real duplicate, both to this check
-         and to the registry itself.
+         and to the registry itself. anchor_cluster is included in the
+         anchor_role key (found 2026-07-28, same reasoning): p5v_led_spoke/
+         n5v_led_spoke share identical anchor_role/anchor_sheet/anchor_pad/
+         origin and differ ONLY by anchor_cluster (Pos vs Neg, the field that
+         actually picks which physical component the anchor resolves to) —
+         without it here, this check false-positived on that legitimate pair.
     """
     problems = []
     seen_names = {}
@@ -238,17 +243,18 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
             seen_ref_anchors[key] = clone.name
 
         if clone.anchor_role is not None:
-            key = (content_id, clone.anchor_role, clone.anchor_sheet, clone.anchor_pad, origin)
+            key = (content_id, clone.anchor_role, clone.anchor_sheet, clone.anchor_cluster,
+                   clone.anchor_pad, origin)
             if key in seen_role_anchors:
                 problems.append(
                     _("{this!r} and {other!r} both point to the same anchor with the same offset "
                       "(template/role={content!r}, anchor_role={role!r}, anchor_sheet={sheet!r}, "
-                      "anchor_pad={pad!r}, origin=({ox}, {oy}) mm) — the registry would confuse "
-                      "their vias/tracks; likely a copy‑paste typo (if this is intentional, give "
-                      "them different origin_x_mm/origin_y_mm)")
+                      "anchor_cluster={cluster!r}, anchor_pad={pad!r}, origin=({ox}, {oy}) mm) — "
+                      "the registry would confuse their vias/tracks; likely a copy‑paste typo (if "
+                      "this is intentional, give them different origin_x_mm/origin_y_mm)")
                     .format(this=clone.name, other=seen_role_anchors[key], content=content_id,
-                            role=clone.anchor_role, sheet=clone.anchor_sheet, pad=clone.anchor_pad,
-                            ox=origin[0], oy=origin[1])
+                            role=clone.anchor_role, sheet=clone.anchor_sheet, cluster=clone.anchor_cluster,
+                            pad=clone.anchor_pad, ox=origin[0], oy=origin[1])
                 )
             seen_role_anchors[key] = clone.name
 

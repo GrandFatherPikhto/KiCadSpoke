@@ -77,12 +77,20 @@ def clone_anchor_id(clone: ClonePlacement) -> str:
     first instance's already-placed items onto itself instead of creating
     independent ones. check_no_duplicate_clone_anchors (validation.py) uses
     the same extended key, for the same reason.
+
+    anchor_cluster is included in the anchor_role branch (found 2026-07-28,
+    same class of bug as above): p5v_led_spoke/n5v_led_spoke share identical
+    anchor_role/anchor_sheet/anchor_pad/origin (both anchor on C_OUT_BYPASS
+    pad '1', offset 3/0 mm) and differ ONLY by anchor_cluster (In_Pi_Filter_Pos
+    vs In_Pi_Filter_Neg) — the one field that actually picks which physical C9
+    vs C12 the anchor resolves to. Without it in the key, they too would
+    collapse to one registry identity.
     """
     if clone.anchor_ref is not None:
         return f"anchor:{clone.anchor_ref}:{clone.anchor_pad or ''}:{clone.origin_x_mm:.4f}:{clone.origin_y_mm:.4f}"
     if clone.anchor_role is not None:
-        return (f"role:{clone.anchor_role}:{clone.anchor_sheet or ''}:{clone.anchor_pad or ''}"
-                f":{clone.origin_x_mm:.4f}:{clone.origin_y_mm:.4f}")
+        return (f"role:{clone.anchor_role}:{clone.anchor_sheet or ''}:{clone.anchor_cluster or ''}"
+                f":{clone.anchor_pad or ''}:{clone.origin_x_mm:.4f}:{clone.origin_y_mm:.4f}")
     return f"name:{clone.name}"
 
 
