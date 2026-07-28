@@ -248,3 +248,19 @@ class TestLoadProfileRootDefaults:
         })
         prof = load_profile(path, "extract_profiles", "a", root_defaults=["output"])
         assert "output" not in prof
+
+
+class TestLoadProfileIncludes:
+    """load_profile() resolves include: (kicadspoke/config/includes.py) the
+    same way load_config() does, so a subsystem file's extract_profiles/
+    clone_profiles are visible here too — not just rules/clone_placements."""
+
+    def test_extract_profiles_from_include_are_visible(self, tmp_path):
+        (tmp_path / "sub.yaml").write_text(
+            yaml.safe_dump({"extract_profiles": {"b": {"name": "b"}}}),
+            encoding="utf-8")
+        path = tmp_path / "profiles.yaml"
+        path.write_text(yaml.safe_dump({"include": ["sub.yaml"]}), encoding="utf-8")
+
+        prof = load_profile(str(path), "extract_profiles", "b")
+        assert prof["name"] == "b"

@@ -35,6 +35,7 @@
 - **File‑based cloner** (`clone-extract`) – parses `.net` and `.kicad_pcb` without IPC, builds a twin map of channels for hierarchical projects.
 - **Tracks in templates** – since v1.22.0, templates can include straight track segments (polylines are supported as a sequence of segments). Track collisions are not automatically checked (rely on KiCad DRC).
 - **External template files** – templates can be stored separately as JSON or YAML and referenced via `templates_file:` in the main config, keeping the main file clean and diff‑friendly.
+- **Splitting a profile into subsystem files** – `include:` at the root of a profile merges in one or more other YAML files (each carrying any mix of `extract_profiles`/`clone_placements`/`rules`/`templates`), recursively, with a per‑entry `enabled: false` to switch a whole subsystem off without touching every item inside it. Independent of `templates_file` (see [docs/commands.md](docs/commands.md) for merge semantics and duplicate/cycle handling).
 
 ---
 
@@ -127,6 +128,7 @@ During extraction, the reverse operation (`--net-template`) is available, turnin
 | `layer` | string | Global layer for ManualSpoke rules: `"F.Cu"` or `"B.Cu"` (replaces deprecated `side`). |
 | `templates` | dict | Inline named spoke templates (optional). |
 | `templates_file` | string | Path to an external JSON/YAML file containing templates (overridden by inline `templates`). |
+| `include` | list | Other profile files to merge in (`rules`/`clone_placements` concatenated, `templates`/`extract_profiles`/`clone_profiles` merged, fatal on duplicate keys or cycles). Each entry is a path string, or `{path, enabled}` to disable a whole subsystem file. |
 | `rules` | list | Manual spoke rules, each with `anchor_ref`. |
 | `clone_placements` | list | Cloned placements (TemplatePlacer). |
 | `thermal_via_array` | dict | Thermal via settings (optional). |

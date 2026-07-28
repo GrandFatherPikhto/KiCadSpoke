@@ -13,6 +13,7 @@ import yaml
 
 from ..exceptions import ValidationError, format_fatal_error
 from ..sheet_names import build_sheet_name_map
+from .includes import resolve_includes
 from .models import (
     ThermalViaArrayConfig, TemplateVia, TemplateComponentSlot, TemplateTrack,
     SpokeTemplate, ManualSpoke, Rule, ClonePlacement, Config, rule_effective_name,
@@ -272,6 +273,7 @@ def load_config(path: str) -> Config:
     logger.info(_("Loading configuration from {path}").format(path=path))
     with open(path, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f) or {}
+    data = resolve_includes(path, data)
 
     if 'target_ref' in data:
         raise ValidationError(format_fatal_error(

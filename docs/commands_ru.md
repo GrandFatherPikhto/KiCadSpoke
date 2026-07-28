@@ -64,6 +64,26 @@ python kicadspoke_cli.py apply <путь_к_конфигу.yaml> [опции]
 log_file: ../logs/placer.log
 ```
 
+**`include:` — разбиение профиля на файлы подсистем.** Независим от `templates_file` (который покрывает
+только `templates:`, с семантикой «инлайн перекрывает внешнее», без изменений). `include:` — общего
+назначения: мёржит `rules:`/`clone_placements:` (конкатенация) и `templates:`/`extract_profiles:`/
+`clone_profiles:` (объединение по ключу) из других файлов в текущий, рекурсивно, и работает **и для**
+`apply` (`load_config`), **и для** `extract`/`clone-extract` (`load_profile` — `extract_profiles`/
+`clone_profiles` читаются отдельным путём) — так что один файл подсистемы может нести и extract-профиль, и
+clone_placement для неё вместе:
+```yaml
+include:
+  - subsystems/ldo.yaml
+  - path: subsystems/dac_channels.yaml
+    enabled: false   # весь файл пропущен — даже не открывается — пока работаете над другим
+```
+Каждая запись — либо строка-путь, либо `{path, enabled}` (`enabled` по умолчанию `true`). Дубликат ключа
+`templates`/`extract_profiles`/`clone_profiles`, заданного в двух разных файлах, — фатал (в отличие от
+тихого перекрытия у `templates_file` — тут файлы задуманы как независимые, и повтор имени куда вероятнее
+опечатка, чем намеренный override). Повторное включение одного и того же файла (напрямую или из двух разных
+веток) — тоже фатал, независимо от того, цикл это или нет. Пути резолвятся относительно файла, который на
+них ссылается, а не относительно корневого конфига или текущей директории.
+
 **Про текущий боевой конфиг:** мастер-конфиг платы `3CH-AWG-TIA` — `profiles/3ch-awg-tia.yaml` (слиты `rules:`, `clone_placements:`, `thermal_via_array`, ссылка на `profiles/templates/3ch-awg-tia.yaml` через `templates_file`). Файл `profiles/generated/10CL006YE144C8G.yaml`, который пишет `tools/generate_10cl006.py`, — самодостаточный архивный вариант (можно прогнать отдельно, но в `apply` для этой платы больше не используется).
 
 **`name:` обязателен у `thermal_via_array:` (если секция вообще присутствует в конфиге) и у каждого

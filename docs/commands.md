@@ -63,6 +63,26 @@ priority over this field:
 log_file: ../logs/placer.log
 ```
 
+**`include:` – splitting a profile into subsystem files.** Independent of `templates_file` (which only
+covers `templates:`, with inline-overrides-external semantics, unchanged). `include:` is general‑purpose,
+merges `rules:`/`clone_placements:` (concatenated) and `templates:`/`extract_profiles:`/`clone_profiles:`
+(merged by key) from other files into the current one, recursively, and works for **both** `apply`
+(`load_config`) and `extract`/`clone-extract` (`load_profile`, since `extract_profiles`/`clone_profiles` are
+read through a separate code path) — so one subsystem file can carry the extract profile and the
+clone_placement for that subsystem together:
+```yaml
+include:
+  - subsystems/ldo.yaml
+  - path: subsystems/dac_channels.yaml
+    enabled: false   # whole file skipped — not even opened — while iterating on something else
+```
+Each entry is either a path string, or `{path, enabled}` (`enabled` defaults to `true`). A duplicate
+`templates`/`extract_profiles`/`clone_profiles` key defined in two different files is fatal (unlike
+`templates_file`'s silent override — these are meant to be separate files, so a repeated name is far more
+likely a mistake). A file included twice (directly, or reached from two different branches) is fatal too,
+whether or not it's a true cycle. Paths are resolved relative to the file that references them, not the
+top‑level config or the current working directory.
+
 **About the current production config:** the master config for the `3CH-AWG-TIA` board is `profiles/3ch-awg-tia.yaml` (merged `rules:`, `clone_placements:`, `thermal_via_array`, with a reference to `profiles/templates/3ch-awg-tia.yaml` via `templates_file`). The file `profiles/generated/10CL006YE144C8G.yaml` written by `tools/generate_10cl006.py` is a self‑contained archival version (can be run separately, but is no longer used in `apply` for this board).
 
 **`name:` is mandatory on `thermal_via_array:` (if that section is present at all) and on every

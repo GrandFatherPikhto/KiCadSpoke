@@ -31,6 +31,7 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
 from kicadspoke.config import load_config, rule_effective_name, thermal_via_array_effective_name
+from kicadspoke.config.includes import resolve_includes
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.placement.dependency_order import resolve_execution_order
@@ -329,6 +330,7 @@ def load_profile(profiles_path: str, top_key: str, profile_name: str,
         sys.exit(_("[error] profiles file {path!r} not found").format(path=profiles_path))
     with open(p, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
+    data = resolve_includes(str(p), data)
     profiles = data.get(top_key, {})
     if profile_name not in profiles:
         available = list(profiles.keys())
