@@ -74,7 +74,7 @@ clone_placements:
     role: R_TERM_P
     anchor_role: AD_DAC
     anchor_pad: '21'
-    origin_x_mm: 0.5
+    origin_x_mm: 0.4
     origin_y_mm: 3.0
     rotation_deg: 270.0
     nets:
@@ -88,10 +88,57 @@ clone_placements:
     role: R_TERM_N
     anchor_role: AD_DAC
     anchor_pad: '20'
-    origin_x_mm: -0.5
+    origin_x_mm: -0.4
     origin_y_mm: 3.0
     rotation_deg: 270.0
     nets:
       R_TERM_N: '/Channel_{channel}/DAC/DAC_OUT_N'
     params:
       channel: 0
+
+  - name: channel_0_с_refio
+    enabled: true
+    anchor_sheet: 'Channel_{channel}'
+    role: C_DAC_REFIO
+    anchor_role: AD_DAC
+    anchor_pad: '23'
+    origin_x_mm: 0.7
+    origin_y_mm: 3.0
+    rotation_deg: 270.0
+    nets:
+      C_DAC_REFIO: '/Channel_{channel}/DAC/DAC_REFIO'
+    params:
+      channel: 0
+
+  - name: channel_0_r_dac_fs_adj
+    enabled: true
+    anchor_sheet: 'Channel_{channel}'
+    role: R_DAC_FS_ADJ
+    anchor_role: AD_DAC
+    anchor_pad: '24'
+    origin_x_mm: 1.5
+    origin_y_mm: 3.0
+    rotation_deg: 270.0
+    nets:
+      R_DAC_FS_ADJ: '/Channel_{channel}/DAC/DAC_FS_ADJ'
+    params:
+      channel: 0
+
+  - name: channel_0_op_amp
+    enabled: true
+    anchor_sheet: 'Channel_{channel}'
+    role: OP_AMP
+    # anchor_role: R_TERM_P — неоднозначен (эта Role дважды на канале: между
+    # DAC и входом ОУ, и между выходом ОУ и входом усилителя мощности,
+    # Cluster у обоих пуст, anchor_sheet сужает только до листа). OP_AMP сам
+    # по себе уникален на канал — якоримся на уже рабочую связку AD_DAC.
+    anchor_role: AD_DAC
+    # anchor_pad: '2'
+    origin_x_mm: 0.0
+    origin_y_mm: 10.0
+    rotation_deg: 180
+    nets:
+      OP_AMP: '/Channel_{channel}/OpAmp/OA_IN_P'
+    params:
+      channel: 0
+
