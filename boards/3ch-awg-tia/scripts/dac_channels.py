@@ -23,8 +23,8 @@ differently-rotated channel would silently misplace the passive.
 PASSIVE_LAYOUT's Channel_1/2 rows are NOT yet visually verified in KiCad
 (nothing is placed there yet, unlike Channel_0's — see
 techdocs/handoff/handoff_2026_07_28_pcb_api.md) — check the result in the
-editor before trusting it as a new reference. OP_AMP stays Channel_0-only,
-same reason.
+editor before trusting it as a new reference. OP_AMP (OP_AMPS below) follows
+the same idea, currently for Channel_0/1 only — Channel_2 not done yet.
 
 Unlike hand-written YAML (profiles/3ch-awg-tia.yaml), this script does NOT
 use ClonePlacement.params/{channel}-in-nets/anchor_sheet placeholder
@@ -63,6 +63,13 @@ PASSIVE_LAYOUT = {
     "R_DAC_FS_ADJ": [(1.5, 3.0, 270.0), (3.0, -1.5, 0.0), (-1.5, -3.0, 90.0)],
 }
 
+# (origin_x_mm, origin_y_mm, rotation_deg) per channel — Channel_0/1 only,
+# same rotation-of-baseline idea as PASSIVE_LAYOUT above.
+OP_AMPS = [
+        (0.0, 10.0, 180.0),
+        (10.0, 0.0, 0.0),
+    ]
+
 # anchor_pad (on AD_DAC) and net template per passive role.
 PASSIVE_PADS = {
     "R_TERM_P": ("21", "/Channel_{channel}/DAC/DAC_OUT_P"),
@@ -97,12 +104,13 @@ def build() -> list:
     # OP_AMP: anchored on AD_DAC, not on R_TERM_P — R_TERM_P repeats twice per
     # channel (DAC-side termination vs. amp-output termination, no Cluster
     # tag to tell them apart), OP_AMP itself is unique per channel.
-    clones.append(ClonePlacement(
-        name="channel_0_op_amp", role="OP_AMP",
-        anchor_role="AD_DAC", anchor_sheet="Channel_0",
-        nets={"OP_AMP": "/Channel_0/OpAmp/OA_IN_P"},
-        origin_x_mm=0.0, origin_y_mm=10.0, rotation_deg=180.0,
-    ))
+    for channel, coords in enumerate(OP_AMPS):
+        clones.append(ClonePlacement(
+            name=f"channel_{channel}_op_amp", role="OP_AMP",
+            anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}",
+            nets={"OP_AMP": f"/Channel_{channel}/OpAmp/OA_IN_P"},
+            origin_x_mm=coords[0], origin_y_mm=coords[1], rotation_deg=coords[2],
+        ))
 
     return clones
 

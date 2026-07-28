@@ -150,3 +150,11 @@ clone_placements:
     OP_AMP: /Channel_0/OpAmp/OA_IN_P
   anchor_role: AD_DAC
   anchor_sheet: Channel_0
+- name: channel_1_op_amp
+  origin_x_mm: 10.0
+  origin_y_mm: 0.0
+  role: OP_AMP
+  nets:
+    OP_AMP: /Channel_1/OpAmp/OA_IN_P
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_1
