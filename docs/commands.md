@@ -213,7 +213,7 @@ python kicadspoke_cli.py extract --name <template_name> --output <file> [--timeo
 
 | Flag | Description |
 |------|-------------|
-| `--name` | Name of the template (key in the `templates` section). |
+| `--name` | Name of the template (key in the `templates` section). Optional in direct-flags mode (not `--profile`): if omitted, prompted for interactively. |
 | `--output` | Output file path. The extension determines the format: `.json` → JSON (flat dictionary), otherwise YAML. |
 | `--timeout-ms` | IPC timeout in milliseconds (default: `20000`). |
 | `--verbose` | Enable verbose output. |
@@ -227,6 +227,8 @@ python kicadspoke_cli.py extract --name <template_name> --output <file> [--timeo
 | `--profile NAME` | Use a profile from the `--profiles` file instead of explicit flags (cannot be combined with `--name`, `--output`, `--param`, `--net-template`, `--origin-by-*` – either everything from the profile or all explicit flags). |
 
 **Important:** Before running, select the desired components, vias, and tracks in the PCB editor. Roles must be unique. When saving as JSON, the file is written **without a `templates:` wrapper**, making it directly usable as a `templates_file` in the main configuration.
+
+**Uncertain `net_template`:** when a component's pads match more than one net from `--net-template`/`net_template` (e.g. an inductor/ferrite bead bridging two rails), `net_template` cannot be set automatically — a warning is logged, and (YAML output only, not JSON) a commented placeholder line is written right after that component's block, e.g. `# net_template: could not determine automatically — ...`, so the gap is visible in the file itself, not only in the log. Resolve it either by editing the line manually or via `--net-template-role ROLE=<net>` on the next run.
 
 **Inside a profile** (`extract_profiles:` in the `--profiles` file): `output:` can be set once at the file's
 root – a shared default for every profile, a specific profile only needs to set its own if it writes
