@@ -1,0 +1,17 @@
+# boards/3ch-awg-tia/3ch-awg-tia.yaml
+# Скриптовая генерация расстановки для 3CH-AWG-TIA (kicadspoke.explore/author,
+# см. docs/board_coding.md) — параллельно profiles/3ch-awg-tia.yaml, который
+# сделан руками и остаётся эталоном для сравнения (не трогаем).
+#
+# templates_file указывает на уже вручную выверенные шаблоны из profiles/ —
+# они здесь не пересобираются, только переиспользуются как есть.
+templates_file: ../../profiles/templates/3ch-awg-tia.yaml
+schematic_dir: ../../test_boards/3CH-AWG-TIA
+
+# registry_path/track_registry_path НЕ заданы явно — новый конфиг, переносить
+# исторические значения неоткуда, пусть выводятся автоматически
+# (registry_path_for_config) рядом с этим файлом: 3ch-awg-tia.registry.json /
+# 3ch-awg-tia.tracks.registry.json.
+
+include:
+  - generated/dac_channels.yaml   # scripts/dac_channels.py
