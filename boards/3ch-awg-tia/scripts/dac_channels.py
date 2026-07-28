@@ -20,11 +20,9 @@ origin_x_mm/origin_y_mm is a FLAT shift from the anchor, NOT auto-rotated
 by the engine (see ClonePlacement's docstring in kicadspoke/config/models.py
 and clone_geometry.py:109-113): reusing Channel_0's numbers verbatim on a
 differently-rotated channel would silently misplace the passive.
-PASSIVE_LAYOUT's Channel_1/2 rows are NOT yet visually verified in KiCad
-(nothing is placed there yet, unlike Channel_0's — see
-techdocs/handoff/handoff_2026_07_28_pcb_api.md) — check the result in the
-editor before trusting it as a new reference. OP_AMP (OP_AMPS below) follows
-the same idea, currently for Channel_0/1 only — Channel_2 not done yet.
+PASSIVE_LAYOUT's Channel_1/2 rows (and OP_AMPS below, same idea) have been
+visually verified in KiCad after applying (2026-07-28) — the
+rotation-of-baseline approach checked out.
 
 Unlike hand-written YAML (profiles/3ch-awg-tia.yaml), this script does NOT
 use ClonePlacement.params/{channel}-in-nets/anchor_sheet placeholder
@@ -40,7 +38,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from kicadspoke.author import dump_clone_placements
+from kicadspoke.author import cli_main
 from kicadspoke.config import ClonePlacement
 
 HERE = Path(__file__).resolve().parent
@@ -63,11 +61,12 @@ PASSIVE_LAYOUT = {
     "R_DAC_FS_ADJ": [(1.5, 3.0, 270.0), (3.0, -1.5, 0.0), (-1.5, -3.0, 90.0)],
 }
 
-# (origin_x_mm, origin_y_mm, rotation_deg) per channel — Channel_0/1 only,
-# same rotation-of-baseline idea as PASSIVE_LAYOUT above.
+# (origin_x_mm, origin_y_mm, rotation_deg) per channel — same
+# rotation-of-baseline idea as PASSIVE_LAYOUT above.
 OP_AMPS = [
         (0.0, 10.0, 180.0),
-        (10.0, 0.0, 0.0),
+        (10.0, 0.0, 270.0),
+        (0.0, -10.0, 0.0)
     ]
 
 # anchor_pad (on AD_DAC) and net template per passive role.
@@ -116,30 +115,4 @@ def build() -> list:
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--apply", action="store_true",
-                        help="also apply to the live board via kicadspoke.author.apply_config() "
-                             "(connects to KiCad over IPC) after writing the YAML")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="with --apply, only print the plan, don't touch the board")
-    args = parser.parse_args()
-
-    clones = build()
-    OUTPUT.parent.mkdir(exist_ok=True)
-    dump_clone_placements(clones, str(OUTPUT))
-    print(f"wrote {len(clones)} clone_placements to {OUTPUT}")
-
-    if args.apply:
-        # boards/3ch-awg-tia.yaml (not OUTPUT itself) is the config_path passed
-        # to apply_config() — it's the one that carries schematic_dir/
-        # templates_file and (via include:) picks up OUTPUT, and it's what
-        # registry identity is keyed off (see apply_config's docstring in
-        # kicadspoke/author.py) — passing OUTPUT here would derive a
-        # different, wrong registry file.
-        from kicadspoke.author import apply_config
-        from kicadspoke.config import load_config
-        ROOT_CONFIG = HERE.parent / "3ch-awg-tia.yaml"
-        cfg = load_config(str(ROOT_CONFIG))
-        apply_config(cfg, str(ROOT_CONFIG), dry_run=args.dry_run)
+    cli_main(build, str(OUTPUT), str(HERE.parent / "3ch-awg-tia.yaml"), description=__doc__)
