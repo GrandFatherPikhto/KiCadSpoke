@@ -12,16 +12,20 @@ two ways to get a built list somewhere useful:
   (b) dump_clone_placements()/dump_rules() — serialize back to YAML, so
       generated subsystem files stay diffable/reviewable in git even when
       authored by a script.
+  (c) cli_main() — the standard --apply/--dry-run entry point wiring (a)
+      and (b) together, one place instead of every boards/*/scripts/*.py
+      copy-pasting its own argparse block.
 
 No changes to the planner/executor/registry engine or the YAML config
 format — both are strictly additive.
 """
 import dataclasses
-from typing import Any, List, Optional
+from pathlib import Path
+from typing import Any, Callable, List, Optional
 
 import yaml
 
-from .config import ClonePlacement, Config, Rule
+from .config import ClonePlacement, Config, Rule, load_config
 from .constants import DEFAULT_BATCH_SIZE, DEFAULT_TIMEOUT_MS
 
 _MISSING = dataclasses.MISSING
@@ -126,3 +130,57 @@ def apply_config(cfg: Config, config_path: str, *, dry_run: bool = False,
         no_collision_check=no_collision_check, collision_margin=collision_margin,
     )
     cmd_apply(args, cfg=cfg)
+
+
+def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
+             root_config_path: str, *, description: Optional[str] = None,
+             argv: Optional[List[str]] = None) -> None:
+    """Standard `if __name__ == "__main__":` body for a
+    boards/<board>/scripts/*.py generator: parses --apply/--dry-run, writes
+    build_fn()'s ClonePlacements to output_path via dump_clone_placements(),
+    and — only with --apply — loads root_config_path and applies via
+    apply_config(). One place for this boilerplate, so every subsystem
+    script behaves identically instead of each one copy-pasting its own
+    argparse block (single source of truth for the apply-gating logic).
+
+    root_config_path (NOT output_path) is what gets loaded/applied — it's
+    the one that carries schematic_dir/templates_file and (via include:)
+    picks up output_path, and it's what registry identity is keyed off (see
+    apply_config's own docstring) — it must be the SAME config every run.
+
+    Without --apply (the default), this only ever writes output_path —
+    never touches the live board. --dry-run only has an effect together
+    with --apply (see apply_config).
+
+    argv — for tests; None (default) reads sys.argv, like any CLI tool.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("--apply", action="store_true",
+                        help="also apply to the live board via kicadspoke.author.apply_config() "
+                             "(connects to KiCad over IPC) after writing the YAML")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="with --apply, only print the plan, don't touch the board")
+    parser.add_argument("--verbose", action="store_true",
+                        help="DEBUG-level logging (default: INFO)")
+    args = parser.parse_args(argv)
+
+    # Local import, same convention as apply_config()'s import of cmd_apply:
+    # kicadspoke_cli.py is the CLI entry point, not part of the package.
+    # Without this, nothing configures a logging handler when a board script
+    # is run directly (as opposed to through kicadspoke_cli.py's own main()),
+    # so every logger.info/debug — including the role-resolver's ambiguity
+    # narrowing cascade, exactly what you need to see when a role fails to
+    # resolve — is silently dropped instead of printed.
+    from kicadspoke_cli import setup_logging
+    setup_logging(verbose=args.verbose)
+
+    clones = build_fn()
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    dump_clone_placements(clones, output_path)
+    print(f"wrote {len(clones)} clone_placements to {output_path}")
+
+    if args.apply:
+        cfg = load_config(root_config_path)
+        apply_config(cfg, root_config_path, dry_run=args.dry_run)

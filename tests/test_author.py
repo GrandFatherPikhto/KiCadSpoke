@@ -10,7 +10,7 @@ from unittest.mock import patch
 import yaml
 
 from kicadspoke.config import ClonePlacement, Config, ManualSpoke, Rule, load_config
-from kicadspoke.author import (_prune_defaults, apply_config, dump_clone_placements,
+from kicadspoke.author import (_prune_defaults, apply_config, cli_main, dump_clone_placements,
                                dump_rules, dump_template)
 
 
@@ -135,6 +135,52 @@ class TestApplyConfig:
         assert args.cluster is None
         assert args.no_collision_check is False
         assert args.collision_margin == 0.2
+
+
+class TestCliMain:
+    """cli_main — the shared --apply/--dry-run entry point every
+    boards/*/scripts/*.py generator uses instead of copy-pasting its own
+    argparse block (see dac_channels.py/dac_pi_filter.py)."""
+
+    @staticmethod
+    def _build():
+        return [ClonePlacement(name="c", origin_x_mm=1.0, origin_y_mm=2.0)]
+
+    def test_without_apply_only_writes_output(self, tmp_path):
+        out = tmp_path / "generated.yaml"
+        with patch("kicadspoke.author.load_config") as mock_load_config, \
+             patch("kicadspoke.author.apply_config") as mock_apply_config:
+            cli_main(self._build, str(out), "root.yaml", argv=[])
+
+        assert out.exists()
+        mock_load_config.assert_not_called()
+        mock_apply_config.assert_not_called()
+
+    def test_apply_dry_run_loads_root_config_and_forwards_dry_run(self, tmp_path):
+        out = tmp_path / "generated.yaml"
+        with patch("kicadspoke.author.load_config") as mock_load_config, \
+             patch("kicadspoke.author.apply_config") as mock_apply_config:
+            mock_load_config.return_value = "cfg-sentinel"
+            cli_main(self._build, str(out), "root.yaml", argv=["--apply", "--dry-run"])
+
+        mock_load_config.assert_called_once_with("root.yaml")
+        mock_apply_config.assert_called_once_with("cfg-sentinel", "root.yaml", dry_run=True)
+
+    def test_apply_without_dry_run_forwards_dry_run_false(self, tmp_path):
+        out = tmp_path / "generated.yaml"
+        with patch("kicadspoke.author.load_config") as mock_load_config, \
+             patch("kicadspoke.author.apply_config") as mock_apply_config:
+            cli_main(self._build, str(out), "root.yaml", argv=["--apply"])
+
+        assert mock_apply_config.call_args.kwargs["dry_run"] is False
+
+    def test_creates_missing_parent_directories(self, tmp_path):
+        out = tmp_path / "nested" / "dir" / "generated.yaml"
+        with patch("kicadspoke.author.load_config"), \
+             patch("kicadspoke.author.apply_config"):
+            cli_main(self._build, str(out), "root.yaml", argv=[])
+
+        assert out.exists()
 
 
 class TestDumpTemplate:
