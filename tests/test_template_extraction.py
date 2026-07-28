@@ -115,6 +115,49 @@ class TestExtractTemplateFromSelection:
         assert len(result["t"]["components"]) == 1
 
 
+class TestExplicitItemsParameter:
+    """items= (added for scripted extract, see kicadspoke.explore.Board.select_items)
+    — None (default) keeps using live GUI selection unchanged; an explicit
+    list bypasses adapter.get_selected_items() entirely, same 'explicit flag,
+    not implicit inference' principle as ClonePlacement.by_selection."""
+
+    def test_explicit_items_bypasses_live_selection(self):
+        cap_wrong = _make_fp("WRONG", 0, 0, 0, "C_IN_BULK")
+        cap_right = _make_fp("RIGHT", 1, 1, 0, "C_IN_BULK")
+        adapter = MagicMock()
+        adapter.get_selected_items.return_value = [cap_wrong]
+        adapter.get_field_value.side_effect = lambda f, name: getattr(f, "_role", None)
+
+        result = extract_template_from_selection(adapter, "t", items=[cap_right])
+
+        adapter.get_selected_items.assert_not_called()
+        assert len(result["t"]["components"]) == 1
+
+    def test_items_none_falls_back_to_live_selection(self):
+        cap = _make_fp("C1", 0, 0, 0, "C_IN_BULK")
+        adapter = MagicMock()
+        adapter.get_selected_items.return_value = [cap]
+        adapter.get_field_value.side_effect = lambda f, name: getattr(f, "_role", None)
+
+        result = extract_template_from_selection(adapter, "t")
+
+        adapter.get_selected_items.assert_called_once()
+        assert len(result["t"]["components"]) == 1
+
+    def test_explicit_empty_items_list_is_not_treated_as_none(self):
+        """An explicit [] must raise the same 'nothing selected' fatal as an
+        empty live selection would — NOT silently fall back to
+        get_selected_items() (that would defeat the point of items= being
+        explicit)."""
+        adapter = MagicMock()
+        adapter.get_selected_items.return_value = [_make_fp("SHOULD_NOT_BE_USED", 0, 0, 0, "X")]
+
+        with pytest.raises(ValidationError):
+            extract_template_from_selection(adapter, "t", items=[])
+
+        adapter.get_selected_items.assert_not_called()
+
+
 class TestGetSelectedItems:
     def test_group_expanded_via_proto_items(self):
         adapter = KiCadBoardAdapter.__new__(KiCadBoardAdapter)

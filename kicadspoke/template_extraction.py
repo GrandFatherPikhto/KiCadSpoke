@@ -203,12 +203,23 @@ def extract_template_from_selection(
     origin_component_role: Optional[str] = None,
     origin_component_pad: Optional[str] = None,
     net_template_role: Optional[Dict[str, str]] = None,
+    items: Optional[List[Any]] = None,
 ) -> Dict[str, Any]:
     """
     Builds a dict {name: {vias: [...], components: [...], tracks: [...]}}
     ready to be written to YAML under the 'templates' key. Fatal (ValidationError)
     if: nothing suitable is selected, a selected component has no Role field,
     or a role appears twice in the selection.
+
+    items — OPTIONAL explicit list of FootprintInstance/Via/Track (same shape
+    adapter.get_selected_items() returns). None (default) — live GUI
+    selection, unchanged from before. Explicit — the caller (e.g. a script
+    using kicadspoke.explore.Board.select_items()) fully describes what to
+    extract instead of requiring a mouse selection in KiCad. Deliberately an
+    explicit parameter, not inferred from whether anything is currently
+    selected — same principle as ClonePlacement.by_selection (see
+    config/models.py): an implicit mode switch here would risk silently
+    extracting the wrong thing if a stale selection happens to be active.
 
     params/net_template_map — both optional and only work as a pair
     (see --param/--net-template in kicadspoke_cli.py): net_template_map is an
@@ -245,7 +256,7 @@ def extract_template_from_selection(
     for key, value in params.items():
         if value not in net_template_map:
             net_template_map[value] = f"{{{key}}}"
-    items = adapter.get_selected_items()
+    items = items if items is not None else adapter.get_selected_items()
     footprints = [i for i in items if isinstance(i, FootprintInstance)]
     vias = [i for i in items if isinstance(i, Via)]
     tracks_selected = [i for i in items if isinstance(i, Track)]
