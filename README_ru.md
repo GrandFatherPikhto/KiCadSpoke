@@ -34,6 +34,9 @@
 - **Диагностика** – набор скриптов для отладки IPC, геометрии и чтения полей.
 - **Файловый клонер** (`clone-extract`) – анализирует `.net` и `.kicad_pcb` без IPC, строит карту близнецов каналов для иерархических проектов.
 - **Дорожки (треки) в шаблонах** – с версии 1.22.0 шаблоны могут содержать прямые отрезки дорожек (ломаные поддерживаются через последовательность сегментов). Коллизии дорожек не проверяются автоматически (полагаемся на DRC KiCad).
+- **Внешние файлы шаблонов** – шаблоны можно хранить отдельно как JSON или YAML и подключать через `templates_file:` в основном конфиге, чтобы не загромождать основной файл геометрией.
+- **Разбиение профиля на файлы подсистем** – `include:` в корне профиля подключает один или несколько других YAML-файлов (каждый может нести любую комбинацию `extract_profiles`/`clone_placements`/`rules`/`templates`), рекурсивно, с `enabled: false` на записи инклюда, чтобы выключить всю подсистему разом. Независим от `templates_file` (см. [docs/commands_ru.md](docs/commands_ru.md) — семантика мёржа, дубликаты, циклы).
+- **Scripting API** – `kicadspoke.explore.Board` для точечных read-only запросов (`board.select(role=..., cluster=..., sheet=..., net=...)`), и `kicadspoke.author` для построения `ClonePlacement`/`Rule` в коде вместо копипаста YAML — с прямым запуском через `apply_config()` или сохранением в `include:`-совместимый YAML (см. [docs/scripting_ru.md](docs/scripting_ru.md)).
 
 ---
 
@@ -143,6 +146,7 @@ pip install kipy pyyaml sexpdata
 | `layer` | строка | Глобальный слой для ManualSpoke-правил: `"F.Cu"` или `"B.Cu"` (вместо устаревшего `side`). |
 | `templates` | словарь | Именованные шаблоны спиц (можно заменить `templates_file`). |
 | `templates_file` | строка | Путь к внешнему файлу шаблонов (JSON или YAML). Инлайновые `templates` дополняют/переопределяют его. |
+| `include` | список | Другие файлы профиля для подключения (`rules`/`clone_placements` конкатенируются, `templates`/`extract_profiles`/`clone_profiles` мёржатся по ключу, фатал на дубликатах/циклах). Запись — строка-путь или `{path, enabled}`, чтобы выключить целый файл подсистемы. |
 | `rules` | список | Правила для ручных спиц (ManualSpoke), каждое с `anchor_ref`. |
 | `clone_placements` | список | Клонируемые размещения (TemplatePlacer). |
 | `thermal_via_array` | словарь | Настройки термовиа (опционально). |
@@ -405,6 +409,8 @@ kicadspoke/
 - [Адаптер KiCad](./docs/kicad_ru.md)
 - [Использование kipy](./docs/kipy_ru.md)
 - [Планирование и исполнение](./docs/placement_ru.md)
+- [Скриптинг: explore/author](./docs/scripting_ru.md)
+- [Кодим плату — сквозной пример](./docs/board_coding_ru.md)
 - [Тесты](./docs/tests_ru.md)
 - [Модули верхнего уровня](./docs/uplevel_modules_ru.md)
 - [Файловый клонер](./docs/cloner_ru.md)
