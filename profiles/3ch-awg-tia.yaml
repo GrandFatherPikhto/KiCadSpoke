@@ -27,7 +27,7 @@ rules:
 - net: +3V3_VCCIO
   name: +3V3_VCCIO
   anchor_role: FPGA
-  enabled: false
+  enabled: true
   spokes:
   - pad: '17'
     template: cap_pair_standard
@@ -104,7 +104,7 @@ rules:
 - net: +1V2_VCCINT
   name: +1V2_VCCINT
   anchor_role: FPGA
-  enabled: false
+  enabled: true
   spokes:
   - pad: '5'
     template: cap_pair_standard
@@ -157,7 +157,7 @@ rules:
 - net: +1V2_VCCD_PLL
   name: +1V2_VCCD_PLL
   anchor_role: FPGA
-  enabled: false
+  enabled: true
   spokes:
   - pad: '37'
     template: cap_pair_standard
@@ -174,7 +174,7 @@ rules:
 - net: +2V5_VCCA
   name: +2V5_VCCA
   anchor_role: FPGA
-  enabled: false
+  enabled: true
   spokes:
   - pad: '35'
     template: cap_pair_standard
@@ -247,6 +247,53 @@ extract_profiles:
       'LED': '/Power/+5V_LED'
     origin_by_component_role: R_LED
     origin_by_component_pad: '2'
+
+  ldo_adj_subsystem:
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '+2V5_DIRTY'
+      PWR_ADJ: '/Power/+2V5_ADJ'
+    net_template_role:
+      'C_IN_BYPASS': '+5V'
+      'C_ADJ_BULK': '/Power/+2V5_ADJ'
+      'D_PROT_ADJ': '/Power/+2V5_ADJ'
+      'D_PROT_BACK': '+2V5_DIRTY'
+      'R_FB_BOT': '/Power/+2V5_ADJ'
+      'R_FB_TOP': '/Power/+2V5_ADJ'
+      # Сама LDO (U3) висит на всех трёх цепях сразу (IN/OUT/ADJ) — без
+      # этой строки net_template у роли пуст, apply падает fatal'ом
+      # ("no net for mapping"). PWR_OUT — цепь, которую эта LDO
+      # непосредственно регулирует, самый однозначный выбор.
+      'LDO_ADJ': '+2V5_DIRTY'
+    origin_by_component_role: 'C_IN_BYPASS'
+    origin_by_component_pad: '2'
+
+  2v5_adj_pi_filter:
+    params:
+      PWR_IN: '+2V5_DIRTY'
+      PWR_OUT: '+2V5'
+    net_template:
+      '+2V5_DIRTY': '{PWR_IN}'
+      '+2V5': '{PWR_OUT}'
+    net_template_role:
+      C_IN_BYPASS: '+2V5_DIRTY'
+      PI_FILTER_FB: '+2V5'
+      C_OUT_BULK: '+2V5'
+    origin_by_component_role: 'C_IN_BYPASS'
+    origin_by_component_pad: '1'
+
+  fpga_in_pi_filter:
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '+1V2_VCCINT'
+    net_template_role:
+      C_IN_BYPASS: '+1V2'
+      C_OUT_BYPASS: '+1V2_VCCINT'
+      C_OUT_BULK: '+1V2_VCCINT'
+      C_IN_BULK: '+1V2'
+      FB_PI_FLT: '+1V2_VCCINT'
+    origin_by_component_role: 'C_OUT_BYPASS'
+    origin_by_component_pad: '1'
 
 clone_placements:
   - name: p5v_pi_filter
@@ -324,3 +371,73 @@ clone_placements:
     params:
       PWR_IN: '-5V'
       PWR_OUT: '/Power/-5V_LED'
+
+  - name: p2v5_dirty_ldo
+    enabled: true
+    template: ldo_adj_subsystem
+    anchor_cluster: In_Pi_Filter_Pos
+    anchor_role: C_OUT_BYPASS
+    anchor_pad: '1'
+    origin_x_mm: 9.0
+    origin_y_mm: -3.0
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '+2V5_DIRTY'
+      PWR_ADJ: '/Power/+2V5_ADJ'
+
+  - name: n2v5_dirty_ldo
+    enabled: true
+    template: ldo_adj_subsystem
+    anchor_cluster: In_Pi_Filter_Neg
+    anchor_role: C_OUT_BYPASS
+    anchor_pad: '1'
+    origin_x_mm: 9.0
+    origin_y_mm: 3.0
+    params:
+      PWR_IN: '-5V'
+      PWR_OUT: '-2V5_DIRTY'
+      PWR_ADJ: '/Power/-2V5_ADJ'
+
+  - name: p2v5_adj_pi_filter
+    enabled: true
+    template: 2v5_adj_pi_filter
+    anchor_cluster: LDO_Subsystem_P2V5
+    anchor_role: D_PROT_BACK
+    anchor_pad: '2'
+    origin_x_mm: 7.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+2V5_DIRTY'
+      PWR_OUT: '+2V5'
+
+  - name: n2v5_adj_pi_filter
+    enabled: true
+    template: 2v5_adj_pi_filter
+    anchor_cluster: LDO_Subsystem_N2V5
+    anchor_role: D_PROT_BACK
+    anchor_pad: '2'
+    origin_x_mm: 7.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '-2V5_DIRTY'
+      PWR_OUT: '-2V5'
+
+  - name: p1v2_fpga_in_pi_filter
+    enabled: true
+    template: fpga_in_pi_filter
+    # anchor_cluster делает ДВОЙНУЮ работу: сужает и якорь (FPGA — не нужно,
+    # роль и так уникальна на плате), и роли C_OUT_BULK/C_OUT_BYPASS ВНУТРИ
+    # шаблона (нужно ОБЯЗАТЕЛЬНО — этот же net +1V2_VCCINT несут ещё и 16
+    # конденсаторов FPGA-спиц, Cluster=FPGA_PWR_BANK). anchor_cluster: FPGA
+    # их не отсеивал (не совпадает ни с одним Cluster), резолвер уходил на
+    # физическую близость к якорю и утаскивал ближайший к FPGA конденсатор
+    # спицы вместо собственных C89/C81 (Cluster=Pi_Filter_1V2_VCCINT, уже
+    # правильно затегированы в схеме — переименовывать роли не нужно).
+    anchor_cluster: Pi_Filter_1V2_VCCINT
+    anchor_role: FPGA
+    anchor_pad: '29'
+    origin_x_mm: -10.0
+    origin_y_mm:  0.0
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '+1V2_VCCINT'

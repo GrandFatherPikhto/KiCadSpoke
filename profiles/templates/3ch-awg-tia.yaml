@@ -345,3 +345,407 @@ led_spoke:
     width_mm: 0.8
     net: GND
   layer: F.Cu
+ldo_adj_subsystem:
+  vias:
+  - offset_along_mm: -0.7
+    offset_across_mm: -3.635
+    net: GND
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  - offset_along_mm: 1.2
+    offset_across_mm: -11.445
+    net: GND
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  components:
+  - role: LDO_ADJ
+    offset_along_mm: 8.54
+    offset_across_mm: -2.28
+    angle_deg: 0.0
+    net_template: '{PWR_OUT}'
+  - role: R_FB_BOT
+    offset_along_mm: 3.8725
+    offset_across_mm: -11.45
+    angle_deg: 180.0
+    net_template: '{PWR_ADJ}'
+  - role: D_PROT_BACK
+    offset_along_mm: 6.0
+    offset_across_mm: 3.6125
+    angle_deg: 0.0
+    net_template: '{PWR_OUT}'
+  - role: D_PROT_ADJ
+    offset_along_mm: 6.0
+    offset_across_mm: -8.3175
+    angle_deg: 180.0
+    net_template: '{PWR_ADJ}'
+  - role: C_IN_BYPASS
+    offset_along_mm: 0.0
+    offset_across_mm: -0.8625
+    angle_deg: -90.0
+    net_template: '{PWR_IN}'
+  - role: R_FB_TOP
+    offset_along_mm: 7.6125
+    offset_across_mm: -11.45
+    angle_deg: 180.0
+    net_template: '{PWR_ADJ}'
+  - role: C_ADJ_BULK
+    offset_along_mm: -0.7
+    offset_across_mm: -6.755
+    angle_deg: -90.0
+    net_template: '{PWR_ADJ}'
+  tracks:
+  - start_along_mm: 8.5
+    start_across_mm: -3.58
+    end_along_mm: 9.8
+    end_across_mm: -2.28
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 3.5
+    start_across_mm: 0.0
+    end_along_mm: 3.5
+    end_across_mm: 3.6125
+    width_mm: 0.8
+    net: '{PWR_IN}'
+  - start_along_mm: 8.5
+    start_across_mm: -8.3175
+    end_along_mm: 8.5
+    end_across_mm: -3.58
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 8.5
+    start_across_mm: 3.6125
+    end_along_mm: 8.5
+    end_across_mm: -0.98
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 8.525
+    start_across_mm: -11.45
+    end_along_mm: 8.525
+    end_across_mm: -8.3425
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 8.525
+    start_across_mm: -8.3425
+    end_along_mm: 8.5
+    end_across_mm: -8.3175
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 0.0
+    start_across_mm: 0.0
+    end_along_mm: 3.5
+    end_across_mm: 0.0
+    width_mm: 0.8
+    net: '{PWR_IN}'
+  - start_along_mm: 8.5
+    start_across_mm: -0.98
+    end_along_mm: 9.8
+    end_across_mm: -2.28
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: 4.785
+    start_across_mm: -11.45
+    end_along_mm: 6.7
+    end_across_mm: -11.45
+    width_mm: 0.8
+    net: '{PWR_ADJ}'
+  - start_along_mm: 3.5
+    start_across_mm: -4.56
+    end_along_mm: 3.5
+    end_across_mm: -8.3175
+    width_mm: 0.8
+    net: '{PWR_ADJ}'
+  - start_along_mm: -0.7
+    start_across_mm: -5.1925
+    end_along_mm: -0.7
+    end_across_mm: -3.635
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 3.5
+    start_across_mm: -8.3175
+    end_along_mm: 3.5
+    end_across_mm: -10.165
+    width_mm: 0.8
+    net: '{PWR_ADJ}'
+  - start_along_mm: 2.96
+    start_across_mm: -11.45
+    end_along_mm: 1.205
+    end_across_mm: -11.45
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 3.5
+    start_across_mm: -10.165
+    end_along_mm: 4.785
+    end_across_mm: -11.45
+    width_mm: 0.8
+    net: '{PWR_ADJ}'
+  - start_along_mm: -0.7
+    start_across_mm: -8.3175
+    end_along_mm: 3.5
+    end_across_mm: -8.3175
+    width_mm: 0.8
+    net: '{PWR_ADJ}'
+  - start_along_mm: 0.0
+    start_across_mm: -1.725
+    end_along_mm: 0.0
+    end_across_mm: -2.935
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 0.0
+    start_across_mm: -2.935
+    end_along_mm: -0.7
+    end_across_mm: -3.635
+    width_mm: 0.8
+    net: GND
+  - start_along_mm: 1.205
+    start_across_mm: -11.45
+    end_along_mm: 1.2
+    end_across_mm: -11.445
+    width_mm: 0.8
+    net: GND
+  layer: F.Cu
+2v5_adj_pi_filter:
+  vias:
+  - offset_along_mm: 6.51
+    offset_across_mm: -3.135
+    net: GND
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  - offset_along_mm: 6.51
+    offset_across_mm: -0.01
+    net: '{PWR_OUT}'
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  - offset_along_mm: 2.08
+    offset_across_mm: -3.4325
+    net: GND
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  components:
+  - role: PI_FILTER_FB
+    offset_along_mm: 1.595
+    offset_across_mm: 2.0575
+    angle_deg: 0.0
+    net_template: '{PWR_OUT}'
+  - role: C_OUT_BYPASS
+    offset_along_mm: 2.08
+    offset_across_mm: -0.8725
+    angle_deg: 90.0
+    net_template: '{PWR_OUT}'
+  - role: C_OUT_BULK
+    offset_along_mm: 4.45
+    offset_across_mm: -1.5725
+    angle_deg: 90.0
+    net_template: '{PWR_OUT}'
+  - role: C_IN_BYPASS
+    offset_along_mm: 0.0
+    offset_across_mm: -0.8625
+    angle_deg: 90.0
+    net_template: '{PWR_IN}'
+  tracks:
+  - start_along_mm: 2.08
+    start_across_mm: -1.735
+    end_along_mm: 0.01
+    end_across_mm: -1.735
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: 0.01
+    start_across_mm: -1.735
+    end_along_mm: 0.0
+    end_across_mm: -1.725
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: 2.08
+    start_across_mm: -1.735
+    end_along_mm: 2.08
+    end_across_mm: -3.4325
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: 2.08
+    start_across_mm: 2.0575
+    end_along_mm: 2.08
+    end_across_mm: -0.01
+    width_mm: 0.65
+    net: '{PWR_OUT}'
+  - start_along_mm: 2.08
+    start_across_mm: -1.735
+    end_along_mm: 3.05
+    end_across_mm: -1.735
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: 3.05
+    start_across_mm: -1.735
+    end_along_mm: 4.45
+    end_across_mm: -3.135
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: 0.0
+    start_across_mm: 0.9475
+    end_along_mm: 1.11
+    end_across_mm: 2.0575
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  - start_along_mm: 0.0
+    start_across_mm: 0.0
+    end_along_mm: 0.0
+    end_across_mm: 0.9475
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  - start_along_mm: 2.08
+    start_across_mm: -0.01
+    end_along_mm: 4.45
+    end_across_mm: -0.01
+    width_mm: 0.65
+    net: '{PWR_OUT}'
+  - start_along_mm: 4.45
+    start_across_mm: -3.135
+    end_along_mm: 6.51
+    end_across_mm: -3.135
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: 4.45
+    start_across_mm: -0.01
+    end_along_mm: 6.51
+    end_across_mm: -0.01
+    width_mm: 0.65
+    net: '{PWR_OUT}'
+  layer: F.Cu
+fpga_in_pi_filter:
+  vias:
+  - offset_along_mm: -6.49
+    offset_across_mm: 0.0
+    net: '{PWR_IN}'
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  - offset_along_mm: 0.0
+    offset_across_mm: -2.6025
+    net: GND
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  - offset_along_mm: 1.42
+    offset_across_mm: 0.0
+    net: '{PWR_OUT}'
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  - offset_along_mm: -3.24
+    offset_across_mm: -2.6025
+    net: GND
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  components:
+  - role: C_OUT_BULK
+    offset_along_mm: -1.5
+    offset_across_mm: -0.8625
+    angle_deg: 90.0
+    net_template: '{PWR_OUT}'
+  - role: FB_PI_FLT
+    offset_along_mm: -2.755
+    offset_across_mm: 1.3675
+    angle_deg: 0.0
+    net_template: '{PWR_OUT}'
+  - role: C_OUT_BYPASS
+    offset_along_mm: 0.0
+    offset_across_mm: -0.5675
+    angle_deg: 90.0
+    net_template: '{PWR_OUT}'
+  - role: C_IN_BULK
+    offset_along_mm: -4.87
+    offset_across_mm: -0.8625
+    angle_deg: 90.0
+    net_template: '{PWR_IN}'
+  - role: C_IN_BYPASS
+    offset_along_mm: -3.24
+    offset_across_mm: -0.5675
+    angle_deg: 90.0
+    net_template: '{PWR_IN}'
+  tracks:
+  - start_along_mm: 0.0
+    start_across_mm: -1.135
+    end_along_mm: 0.0
+    end_across_mm: -2.6025
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: -4.1175
+    start_across_mm: -1.725
+    end_along_mm: -3.24
+    end_across_mm: -2.6025
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: -4.87
+    start_across_mm: -1.725
+    end_along_mm: -4.1175
+    end_across_mm: -1.725
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: -1.5
+    start_across_mm: -1.725
+    end_along_mm: -0.8775
+    end_across_mm: -1.725
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: -0.8775
+    start_across_mm: -1.725
+    end_along_mm: 0.0
+    end_across_mm: -2.6025
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: -3.24
+    start_across_mm: -1.135
+    end_along_mm: -3.24
+    end_across_mm: -2.6025
+    width_mm: 0.65
+    net: GND
+  - start_along_mm: 0.0
+    start_across_mm: 0.0
+    end_along_mm: 1.42
+    end_across_mm: 0.0
+    width_mm: 0.65
+    net: '{PWR_OUT}'
+  - start_along_mm: -6.4425
+    start_across_mm: 0.0
+    end_along_mm: -6.49
+    end_across_mm: 0.0475
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  - start_along_mm: -4.87
+    start_across_mm: 0.0
+    end_along_mm: -6.4425
+    end_across_mm: 0.0
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  - start_along_mm: -1.5
+    start_across_mm: 0.0
+    end_along_mm: 0.0
+    end_across_mm: 0.0
+    width_mm: 0.65
+    net: '{PWR_OUT}'
+  - start_along_mm: -2.27
+    start_across_mm: 0.77
+    end_along_mm: -1.5
+    end_across_mm: 0.0
+    width_mm: 0.65
+    net: '{PWR_OUT}'
+  - start_along_mm: -2.27
+    start_across_mm: 1.3675
+    end_along_mm: -2.27
+    end_across_mm: 0.77
+    width_mm: 0.65
+    net: '{PWR_OUT}'
+  - start_along_mm: -3.24
+    start_across_mm: 0.0
+    end_along_mm: -3.24
+    end_across_mm: 1.3675
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  - start_along_mm: -3.24
+    start_across_mm: 1.3675
+    end_along_mm: -3.5025
+    end_across_mm: 1.3675
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  - start_along_mm: -3.5025
+    start_across_mm: 1.3675
+    end_along_mm: -4.87
+    end_across_mm: 0.0
+    width_mm: 0.65
+    net: '{PWR_IN}'
+  layer: B.Cu
