@@ -5,9 +5,7 @@ clone_placements:
   rotation_deg: 270.0
   role: AD_DAC
   nets:
-    AD_DAC: /Channel_{channel}/DAC/DAC_OUT_P
-  params:
-    channel: 0
+    AD_DAC: /Channel_0/DAC/DAC_OUT_P
   anchor_role: FPGA
   anchor_sheet: Channel_0
 - name: channel_1_ad9707
@@ -15,9 +13,7 @@ clone_placements:
   origin_y_mm: 0.0
   role: AD_DAC
   nets:
-    AD_DAC: /Channel_{channel}/DAC/DAC_OUT_P
-  params:
-    channel: 1
+    AD_DAC: /Channel_1/DAC/DAC_OUT_P
   anchor_role: FPGA
   anchor_sheet: Channel_1
 - name: channel_2_ad9707
@@ -26,9 +22,7 @@ clone_placements:
   rotation_deg: 90.0
   role: AD_DAC
   nets:
-    AD_DAC: /Channel_{channel}/DAC/DAC_OUT_P
-  params:
-    channel: 2
+    AD_DAC: /Channel_2/DAC/DAC_OUT_P
   anchor_role: FPGA
   anchor_sheet: Channel_2
 - name: channel_0_r_term_p
@@ -37,56 +31,122 @@ clone_placements:
   rotation_deg: 270.0
   role: R_TERM_P
   nets:
-    R_TERM_P: /Channel_{channel}/DAC/DAC_OUT_P
-  params:
-    channel: 0
+    R_TERM_P: /Channel_0/DAC/DAC_OUT_P
   anchor_pad: '21'
   anchor_role: AD_DAC
-  anchor_sheet: Channel_{channel}
+  anchor_sheet: Channel_0
+- name: channel_1_r_term_p
+  origin_x_mm: 3.0
+  origin_y_mm: -0.4
+  role: R_TERM_P
+  nets:
+    R_TERM_P: /Channel_1/DAC/DAC_OUT_P
+  anchor_pad: '21'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_1
+- name: channel_2_r_term_p
+  origin_x_mm: -0.4
+  origin_y_mm: -3.0
+  rotation_deg: 90.0
+  role: R_TERM_P
+  nets:
+    R_TERM_P: /Channel_2/DAC/DAC_OUT_P
+  anchor_pad: '21'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_2
 - name: channel_0_r_term_n
   origin_x_mm: -0.4
   origin_y_mm: 3.0
   rotation_deg: 270.0
   role: R_TERM_N
   nets:
-    R_TERM_N: /Channel_{channel}/DAC/DAC_OUT_N
-  params:
-    channel: 0
+    R_TERM_N: /Channel_0/DAC/DAC_OUT_N
   anchor_pad: '20'
   anchor_role: AD_DAC
-  anchor_sheet: Channel_{channel}
+  anchor_sheet: Channel_0
+- name: channel_1_r_term_n
+  origin_x_mm: 3.0
+  origin_y_mm: 0.4
+  role: R_TERM_N
+  nets:
+    R_TERM_N: /Channel_1/DAC/DAC_OUT_N
+  anchor_pad: '20'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_1
+- name: channel_2_r_term_n
+  origin_x_mm: 0.4
+  origin_y_mm: -3.0
+  rotation_deg: 90.0
+  role: R_TERM_N
+  nets:
+    R_TERM_N: /Channel_2/DAC/DAC_OUT_N
+  anchor_pad: '20'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_2
 - name: channel_0_c_dac_refio
   origin_x_mm: 0.7
   origin_y_mm: 3.0
   rotation_deg: 270.0
   role: C_DAC_REFIO
   nets:
-    C_DAC_REFIO: /Channel_{channel}/DAC/DAC_REFIO
-  params:
-    channel: 0
+    C_DAC_REFIO: /Channel_0/DAC/DAC_REFIO
   anchor_pad: '23'
   anchor_role: AD_DAC
-  anchor_sheet: Channel_{channel}
+  anchor_sheet: Channel_0
+- name: channel_1_c_dac_refio
+  origin_x_mm: 3.0
+  origin_y_mm: -0.7
+  role: C_DAC_REFIO
+  nets:
+    C_DAC_REFIO: /Channel_1/DAC/DAC_REFIO
+  anchor_pad: '23'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_1
+- name: channel_2_c_dac_refio
+  origin_x_mm: -0.7
+  origin_y_mm: -3.0
+  rotation_deg: 90.0
+  role: C_DAC_REFIO
+  nets:
+    C_DAC_REFIO: /Channel_2/DAC/DAC_REFIO
+  anchor_pad: '23'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_2
 - name: channel_0_r_dac_fs_adj
   origin_x_mm: 1.5
   origin_y_mm: 3.0
   rotation_deg: 270.0
   role: R_DAC_FS_ADJ
   nets:
-    R_DAC_FS_ADJ: /Channel_{channel}/DAC/DAC_FS_ADJ
-  params:
-    channel: 0
+    R_DAC_FS_ADJ: /Channel_0/DAC/DAC_FS_ADJ
   anchor_pad: '24'
   anchor_role: AD_DAC
-  anchor_sheet: Channel_{channel}
+  anchor_sheet: Channel_0
+- name: channel_1_r_dac_fs_adj
+  origin_x_mm: 3.0
+  origin_y_mm: -1.5
+  role: R_DAC_FS_ADJ
+  nets:
+    R_DAC_FS_ADJ: /Channel_1/DAC/DAC_FS_ADJ
+  anchor_pad: '24'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_1
+- name: channel_2_r_dac_fs_adj
+  origin_x_mm: -1.5
+  origin_y_mm: -3.0
+  rotation_deg: 90.0
+  role: R_DAC_FS_ADJ
+  nets:
+    R_DAC_FS_ADJ: /Channel_2/DAC/DAC_FS_ADJ
+  anchor_pad: '24'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_2
 - name: channel_0_op_amp
   origin_x_mm: 0.0
   origin_y_mm: 10.0
   rotation_deg: 180.0
   role: OP_AMP
   nets:
-    OP_AMP: /Channel_{channel}/OpAmp/OA_IN_P
-  params:
-    channel: 0
+    OP_AMP: /Channel_0/OpAmp/OA_IN_P
   anchor_role: AD_DAC
-  anchor_sheet: Channel_{channel}
+  anchor_sheet: Channel_0
