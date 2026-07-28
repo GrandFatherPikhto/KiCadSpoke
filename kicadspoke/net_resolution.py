@@ -20,6 +20,28 @@ from .exceptions import ValidationError, format_fatal_error
 from .i18n import _
 
 
+def resolve_placeholder(template: str, params: Dict[str, Any], what: str = "value") -> str:
+    """
+    Generic {placeholder} substitution from params (str.format) — the engine
+    underneath resolve_net, also reused as-is for ClonePlacement.anchor_sheet
+    (see clone_role_resolver.resolve_anchor_by_role): the Role field is shared
+    across every instance of a reused sheet (e.g. channel.kicad_sch used 3×),
+    but the sheet NAME differs per instance (Channel_0/Channel_1/...), so a
+    clone_placement parametrized with params: {channel: N} needs
+    anchor_sheet: 'Channel_{channel}' to actually narrow per‑instance — a
+    literal anchor_sheet would have to be repeated, unparametrized, in every
+    clone_placement copy.
+    """
+    try:
+        return template.format(**params)
+    except KeyError as e:
+        raise ValidationError(format_fatal_error(
+            _("{what} {template!r} has a placeholder with no parameter").format(what=what, template=template),
+            [_("missing parameter {param} — add it to params of this clone_placement, "
+               "or remove the placeholder").format(param=e)]
+        ))
+
+
 def resolve_net(net_template: str, params: Dict[str, Any], net_overrides: Dict[str, str]) -> str:
     """
     net_template — net name as written in the template (TemplateVia.net),
@@ -27,14 +49,7 @@ def resolve_net(net_template: str, params: Dict[str, Any], net_overrides: Dict[s
     ClonePlacement.params). net_overrides — point override of the final name
     (from ClonePlacement.net_overrides).
     """
-    try:
-        resolved = net_template.format(**params)
-    except KeyError as e:
-        raise ValidationError(format_fatal_error(
-            _("net {template!r} has a placeholder with no parameter").format(template=net_template),
-            [_("missing parameter {param} — add it to params of this clone_placement, "
-               "or remove the placeholder from the template").format(param=e)]
-        ))
+    resolved = resolve_placeholder(net_template, params, what="net")
     return net_overrides.get(resolved, resolved)
 
 

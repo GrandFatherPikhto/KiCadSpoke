@@ -10,7 +10,7 @@ from kipy.board_types import FootprintInstance
 
 from kicadspoke.config import SpokeTemplate, TemplateComponentSlot, ClonePlacement
 from kicadspoke.placement.services.clone_role_resolver import (
-    resolve_roles_by_selection, resolve_roles_by_nets
+    resolve_roles_by_selection, resolve_roles_by_nets, resolve_anchor_by_role
 )
 from kicadspoke.exceptions import ValidationError
 
@@ -264,3 +264,63 @@ class TestResolveRolesByNets:
                                nets={"X": "NET1"}, refs={"X": "B"})
         result = resolve_roles_by_nets(adapter, tpl, clone)
         assert result == {"X": "B"}  # Must pick B despite ambiguity
+
+
+def _make_anchor_fp(ref, role, sheet_uuid):
+    fp = MagicMock(spec=FootprintInstance)
+    fp.reference_field.text.value = ref
+    fp._role = role
+    # resolve_sheet_path_names reads fp.sheet_path.path[:-1] (last entry is
+    # the component's own uuid, excluded) — see kicadspoke/sheet_names.py.
+    fp.sheet_path.path = [MagicMock(value=sheet_uuid), MagicMock(value=f"{ref}-own-uuid")]
+    return fp
+
+
+class TestResolveAnchorByRole:
+    """anchor_sheet supports {placeholder} substitution from clone.params
+    (real bug hit live 2026-07-28: IC2/IC3/IC4 — same Role field shared
+    across 3 instances of a reused sheet, channel.kicad_sch — a clone
+    parametrized with params: {channel: N} needs anchor_sheet:
+    'Channel_{channel}' to actually narrow per‑instance)."""
+
+    def _adapter(self, fps):
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = fps
+        adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_selected_items.return_value = []
+        return adapter
+
+    def test_anchor_sheet_placeholder_substituted_from_params(self):
+        fps = [
+            _make_anchor_fp("IC2", "AD_DAC", "sheet-uuid-0"),
+            _make_anchor_fp("IC3", "AD_DAC", "sheet-uuid-1"),
+        ]
+        adapter = self._adapter(fps)
+        sheet_names = {"sheet-uuid-0": "Channel_0", "sheet-uuid-1": "Channel_1"}
+        clone = ClonePlacement(name="c0", template="t", origin_x_mm=0, origin_y_mm=0,
+                               anchor_role="AD_DAC", anchor_sheet="Channel_{channel}",
+                               params={"channel": 0})
+        result = resolve_anchor_by_role(adapter, clone, sheet_names)
+        assert result.reference_field.text.value == "IC2"
+
+    def test_anchor_sheet_missing_param_raises(self):
+        fps = [_make_anchor_fp("IC2", "AD_DAC", "sheet-uuid-0")]
+        adapter = self._adapter(fps)
+        clone = ClonePlacement(name="c0", template="t", origin_x_mm=0, origin_y_mm=0,
+                               anchor_role="AD_DAC", anchor_sheet="Channel_{channel}", params={})
+        with pytest.raises(ValidationError, match="channel"):
+            resolve_anchor_by_role(adapter, clone, {"sheet-uuid-0": "Channel_0"})
+
+    def test_anchor_sheet_literal_without_placeholder_unaffected(self):
+        """Regression: a plain, unparametrized anchor_sheet (no {placeholder})
+        must keep working exactly as before."""
+        fps = [
+            _make_anchor_fp("IC2", "AD_DAC", "sheet-uuid-0"),
+            _make_anchor_fp("IC3", "AD_DAC", "sheet-uuid-1"),
+        ]
+        adapter = self._adapter(fps)
+        sheet_names = {"sheet-uuid-0": "Channel_0", "sheet-uuid-1": "Channel_1"}
+        clone = ClonePlacement(name="c0", template="t", origin_x_mm=0, origin_y_mm=0,
+                               anchor_role="AD_DAC", anchor_sheet="Channel_0")
+        result = resolve_anchor_by_role(adapter, clone, sheet_names)
+        assert result.reference_field.text.value == "IC2"

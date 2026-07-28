@@ -27,7 +27,7 @@ from kipy.geometry import Vector2
 
 from ...config import SpokeTemplate, ClonePlacement
 from ...exceptions import ValidationError, format_fatal_error
-from ...net_resolution import resolve_net
+from ...net_resolution import resolve_net, resolve_placeholder
 from ...utils.units import MM
 from .component_pool import ROLE_FIELD_NAME, _cluster_prefix_match
 from ...constants import CLUSTER_FIELD_NAME
@@ -445,6 +445,14 @@ def resolve_footprint_by_role(adapter, anchor_role: str, anchor_sheet: Optional[
 
 def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str, str]) -> FootprintInstance:
     """Thin wrapper of resolve_footprint_by_role for ClonePlacement — backward
-    compatibility for calling code (clone_position_calculator.py)."""
-    return resolve_footprint_by_role(adapter, clone.anchor_role, clone.anchor_sheet,
+    compatibility for calling code (clone_position_calculator.py).
+
+    anchor_sheet supports {placeholder} substitution from clone.params (same
+    mechanism as nets/net_template, via resolve_placeholder) — unlike Rule
+    (manual_position_calculator.py), which has no params field and always
+    uses anchor_sheet literally."""
+    anchor_sheet = clone.anchor_sheet
+    if anchor_sheet is not None:
+        anchor_sheet = resolve_placeholder(anchor_sheet, clone.params, what="anchor_sheet")
+    return resolve_footprint_by_role(adapter, clone.anchor_role, anchor_sheet,
                                      clone.anchor_cluster, sheet_names, clone.name)

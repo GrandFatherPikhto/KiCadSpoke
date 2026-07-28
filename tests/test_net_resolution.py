@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadspoke.net_resolution import resolve_net
+from kicadspoke.net_resolution import resolve_net, resolve_placeholder
 from kicadspoke.exceptions import ValidationError
 
 
@@ -49,3 +49,23 @@ class TestResolveNet:
     def test_extra_unused_params_are_harmless(self):
         """Extra params not used in the template must not interfere."""
         assert resolve_net("GND", {"channel": 5, "unused": "x"}, {}) == "GND"
+
+
+class TestResolvePlaceholder:
+    """resolve_net's substitution engine, extracted so ClonePlacement.anchor_sheet
+    can reuse it too (see clone_role_resolver.resolve_anchor_by_role) — same
+    behaviour, no net_overrides step."""
+
+    def test_literal_unchanged(self):
+        assert resolve_placeholder("Channel_0", {}) == "Channel_0"
+
+    def test_placeholder_substituted(self):
+        assert resolve_placeholder("Channel_{channel}", {"channel": 2}) == "Channel_2"
+
+    def test_missing_param_raises_fatal_error(self):
+        with pytest.raises(ValidationError, match="channel"):
+            resolve_placeholder("Channel_{channel}", {})
+
+    def test_error_message_uses_what_label(self):
+        with pytest.raises(ValidationError, match="anchor_sheet"):
+            resolve_placeholder("Channel_{channel}", {}, what="anchor_sheet")
