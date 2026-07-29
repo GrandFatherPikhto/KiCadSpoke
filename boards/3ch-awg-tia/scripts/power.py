@@ -44,6 +44,10 @@ from kicadspoke.config import ClonePlacement
 HERE = Path(__file__).resolve().parent
 OUTPUT = HERE.parent / "profiles" / "generated" / "power.yaml"
 
+# Шаблоны для размещения
+PLACES = [
+    ('p5v_pi_filter', )
+]
 
 def build() -> list:
     clones = []

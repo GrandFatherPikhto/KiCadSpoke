@@ -1,0 +1,171 @@
+# layer: B.Cu для этого пути (ManualSpoke/rules) задаётся в КОРНЕВОМ
+# fpga.yaml, не здесь — include: не переносит произвольные ключи вроде
+# layer: из подключаемого файла наверх, только rules:/clone_placements:/
+# templates:/extract_profiles:/clone_profiles: (см. комментарий в fpga.yaml).
+
+rules:
+- net: +3V3_VCCIO
+  name: +3V3_VCCIO
+  anchor_role: FPGA
+  enabled: true
+  spokes:
+  - pad: '17'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: -0.5
+    rotation_deg: 90.0
+    cluster: FPGA_PWR_BANK
+  - pad: '26'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: -2.4
+    rotation_deg: 90.0
+    cluster: FPGA_PWR_BANK
+  - pad: '40'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 1.3
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    cluster: FPGA_PWR_BANK
+  - pad: '47'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 2.5
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    cluster: FPGA_PWR_BANK
+  - pad: '56'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.3
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    cluster: FPGA_PWR_BANK
+  - pad: '62'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 2.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    cluster: FPGA_PWR_BANK
+  - pad: '81'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: -1.0
+    rotation_deg: 270.0
+    cluster: FPGA_PWR_BANK
+  - pad: '93'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 270.0
+    cluster: FPGA_PWR_BANK
+  - pad: '117'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: -2.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    cluster: FPGA_PWR_BANK
+  - pad: '122'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: -1.8
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    cluster: FPGA_PWR_BANK
+  - pad: '130'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    cluster: FPGA_PWR_BANK
+  - pad: '139'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    cluster: FPGA_PWR_BANK
+- net: +1V2_VCCINT
+  name: +1V2_VCCINT
+  anchor_role: FPGA
+  enabled: true
+  spokes:
+  - pad: '5'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 90.0
+    cluster: FPGA_PWR_BANK
+  - pad: '29'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: -1.5
+    rotation_deg: 90.0
+    cluster: FPGA_PWR_BANK
+  - pad: '45'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 1.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    cluster: FPGA_PWR_BANK
+  - pad: '61'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: -0.0
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    cluster: FPGA_PWR_BANK
+  - pad: '78'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: 0.0
+    rotation_deg: 270.0
+    cluster: FPGA_PWR_BANK
+  - pad: '102'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: 1.0
+    rotation_deg: 270.0
+    cluster: FPGA_PWR_BANK
+  - pad: '116'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: -0.3
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    cluster: FPGA_PWR_BANK
+  - pad: '134'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: -0.3
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    cluster: FPGA_PWR_BANK
+- net: +1V2_VCCD_PLL
+  name: +1V2_VCCD_PLL
+  anchor_role: FPGA
+  enabled: true
+  spokes:
+  - pad: '37'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.5
+    shift_y_mm: 0.0
+    rotation_deg: 180.0
+    cluster: FPGA_PWR_BANK
+  - pad: '109'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: -1.5
+    shift_y_mm: 0.0
+    rotation_deg: 0.0
+    cluster: FPGA_PWR_BANK
+- net: +2V5_VCCA
+  name: +2V5_VCCA
+  anchor_role: FPGA
+  enabled: true
+  spokes:
+  - pad: '35'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: -2.0
+    rotation_deg: 90.0
+    cluster: FPGA_PWR_BANK
+  - pad: '107'
+    template: fpga_cap_pair_spoke
+    shift_x_mm: 0.0
+    shift_y_mm: 1.0
+    rotation_deg: 270.0
+    cluster: FPGA_PWR_BANK
+

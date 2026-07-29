@@ -1,0 +1,71 @@
+registry_path: registries/fpga.json
+track_registry_path: registries/fpga.tracks.registry.json
+log_file: ../logs/fpga.log
+schematic_dir: ../../../test_boards/3CH-AWG-TIA
+# Spoke layer for the ManualSpoke path (rules: in rules/fpga_spokes.yaml) —
+# MUST be set here at the root, not inside the included file: include:
+# only merges rules:/clone_placements:/templates:/extract_profiles:/
+# clone_profiles: from an included file, any other top-level key (like
+# layer:) is silently dropped. ManualSpoke ignores the template's own
+# layer: field entirely (only ClonePlacement honours it) — ends up on
+# F.Cu (the Config.layer default) without this.
+layer: B.Cu
+
+template_files:
+  - templates/fpga_pi_filters.yaml
+  - templates/fpga_cap_pair_spoke.yaml
+
+include:
+  - fpga_extracts.yaml  # Коллекция экстраторов
+  - rules/fpga_spokes.yaml
+  - fpga_thermal_vias.yaml
+
+clone_placements:
+
+  - name: pi_filter_vccint
+    enabled: true
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_1V2_VCCINT
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm:  2.0
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '+1V2_VCCINT'
+
+  - name: p3v3_vccio_pi_filter
+    enabled: true
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_3V3_VCCIO
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm: 8.0
+    params:
+      PWR_IN: '+3V3'
+      PWR_OUT: '+3V3_VCCIO'
+
+  - name: p2v5_vcca_pi_filter
+    enabled: true
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_1V2_VCCA_P2V5
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm: 14.0
+    params:
+      PWR_IN: '+2V5'
+      PWR_OUT: '+2V5_VCCA'
+
+  - name: p1v2_vcd_pll_fpga_in_pi_filter
+    enabled: true
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_1V2_VCCD_PLL
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm:  20.0
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '+1V2_VCCD_PLL'

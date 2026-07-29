@@ -1,0 +1,216 @@
+registry_path: registries/power.json
+track_registry_path: registries/power.tracks.registry.json
+log_file: ../logs/power.log
+schematic_dir: ../../../test_boards/3CH-AWG-TIA
+
+template_files:
+  - templates/ldo_adj.yaml
+  - templates/led_spoke.yaml
+  - templates/ldo_adj_pi_filter.yaml
+  - templates/ldo_out_pi_filter.yaml
+  - templates/power_pi_filters.yaml
+
+include:
+  - power_extracts.yaml  # Коллекция экстраторов для силовой части платы
+
+clone_placements:
+# ±5V Input Filters
+  - name: p5v_pi_filter
+    enabled: true
+    template: 5v_pi_filter
+    anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: 7.0
+    origin_y_mm: -6.0
+    anchor_cluster: In_Pi_Filter_Pos
+    params:
+      PWR_IN: '+5V_DIRTY'
+      PWR_OUT: '+5V'
+
+  - name: p5v_led_spoke
+    enabled: true
+    template: led_spoke
+    anchor_cluster: In_Pi_Filter_Pos
+    anchor_role: C_OUT_BYPASS
+    anchor_pad: '1'
+    origin_x_mm: 2.5
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '/Power/+5V_LED'
+
+  - name: n5v_pi_filter
+    enabled: true
+    template: 5v_pi_filter
+    anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: 7.0
+    origin_y_mm: 6.0
+    # anchor_role: C_IN_BULK
+    anchor_cluster: In_Pi_Filter_Neg
+    params:
+      PWR_IN: '-5V_DIRTY'
+      PWR_OUT: '-5V'
+
+  - name: n5v_led_spoke
+    enabled: true
+    template: led_spoke
+    anchor_cluster: In_Pi_Filter_Neg
+    anchor_role: C_OUT_BYPASS
+    anchor_pad: '1'
+    origin_x_mm: 2.5
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '-5V'
+      PWR_OUT: '/Power/-5V_LED'
+
+# 3V3 LDO System
+  - name: 3v3_ldo
+    enabled: true
+    role: LDO_3V3
+    nets:
+      LDO_3V3: '+3V3_DIRTY'
+    anchor_role: C_OUT_BYPASS
+    anchor_cluster: In_Pi_Filter_Pos
+    anchor_pad: '1'
+    origin_x_mm: -5.0
+    origin_y_mm: 35.0
+
+  - name: 3v3_led_spoke
+    enabled: true
+    template: led_spoke
+    anchor_cluster: Pi_Filter_Out_3V3
+    anchor_role: C_OUT_BYPASS
+    anchor_pad: '1'
+    origin_x_mm: 2.5
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+3V3'
+      PWR_OUT: '/Power/+3V3_LED'
+
+  - name: 3v3_ldo_out_pi_filter
+    enabled: true
+    template: ldo_out_pi_filter
+    anchor_role: LDO_3V3
+    anchor_pad: '2'
+    anchor_cluster: Pi_Filter_Out_3V3
+    origin_x_mm: 12.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+3V3_DIRTY'
+      PWR_OUT: '+3V3'
+
+# ±2V5 LDO Subsystems
+#   +2V5 LDO Subsystem
+  - name: p2v5_dirty_ldo
+    enabled: true
+    template: ldo_adj
+    # anchor_cluster: In_Pi_Filter_Pos
+    # anchor_role: C_OUT_BYPASS
+    anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: 5.0
+    origin_y_mm: 48.0
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '+2V5_DIRTY'
+      PWR_ADJ: '/Power/+2V5_ADJ'
+
+  - name: p2v5_adj_pi_filter
+    enabled: true
+    template: ldo_adj_pi_filter
+    anchor_cluster: LDO_Subsystem_P2V5
+    anchor_role: D_PROT_BACK
+    anchor_pad: '2'
+    origin_x_mm: 7.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+2V5_DIRTY'
+      PWR_OUT: '+2V5'
+
+  - name: p2v5_led_spoke
+    enabled: true
+    template: led_spoke
+    anchor_cluster: LDO_Subsystem_P2V5
+    anchor_role: LDO_ADJ
+    anchor_pad: '2'
+    origin_x_mm: 6.0
+    origin_y_mm: -3.0
+    params:
+      PWR_IN: '+2V5'
+      PWR_OUT: '/Power/+2V5_LED'
+
+#   -2V5 LDO Subsystem
+  - name: n2v5_dirty_ldo
+    enabled: true
+    template: ldo_adj
+    # anchor_cluster: In_Pi_Filter_Neg
+    anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: 5.0
+    origin_y_mm: 68.0
+    params:
+      PWR_IN: '-5V'
+      PWR_OUT: '-2V5_DIRTY'
+      PWR_ADJ: '/Power/-2V5_ADJ'
+
+  - name: n2v5_adj_pi_filter
+    enabled: true
+    template: ldo_adj_pi_filter
+    anchor_cluster: LDO_Subsystem_N2V5
+    anchor_role: D_PROT_BACK
+    anchor_pad: '2'
+    origin_x_mm: 7.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '-2V5_DIRTY'
+      PWR_OUT: '-2V5'
+
+  - name: n2v5_led_spoke
+    enabled: true
+    template: led_spoke
+    anchor_cluster: LDO_Subsystem_N2V5
+    anchor_role: LDO_ADJ
+    anchor_pad: '2'
+    origin_x_mm: 6.0
+    origin_y_mm: -3.0
+    params:
+      PWR_IN: '-2V5'
+      PWR_OUT: '/Power/-2V5_LED'
+
+# 1V2 LDO Subsystem
+  - name: 1v2_ldo
+    enabled: true
+    role: LDO_1V2
+    nets:
+      LDO_1V2: '+1V2_DIRTY'
+    anchor_role: C_OUT_BYPASS
+    anchor_cluster: In_Pi_Filter_Pos
+    # anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: -5.0
+    origin_y_mm: 25.0
+
+  - name: 1v2_ldo_out_pi_filter
+    enabled: true
+    template: ldo_out_pi_filter
+    anchor_role: LDO_1V2
+    anchor_pad: '2'
+    anchor_cluster: Pi_Filter_Out_1V2
+    origin_x_mm: 10.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+1V2_DIRTY'
+      PWR_OUT: '+1V2'
+
+  - name: 1v2_led_spoke
+    enabled: true
+    template: led_spoke
+    anchor_cluster: Pi_Filter_Out_1V2
+    anchor_role: C_OUT_BYPASS
+    anchor_pad: '1'
+    origin_x_mm: 2.5
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '/Power/+1V2_LED'

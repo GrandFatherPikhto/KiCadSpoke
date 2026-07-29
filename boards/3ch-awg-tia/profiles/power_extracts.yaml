@@ -93,35 +93,6 @@ extract_profiles:
     origin_by_component_role: C_IN_BULK
     origin_by_component_pad: '1'
 
-# FPGA Subsistem
-  fpga_pwr_spoke:
-    name: fpga_cap_pair   # ИМЯ ШАБЛОНА отличается от имени профиля — оставляем явно
-    output: boards/3ch-awg-tia/profiles/templates/fpga_pi_filter_spoke.yaml
-    # Выделить в PCB: 2 конденсатора спицы (Role=C_OUT_BYPASS/C_OUT_BULK)
-    # + их GND-via + via уровня спицы (сеть "+3V3_VCCIO") + разведённые
-    # дорожки между ними. FPGA (IC1) в выделение НЕ включать — попадёт
-    # в шаблон как компонент роли FPGA и исчерпает пул на первой же спице.
-    # via-net дал неоднозначность (2 via на +3V3_VCCIO в выделении —
-    # проверь, не зацепило ли рамкой соседнюю спицу). Роль компонента
-    # внутри выделения уникальна по построению (extract сам фатально
-    # падает на дублирующихся ролях) — надёжнее.
-    origin_by_component_role: C_OUT_BYPASS
-
-  fpga_1v2_vccint_pi_filter:
-    name: fpga_in_pi_filter   # ИМЯ ШАБЛОНА отличается от имени профиля — оставляем явно
-    output: boards/3ch-awg-tia/profiles/templates/fpga_in_pi_filter.yaml
-    params:
-      PWR_IN: '+1V2'
-      PWR_OUT: '+1V2_VCCINT'
-    net_template_role:
-      C_IN_BYPASS: '+1V2'
-      C_OUT_BYPASS: '+1V2_VCCINT'
-      C_OUT_BULK: '+1V2_VCCINT'
-      C_IN_BULK: '+1V2'
-      FB_PI_FLT: '+1V2_VCCINT'
-    origin_by_component_role: 'C_OUT_BYPASS'
-    origin_by_component_pad: '1'
-
 # DAC Subsystems
   ch0_clk_vdd_dac_pi_filter:
     name: dac_clk_vdd_pi_filter
@@ -136,7 +107,7 @@ extract_profiles:
     net_template_role:
       FB_PI_FLT: '/Channel_0/DAC/+3V3_CLKVDD'   # выходная сеть — она per-channel уникальна
 
-  dac_avdd_pi_filter:
+  ch0_dac_avdd_pi_filter:
     name: dac_avdd_pi_filter
     output: templates/dac_pi_filters.yaml
     origin_by_via_net: '/Channel_0/DAC/+3V3_AVDD'
@@ -146,3 +117,18 @@ extract_profiles:
     net_template_role:
       '+3V3_AVDD': '{PWR_OUT}' 
       '+3V3': '{PWR_IN}'
+    net_template_role:
+      FB_PI_FLT: '/Channel_0/DAC/+3V3_AVDD'   # выходная сеть — она per-channel уникальна
+
+  ch0_dac_dvdd_pi_filter:
+    name: dac_dvdd_pi_filter
+    output: templates/dac_pi_filters.yaml
+    origin_by_via_net: '/Channel_0/DAC/+3V3_DVDD'
+    params:
+      'PWR_IN': '+3V3'
+      'PWR_OUT': '/Channel_0/DAC/+3V3_DVDD' 
+    net_template_role:
+      '+3V3_AVDD': '{PWR_OUT}' 
+      '+3V3': '{PWR_IN}'
+    net_template_role:
+      FB_PI_FLT: '/Channel_0/DAC/+3V3_DVDD'   # выходная сеть — она per-channel уникальна

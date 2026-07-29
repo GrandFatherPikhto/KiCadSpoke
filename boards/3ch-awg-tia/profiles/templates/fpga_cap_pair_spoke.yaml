@@ -1,4 +1,4 @@
-fpga_cap_pair:
+fpga_cap_pair_spoke:
   vias:
   - offset_along_mm: 1.0
     offset_across_mm: 0.5
