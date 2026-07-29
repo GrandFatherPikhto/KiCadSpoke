@@ -125,7 +125,16 @@ def _load_spoke_template(name: str, data: Dict[str, Any]) -> SpokeTemplate:
     )
 
 
-def _load_manual_spoke(data: Dict[str, Any]) -> ManualSpoke:
+_MANUAL_SPOKE_KNOWN_KEYS = {
+    'pad', 'template', 'shift_x_mm', 'shift_y_mm', 'rotation_deg',
+    'enabled', 'cluster', 'active',
+}
+
+
+def _load_manual_spoke(data: Dict[str, Any], rule_label: str) -> ManualSpoke:
+    check_unknown_keys(data, _MANUAL_SPOKE_KNOWN_KEYS,
+                       _("unknown fields in spoke (pad {pad!r}) of rule (net {net!r})")
+                       .format(pad=data.get('pad', '?'), net=rule_label))
     return ManualSpoke(
         pad=data['pad'],
         template=data['template'],
@@ -141,6 +150,13 @@ def _load_manual_spoke(data: Dict[str, Any]) -> ManualSpoke:
 _RULE_KNOWN_KEYS = {
     'net', 'spokes', 'anchor_ref', 'anchor_role', 'anchor_sheet',
     'anchor_cluster', 'name', 'enabled', 'active',
+}
+
+
+_THERMAL_VIA_ARRAY_KNOWN_KEYS = {
+    'enabled', 'anchor_ref', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
+    'pad', 'net', 'rows', 'cols', 'margin_mm', 'pattern', 'drill_mm',
+    'diameter_mm', 'name', 'active',
 }
 
 
@@ -298,6 +314,8 @@ def load_config(path: str) -> Config:
                "(kicadspoke_cli.py) for isolated runs; write name: <any understandable string>, "
                "e.g. name: fpga_thermal")]
         ))
+    check_unknown_keys(tva_data, _THERMAL_VIA_ARRAY_KNOWN_KEYS,
+                       _("unknown fields in thermal_via_array"))
     thermal_via = ThermalViaArrayConfig(
         enabled=tva_data.get('enabled', False),
         anchor_ref=tva_data.get('anchor_ref'),
@@ -397,7 +415,7 @@ def load_config(path: str) -> Config:
                 [_("a spoke rule must have an anchor – anchor_ref: <ref> (component whose "
                    "pads are listed in spokes), or anchor_role: <ROLE> (survives re‑annotation)")]
             ))
-        spokes = [_load_manual_spoke(spoke_data) for spoke_data in rule_data.get('spokes', [])]
+        spokes = [_load_manual_spoke(spoke_data, rule_net) for spoke_data in rule_data.get('spokes', [])]
         rules.append(Rule(net=rule_net, spokes=spokes, anchor_ref=anchor_ref,
                           anchor_role=anchor_role, anchor_sheet=anchor_sheet,
                           anchor_cluster=anchor_cluster, name=rule_data.get('name'),
