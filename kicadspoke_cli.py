@@ -39,7 +39,7 @@ from kicadspoke.placement.services.clone_position_calculator import clone_anchor
 from kicadspoke.placement.services.via_planner import thermal_anchor_id
 from kicadspoke.placement.services.component_pool import _cluster_prefix_match
 from kicadspoke.placement.executor import BatchExecutor
-from kicadspoke.exceptions import PlacerError
+from kicadspoke.exceptions import PlacerError, check_unknown_keys
 from kipy.errors import ApiError, ApiStatusCode
 from kicadspoke.undo import undo_last_operation
 from kicadspoke.validation import run_all_checks
@@ -67,13 +67,42 @@ def _matches_any_cluster(candidate: Optional[str], wanted: List[str]) -> bool:
     return any(_cluster_prefix_match(candidate, w) for w in wanted)
 
 
+class _ColorFormatter(logging.Formatter):
+    """Wraps ERROR/CRITICAL lines in red, WARNING in yellow — ANSI escape
+    codes, only when the console stream is a real terminal (use_color), so
+    redirected/piped output never gets raw escape bytes. format_fatal_error()
+    already marks each problem with '✗' — this makes the whole FATAL ERROR
+    block visually impossible to miss instead of blending into a wall of
+    INFO lines (found needed live: ambiguity errors from a board script were
+    easy to scroll past in a long --apply log)."""
+    _RED = "\033[91m"
+    _YELLOW = "\033[93m"
+    _RESET = "\033[0m"
+
+    def __init__(self, fmt: str, use_color: bool):
+        super().__init__(fmt)
+        self._use_color = use_color
+
+    def format(self, record: logging.LogRecord) -> str:
+        message = super().format(record)
+        if not self._use_color:
+            return message
+        if record.levelno >= logging.ERROR:
+            return f"{self._RED}{message}{self._RESET}"
+        if record.levelno == logging.WARNING:
+            return f"{self._YELLOW}{message}{self._RESET}"
+        return message
+
+
 def setup_logging(verbose: bool = False, log_file: str = None):
     """Configure logging: level and output to console and/or file."""
     level = logging.DEBUG if verbose else logging.INFO
     handlers = []
     console = logging.StreamHandler(sys.stdout)
     console.setLevel(level)
-    console.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+    use_color = hasattr(console.stream, "isatty") and console.stream.isatty()
+    console.setFormatter(_ColorFormatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s", use_color=use_color))
     handlers.append(console)
 
     if log_file:
@@ -309,8 +338,21 @@ def cmd_apply(args, cfg=None):
         logger.warning(_("⚠️ Some operations failed – check the log."))
 
 
+# extract_profiles: / clone_profiles: known keys — see load_profile's
+# known_keys param. Field names read from the profile dict: cmd_extract's
+# --profile branch (name/output/params/net_template/net_template_role/
+# origin_by_via_net/origin_by_component_role/origin_by_component_pad) and
+# clone-extract's --profile branch (net/pcb/channel/output).
+_EXTRACT_PROFILE_KNOWN_KEYS = {
+    'name', 'output', 'params', 'net_template', 'net_template_role',
+    'origin_by_via_net', 'origin_by_component_role', 'origin_by_component_pad',
+}
+_CLONE_EXTRACT_PROFILE_KNOWN_KEYS = {'net', 'pcb', 'channel', 'output'}
+
+
 def load_profile(profiles_path: str, top_key: str, profile_name: str,
-                  root_defaults: Optional[List[str]] = None) -> Dict[str, Any]:
+                  root_defaults: Optional[List[str]] = None,
+                  known_keys: Optional[set] = None) -> Dict[str, Any]:
     """
     Common loader for named CLI profiles (for extract and clone-extract).
     top_key is different for each command (extract_profiles / clone_profiles).
@@ -324,6 +366,13 @@ def load_profile(profiles_path: str, top_key: str, profile_name: str,
     profile that genuinely needs a different value still overrides it as
     before, just by setting the field directly. Empty/None (default) — no
     change from the old behaviour, used as-is by clone-extract.
+
+    known_keys — if given, fatal on any key in the selected profile outside
+    this set (see check_unknown_keys) — same protection clone_placements/
+    rules already have. A typo'd or wrong-separator key (e.g.
+    'origin-by-via-net' instead of 'origin_by_via_net') was previously
+    silently ignored: found live on boards/3ch-awg-tia, the origin quietly
+    fell back to the selection bbox instead of the intended via.
     """
     p = Path(profiles_path)
     if not p.exists():
@@ -340,6 +389,10 @@ def load_profile(profiles_path: str, top_key: str, profile_name: str,
     for field in (root_defaults or []):
         if field not in prof and field in data:
             prof[field] = data[field]
+    if known_keys is not None:
+        check_unknown_keys(prof, known_keys,
+                           _("unknown fields in {top_key} {name!r} of {path!r}")
+                           .format(top_key=top_key, name=profile_name, path=profiles_path))
     return prof
 
 
@@ -362,7 +415,8 @@ def cmd_extract(args):
     if args.profile:
         if not args.profiles:
             sys.exit(_("[error] --profile given without --profiles (profiles file)"))
-        prof = load_profile(args.profiles, "extract_profiles", args.profile, root_defaults=["output"])
+        prof = load_profile(args.profiles, "extract_profiles", args.profile, root_defaults=["output"],
+                            known_keys=_EXTRACT_PROFILE_KNOWN_KEYS)
         if "output" not in prof:
             sys.exit(_("[error] profile {profile!r} missing required field {field!r}")
                      .format(profile=args.profile, field="output"))
@@ -589,7 +643,8 @@ def main():
             if args.profile:
                 if not args.profiles:
                     sys.exit(_("[error] --profile given without --profiles (profiles file)"))
-                prof = load_profile(args.profiles, "clone_profiles", args.profile)
+                prof = load_profile(args.profiles, "clone_profiles", args.profile,
+                                    known_keys=_CLONE_EXTRACT_PROFILE_KNOWN_KEYS)
                 for required in ("net", "pcb", "channel", "output"):
                     if required not in prof:
                         sys.exit(_("[error] profile {profile!r} missing required field {field!r}")

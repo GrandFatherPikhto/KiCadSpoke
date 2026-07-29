@@ -6,12 +6,11 @@ Split from monolithic config.py by the same refactoring as models.py.
 """
 import logging
 import json
-import difflib
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 import yaml
 
-from ..exceptions import ValidationError, format_fatal_error
+from ..exceptions import ValidationError, format_fatal_error, check_unknown_keys
 from ..sheet_names import build_sheet_name_map
 from .includes import resolve_includes
 from .models import (
@@ -138,6 +137,12 @@ def _load_manual_spoke(data: Dict[str, Any]) -> ManualSpoke:
     )
 
 
+_RULE_KNOWN_KEYS = {
+    'net', 'spokes', 'anchor_ref', 'anchor_role', 'anchor_sheet',
+    'anchor_cluster', 'name', 'enabled',
+}
+
+
 _CLONE_PLACEMENT_KNOWN_KEYS = {
     'name', 'template', 'role', 'origin_x_mm', 'origin_y_mm', 'rotation_deg',
     'nets', 'params', 'net_overrides', 'enabled',
@@ -156,22 +161,9 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
                "(kicadspoke_cli.py) for isolated runs; write name: <string>. "
                "Previously missing name would silently substitute '?' – that was a bug")]
         ))
-    unknown = set(data.keys()) - _CLONE_PLACEMENT_KNOWN_KEYS
-    if unknown:
-        problems = []
-        for key in sorted(unknown):
-            close = difflib.get_close_matches(key, _CLONE_PLACEMENT_KNOWN_KEYS, n=1)
-            if not close:
-                close = [k for k in sorted(_CLONE_PLACEMENT_KNOWN_KEYS)
-                        if key in k or k in key]
-            hint = _(" — did you mean {suggestion!r}?").format(suggestion=close[0]) if close else ""
-            problems.append(f"{key!r}{hint}")
-        raise ValidationError(format_fatal_error(
-            _("unknown fields in clone_placement {name!r}").format(name=name),
-            [_("unrecognised keys are silently ignored – common source of quiet bugs "
-               "(e.g. 'pad' won't work; use 'anchor_pad'): {problems}")
-             .format(problems=', '.join(problems))]
-        ))
+    check_unknown_keys(data, _CLONE_PLACEMENT_KNOWN_KEYS,
+                       _("unknown fields in clone_placement {name!r}").format(name=name),
+                       extra_hint=_(" (e.g. 'pad' won't work; use 'anchor_pad')"))
 
     anchor_ref = data.get('anchor_ref')
     anchor_pad = data.get('anchor_pad')
@@ -347,6 +339,8 @@ def load_config(path: str) -> Config:
     rules = []
     for rule_data in data.get('rules', []):
         rule_net = rule_data.get('net')
+        check_unknown_keys(rule_data, _RULE_KNOWN_KEYS,
+                           _("unknown fields in rule (net {net!r})").format(net=rule_net))
         anchor_ref = rule_data.get('anchor_ref')
         anchor_role = rule_data.get('anchor_role')
         anchor_sheet = rule_data.get('anchor_sheet')

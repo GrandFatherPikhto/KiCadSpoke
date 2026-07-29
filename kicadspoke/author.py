@@ -20,13 +20,17 @@ No changes to the planner/executor/registry engine or the YAML config
 format — both are strictly additive.
 """
 import dataclasses
+import logging
+import sys
 from pathlib import Path
 from typing import Any, Callable, List, Optional
 
 import yaml
+from kipy.errors import ApiError, ApiStatusCode
 
 from .config import ClonePlacement, Config, Rule, load_config
 from .constants import DEFAULT_BATCH_SIZE, DEFAULT_TIMEOUT_MS
+from .exceptions import PlacerError
 
 _MISSING = dataclasses.MISSING
 
@@ -176,11 +180,35 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
     from kicadspoke_cli import setup_logging
     setup_logging(verbose=args.verbose)
 
-    clones = build_fn()
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    dump_clone_placements(clones, output_path)
-    print(f"wrote {len(clones)} clone_placements to {output_path}")
+    # Mirrors kicadspoke_cli.py's own main() exception handling: without
+    # this, a ValidationError/PlacerError from apply_config() (e.g. a role
+    # ambiguity fatal — format_fatal_error's boxed message, already the
+    # useful part) propagated as a raw Python traceback instead, burying the
+    # actual message under a wall of stack frames — found live debugging
+    # dac_pi_filter.py's role-resolution ambiguity.
+    try:
+        clones = build_fn()
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        dump_clone_placements(clones, output_path)
+        print(f"wrote {len(clones)} clone_placements to {output_path}")
 
-    if args.apply:
-        cfg = load_config(root_config_path)
-        apply_config(cfg, root_config_path, dry_run=args.dry_run)
+        if args.apply:
+            cfg = load_config(root_config_path)
+            apply_config(cfg, root_config_path, dry_run=args.dry_run)
+    except PlacerError as e:
+        logging.error(f"Error: {e}")
+        sys.exit(1)
+    except ApiError as e:
+        if e.code == ApiStatusCode.AS_BUSY:
+            logging.error(
+                "KiCad is busy and cannot respond right now. Usually this means an unfinished "
+                "tool is active in the GUI (dimensioning, interactive routing, move tool, etc.) — "
+                "finish it (Esc or right-click -> Cancel) and run the command again. "
+                "The board was not modified."
+            )
+        else:
+            logging.error(f"KiCad returned API error: {e}")
+        sys.exit(1)
+    except Exception:
+        logging.exception("Unexpected error")
+        sys.exit(2)
