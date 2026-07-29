@@ -53,7 +53,7 @@ def _parse_include_entry(entry: Any, source_path: str) -> Tuple[str, bool]:
     ))
 
 
-def _resolve(path: str, data: Dict[str, Any], seen: Set[Path]) -> Dict[str, Any]:
+def _resolve(path: str, data: Dict[str, Any], seen: Set[Path], is_root: bool = True) -> Dict[str, Any]:
     base_dir = Path(path).parent
     if not isinstance(data, dict):
         raise ValidationError(format_fatal_error(
@@ -82,6 +82,29 @@ def _resolve(path: str, data: Dict[str, Any], seen: Set[Path]) -> Dict[str, Any]
                 [_("{section!r} entries are a YAML mapping ('key: {{...}}'); "
                    "{list_sections} are lists — check for a mixed-up "
                    "section key").format(section=section, list_sections=_LIST_SECTIONS)]
+            ))
+
+    # An included (non-root) file's top-level keys outside _LIST_SECTIONS/
+    # _DICT_SECTIONS/'include' have no defined multi-file merge semantics —
+    # they used to be silently computed here and then dropped by the caller
+    # (only _LIST_SECTIONS/_DICT_SECTIONS get pulled up, see below), a real,
+    # repeatedly-hit class of bug (layer:, thermal_via_array:, an un-wrapped
+    # templates: shape — all found live on boards/3ch-awg-tia). Fatal instead
+    # of guessing a merge rule for an arbitrary scalar/mapping key.
+    if not is_root:
+        unsupported = sorted(k for k in data.keys()
+                             if k not in _LIST_SECTIONS and k not in _DICT_SECTIONS and k != 'include')
+        if unsupported:
+            keys_str = ', '.join(repr(k) for k in unsupported)
+            raise ValidationError(format_fatal_error(
+                _("include: {file!r} has top-level key(s) not supported inside an included file: {keys}")
+                .format(file=path, keys=keys_str),
+                [_("include: only merges {list_sections} (lists) and {dict_sections} (mappings) "
+                   "from an included file — anything else (e.g. layer:, thermal_via_array:, "
+                   "schematic_dir:, registry_path:) has no defined way to merge across multiple "
+                   "included files and was previously silently dropped. Move {keys} to the root "
+                   "config file instead")
+                 .format(list_sections=_LIST_SECTIONS, dict_sections=_DICT_SECTIONS, keys=keys_str)]
             ))
 
     merged: Dict[str, Any] = {}
@@ -120,7 +143,7 @@ def _resolve(path: str, data: Dict[str, Any], seen: Set[Path]) -> Dict[str, Any]
 
         with open(include_path, 'r', encoding='utf-8') as f:
             include_data = yaml.safe_load(f) or {}
-        include_merged = _resolve(str(include_path), include_data, seen)
+        include_merged = _resolve(str(include_path), include_data, seen, is_root=False)
 
         for section in _LIST_SECTIONS:
             merged[section].extend(include_merged.get(section) or [])

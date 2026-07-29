@@ -108,6 +108,44 @@ include:
         load_config(str(root))
 
 
+def test_unsupported_key_in_included_file_is_fatal(tmp_path):
+    """layer:/thermal_via_array:/schematic_dir:/etc. inside an included file
+    have no defined multi-file merge rule — previously silently computed
+    then dropped by the caller (only _LIST_SECTIONS/_DICT_SECTIONS are
+    pulled up), a real bug hit live on boards/3ch-awg-tia (layer: in
+    rules/fpga_spokes.yaml, thermal_via_array: in fpga_thermal_vias.yaml)."""
+    (tmp_path / "sub.yaml").write_text("""
+layer: B.Cu
+rules: []
+""", encoding="utf-8")
+
+    root = tmp_path / "root.yaml"
+    root.write_text("""
+include:
+  - sub.yaml
+""", encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="not supported inside an included file"):
+        load_config(str(root))
+
+
+def test_same_key_is_fine_at_the_root_file_itself(tmp_path):
+    """The same key (layer:) IS supported when set directly on the root
+    config file (not inside an included file) — only the included-file case
+    is fatal, this must keep working exactly as before."""
+    (tmp_path / "sub.yaml").write_text(MINIMAL_TEMPLATE, encoding="utf-8")
+
+    root = tmp_path / "root.yaml"
+    root.write_text("""
+layer: B.Cu
+include:
+  - sub.yaml
+""", encoding="utf-8")
+
+    cfg = load_config(str(root))
+    assert cfg.layer == "B.Cu"
+
+
 def test_disabled_include_is_skipped_before_existence_check(tmp_path):
     root = tmp_path / "root.yaml"
     root.write_text("""
