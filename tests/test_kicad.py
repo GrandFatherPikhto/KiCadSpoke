@@ -144,6 +144,30 @@ class TestFootprintsCache:
 
         assert len(second) == 1
 
+    def test_flip_selected_invalidates_the_cache(self):
+        """Regression (found live 2026-07-29, fpga_oscill_r_pi_filter landing
+        on F.Cu instead of B.Cu): flip_selected() flips server-side via a GUI
+        action, it does NOT update the local FootprintInstance objects'
+        .layer — a cached get_footprints() call right after it must NOT
+        return the stale pre-flip list, or flip_manager.flip_if_needed()'s
+        "reload after flip" re-fetch silently returns stale data, and the
+        subsequent update_items() push undoes the flip."""
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+        adapter._kicad = MagicMock()
+        adapter._footprints_cache = None
+        pre_flip_fp = _make_fp("C1")
+        post_flip_fp = _make_fp("C1")
+        adapter._board.get_footprints.side_effect = [[pre_flip_fp], [post_flip_fp]]
+
+        first = adapter.get_footprints()
+        adapter.flip_selected(first)
+        second = adapter.get_footprints()
+
+        assert first[0] is pre_flip_fp
+        assert second[0] is post_flip_fp
+        assert adapter._board.get_footprints.call_count == 2
+
 
 if __name__ == "__main__":
     print("Running kicad tests (without KiCad connection)...")

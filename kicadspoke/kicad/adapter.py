@@ -263,6 +263,15 @@ class KiCadBoardAdapter(IBoardAdapter):
         self._board.add_to_selection(footprints)
         self._kicad.run_action("pcbnew.InteractiveEdit.flip")
         self._board.clear_selection()
+        # The flip happens server-side via a GUI action — unlike update_items,
+        # it does NOT touch the local FootprintInstance objects' .layer, so
+        # the get_footprints() cache (see there) is now stale: any cached fp
+        # still reports its PRE-flip layer. flip_manager.flip_if_needed()
+        # relies on re-fetching after this call to see the real post-flip
+        # layer (otherwise its stale fp objects get pushed straight back via
+        # update_items(), silently undoing the flip — found live 2026-07-29:
+        # fpga_oscill_r_pi_filter's components landing back on F.Cu).
+        self._footprints_cache = None
         logger.debug(_("Flip performed"))
 
     def commit_with_retry(self, description: str, work_fn, retries: int = 1) -> bool:
