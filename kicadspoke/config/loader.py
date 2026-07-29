@@ -314,25 +314,56 @@ def load_config(path: str) -> Config:
     )
 
     templates_data = dict(data.get('templates', {}) or {})
+
     templates_file = data.get('templates_file')
-    if templates_file:
-        templates_path = Path(path).parent / templates_file
+    template_files = data.get('template_files') or []
+    if not isinstance(template_files, list):
+        raise ValidationError(format_fatal_error(
+            _("template_files must be a list, got {type}").format(type=type(template_files).__name__),
+            [_("template_files: is a YAML list of paths ('- templates/a.yaml'); "
+               "for a single file use templates_file: <path> instead")]
+        ))
+    external_files = ([templates_file] if templates_file else []) + list(template_files)
+
+    # Each external file is the RAW extract() shape ({name: {...}}, no
+    # 'templates:' wrapper — unlike include:, which expects one). Merged
+    # among THEMSELVES with fatal on a repeated name (independent files —
+    # a collision is far more likely a copy-paste mistake than an
+    # intentional override, same philosophy as include:'s _DICT_SECTIONS).
+    # Inline templates: in this config file still overrides silently on top
+    # of all of them, unchanged from templates_file's original behaviour.
+    external_templates: Dict[str, Any] = {}
+    for ext_file in external_files:
+        templates_path = Path(path).parent / ext_file
         if not templates_path.exists():
             raise ValidationError(format_fatal_error(
-                _("templates_file {file!r} not found").format(file=templates_file),
+                _("templates file {file!r} not found").format(file=ext_file),
                 [_("expected at {path} (relative to the config file itself, "
                    "not the current working directory)").format(path=templates_path)]
             ))
         with open(templates_path, 'r', encoding='utf-8') as f:
             if templates_path.suffix.lower() == '.json':
-                external_templates = json.load(f)
+                file_templates = json.load(f)
             else:
-                external_templates = yaml.safe_load(f) or {}
-        merged = dict(external_templates)
-        merged.update(templates_data)
-        templates_data = merged
-        logger.info(_("Templates from {file}: {count_ext}, plus inline: {count_inline}")
-                    .format(file=templates_file, count_ext=len(external_templates),
+                file_templates = yaml.safe_load(f) or {}
+        for name, tdata in (file_templates or {}).items():
+            if name in external_templates:
+                raise ValidationError(format_fatal_error(
+                    _("duplicate template {name!r} across templates_file/template_files").format(name=name),
+                    [_("defined in more than one external templates file (templates_file "
+                       "and/or an entry of template_files) — external files are meant to "
+                       "be independent, a repeated name is far more likely a mistake than "
+                       "an intentional override; inline templates: in the config itself "
+                       "CAN still override an external one, that is unaffected")]
+                ))
+            external_templates[name] = tdata
+
+    merged = dict(external_templates)
+    merged.update(templates_data)
+    templates_data = merged
+    if external_files:
+        logger.info(_("Templates from {files}: {count_ext}, plus inline: {count_inline}")
+                    .format(files=external_files, count_ext=len(external_templates),
                             count_inline=len(data.get('templates', {}) or {})))
     templates = {name: _load_spoke_template(name, tdata) for name, tdata in templates_data.items()}
 
