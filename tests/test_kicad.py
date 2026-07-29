@@ -6,6 +6,7 @@ Checks imports and method presence in classes.
 
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 # Add project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -67,6 +68,81 @@ def test_init_without_connection():
         print("✅ KiCadBoardAdapter constructor works (without connection)")
     except Exception as e:
         print(f"⚠️ Constructor crashed (this may be normal if KiCad is not running): {e}")
+
+
+def _make_fp(ref):
+    fp = MagicMock()
+    fp.reference_field.text.value = ref
+    return fp
+
+
+class TestFootprintsCache:
+    """get_footprints() caching (added 2026-07-29): the call graph analysis
+    (dependency_order.py resolves every rule/clone_placement's anchor TWICE —
+    once for the dependency graph, once again to actually plan it — and each
+    resolution calls get_footprints() at least once) showed dozens of
+    redundant full-board IPC round trips per apply run for data that cannot
+    have changed since the last refresh_board(). Uses __new__ to bypass
+    __init__ (which creates a real kipy.KiCad() instance) — these tests only
+    exercise the caching logic around a mocked self._board/self._kicad, no
+    live KiCad connection needed."""
+
+    def test_get_footprints_only_queries_ipc_once_per_generation(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+        adapter._footprints_cache = None
+        adapter._board.get_footprints.return_value = [_make_fp("R1"), _make_fp("C1")]
+
+        first = adapter.get_footprints()
+        second = adapter.get_footprints()
+
+        assert [fp.reference_field.text.value for fp in first] == ["R1", "C1"]
+        assert [fp.reference_field.text.value for fp in second] == ["R1", "C1"]
+        adapter._board.get_footprints.assert_called_once()
+
+    def test_get_footprint_by_ref_uses_the_cache_too(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+        adapter._footprints_cache = None
+        adapter._board.get_footprints.return_value = [_make_fp("R1"), _make_fp("C1")]
+
+        found = adapter.get_footprint("C1")
+        adapter.get_footprints()  # second read — must still hit the cache
+
+        assert found.reference_field.text.value == "C1"
+        adapter._board.get_footprints.assert_called_once()
+
+    def test_refresh_board_clears_the_cache(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter._kicad = MagicMock()
+        adapter._footprints_cache = None
+        board1 = MagicMock()
+        board1.get_footprints.return_value = [_make_fp("R1")]
+        board2 = MagicMock()
+        board2.get_footprints.return_value = [_make_fp("R1"), _make_fp("C1")]
+        adapter._kicad.get_board.side_effect = [board1, board2]
+
+        adapter.refresh_board()
+        first = adapter.get_footprints()
+        adapter.refresh_board()
+        second = adapter.get_footprints()
+
+        assert len(first) == 1
+        assert len(second) == 2
+        board1.get_footprints.assert_called_once()
+        board2.get_footprints.assert_called_once()
+
+    def test_returned_list_is_a_copy_mutating_it_does_not_corrupt_cache(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+        adapter._footprints_cache = None
+        adapter._board.get_footprints.return_value = [_make_fp("R1")]
+
+        first = adapter.get_footprints()
+        first.append(_make_fp("BOGUS"))
+        second = adapter.get_footprints()
+
+        assert len(second) == 1
 
 
 if __name__ == "__main__":

@@ -24,17 +24,19 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug(_("kipy.KiCad instance created"))
         self._board = None
         self._write_risk_checked = False
+        self._footprints_cache: Optional[List[FootprintInstance]] = None
 
     def refresh_board(self):
         logger.debug(_("Refreshing board from KiCad"))
         self._board = self._kicad.get_board()
         if self._board is None:
             raise BoardNotFoundError(_("Failed to obtain board from KiCad"))
+        self._footprints_cache = None
         logger.info(_("Board obtained"))
 
     # --- Search ---
     def get_footprint(self, ref: str) -> Optional[FootprintInstance]:
-        for fp in self._board.get_footprints():
+        for fp in self.get_footprints():
             if fp.reference_field.text.value == ref:
                 logger.debug(_("Found footprint {ref}").format(ref=ref))
                 return fp
@@ -42,9 +44,26 @@ class KiCadBoardAdapter(IBoardAdapter):
         return None
 
     def get_footprints(self) -> List[FootprintInstance]:
-        fps = list(self._board.get_footprints())
-        logger.debug(_("Retrieved {count} footprints").format(count=len(fps)))
-        return fps
+        """
+        Cached per board generation (cleared by refresh_board()). Anchor/role
+        resolution (clone_role_resolver.py), ComponentPool, dependency_order.py
+        (which resolves every rule/clone_placement's anchor TWICE — once to
+        build the dependency graph, once again to actually plan it) and the
+        collision check in move_executor.py each used to call this fresh,
+        every time — a single apply run over ~20 rules/clone_placements meant
+        dozens of full-board IPC round trips for data that cannot have changed
+        since the last explicit refresh_board() (every place in this codebase
+        that moves/creates something already calls refresh_board() before the
+        next read that needs to see it — see cmd_apply's per-item loop and the
+        moves -> vias -> tracks phase boundaries). Confirmed 2026-07-29 by
+        reading the call graph (dependency_order.py alone doubles every
+        anchor/role resolution); not re-profiled live since the redundancy is
+        structural, not data-dependent.
+        """
+        if self._footprints_cache is None:
+            self._footprints_cache = list(self._board.get_footprints())
+            logger.debug(_("Retrieved {count} footprints").format(count=len(self._footprints_cache)))
+        return list(self._footprints_cache)
 
     def get_vias(self) -> List[Via]:
         vias = list(self._board.get_vias())
