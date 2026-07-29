@@ -136,9 +136,10 @@ extract_profiles:
     net_template_role:
       FB_PI_FLT: '/Channel_0/DAC/+3V3_CLKVDD'   # выходная сеть — она per-channel уникальна
 
-  dac_pi_filter_avdd:
+  dac_avdd_pi_filter:
+    name: dac_avdd_pi_filter
     output: templates/dac_pi_filters.yaml
-    origin-by-via-net: '/Channel_0/DAC/+3V3_AVDD'
+    origin_by_via_net: '/Channel_0/DAC/+3V3_AVDD'
     params:
       'PWR_IN': '+3V3'
       'PWR_OUT': '/Channel_0/DAC/+3V3_AVDD' 
