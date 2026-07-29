@@ -169,10 +169,22 @@ class ManualPositionCalculator(IPositionCalculator):
                                 ex=track.end.x/1e6, ey=track.end.y/1e6, net=track.net, layer=track.layer)
                     )
 
-                # Component‑level slots
+                # Component‑level slots. Slot layer: its own absolute or
+                # inherited from the template — same convention as
+                # ClonePlacement (clone_position_calculator.py), minus
+                # mirror (ManualSpoke does not support it, see
+                # spoke_layout._resolve_track's docstring). Previously
+                # never set here at all — components silently inherited
+                # PlacementPlanner's single global target_layer regardless
+                # of what the template itself declared (found live:
+                # templates/fpga_cap_pair_spoke.yaml's layer: B.Cu was
+                # honoured for its tracks but not its components).
                 for comp_layout in layout.components:
+                    slot_layer = comp_layout.slot_layer or template.layer
+                    comp_layer = BoardLayer.BL_B_Cu if slot_layer == 'B.Cu' else BoardLayer.BL_F_Cu
                     components_result.append(PlacedComponentInfo(
                         ref=comp_layout.ref, dest=comp_layout.position, angle_deg=comp_layout.angle_deg,
+                        layer=comp_layer,
                     ))
                     logger.debug(
                         _("  {ref} (role {role}, pad {pad}): position ({x:.3f}, {y:.3f}) mm, angle {angle:.1f}°")
