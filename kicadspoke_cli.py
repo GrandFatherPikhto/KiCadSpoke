@@ -37,6 +37,7 @@ from kicadspoke.placement.planner import PlacementPlanner
 from kicadspoke.placement.dependency_order import resolve_execution_order
 from kicadspoke.placement.services.clone_position_calculator import clone_anchor_id
 from kicadspoke.placement.services.via_planner import thermal_anchor_id
+from kicadspoke.placement.services.manual_position_calculator import rule_anchor_ids
 from kicadspoke.placement.services.component_pool import _cluster_prefix_match
 from kicadspoke.placement.executor import BatchExecutor
 from kicadspoke.exceptions import PlacerError, check_unknown_keys
@@ -220,16 +221,27 @@ def cmd_apply(args, cfg=None):
     drop_disabled_rules(cfg, logger)
 
     # known_anchor_ids for registry.reconcile(): the FULL set (before --only/
-    # --cluster narrow this particular run), excluding disabled clone_placements
-    # (enabled: false means "does not exist", same convention as rules — see
-    # drop_disabled_rules). MUST be captured before apply_only_filter/
-    # apply_cluster_filter mutate cfg.clone_placements/cfg.thermal_via_array.enabled
-    # below, or the whole point of known_anchor_ids (protecting a temporarily
-    # filtered-out item's vias/tracks from being pruned as "stale") silently does
-    # nothing (found 2026-07-28 while chasing orphaned ldo_adj_subsystem tracks —
-    # was computed AFTER filtering, so a --only/--cluster run would prune
-    # everything else's vias instead of preserving them as documented).
+    # --cluster narrow this particular run), excluding disabled clone_placements/
+    # rules (enabled: false means "does not exist" — see drop_disabled_rules,
+    # already applied above for cfg.rules). MUST be captured before
+    # apply_only_filter/apply_cluster_filter mutate cfg.rules/cfg.clone_placements/
+    # cfg.thermal_via_array.enabled below, or the whole point of known_anchor_ids
+    # (protecting a temporarily filtered-out item's vias/tracks from being pruned
+    # as "stale") silently does nothing (found 2026-07-28 while chasing orphaned
+    # ldo_adj_subsystem tracks — was computed AFTER filtering, so a --only/
+    # --cluster run would prune everything else's vias instead of preserving
+    # them as documented).
+    #
+    # rule_anchor_ids(r) (2026-07-29): rules were missing from this set
+    # entirely until now — a Rule has no single anchor_id like ClonePlacement
+    # (clone_anchor_id), it's a GROUP of per-pad spokes, each registered under
+    # its own 'pad:{pad}' key. Without this, --only/--cluster (or even just
+    # temporarily narrowing which rules run) pruned a rule's via/tracks the
+    # moment it was excluded from a run, --only/--cluster protection for
+    # rule-based geometry never actually worked.
     all_anchor_ids = {clone_anchor_id(c) for c in cfg.clone_placements if c.enabled}
+    for r in cfg.rules:
+        all_anchor_ids |= rule_anchor_ids(r)
     if cfg.thermal_via_array.enabled:
         all_anchor_ids.add(thermal_anchor_id(cfg.thermal_via_array))
 

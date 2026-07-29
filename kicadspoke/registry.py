@@ -250,7 +250,7 @@ class PlacementRegistry:
             # does not apply here (see IMPORTANT note above).
             if (anchor_id not in seen_anchor_ids
                     and known_anchor_ids is not None
-                    and anchor_id.startswith(('anchor:', 'role:', 'name:', 'thermal:'))
+                    and anchor_id.startswith(('anchor:', 'role:', 'name:', 'thermal:', 'pad:'))
                     and anchor_id in known_anchor_ids):
                 logger.debug(_("  {key}: not processed in this run (--only filtered "
                                "{anchor_id!r}), but it is still in the config — NOT pruned")
@@ -367,7 +367,7 @@ class TrackRegistry:
             # an item that WAS processed but whose template shrank/reordered.
             if (anchor_id not in seen_anchor_ids
                     and known_anchor_ids is not None
-                    and anchor_id.startswith(('anchor:', 'role:', 'name:', 'thermal:'))
+                    and anchor_id.startswith(('anchor:', 'role:', 'name:', 'thermal:', 'pad:'))
                     and anchor_id in known_anchor_ids):
                 logger.debug(_("  {key}: not processed in this run (--only filtered "
                                "{anchor_id!r}), but it is still in the config — NOT pruned")

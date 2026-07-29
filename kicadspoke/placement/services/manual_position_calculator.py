@@ -1,7 +1,7 @@
 # kicadspoke/placement/services/manual_position_calculator.py
 
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
 from kipy.board_types import FootprintInstance, BoardLayer
 
 from ...config import Config, Rule
@@ -32,6 +32,28 @@ def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule)
         )
         return fp.reference_field.text.value
     return None
+
+
+def rule_anchor_ids(rule: Rule) -> Set[str]:
+    """
+    Registry identity/identities of a rule — one 'pad:{pad}' per ENABLED
+    spoke (see compute_raw_positions below: anchor_id = f"pad:{spoke.pad}",
+    passed to make_registry_key). Unlike ClonePlacement (one clone_anchor_id
+    per placement), a Rule is a GROUP of per-pad spokes, each with its own
+    registry identity — so this returns a set, not a single id.
+
+    Used for known_anchor_ids (kicadspoke_cli.py's cmd_apply, see
+    clone_anchor_id/thermal_anchor_id for the same idea). Without this, a
+    rule excluded from a run (enabled: false, --only, --cluster) has its
+    via/track registry entries pruned unconditionally —
+    registry.reconcile()'s known_anchor_ids protection only recognises the
+    'anchor:'/'role:'/'name:'/'thermal:' prefixes (ClonePlacement/
+    thermal_via_array), never 'pad:', so rule-based geometry was never
+    actually protected by --only/--cluster at all (found 2026-07-29: "hiding
+    part of fpga.yaml's rules deletes its routing", true even without
+    touching enabled at all — just being excluded by --only was enough).
+    """
+    return {f"pad:{spoke.pad}" for spoke in rule.spokes if spoke.enabled}
 
 
 class ManualPositionCalculator(IPositionCalculator):
