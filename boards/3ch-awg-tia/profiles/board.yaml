@@ -15,5 +15,9 @@ schematic_dir: ../../test_boards/3CH-AWG-TIA
 # 3ch-awg-tia.tracks.registry.json.
 
 include:
+  - extracts.yaml  # Коллекция экстраторов
+  - templates/fpga_in_pi_filter.yaml
+  - templates/fpga_pi_filter_spoke.yaml
   - generated/dac_channels.yaml   # scripts/dac_channels.py
   - generated/dac_pi_filter.yaml  # scripts/dac_pi_filter.py
+
