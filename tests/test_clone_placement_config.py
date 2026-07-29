@@ -60,6 +60,29 @@ def test_clone_placements_loaded_with_all_fields(tmp_path):
     assert cp2.net_overrides == {"/STM32F4xx/BOOT0": "/STM32F4xx_2/BOOT0"}
 
 
+def test_active_defaults_true_and_can_be_set_false(tmp_path):
+    yaml_content = """
+templates:
+  t:
+    components: []
+clone_placements:
+  - name: default_active
+    template: t
+    origin_x_mm: 0
+    origin_y_mm: 0
+  - name: explicitly_inactive
+    template: t
+    origin_x_mm: 0
+    origin_y_mm: 0
+    active: false
+"""
+    config_file = tmp_path / "active.yaml"
+    config_file.write_text(yaml_content, encoding="utf-8")
+    cfg = load_config(str(config_file))
+    assert cfg.clone_placements[0].active is True
+    assert cfg.clone_placements[1].active is False
+
+
 def test_no_clone_placements_gives_empty_list(tmp_path):
     config_file = tmp_path / "test2.yaml"
     config_file.write_text("", encoding="utf-8")

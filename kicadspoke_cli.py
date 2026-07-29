@@ -129,6 +129,53 @@ def drop_disabled_rules(cfg, logger) -> None:
                     .format(name=rule_effective_name(r), net=r.net))
 
 
+def drop_inactive_items(cfg, logger) -> None:
+    """active: false — the inline, per-item counterpart of --only/--cluster
+    (see Rule/ClonePlacement/ThermalViaArrayConfig.active docstrings in
+    config/models.py). Unlike enabled: false (drop_disabled_rules above),
+    this must run AFTER known_anchor_ids is computed in cmd_apply — an
+    inactive item's via/tracks must still count as "known" so reconcile()
+    protects them from pruning, it's just not (re)planned this run. Composes
+    with --only/--cluster as a further AND-narrowing, same as those two
+    compose with each other. Pure cfg mutation, no adapter.
+
+    Added 2026-07-29: the user wanted to focus work on part of a rule/config
+    without retyping --only every run, and without enabled: false pruning
+    the parts left alone (see rule_anchor_ids/pad: fix earlier the same day —
+    this reuses that same protection, just gated on active instead of on
+    "was this item processed this run at all")."""
+    active_clones = [c for c in cfg.clone_placements if c.active]
+    dropped_clones = [c for c in cfg.clone_placements if not c.active]
+    cfg.clone_placements = active_clones
+    for c in dropped_clones:
+        logger.info(_("ClonePlacement {name!r}: active=false, skipped this run "
+                      "(existing via/tracks stay protected)").format(name=c.name))
+
+    narrowed_rules = []
+    for r in cfg.rules:
+        if not r.active:
+            logger.info(_("Rule {name!r}: active=false, skipped this run "
+                          "(existing via/tracks stay protected)").format(name=rule_effective_name(r)))
+            continue
+        kept_spokes = [s for s in r.spokes if s.active]
+        for s in r.spokes:
+            if not s.active:
+                logger.debug(_("Rule {name!r}: spoke on pad {pad} active=false, skipped this run")
+                             .format(name=rule_effective_name(r), pad=s.pad))
+        if kept_spokes:
+            narrowed_rules.append(dataclasses.replace(r, spokes=kept_spokes))
+        else:
+            logger.info(_("Rule {name!r}: no active spokes left, skipped this run "
+                          "(existing via/tracks stay protected)").format(name=rule_effective_name(r)))
+    cfg.rules = narrowed_rules
+
+    if cfg.thermal_via_array.enabled and not cfg.thermal_via_array.active:
+        logger.info(_("thermal_via_array {name!r}: active=false, skipped this run "
+                      "(existing vias stay protected)")
+                    .format(name=thermal_via_array_effective_name(cfg.thermal_via_array)))
+        cfg.thermal_via_array.enabled = False
+
+
 def apply_only_filter(cfg, only_names: List[str], logger) -> None:
     """--only: whole-block selection by identity (rule name-or-net, clone_placement
     name, thermal_via_array name). sys.exit on unmatched names. Pure cfg mutation."""
@@ -244,6 +291,13 @@ def cmd_apply(args, cfg=None):
         all_anchor_ids |= rule_anchor_ids(r)
     if cfg.thermal_via_array.enabled:
         all_anchor_ids.add(thermal_anchor_id(cfg.thermal_via_array))
+
+    # active: false (drop_inactive_items, 2026-07-29) is computed from — and
+    # must run AFTER — all_anchor_ids above: it's the inline equivalent of
+    # --only/--cluster (skip this run, protect existing geometry), not of
+    # enabled: false (which is already excluded from all_anchor_ids by the
+    # `if c.enabled`/drop_disabled_rules above).
+    drop_inactive_items(cfg, logger)
 
     apply_only_filter(cfg, _split_comma_values(getattr(args, "only", None)), logger)
     apply_cluster_filter(cfg, _split_comma_values(getattr(args, "cluster", None)), logger)

@@ -13,7 +13,7 @@ import yaml
 from kicadspoke.config import Config, Rule, ManualSpoke, ClonePlacement, ThermalViaArrayConfig
 from kicadspoke_cli import (
     _split_comma_values, _matches_any_cluster,
-    drop_disabled_rules, apply_only_filter, apply_cluster_filter,
+    drop_disabled_rules, drop_inactive_items, apply_only_filter, apply_cluster_filter,
     load_profile,
 )
 
@@ -79,6 +79,88 @@ class TestDropDisabledRules:
         drop_disabled_rules(cfg, logger)
         with pytest.raises(SystemExit):
             apply_only_filter(cfg, ["GND"], logger)
+        assert cfg.rules == []
+
+
+class TestDropInactiveItems:
+    """active: false — the inline counterpart of --only/--cluster (skip this
+    run, but do NOT prune from the registry, unlike enabled: false). See
+    Rule/ClonePlacement/ThermalViaArrayConfig.active in config/models.py."""
+
+    def test_inactive_rule_skipped_active_rule_kept(self):
+        cfg = _cfg(rules=[
+            Rule(net="GND", spokes=[ManualSpoke(pad="1", template="t")],
+                 anchor_role="FPGA", active=False),
+            Rule(net="+3V3_VCCIO", spokes=[ManualSpoke(pad="2", template="t")],
+                 anchor_role="FPGA", active=True),
+        ])
+        drop_inactive_items(cfg, logger)
+        assert [r.net for r in cfg.rules] == ["+3V3_VCCIO"]
+
+    def test_inactive_spoke_narrows_rule_without_dropping_it(self):
+        cfg = _cfg(rules=[Rule(net="GND", spokes=[
+            ManualSpoke(pad="1", template="t", active=True),
+            ManualSpoke(pad="2", template="t", active=False),
+        ], anchor_role="FPGA")])
+        drop_inactive_items(cfg, logger)
+        assert len(cfg.rules) == 1
+        assert [s.pad for s in cfg.rules[0].spokes] == ["1"]
+
+    def test_rule_dropped_entirely_if_no_active_spoke_left(self):
+        cfg = _cfg(rules=[Rule(net="GND", spokes=[
+            ManualSpoke(pad="1", template="t", active=False),
+        ], anchor_role="FPGA")])
+        drop_inactive_items(cfg, logger)
+        assert cfg.rules == []
+
+    def test_original_rule_object_not_mutated(self):
+        original = Rule(net="GND", spokes=[
+            ManualSpoke(pad="1", template="t", active=True),
+            ManualSpoke(pad="2", template="t", active=False),
+        ], anchor_role="FPGA")
+        cfg = _cfg(rules=[original])
+        drop_inactive_items(cfg, logger)
+        assert len(original.spokes) == 2
+
+    def test_inactive_clone_placement_skipped(self):
+        cfg = _cfg(clone_placements=[
+            ClonePlacement(name="a", origin_x_mm=0.0, origin_y_mm=0.0, template="t", active=False),
+            ClonePlacement(name="b", origin_x_mm=0.0, origin_y_mm=0.0, template="t", active=True),
+        ])
+        drop_inactive_items(cfg, logger)
+        assert [c.name for c in cfg.clone_placements] == ["b"]
+
+    def test_inactive_thermal_via_array_disabled_for_this_run(self):
+        cfg = _cfg(thermal_via_array=ThermalViaArrayConfig(
+            enabled=True, anchor_role="FPGA", pad="145", name="fpga_thermal", active=False,
+        ))
+        drop_inactive_items(cfg, logger)
+        assert cfg.thermal_via_array.enabled is False
+
+    def test_active_true_everywhere_is_noop(self):
+        cfg = _cfg(
+            rules=[Rule(net="GND", spokes=[ManualSpoke(pad="1", template="t")], anchor_role="FPGA")],
+            clone_placements=[ClonePlacement(name="a", origin_x_mm=0.0, origin_y_mm=0.0, template="t")],
+            thermal_via_array=ThermalViaArrayConfig(enabled=True, anchor_role="FPGA", pad="145", name="th"),
+        )
+        drop_inactive_items(cfg, logger)
+        assert len(cfg.rules) == 1
+        assert len(cfg.clone_placements) == 1
+        assert cfg.thermal_via_array.enabled is True
+
+    def test_active_false_does_not_affect_known_anchor_ids_computation_order(self):
+        """drop_inactive_items only mutates cfg — it must NOT be confused with
+        drop_disabled_rules: a rule with enabled=True, active=False still
+        contributes to rule_anchor_ids's input set (cfg.rules) at the point
+        known_anchor_ids is computed in cmd_apply, i.e. BEFORE this function
+        runs. This test just documents that drop_inactive_items itself makes
+        no such distinction — it purely filters on .active."""
+        cfg = _cfg(rules=[
+            Rule(net="GND", spokes=[ManualSpoke(pad="1", template="t")],
+                 anchor_role="FPGA", enabled=True, active=False),
+        ])
+        assert cfg.rules[0].enabled is True
+        drop_inactive_items(cfg, logger)
         assert cfg.rules == []
 
 

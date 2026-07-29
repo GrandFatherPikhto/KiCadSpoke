@@ -25,6 +25,14 @@ class ThermalViaArrayConfig:
     tests/internal code that construct ThermalViaArrayConfig() directly in
     Python (bypassing the YAML loader) don't need a name — the requirement
     applies ONLY to human input via YAML, not to the data structure itself.
+
+    active — orthogonal to enabled (default True). enabled: false means "does
+    not exist on the board" (registry pruned, see drop_disabled_rules/
+    known_anchor_ids in kicadspoke_cli.py). active: false means "skip this
+    run only" — same effect as being excluded by --only/--cluster, but
+    written inline instead of on the command line: existing via/tracks stay
+    protected in the registry (still counted in known_anchor_ids), just not
+    (re)planned this run. See drop_inactive_items in kicadspoke_cli.py.
     """
     enabled: bool = False
     anchor_ref: Optional[str] = None
@@ -40,6 +48,7 @@ class ThermalViaArrayConfig:
     drill_mm: float = 0.3
     diameter_mm: float = 0.5
     name: Optional[str] = None
+    active: bool = True
 
 
 def thermal_via_array_effective_name(tva: "ThermalViaArrayConfig") -> Optional[str]:
@@ -163,6 +172,10 @@ class ManualSpoke:
     automatically selected from the pool (see placement/services/component_pool.py)
     by matching the actual rule net (rule.net) and the custom Role field on the
     component, in the order of spokes in this list.
+
+    active — see ThermalViaArrayConfig.active for the enabled-vs-active
+    distinction; here it lets you narrow work down to a single spoke within a
+    rule without touching enabled (which would prune its registry entries).
     """
     pad: str
     template: str
@@ -171,6 +184,7 @@ class ManualSpoke:
     rotation_deg: float = 0.0
     enabled: bool = True
     cluster: Optional[str] = None
+    active: bool = True
 
 
 @dataclass
@@ -194,6 +208,12 @@ class Rule:
     CLI selection is applied, it cannot be resurrected by naming it explicitly
     on the command line — enabled: false means "does not exist on the board
     right now", not "excluded from this particular run".
+
+    active — see ThermalViaArrayConfig.active. Unlike enabled, active: false
+    does NOT prune this rule's via/tracks from the registry, it only skips
+    (re)planning them this run — the inline, per-item equivalent of --only/
+    --cluster, for narrowing work without retyping CLI flags each time (see
+    drop_inactive_items in kicadspoke_cli.py, added 2026-07-29).
     """
     net: str
     spokes: List[ManualSpoke]
@@ -203,6 +223,7 @@ class Rule:
     anchor_cluster: Optional[str] = None
     name: Optional[str] = None
     enabled: bool = True
+    active: bool = True
 
 
 def rule_effective_name(rule: "Rule") -> str:
@@ -238,6 +259,9 @@ class ClonePlacement:
         ClonePositionCalculator synthesises a temporary SpokeTemplate "on the fly"
         (one component with that role at (0,0), angle 0) — templates: in YAML
         is not touched.
+
+    active — see ThermalViaArrayConfig.active for the enabled-vs-active
+    distinction.
     """
     name: str
     origin_x_mm: float
@@ -249,6 +273,7 @@ class ClonePlacement:
     params: Dict[str, Any] = field(default_factory=dict)    # for {placeholder} in net templates
     net_overrides: Dict[str, str] = field(default_factory=dict)  # final override of resolved name
     enabled: bool = True
+    active: bool = True
     anchor_ref: Optional[str] = None
     anchor_pad: Optional[str] = None
     # Alternative to anchor_ref — anchor by the Role field on the board, not by

@@ -229,3 +229,61 @@ templates: {}
         config_file.write_text(text, encoding="utf-8")
         cfg = load_config(str(config_file))
         assert cfg.rules[0].enabled is False
+
+
+class TestRuleActive:
+    """Rule.active / ManualSpoke.active — orthogonal to enabled (default True),
+    the inline per-item counterpart of --only/--cluster (see
+    drop_inactive_items in kicadspoke_cli.py, added 2026-07-29)."""
+
+    def test_default_is_active(self, tmp_path):
+        text = """
+layer: B.Cu
+rules:
+- net: +3V3_VCCIO
+  anchor_role: FPGA
+  spokes:
+  - pad: '17'
+    template: t
+templates: {}
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        cfg = load_config(str(config_file))
+        assert cfg.rules[0].active is True
+        assert cfg.rules[0].spokes[0].active is True
+
+    def test_active_false_loaded_from_yaml_on_rule_and_spoke(self, tmp_path):
+        text = """
+layer: B.Cu
+rules:
+- net: +3V3_VCCIO
+  anchor_role: FPGA
+  active: false
+  spokes:
+  - pad: '17'
+    template: t
+    active: false
+templates: {}
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        cfg = load_config(str(config_file))
+        assert cfg.rules[0].active is False
+        assert cfg.rules[0].spokes[0].active is False
+
+    def test_thermal_via_array_active_false_loaded_from_yaml(self, tmp_path):
+        text = """
+layer: B.Cu
+thermal_via_array:
+  enabled: true
+  anchor_role: FPGA
+  pad: '145'
+  name: fpga_thermal
+  active: false
+templates: {}
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        cfg = load_config(str(config_file))
+        assert cfg.thermal_via_array.active is False

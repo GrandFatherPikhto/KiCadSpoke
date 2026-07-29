@@ -134,18 +134,19 @@ def _load_manual_spoke(data: Dict[str, Any]) -> ManualSpoke:
         rotation_deg=data.get('rotation_deg', 0.0),
         enabled=data.get('enabled', True),
         cluster=data.get('cluster'),
+        active=data.get('active', True),
     )
 
 
 _RULE_KNOWN_KEYS = {
     'net', 'spokes', 'anchor_ref', 'anchor_role', 'anchor_sheet',
-    'anchor_cluster', 'name', 'enabled',
+    'anchor_cluster', 'name', 'enabled', 'active',
 }
 
 
 _CLONE_PLACEMENT_KNOWN_KEYS = {
     'name', 'template', 'role', 'origin_x_mm', 'origin_y_mm', 'rotation_deg',
-    'nets', 'params', 'net_overrides', 'enabled',
+    'nets', 'params', 'net_overrides', 'enabled', 'active',
     'anchor_ref', 'anchor_pad', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
     'layer', 'mirror', 'refs', 'by_selection',
     'side',  # deprecated – recognised separately to give a migration message
@@ -249,6 +250,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
         params=data.get('params', {}) or {},
         net_overrides=data.get('net_overrides', {}) or {},
         enabled=data.get('enabled', True),
+        active=data.get('active', True),
         anchor_ref=anchor_ref,
         anchor_pad=str(anchor_pad) if anchor_pad is not None else None,
         anchor_role=anchor_role,
@@ -311,6 +313,7 @@ def load_config(path: str) -> Config:
         drill_mm=tva_data.get('drill_mm', 0.3),
         diameter_mm=tva_data.get('diameter_mm', 0.5),
         name=tva_data.get('name'),
+        active=tva_data.get('active', True),
     )
 
     templates_data = dict(data.get('templates', {}) or {})
@@ -398,7 +401,8 @@ def load_config(path: str) -> Config:
         rules.append(Rule(net=rule_net, spokes=spokes, anchor_ref=anchor_ref,
                           anchor_role=anchor_role, anchor_sheet=anchor_sheet,
                           anchor_cluster=anchor_cluster, name=rule_data.get('name'),
-                          enabled=rule_data.get('enabled', True)))
+                          enabled=rule_data.get('enabled', True),
+                          active=rule_data.get('active', True)))
 
     # Fatal on collision: two rules resolving to the same --only identity
     # (same net, neither disambiguated with an explicit name) would silently
