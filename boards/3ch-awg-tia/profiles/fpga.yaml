@@ -11,61 +11,103 @@ schematic_dir: ../../../test_boards/3CH-AWG-TIA
 # F.Cu (the Config.layer default) without this.
 layer: B.Cu
 
+# Same reason as layer: above — thermal_via_array: inside the included
+# fpga_thermal_vias.yaml is silently dropped by include: (not a list/dict
+# section), so it must live here at the root instead.
+thermal_via_array:
+  name: fpga_thermal
+  enabled: true
+  active: false
+  anchor_role: FPGA
+  pad: '145'
+  net: GND
+  rows: 4
+  cols: 4
+  margin_mm: 0.5
+  pattern: grid
+  drill_mm: 0.3
+  diameter_mm: 0.5
+
 template_files:
   - templates/fpga_pi_filters.yaml
   - templates/fpga_cap_pair_spoke.yaml
+  - templates/fpga_r_pi_filters.yaml
+  - templates/fpga_oscill.yaml
 
 include:
   - fpga_extracts.yaml  # Коллекция экстраторов
   - rules/fpga_spokes.yaml
-  - fpga_thermal_vias.yaml
 
 clone_placements:
 
-  - name: pi_filter_vccint
-    enabled: true
-    template: fpga_in_pi_filter
-    anchor_cluster: Pi_Filter_1V2_VCCINT
-    anchor_role: FPGA
-    anchor_pad: '1'
-    origin_x_mm: -8.0
-    origin_y_mm:  2.0
-    params:
-      PWR_IN: '+1V2'
-      PWR_OUT: '+1V2_VCCINT'
-
   - name: p3v3_vccio_pi_filter
     enabled: true
+    active: false
     template: fpga_in_pi_filter
     anchor_cluster: Pi_Filter_3V3_VCCIO
     anchor_role: FPGA
-    anchor_pad: '1'
-    origin_x_mm: -8.0
-    origin_y_mm: 8.0
+    anchor_pad: '139'
+    origin_x_mm: -4.0
+    origin_y_mm: -6.0
     params:
       PWR_IN: '+3V3'
       PWR_OUT: '+3V3_VCCIO'
 
+  - name: pi_filter_vccint
+    enabled: true
+    active: false
+    template: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_1V2_VCCINT
+    anchor_role: FPGA
+    anchor_pad: '1'
+    origin_x_mm: -6.0
+    origin_y_mm: -2.0
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '+1V2_VCCINT'
+
   - name: p2v5_vcca_pi_filter
     enabled: true
+    active: false
     template: fpga_in_pi_filter
     anchor_cluster: Pi_Filter_1V2_VCCA_P2V5
     anchor_role: FPGA
-    anchor_pad: '1'
-    origin_x_mm: -8.0
-    origin_y_mm: 14.0
+    anchor_pad: '34'
+    origin_x_mm: -10.0
+    origin_y_mm:  2.0
     params:
       PWR_IN: '+2V5'
       PWR_OUT: '+2V5_VCCA'
 
   - name: p1v2_vcd_pll_fpga_in_pi_filter
     enabled: true
+    active: false
     template: fpga_in_pi_filter
     anchor_cluster: Pi_Filter_1V2_VCCD_PLL
     anchor_role: FPGA
-    anchor_pad: '1'
-    origin_x_mm: -8.0
-    origin_y_mm:  20.0
+    anchor_pad: '37'
+    origin_x_mm: -6.0
+    origin_y_mm:  5.0
     params:
       PWR_IN: '+1V2'
       PWR_OUT: '+1V2_VCCD_PLL'
+
+# Oscillator system
+  - name: fpga_oscill
+    enabled: true
+    active: true
+    template: fpga_oscill
+    role: FPGA_OSCILL
+    anchor_role: FPGA
+    anchor_cluster: FPGA
+    anchor_pad: '22'
+    origin_x_mm: -10.0
+    origin_y_mm:  0.0
+    nets:
+      FPGA_OSCILL: '+3V3_OSCILL'
+    params:
+      'PWR_IN': '+3V3_OSCILL'
+      'CLK_OUT': 'CL_CLK_0'
+    
+
+    

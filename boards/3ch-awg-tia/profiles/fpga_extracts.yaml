@@ -1,7 +1,7 @@
 extract_profiles:
 
 # FPGA Subsistem
-  fpga_pwr_spoke:
+  fpga_3v3_vccint_spoke:
     name: fpga_cap_pair   # ИМЯ ШАБЛОНА отличается от имени профиля — оставляем явно
     output: boards/3ch-awg-tia/profiles/templates/fpga_cap_spoke.yaml
     # Выделить в PCB: 2 конденсатора спицы (Role=C_OUT_BYPASS/C_OUT_BULK)
@@ -13,6 +13,8 @@ extract_profiles:
     # внутри выделения уникальна по построению (extract сам фатально
     # падает на дублирующихся ролях) — надёжнее.
     origin_by_component_role: C_OUT_BYPASS
+    params:
+      'PWR': '+3V3_VCCIO'
 
   fpga_p1v2_vccint_pi_filter:
     name: fpga_in_pi_filter
@@ -29,5 +31,31 @@ extract_profiles:
     origin_by_component_role: 'C_OUT_BYPASS'
     origin_by_component_pad: '1'
 
+
+  p3v3_flash_r_filter:
+    name: fpga_r_pi_filter
+    output: boards/3ch-awg-tia/profiles/templates/fpga_r_pi_filters.yaml
+    params:
+      PWR_IN: '+3V3'
+      PWR_OUT: '+3V3_FLASH'
+    net_template_role:
+      C_IN_BYPASS: '+3V3'
+      C_OUT_BYPASS: '+3V3_FLASH'
+      C_OUT_BULK: '+3V3_FLASH'
+      C_IN_BULK: '+3V3'
+      R_PI_FLT: '+3V3_FLASH'
+    origin_by_component_role: 'C_OUT_BYPASS'
+    origin_by_component_pad: '1'
+
+  fpga_oscillator:
+    name: fpga_oscill
+    output: boards/3ch-awg-tia/profiles/templates/fpga_oscill.yaml
+    params:
+      PWR_IN: '+3V3_OSCILL'
+      CLK_OUT: '/FPGA/CL_CLK_0'
+    net_template_role:
+      FPGA_OSCILL: '/FPGA/CL_CLK_0'
+    origin_by_component_role: R_FPGA_CLK_IN
+    origin_by_component_pad: '2'
 
     
