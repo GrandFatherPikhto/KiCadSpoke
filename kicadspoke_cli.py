@@ -28,6 +28,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
+from kicadspoke import __version__
 from kicadspoke.config import load_config, RuntimeContext
 from kicadspoke.apply_pipeline import ApplyPipeline, cmd_apply
 from kicadspoke.cli_extract import cmd_extract, load_profile, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
@@ -62,13 +63,20 @@ def cmd_undo(args):
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] not in ['apply', 'undo', 'extract', 'clone-extract']:
+    # --version/-V exempted from the bare-config-path -> 'apply' rewrite
+    # below, same as the other real subcommands — otherwise it would be
+    # silently rewritten to 'apply --version' and fail as an unknown apply
+    # argument instead of printing the version.
+    if len(sys.argv) > 1 and sys.argv[1] not in ['apply', 'undo', 'extract', 'clone-extract',
+                                                  '--version', '-V']:
         sys.argv.insert(1, 'apply')
 
     parser = argparse.ArgumentParser(
         description=_("KiCad Decap Placer – capacitor placement (manual strategy)"),
         epilog=_("Example: kicadspoke_cli.py config.yaml --dry-run")
     )
+    parser.add_argument("--version", "-V", action="version",
+                        version=f"kicadspoke {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True, help=_("Subcommand"))
 
     apply_parser = subparsers.add_parser("apply", help=_("Apply placement"))

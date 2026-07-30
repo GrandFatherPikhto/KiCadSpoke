@@ -1,4 +1,4 @@
-# KiCadSpoke v1.37.0
+# KiCadSpoke v1.4.0
 
 **KiCadSpoke** is a command‑line **PCB cloning and layout automation** tool for **KiCad 10**, designed as an advanced script‑based alternative to the traditional **KiCad Replicate Layout** plugin. It enables automated **block replication**, component placement, and routing of complex multi‑channel designs using **templates**, **roles**, and the IPC API.
 
@@ -33,7 +33,7 @@
   - at most one selection‑based `clone_placement` per run (KiCad allows only one active selection).
 - **Diagnostics** – scripts for debugging IPC, geometry, and field reading.
 - **File‑based cloner** (`clone-extract`) – parses `.net` and `.kicad_pcb` without IPC, builds a twin map of channels for hierarchical projects.
-- **Tracks in templates** – since v1.22.0, templates can include straight track segments (polylines are supported as a sequence of segments). Track collisions are not automatically checked (rely on KiCad DRC).
+- **Tracks in templates** – templates can include straight track segments (polylines are supported as a sequence of segments). Track collisions are not automatically checked (rely on KiCad DRC).
 - **External template files** – templates can be stored separately as JSON or YAML and referenced via `templates_file:` in the main config, keeping the main file clean and diff‑friendly.
 - **Splitting a profile into subsystem files** – `include:` at the root of a profile merges in one or more other YAML files (each carrying any mix of `extract_profiles`/`clone_placements`/`rules`/`templates`), recursively, with a per‑entry `enabled: false` to switch a whole subsystem off without touching every item inside it. Independent of `templates_file` (see [docs/commands.md](docs/commands.md) for merge semantics and duplicate/cycle handling).
 - **Scripting API** – `kicadspoke.explore.Board` for ad‑hoc read‑only querying (`board.select(role=..., cluster=..., sheet=..., net=...)`), and `kicadspoke.author` for building `ClonePlacement`/`Rule` in real Python instead of hand‑writing repetitive YAML, either applied directly or dumped back to an `include:`‑ready YAML file (see [docs/scripting.md](docs/scripting.md)).
@@ -403,6 +403,16 @@ Detailed documentation is in the `docs/` folder:
 - [Internationalization (i18n) — gettext/Babel](./docs/i18n.md)
 - [Template rotation and transformation](./docs/rotate_template.md)
 - [Module dependency diagram](./docs/diagram.md)
+
+---
+
+## Versioning
+
+Single source of truth: `__version__` in [`kicadspoke/__init__.py`](./kicadspoke/__init__.py) — this README's
+header and `kicadspoke_cli.py --version`/`-V` both read it, not a separate literal. Versioned by
+session/stage, not by commit: MINOR bumps once per notable block of work (e.g. one architecture‑refactor
+session, regardless of how many commits it took), PATCH for point fixes made between stages, MAJOR
+reserved for actual breaking changes to the CLI or YAML config format.
 
 ---
 
