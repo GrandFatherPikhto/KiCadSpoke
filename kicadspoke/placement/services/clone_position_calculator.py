@@ -178,19 +178,23 @@ class ClonePositionCalculator:
             # Resolve anchor BEFORE role resolution — needed for physical
             # proximity narrowing (resolve_roles_by_nets), and the same anchor
             # is later used in apply_clone_geometry (avoid double resolution).
-            anchor_position = self._resolve_anchor(clone)
+            # clone.ignore_selection — per-item counterpart of --no-selection,
+            # scoped to just this clone's own resolution (see
+            # temporarily_ignore_selection's docstring).
+            with self.adapter.temporarily_ignore_selection(clone.ignore_selection):
+                anchor_position = self._resolve_anchor(clone)
 
-            # Mode: "by nets" if nets OR params are set — otherwise "by selection".
-            # Explicit decision outside, not automatic inside the resolver
-            # (see clone_role_resolver.py).
-            if clone_uses_selection_mode(clone):
-                role_to_ref = resolve_roles_by_selection(self.adapter, template, clone,
-                                                         anchor_position=anchor_position,
-                                                         sheet_names=self.cfg.sheet_names)
-            else:
-                role_to_ref = resolve_roles_by_nets(self.adapter, template, clone,
-                                                    anchor_position=anchor_position,
-                                                    sheet_names=self.cfg.sheet_names)
+                # Mode: "by nets" if nets OR params are set — otherwise "by selection".
+                # Explicit decision outside, not automatic inside the resolver
+                # (see clone_role_resolver.py).
+                if clone_uses_selection_mode(clone):
+                    role_to_ref = resolve_roles_by_selection(self.adapter, template, clone,
+                                                             anchor_position=anchor_position,
+                                                             sheet_names=self.cfg.sheet_names)
+                else:
+                    role_to_ref = resolve_roles_by_nets(self.adapter, template, clone,
+                                                        anchor_position=anchor_position,
+                                                        sheet_names=self.cfg.sheet_names)
 
             # Placement side: own layer of the clone or global from config.
             # mirror — explicit manual operation; correctness of layer/mirror pair

@@ -2,6 +2,7 @@
 
 import time
 import logging
+from contextlib import contextmanager
 from typing import List, Optional, Any
 import kipy
 from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, Track, BoardLayer, Pad, Field, Group
@@ -36,6 +37,30 @@ class KiCadBoardAdapter(IBoardAdapter):
         # which candidate wins, with no indication it came from the GUI, not
         # the config. This flag lets a whole apply run opt out of that input.
         self.ignore_selection = False
+
+    @contextmanager
+    def temporarily_ignore_selection(self, active: bool):
+        """
+        Force ignore_selection True for the duration of the `with` block when
+        active is True; a no-op (state left exactly as it was) when False.
+        OR-composes with an already-True ignore_selection (e.g. from
+        --no-selection) rather than overriding it back off — restores
+        whatever the previous value was, not unconditionally False.
+
+        See ClonePlacement.ignore_selection (config/models.py) — the
+        per-item counterpart of --no-selection, applied around just one
+        clone_placement's own anchor/role resolution (clone_position_
+        calculator.py, dependency_order.py) instead of the whole run.
+        """
+        if not active:
+            yield
+            return
+        previous = self.ignore_selection
+        self.ignore_selection = True
+        try:
+            yield
+        finally:
+            self.ignore_selection = previous
 
     def refresh_board(self):
         logger.debug(_("Refreshing board from KiCad"))

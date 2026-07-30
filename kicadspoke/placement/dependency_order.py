@@ -71,8 +71,13 @@ def _build_items(adapter: KiCadBoardAdapter, cfg: Config) -> List[Item]:
     for clone in cfg.clone_placements:
         if not clone.enabled:
             continue
-        anchor_ref = resolve_clone_anchor_ref(adapter, cfg, clone)
-        placed, _vias, _tracks = clone_calc.compute_raw_positions([clone])
+        # clone.ignore_selection must apply here too — this pass resolves
+        # the same anchor/roles as compute_raw_positions does again later
+        # for real planning, and both must see the selection the same way
+        # (see temporarily_ignore_selection's docstring in kicad/adapter.py).
+        with adapter.temporarily_ignore_selection(clone.ignore_selection):
+            anchor_ref = resolve_clone_anchor_ref(adapter, cfg, clone)
+            placed, _vias, _tracks = clone_calc.compute_raw_positions([clone])
         items.append(Item(
             kind='clone', obj=clone, label=_("clone_placement {name!r}").format(name=clone.name),
             anchor_ref=anchor_ref, produces={p.ref for p in placed},

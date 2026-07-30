@@ -83,6 +83,29 @@ clone_placements:
     assert cfg.clone_placements[1].active is False
 
 
+def test_ignore_selection_defaults_false_and_can_be_set_true(tmp_path):
+    yaml_content = """
+templates:
+  t:
+    components: []
+clone_placements:
+  - name: default_selection
+    template: t
+    origin_x_mm: 0
+    origin_y_mm: 0
+  - name: ignores_selection
+    template: t
+    origin_x_mm: 0
+    origin_y_mm: 0
+    ignore_selection: true
+"""
+    config_file = tmp_path / "ignore_selection.yaml"
+    config_file.write_text(yaml_content, encoding="utf-8")
+    cfg = load_config(str(config_file))
+    assert cfg.clone_placements[0].ignore_selection is False
+    assert cfg.clone_placements[1].ignore_selection is True
+
+
 def test_no_clone_placements_gives_empty_list(tmp_path):
     config_file = tmp_path / "test2.yaml"
     config_file.write_text("", encoding="utf-8")

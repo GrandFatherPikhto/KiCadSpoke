@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 # Add project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -201,6 +203,63 @@ class TestIgnoreSelection:
 
         assert items == []
         adapter._board.get_selection.assert_not_called()
+
+
+class TestTemporarilyIgnoreSelection:
+    """adapter.temporarily_ignore_selection() — per-item counterpart of the
+    plain ignore_selection flag, used by ClonePlacement.ignore_selection
+    (added 2026-07-30) to scope the override to just one clone_placement's
+    own resolution instead of the whole run."""
+
+    def test_active_true_forces_true_for_the_block_and_restores_after(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter.ignore_selection = False
+
+        with adapter.temporarily_ignore_selection(True):
+            assert adapter.ignore_selection is True
+
+        assert adapter.ignore_selection is False
+
+    def test_active_false_is_a_noop(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter.ignore_selection = False
+
+        with adapter.temporarily_ignore_selection(False):
+            assert adapter.ignore_selection is False
+
+        assert adapter.ignore_selection is False
+
+    def test_or_composes_with_an_already_true_flag(self):
+        """--no-selection already set adapter.ignore_selection = True for the
+        whole run — a clone with ignore_selection: false must NOT turn it
+        back off underneath an outer --no-selection."""
+        adapter = Adapter.__new__(Adapter)
+        adapter.ignore_selection = True
+
+        with adapter.temporarily_ignore_selection(False):
+            assert adapter.ignore_selection is True
+
+        assert adapter.ignore_selection is True
+
+    def test_restores_true_after_a_true_block_inside_an_already_true_run(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter.ignore_selection = True
+
+        with adapter.temporarily_ignore_selection(True):
+            assert adapter.ignore_selection is True
+
+        assert adapter.ignore_selection is True
+
+    def test_exception_inside_the_block_still_restores(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter.ignore_selection = False
+
+        with pytest.raises(ValueError):
+            with adapter.temporarily_ignore_selection(True):
+                assert adapter.ignore_selection is True
+                raise ValueError("boom")
+
+        assert adapter.ignore_selection is False
 
 
 if __name__ == "__main__":

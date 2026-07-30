@@ -162,7 +162,7 @@ _THERMAL_VIA_ARRAY_KNOWN_KEYS = {
 
 _CLONE_PLACEMENT_KNOWN_KEYS = {
     'name', 'template', 'role', 'origin_x_mm', 'origin_y_mm', 'rotation_deg',
-    'nets', 'params', 'net_overrides', 'enabled', 'active',
+    'nets', 'params', 'net_overrides', 'enabled', 'active', 'ignore_selection',
     'anchor_ref', 'anchor_pad', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
     'layer', 'mirror', 'refs', 'by_selection',
     'side',  # deprecated – recognised separately to give a migration message
@@ -267,6 +267,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
         net_overrides=data.get('net_overrides', {}) or {},
         enabled=data.get('enabled', True),
         active=data.get('active', True),
+        ignore_selection=data.get('ignore_selection', False),
         anchor_ref=anchor_ref,
         anchor_pad=str(anchor_pad) if anchor_pad is not None else None,
         anchor_role=anchor_role,

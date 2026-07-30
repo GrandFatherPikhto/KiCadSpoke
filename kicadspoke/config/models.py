@@ -262,6 +262,17 @@ class ClonePlacement:
 
     active — see ThermalViaArrayConfig.active for the enabled-vs-active
     distinction.
+
+    ignore_selection — per-item counterpart of the CLI's --no-selection
+    (kicadspoke_cli.py), default False. When True, this clone_placement's own
+    anchor resolution and role resolution (by_selection mode, and the
+    selection-narrowing step shared with by-nets ambiguity resolution) treat
+    the live PCB editor selection as empty, regardless of --no-selection —
+    OR-composes with it, does not override it off. Useful when only SOME
+    clone_placements are bothered by a stray leftover GUI selection, while
+    others in the same run genuinely rely on it (e.g. a one-off MCU placed
+    "by selection" — see resolve_roles_by_selection's docstring in
+    clone_role_resolver.py).
     """
     name: str
     origin_x_mm: float
@@ -274,6 +285,7 @@ class ClonePlacement:
     net_overrides: Dict[str, str] = field(default_factory=dict)  # final override of resolved name
     enabled: bool = True
     active: bool = True
+    ignore_selection: bool = False
     anchor_ref: Optional[str] = None
     anchor_pad: Optional[str] = None
     # Alternative to anchor_ref — anchor by the Role field on the board, not by
