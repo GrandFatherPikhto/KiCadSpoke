@@ -35,6 +35,7 @@ Run: python boards/3ch-awg-tia/scripts/dac_channels.py
 """
 import sys
 from pathlib import Path
+from typing import List, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
@@ -77,6 +78,54 @@ PASSIVE_PADS = {
     "R_DAC_FS_ADJ": ("24", "/Channel_{channel}/DAC/DAC_FS_ADJ"),
 }
 
+DAC_CLKDVDD_PI_FILTERS = [
+    (-1.3, 0.0, 0.0),
+    (0.0, 1.3, 90.0),
+    (1.3, 0.0, 180.0)
+]
+
+DAC_ADVDD_PI_FILTERS = [
+    (0.0, 1.3, 0.0),
+    (1.3, 0.0, 90.0),
+    (0.0, -1.3, 180.0)
+]
+
+DAC_DDVDD_PI_FILTERS = [
+    (0.0, -1.3, 180.0),
+    (-1.3, 0.0, 270.0),
+    (0.0,  1.3, 0.0)
+]
+
+def generate_rotated_placements(
+    start_x: float,
+    start_y: float,
+    angles = (0.0, 90.0, 180.0)
+) -> List[Tuple[float, float, float]]:
+    """
+    Генерирует координаты и углы путём последовательного поворота
+    начальной точки на step_deg градусов вокруг (0,0).
+    
+    Args:
+        start_x, start_y: начальные координаты (смещение от центра)
+        start_angle: начальный угол компонента (в градусах)
+        count: количество точек (минимум 1)
+        step_deg: шаг поворота в градусах (по умолчанию 90°)
+    
+    Returns:
+        Список кортежей (x, y, angle)
+    """
+    import math
+    result = []
+    x, y = start_x, start_y
+    for angle in angles:
+        # result.append((round(x, 4), round(y, 4), round(angle, 4)))
+        # Поворачиваем вектор (x, y) на step_deg по часовой стрелке
+        rad = math.radians(angle)
+        new_x = x * math.cos(rad) + y * math.sin(rad)
+        new_y = -x * math.sin(rad) + y * math.cos(rad)
+        # x, y = new_x, new_y
+        result.append((round(new_x, 4), round(new_y, 4), round(angle, 4)))
+    return result
 
 def build() -> list:
     clones = []
@@ -87,6 +136,7 @@ def build() -> list:
             anchor_role="FPGA", anchor_sheet=f"Channel_{channel}",
             nets={"AD_DAC": f"/Channel_{channel}/DAC/DAC_OUT_P"},
             origin_x_mm=x, origin_y_mm=y, rotation_deg=rot,
+            enabled=True, active=True
         ))
 
     for role, offsets in PASSIVE_LAYOUT.items():
@@ -98,6 +148,7 @@ def build() -> list:
                 anchor_role="AD_DAC", anchor_sheet=channel_name, anchor_pad=anchor_pad,
                 nets={role: net_template.format(channel=channel)},
                 origin_x_mm=x, origin_y_mm=y, rotation_deg=rot,
+                enabled=True, active=True
             ))
 
     # OP_AMP: anchored on AD_DAC, not on R_TERM_P — R_TERM_P repeats twice per
@@ -108,7 +159,38 @@ def build() -> list:
             name=f"channel_{channel}_op_amp", role="OP_AMP",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}",
             nets={"OP_AMP": f"/Channel_{channel}/OpAmp/OA_IN_P"},
-            origin_x_mm=coords[0], origin_y_mm=coords[1], rotation_deg=coords[2], enabled=True, active=True
+            origin_x_mm=coords[0], origin_y_mm=coords[1], rotation_deg=coords[2],
+            enabled=True, active=True
+        ))
+
+    for channel, dac_pwr in enumerate(DAC_CLKDVDD_PI_FILTERS):
+        clones.append(ClonePlacement(
+            name=f"Channel_{channel}_Dac_Pi_Filter_ClkVdd", template="dac_clkvdd_pi_filter",
+            anchor_cluster="Dac_Pi_Filter_ClkVdd",
+            anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="11",
+            params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_CLKVDD"},
+            origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
+            enabled=True, active=True
+        ))
+
+    for channel, dac_pwr in enumerate(DAC_ADVDD_PI_FILTERS):
+        clones.append(ClonePlacement(
+            name=f"Channel_{channel}_Dac_Pi_Filter_Avdd", template="dac_avdd_pi_filter",
+            anchor_cluster="Dac_Pi_Filter_Avdd",
+            anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="18",
+            params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_AVDD"},
+            origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
+            enabled=True, active=True
+        ))
+
+    for channel, dac_pwr in enumerate(DAC_DDVDD_PI_FILTERS):
+        clones.append(ClonePlacement(
+            name=f"Channel_{channel}_Dac_Pi_Filter_Dvdd", template="dac_dvdd_pi_filter",
+            anchor_cluster="Dac_Pi_Filter_Dvdd",
+            anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="3",
+            params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_DVDD"},
+            origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
+            enabled=True, active=True
         ))
 
     return clones

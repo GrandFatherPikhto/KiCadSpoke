@@ -167,3 +167,108 @@ clone_placements:
     OP_AMP: /Channel_2/OpAmp/OA_IN_P
   anchor_role: AD_DAC
   anchor_sheet: Channel_2
+- name: Channel_0_Dac_Pi_Filter_ClkVdd
+  origin_x_mm: -1.3
+  origin_y_mm: 0.0
+  template: dac_clkvdd_pi_filter
+  params:
+    PWR_IN: +3V3
+    PWR_OUT: /Channel_0/DAC/+3V3_CLKVDD
+  anchor_pad: '11'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_0
+  anchor_cluster: Dac_Pi_Filter_ClkVdd
+- name: Channel_1_Dac_Pi_Filter_ClkVdd
+  origin_x_mm: 0.0
+  origin_y_mm: 1.3
+  rotation_deg: 90.0
+  template: dac_clkvdd_pi_filter
+  params:
+    PWR_IN: +3V3
+    PWR_OUT: /Channel_1/DAC/+3V3_CLKVDD
+  anchor_pad: '11'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_1
+  anchor_cluster: Dac_Pi_Filter_ClkVdd
+- name: Channel_2_Dac_Pi_Filter_ClkVdd
+  origin_x_mm: 1.3
+  origin_y_mm: 0.0
+  rotation_deg: 180.0
+  template: dac_clkvdd_pi_filter
+  params:
+    PWR_IN: +3V3
+    PWR_OUT: /Channel_2/DAC/+3V3_CLKVDD
+  anchor_pad: '11'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_2
+  anchor_cluster: Dac_Pi_Filter_ClkVdd
+- name: Channel_0_Dac_Pi_Filter_Avdd
+  origin_x_mm: 0.0
+  origin_y_mm: 1.3
+  template: dac_avdd_pi_filter
+  params:
+    PWR_IN: +3V3
+    PWR_OUT: /Channel_0/DAC/+3V3_AVDD
+  anchor_pad: '18'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_0
+  anchor_cluster: Dac_Pi_Filter_Avdd
+- name: Channel_1_Dac_Pi_Filter_Avdd
+  origin_x_mm: 1.3
+  origin_y_mm: 0.0
+  rotation_deg: 90.0
+  template: dac_avdd_pi_filter
+  params:
+    PWR_IN: +3V3
+    PWR_OUT: /Channel_1/DAC/+3V3_AVDD
+  anchor_pad: '18'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_1
+  anchor_cluster: Dac_Pi_Filter_Avdd
+- name: Channel_2_Dac_Pi_Filter_Avdd
+  origin_x_mm: 0.0
+  origin_y_mm: -1.3
+  rotation_deg: 180.0
+  template: dac_avdd_pi_filter
+  params:
+    PWR_IN: +3V3
+    PWR_OUT: /Channel_2/DAC/+3V3_AVDD
+  anchor_pad: '18'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_2
+  anchor_cluster: Dac_Pi_Filter_Avdd
+- name: Channel_0_Dac_Pi_Filter_Dvdd
+  origin_x_mm: 0.0
+  origin_y_mm: -1.3
+  rotation_deg: 180.0
+  template: dac_dvdd_pi_filter
+  params:
+    PWR_IN: +3V3
+    PWR_OUT: /Channel_0/DAC/+3V3_DVDD
+  anchor_pad: '3'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_0
+  anchor_cluster: Dac_Pi_Filter_Dvdd
+- name: Channel_1_Dac_Pi_Filter_Dvdd
+  origin_x_mm: -1.3
+  origin_y_mm: 0.0
+  rotation_deg: 270.0
+  template: dac_dvdd_pi_filter
+  params:
+    PWR_IN: +3V3
+    PWR_OUT: /Channel_1/DAC/+3V3_DVDD
+  anchor_pad: '3'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_1
+  anchor_cluster: Dac_Pi_Filter_Dvdd
+- name: Channel_2_Dac_Pi_Filter_Dvdd
+  origin_x_mm: 0.0
+  origin_y_mm: 1.3
+  template: dac_dvdd_pi_filter
+  params:
+    PWR_IN: +3V3
+    PWR_OUT: /Channel_2/DAC/+3V3_DVDD
+  anchor_pad: '3'
+  anchor_role: AD_DAC
+  anchor_sheet: Channel_2
+  anchor_cluster: Dac_Pi_Filter_Dvdd

@@ -1,9 +1,9 @@
 # kicadspoke/placement/services/clone_position_calculator.py
 """
 clone_position_calculator.py — counterpart to manual_position_calculator.py, but
-for ClonePlacement (TemplatePlacer). It does not implement IPositionCalculator
-because that interface is designed specifically for the pad‑anchored ManualSpoke
-model (target_fp/rules/side); ClonePlacement works fundamentally differently.
+for ClonePlacement (TemplatePlacer). The two calculators share no base class
+because they work fundamentally differently (pad‑anchored spokes vs template‑
+based section cloning), so they have independent signatures.
 
 anchor_id for the registry (see registry.py) is built from PHYSICAL binding
 (anchor_ref/anchor_pad, PLUS the origin_x_mm/origin_y_mm offset — see

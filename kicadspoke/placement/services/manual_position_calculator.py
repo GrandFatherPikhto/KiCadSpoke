@@ -10,7 +10,6 @@ from ...geometry.spoke_layout import apply_spoke_geometry
 from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand
 from ...registry import make_registry_key
 from .component_pool import ComponentPool
-from ..interfaces import IPositionCalculator
 from ...i18n import _
 
 logger = logging.getLogger(__name__)
@@ -56,7 +55,7 @@ def rule_anchor_ids(rule: Rule) -> Set[str]:
     return {f"pad:{spoke.pad}" for spoke in rule.spokes if spoke.enabled}
 
 
-class ManualPositionCalculator(IPositionCalculator):
+class ManualPositionCalculator:
     """
     Manual positioning of components and vias via spoke templates.
     Supports clusters: for each unique cluster in the rule, a separate

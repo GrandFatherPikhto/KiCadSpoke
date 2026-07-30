@@ -12,7 +12,6 @@ from ...kicad.adapter import KiCadBoardAdapter
 from ...utils.units import MM
 from ...exceptions import GeometryError, ComponentNotFoundError, ValidationError
 from ..commands import ViaCommand, PlacedComponentInfo
-from ..interfaces import IViaPlanner
 from .clone_role_resolver import resolve_footprint_by_role
 from ...i18n import _
 
@@ -25,7 +24,7 @@ def thermal_anchor_id(tva: ThermalViaArrayConfig) -> str:
     return f"thermal:{tva.name}"
 
 
-class ViaPlanner(IViaPlanner):
+class ViaPlanner:
     """
     Via planner: filters existing vias (skip_existing_components), adds thermal
     vias. Supports anchor_role for thermal vias (same as rules and ClonePlacement).
