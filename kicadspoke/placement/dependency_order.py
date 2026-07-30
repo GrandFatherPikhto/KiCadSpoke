@@ -31,13 +31,15 @@ single-snapshot behaviour.
 """
 import logging
 from dataclasses import dataclass
-from typing import List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union
 
-from ..config import Config, Rule, ClonePlacement
+from ..config import Config, Rule, ClonePlacement, SpokeTemplate, TemplateComponentSlot
 from ..kicad.adapter import KiCadBoardAdapter
 from ..exceptions import ValidationError, format_fatal_error
-from .services.manual_position_calculator import ManualPositionCalculator, resolve_rule_anchor_ref
-from .services.clone_position_calculator import ClonePositionCalculator, resolve_clone_anchor_ref
+from .services.manual_position_calculator import resolve_rule_anchor_ref
+from .services.clone_position_calculator import resolve_clone_anchor_ref
+from .services.clone_role_resolver import resolve_roles_by_selection, resolve_roles_by_nets, clone_uses_selection_mode
+from .services.component_pool import ComponentPool
 from ..i18n import _
 
 logger = logging.getLogger(__name__)
@@ -52,20 +54,122 @@ class Item:
     produces: Set[str]
 
 
+def _resolve_rule_produces(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) -> Set[str]:
+    """
+    Lightweight equivalent of ManualPositionCalculator.compute_raw_positions()
+    that returns ONLY the set of refs this rule will produce — without resolving
+    the anchor, looking up pads, computing spoke geometry, or creating
+    ViaCommand/TrackCommand objects.
+
+    ComponentPools ARE built and consumed here (in the same order as the real
+    geometry pass in planner.py/plan_item), so the 'produces' set matches what
+    the real placement will produce. This is the expensive part that cannot be
+    avoided — the pool must be scanned to know which refs match the role+net
+    criteria. What we skip is all the geometry computation (apply_spoke_geometry,
+    pad lookups, via/track command creation).
+    """
+    produces: Set[str] = set()
+
+    # --- Collect all roles needed across enabled spokes ---
+    roles_needed: Set[str] = set()
+    for spoke in rule.spokes:
+        if not spoke.enabled:
+            continue
+        template = cfg.templates.get(spoke.template)
+        if template is not None:
+            roles_needed.update(slot.role for slot in template.components)
+
+    # --- Collect unique clusters used in enabled spokes ---
+    clusters_needed: Set[Optional[str]] = {spoke.cluster for spoke in rule.spokes if spoke.enabled}
+
+    # --- Build ComponentPools per cluster (same as ManualPositionCalculator) ---
+    pools_by_cluster: Dict[Optional[str], ComponentPool] = {}
+    for cluster in clusters_needed:
+        pools_by_cluster[cluster] = ComponentPool(
+            adapter,
+            rule.net,
+            roles=sorted(roles_needed),
+            cluster=cluster,
+        )
+
+    # --- Consume pools in spoke order (same as ManualPositionCalculator) ---
+    for spoke in rule.spokes:
+        if not spoke.enabled:
+            continue
+        template = cfg.templates.get(spoke.template)
+        if template is None:
+            continue
+
+        pool = pools_by_cluster[spoke.cluster]
+        role_to_ref = {slot.role: pool.pop(slot.role, spoke.pad) for slot in template.components}
+        produces.update(role_to_ref.values())
+
+    return produces
+
+
+def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: ClonePlacement) -> Set[str]:
+    """
+    Lightweight equivalent of ClonePositionCalculator.compute_raw_positions()
+    that returns ONLY the set of refs this clone will produce — without
+    resolving the anchor position, applying clone geometry, or creating
+    ViaCommand/TrackCommand objects.
+
+    Role resolvers are called directly (resolve_roles_by_selection or
+    resolve_roles_by_nets) — they are standalone functions. The anchor_position
+    parameter (used only for last-resort physical proximity tie-breaking) is
+    omitted here; the known limitation documented in this module's docstring
+    covers that case.
+    """
+    # Synthesise or look up template (same logic as ClonePositionCalculator)
+    if clone.template is not None:
+        template = cfg.templates.get(clone.template)
+        if template is None:
+            logger.warning(
+                _("{name}: template {template!r} not found in templates, skipping")
+                .format(name=clone.name, template=clone.template)
+            )
+            return set()
+    else:
+        # role: instead of template — single-component placement without
+        # a separate template file.
+        template = SpokeTemplate(
+            name=f"__role__{clone.role}",
+            components=[TemplateComponentSlot(
+                role=clone.role, offset_along_mm=0.0, offset_across_mm=0.0, angle_deg=0.0,
+            )],
+        )
+
+    # clone.ignore_selection must apply here too — same as in the real pass
+    with adapter.temporarily_ignore_selection(clone.ignore_selection):
+        if clone_uses_selection_mode(clone):
+            role_to_ref = resolve_roles_by_selection(
+                adapter, template, clone,
+                anchor_position=None,
+                sheet_names=cfg.sheet_names,
+            )
+        else:
+            role_to_ref = resolve_roles_by_nets(
+                adapter, template, clone,
+                anchor_position=None,
+                sheet_names=cfg.sheet_names,
+            )
+
+    return set(role_to_ref.values())
+
+
 def _build_items(adapter: KiCadBoardAdapter, cfg: Config) -> List[Item]:
     """Read-only: resolves every enabled rule/clone_placement's anchor ref and
     produced refs against the board as it is RIGHT NOW. No board mutation —
-    same calls compute_raw_positions already makes for planning."""
+    lightweight ref-resolution only, no geometry computation (see
+    _resolve_rule_produces / _resolve_clone_produces for what is skipped)."""
     items: List[Item] = []
-    position_calc = ManualPositionCalculator(adapter, cfg)
-    clone_calc = ClonePositionCalculator(adapter, cfg)
 
     for rule in cfg.rules:
         anchor_ref = resolve_rule_anchor_ref(adapter, cfg, rule)
-        placed, _vias, _tracks = position_calc.compute_raw_positions([rule])
+        produces = _resolve_rule_produces(adapter, cfg, rule)
         items.append(Item(
             kind='rule', obj=rule, label=_("rule (net {net!r})").format(net=rule.net),
-            anchor_ref=anchor_ref, produces={p.ref for p in placed},
+            anchor_ref=anchor_ref, produces=produces,
         ))
 
     for clone in cfg.clone_placements:
@@ -77,10 +181,10 @@ def _build_items(adapter: KiCadBoardAdapter, cfg: Config) -> List[Item]:
         # (see temporarily_ignore_selection's docstring in kicad/adapter.py).
         with adapter.temporarily_ignore_selection(clone.ignore_selection):
             anchor_ref = resolve_clone_anchor_ref(adapter, cfg, clone)
-            placed, _vias, _tracks = clone_calc.compute_raw_positions([clone])
+            produces = _resolve_clone_produces(adapter, cfg, clone)
         items.append(Item(
             kind='clone', obj=clone, label=_("clone_placement {name!r}").format(name=clone.name),
-            anchor_ref=anchor_ref, produces={p.ref for p in placed},
+            anchor_ref=anchor_ref, produces=produces,
         ))
 
     return items
