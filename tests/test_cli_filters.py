@@ -11,11 +11,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import pytest
 import yaml
 from kicadspoke.config import Config, Rule, ManualSpoke, ClonePlacement, ThermalViaArrayConfig
-from kicadspoke_cli import (
+from kicadspoke.apply_pipeline import (
     _split_comma_values, _matches_any_cluster,
     drop_disabled_rules, drop_inactive_items, apply_only_filter, apply_cluster_filter,
-    load_profile,
 )
+from kicadspoke.cli_extract import load_profile
 
 logger = logging.getLogger("test_cli_filters")
 

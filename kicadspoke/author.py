@@ -177,7 +177,7 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
     # so every logger.info/debug — including the role-resolver's ambiguity
     # narrowing cascade, exactly what you need to see when a role fails to
     # resolve — is silently dropped instead of printed.
-    from kicadspoke_cli import setup_logging
+    from kicadspoke.logging_setup import setup_logging
     setup_logging(verbose=args.verbose)
 
     # Mirrors kicadspoke_cli.py's own main() exception handling: without
