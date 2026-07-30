@@ -56,7 +56,7 @@ class TestDumpRoundTrip:
         out = tmp_path / "generated.yaml"
         dump_clone_placements(clones, str(out))
 
-        cfg = load_config(str(out))
+        cfg, _ = load_config(str(out))
         assert len(cfg.clone_placements) == 1
         loaded = cfg.clone_placements[0]
         original = clones[0]
@@ -79,7 +79,7 @@ class TestDumpRoundTrip:
         out = tmp_path / "generated_rules.yaml"
         dump_rules(rules, str(out))
 
-        cfg = load_config(str(out))
+        cfg, _ = load_config(str(out))
         assert len(cfg.rules) == 1
         loaded = cfg.rules[0]
         assert loaded.net == "+3V3_VCCIO"
@@ -160,7 +160,7 @@ class TestCliMain:
         out = tmp_path / "generated.yaml"
         with patch("kicadspoke.author.load_config") as mock_load_config, \
              patch("kicadspoke.author.apply_config") as mock_apply_config:
-            mock_load_config.return_value = "cfg-sentinel"
+            mock_load_config.return_value = ("cfg-sentinel", None)
             cli_main(self._build, str(out), "root.yaml", argv=["--apply", "--dry-run"])
 
         mock_load_config.assert_called_once_with("root.yaml")
@@ -170,6 +170,7 @@ class TestCliMain:
         out = tmp_path / "generated.yaml"
         with patch("kicadspoke.author.load_config") as mock_load_config, \
              patch("kicadspoke.author.apply_config") as mock_apply_config:
+            mock_load_config.return_value = ("cfg-sentinel", None)
             cli_main(self._build, str(out), "root.yaml", argv=["--apply"])
 
         assert mock_apply_config.call_args.kwargs["dry_run"] is False

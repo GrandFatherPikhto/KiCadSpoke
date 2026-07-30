@@ -36,7 +36,8 @@ from ...i18n import _
 logger = logging.getLogger(__name__)
 
 
-def resolve_clone_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, clone: ClonePlacement) -> Optional[str]:
+def resolve_clone_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, clone: ClonePlacement,
+                             sheet_names=None) -> Optional[str]:
     """
     Resolves clone's anchor to a concrete ref, WITHOUT resolving anchor_pad
     position — used by dependency_order.py to build the producer/consumer
@@ -49,7 +50,8 @@ def resolve_clone_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, clone: Clo
     if clone.anchor_ref is not None:
         return clone.anchor_ref
     if clone.anchor_role is not None:
-        fp = resolve_anchor_by_role(adapter, clone, cfg.sheet_names)
+        _sn = sheet_names or {}
+        fp = resolve_anchor_by_role(adapter, clone, _sn)
         return fp.reference_field.text.value
     return None
 
@@ -95,9 +97,10 @@ def clone_anchor_id(clone: ClonePlacement) -> str:
 
 
 class ClonePositionCalculator:
-    def __init__(self, adapter: KiCadBoardAdapter, config: Config):
+    def __init__(self, adapter: KiCadBoardAdapter, config: Config, sheet_names=None):
         self.adapter = adapter
         self.cfg = config
+        self.sheet_names = sheet_names or {}
 
     def _resolve_anchor(self, clone: ClonePlacement) -> Optional[Vector2]:
         """
@@ -117,7 +120,7 @@ class ClonePositionCalculator:
                      .format(name=clone.name)]
                 ))
         elif clone.anchor_role is not None:
-            fp = resolve_anchor_by_role(self.adapter, clone, self.cfg.sheet_names)
+            fp = resolve_anchor_by_role(self.adapter, clone, self.sheet_names)
         else:
             return None
 
@@ -189,12 +192,12 @@ class ClonePositionCalculator:
                 # (see clone_role_resolver.py).
                 if clone_uses_selection_mode(clone):
                     role_to_ref = resolve_roles_by_selection(self.adapter, template, clone,
-                                                             anchor_position=anchor_position,
-                                                             sheet_names=self.cfg.sheet_names)
+                                                              anchor_position=anchor_position,
+                                                              sheet_names=self.sheet_names)
                 else:
                     role_to_ref = resolve_roles_by_nets(self.adapter, template, clone,
-                                                        anchor_position=anchor_position,
-                                                        sheet_names=self.cfg.sheet_names)
+                                                         anchor_position=anchor_position,
+                                                         sheet_names=self.sheet_names)
 
             # Placement side: own layer of the clone or global from config.
             # mirror — explicit manual operation; correctness of layer/mirror pair

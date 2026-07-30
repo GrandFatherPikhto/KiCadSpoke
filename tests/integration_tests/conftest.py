@@ -39,7 +39,8 @@ def board(adapter):
 @pytest.fixture(scope="session")
 def test_config():
     """Loads the test config."""
-    return load_config(str(TEST_CONFIG_PATH))
+    cfg, _ = load_config(str(TEST_CONFIG_PATH))
+    return cfg
 
 
 @pytest.fixture(scope="function")

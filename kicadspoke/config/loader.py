@@ -1,4 +1,5 @@
 # kicadspoke/config/loader.py
+from typing import Tuple
 """
 config/loader.py — all YAML loading/validation logic for dataclasses
 from config/models.py: load_config() (entry point) and all _load_* functions.
@@ -7,11 +8,12 @@ Split from monolithic config.py by the same refactoring as models.py.
 import logging
 import json
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 import yaml
 
 from ..exceptions import ValidationError, format_fatal_error, check_unknown_keys
 from ..sheet_names import build_sheet_name_map
+from ..runtime_context import RuntimeContext
 from .includes import resolve_includes
 from .models import (
     ThermalViaArrayConfig, TemplateVia, TemplateComponentSlot, TemplateTrack,
@@ -280,7 +282,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
     )
 
 
-def load_config(path: str) -> Config:
+def load_config(path: str) -> Tuple[Config, RuntimeContext]:
     logger.info(_("Loading configuration from {path}").format(path=path))
     with open(path, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f) or {}
@@ -485,6 +487,8 @@ def load_config(path: str) -> Config:
     if log_file:
         log_file = str(Path(path).parent / log_file)
 
+    ctx = RuntimeContext(sheet_names=sheet_names)
+
     cfg = Config(
         layer=root_layer,
         templates=templates,
@@ -499,7 +503,6 @@ def load_config(path: str) -> Config:
         via_search_n_directions=data.get('via_search_n_directions', 8),
         schematic_dir=schematic_dir,
         schematic_files=schematic_files,
-        sheet_names=sheet_names,
         registry_path=registry_path,
         track_registry_path=track_registry_path,
         log_file=log_file,
@@ -509,4 +512,4 @@ def load_config(path: str) -> Config:
                    "clone_placements={clones}").format(
                        layer=cfg.layer, tpl=len(cfg.templates), rules=len(cfg.rules),
                        spokes=total_spokes, clones=len(cfg.clone_placements)))
-    return cfg
+    return cfg, ctx

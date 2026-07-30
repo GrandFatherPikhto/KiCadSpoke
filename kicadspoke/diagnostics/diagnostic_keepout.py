@@ -35,7 +35,7 @@ def main():
 
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     logger.info(_("Loading config: {path}").format(path=config_path))
-    cfg = load_config(config_path)
+    cfg, _ctx = load_config(config_path)
 
     logger.info(_("Connecting to KiCad..."))
     adapter = KiCadBoardAdapter()

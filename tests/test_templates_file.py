@@ -25,7 +25,7 @@ def test_single_templates_file_still_works(tmp_path):
     root = tmp_path / "root.yaml"
     root.write_text("templates_file: ext.yaml\n", encoding="utf-8")
 
-    cfg = load_config(str(root))
+    cfg, _ = load_config(str(root))
     assert set(cfg.templates.keys()) == {"tpl_a"}
 
 
@@ -39,7 +39,7 @@ template_files:
   - b.yaml
 """, encoding="utf-8")
 
-    cfg = load_config(str(root))
+    cfg, _ = load_config(str(root))
     assert set(cfg.templates.keys()) == {"tpl_a", "tpl_b"}
 
 
@@ -53,7 +53,7 @@ template_files:
   - a.yaml
 """, encoding="utf-8")
 
-    cfg = load_config(str(root))
+    cfg, _ = load_config(str(root))
     assert set(cfg.templates.keys()) == {"tpl_single", "tpl_a"}
 
 
@@ -100,7 +100,7 @@ templates:
         angle_deg: 0.0
 """, encoding="utf-8")
 
-    cfg = load_config(str(root))
+    cfg, _ = load_config(str(root))
     assert cfg.templates["tpl_a"].components[0].role == "INLINE_ROLE"
 
 

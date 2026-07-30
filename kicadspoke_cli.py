@@ -28,7 +28,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
-from kicadspoke.config import load_config
+from kicadspoke.config import load_config, RuntimeContext
 from kicadspoke.apply_pipeline import ApplyPipeline
 from kicadspoke.cli_extract import cmd_extract, load_profile, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
 from kicadspoke.exceptions import PlacerError
@@ -39,7 +39,7 @@ from kicadspoke.i18n import _
 from kipy.errors import ApiError, ApiStatusCode
 
 
-def cmd_apply(args, cfg=None):
+def cmd_apply(args, cfg=None, ctx=None):
     """Main command: apply placement.  Thin delegator to ApplyPipeline."""
     pipeline = ApplyPipeline(
         config_path=args.config,
@@ -52,6 +52,7 @@ def cmd_apply(args, cfg=None):
         only=getattr(args, "only", None),
         cluster=getattr(args, "cluster", None),
         preloaded_cfg=cfg,
+        preloaded_ctx=ctx,
     )
     pipeline.run()
 
@@ -176,18 +177,20 @@ def main():
 
     # Load config early (only for apply) to pick up log_file from config if --log-file not given.
     cfg = None
+    ctx = None
     if args.command == "apply":
         try:
-            cfg = load_config(args.config)
+            cfg, ctx = load_config(args.config)
         except Exception:
             cfg = None
+            ctx = None
 
     log_file = getattr(args, "log_file", None) or (cfg.log_file if cfg else None)
     setup_logging(verbose=getattr(args, "verbose", False), log_file=log_file)
 
     try:
         if args.command == "apply":
-            cmd_apply(args, cfg=cfg)
+            cmd_apply(args, cfg=cfg, ctx=ctx)
         elif args.command == "undo":
             cmd_undo(args)
         elif args.command == "clone-extract":

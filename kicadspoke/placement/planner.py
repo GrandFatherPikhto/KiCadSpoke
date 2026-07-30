@@ -20,18 +20,19 @@ logger = logging.getLogger(__name__)
 
 
 class PlacementPlanner:
-    def __init__(self, adapter: KiCadBoardAdapter, config: Config):
+    def __init__(self, adapter: KiCadBoardAdapter, config: Config, sheet_names=None):
+        _sn = sheet_names or {}
         self.adapter = adapter
         self.cfg = config
-        self.position_calc = ManualPositionCalculator(adapter, config)
-        self.clone_calc = ClonePositionCalculator(adapter, config)
+        self.position_calc = ManualPositionCalculator(adapter, config, sheet_names=_sn)
+        self.clone_calc = ClonePositionCalculator(adapter, config, sheet_names=_sn)
         # No global target_fp any more: anchors are per‑rule (Rule.anchor_ref / anchor_role)
         # and per‑tva; resolved on the spot.
         self._target_layer = BoardLayer.BL_B_Cu if config.layer == 'B.Cu' else BoardLayer.BL_F_Cu
         self._planned = None
         self._planned_vias = None
         self._planned_tracks = None
-        self.via_planner = ViaPlanner(adapter, config)
+        self.via_planner = ViaPlanner(adapter, config, sheet_names=_sn)
         logger.info(_("Planner initialised: layer={layer}, anchors in rules: {anchors}")
                     .format(layer=config.layer,
                             anchors=len({r.anchor_ref or r.anchor_role for r in config.rules})))

@@ -32,9 +32,10 @@ class ViaPlanner:
 
     _VIA_POSITION_TOLERANCE_NM = 10_000  # 0.01 mm
 
-    def __init__(self, adapter: KiCadBoardAdapter, config: Config):
+    def __init__(self, adapter: KiCadBoardAdapter, config: Config, sheet_names=None):
         self.adapter = adapter
         self.cfg = config
+        self.sheet_names = sheet_names or {}
 
     def _via_already_exists(self, existing_vias, position: Vector2, net_name: str) -> bool:
         for via in existing_vias:
@@ -69,7 +70,7 @@ class ViaPlanner:
                 tva.anchor_role,
                 tva.anchor_sheet,
                 tva.anchor_cluster,
-                self.cfg.sheet_names,
+                self.sheet_names,
                 label="thermal_via_array"
             )
 

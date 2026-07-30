@@ -68,7 +68,7 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         spoke = cfg.rules[0].spokes[0]
         assert spoke.cluster == "Channel_0"
         assert spoke.active is False
@@ -113,7 +113,7 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         assert cfg.thermal_via_array.active is False
 
     def test_absent_thermal_via_array_is_fine(self, tmp_path):
@@ -123,5 +123,5 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         assert cfg.thermal_via_array.enabled is False

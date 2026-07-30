@@ -72,7 +72,7 @@ class TestNameLoadedFromYaml:
     def test_rule_name_loaded(self, tmp_path):
         config_file = tmp_path / "test.yaml"
         config_file.write_text(YAML_TEXT, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
 
         rule = cfg.rules[0]
         assert rule.name == "fpga_3v3_bank"
@@ -81,7 +81,7 @@ class TestNameLoadedFromYaml:
     def test_thermal_via_array_name_loaded(self, tmp_path):
         config_file = tmp_path / "test.yaml"
         config_file.write_text(YAML_TEXT, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
 
         assert cfg.thermal_via_array.name == "fpga_thermal"
         assert thermal_via_array_effective_name(cfg.thermal_via_array) == "fpga_thermal"
@@ -117,7 +117,7 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         assert cfg.thermal_via_array.enabled is False
         assert cfg.thermal_via_array.name is None
 
@@ -152,7 +152,7 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         rule = cfg.rules[0]
         assert rule.name is None
         assert rule_effective_name(rule) == "+3V3_VCCIO"
@@ -192,7 +192,7 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         assert rule_effective_name(cfg.rules[0]) == "fpga_gnd"
         assert rule_effective_name(cfg.rules[1]) == "GND"
 
@@ -212,7 +212,7 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         assert cfg.rules[0].enabled is True
 
     def test_enabled_false_loaded_from_yaml(self, tmp_path):
@@ -227,7 +227,7 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         assert cfg.rules[0].enabled is False
 
 
@@ -249,7 +249,7 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         assert cfg.rules[0].active is True
         assert cfg.rules[0].spokes[0].active is True
 
@@ -268,7 +268,7 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         assert cfg.rules[0].active is False
         assert cfg.rules[0].spokes[0].active is False
 
@@ -285,5 +285,5 @@ templates: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        cfg = load_config(str(config_file))
+        cfg, _ = load_config(str(config_file))
         assert cfg.thermal_via_array.active is False

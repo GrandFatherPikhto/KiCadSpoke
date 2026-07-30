@@ -41,7 +41,7 @@ def test_clone_placements_loaded_with_all_fields(tmp_path):
     config_file = tmp_path / "test.yaml"
     config_file.write_text(YAML_TEXT, encoding="utf-8")
 
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     assert len(cfg.clone_placements) == 2
 
     cp1 = cfg.clone_placements[0]
@@ -78,7 +78,7 @@ clone_placements:
 """
     config_file = tmp_path / "active.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     assert cfg.clone_placements[0].active is True
     assert cfg.clone_placements[1].active is False
 
@@ -101,7 +101,7 @@ clone_placements:
 """
     config_file = tmp_path / "ignore_selection.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     assert cfg.clone_placements[0].ignore_selection is False
     assert cfg.clone_placements[1].ignore_selection is True
 
@@ -109,7 +109,7 @@ clone_placements:
 def test_no_clone_placements_gives_empty_list(tmp_path):
     config_file = tmp_path / "test2.yaml"
     config_file.write_text("", encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     assert cfg.clone_placements == []
 
 
@@ -130,7 +130,7 @@ clone_placements:
 """
     config_file = tmp_path / "anchor.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
     assert cp.anchor_ref == "IC1"
     assert cp.anchor_pad == "17"
@@ -150,7 +150,7 @@ clone_placements:
 """
     config_file = tmp_path / "anchor_no_origin.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
     assert cp.origin_x_mm == 0.0
     assert cp.origin_y_mm == 0.0
@@ -171,7 +171,7 @@ clone_placements:
 """
     config_file = tmp_path / "anchor_role.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
     assert cp.anchor_role == "MCU"
     assert cp.anchor_sheet == "Channel_0"
@@ -194,7 +194,7 @@ clone_placements:
 """
     config_file = tmp_path / "anchor_cluster.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
     assert cp.anchor_cluster == "FPGA_PWR_BANK"
 
@@ -216,7 +216,7 @@ clone_placements:
 """
     config_file = tmp_path / "layer_mirror.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
     assert cp.layer == "B.Cu"
     assert cp.mirror is True
@@ -243,7 +243,7 @@ clone_placements:
 """
     config_file = tmp_path / "nets_refs.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
     assert cp.nets == {"A": "GND", "B": "VCC"}
     assert cp.refs == {"A": "C1"}
@@ -264,7 +264,7 @@ clone_placements:
 """
     config_file = tmp_path / "by_selection.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
     assert cp.by_selection is True
 
@@ -375,7 +375,7 @@ clone_placements:
 """
     config_file = tmp_path / "role_only.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    cfg = load_config(str(config_file))
+    cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
     assert cp.role == "LED"
     assert cp.template is None

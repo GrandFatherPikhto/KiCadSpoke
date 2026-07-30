@@ -20,6 +20,7 @@ from .models import (
     rule_effective_name,
     thermal_via_array_effective_name,
 )
+from ..runtime_context import RuntimeContext
 from .loader import (
     load_config,
     _load_template_via,
@@ -41,6 +42,7 @@ __all__ = [
     "Rule",
     "ClonePlacement",
     "Config",
+    "RuntimeContext",
     "load_config",
     "rule_effective_name",
     "thermal_via_array_effective_name",

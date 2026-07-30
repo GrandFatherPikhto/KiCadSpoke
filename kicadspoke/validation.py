@@ -26,7 +26,7 @@ from .i18n import _
 logger = logging.getLogger(__name__)
 
 
-def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config) -> None:
+def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> None:
     """
     Every spoke must reference an existing template and an existing pad of the
     target component — otherwise the spoke is simply skipped silently (which
@@ -50,7 +50,7 @@ def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config) -> N
                     rule.anchor_role,
                     rule.anchor_sheet,
                     rule.anchor_cluster,
-                    cfg.sheet_names,
+                    sheet_names or {},
                     label=_("rule (net {net!r})").format(net=rule.net)
                 )
                 anchors[f"role:{rule.anchor_role}"] = fp
@@ -266,16 +266,17 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
     logger.debug(_("Duplicate clone anchor checks passed"))
 
 
-def check_anchor_sheet_configured(cfg: Config) -> None:
+def check_anchor_sheet_configured(cfg: Config, sheet_names=None) -> None:
     """
-    Pure config check. anchor_sheet is resolved via Config.sheet_names.
+    Pure config check. anchor_sheet is resolved via sheet_names.
     If sheet_names is empty, it means neither schematic_dir nor schematic_files
     were set (or none of the .kicad_sch files could be parsed), and anchor_sheet
     will NEVER narrow anything — it will silently do nothing, and later ambiguity
     of anchor_role will fail with a less helpful fatal. Better to say it upfront.
     """
+    _sn = sheet_names or {}
     users = [c.name for c in cfg.clone_placements if c.enabled and c.anchor_sheet]
-    if users and not cfg.sheet_names:
+    if users and not _sn:
         raise ValidationError(format_fatal_error(
             _("anchor_sheet is used but sheet name dictionary is empty"),
             [_("clone_placements with anchor_sheet: {users}").format(users=users),
@@ -362,14 +363,15 @@ def check_single_selection_based_clone(cfg: Config) -> None:
     logger.debug(_("Single selection‑based clone check passed"))
 
 
-def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config) -> None:
+def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> None:
     """Runs all checks in order — from cheap to more comprehensive."""
+    _sn = sheet_names or {}
     logger.info(_("Running pre‑validation checks..."))
     check_clone_templates_exist(cfg)
     check_no_duplicate_clone_anchors(cfg)
-    check_anchor_sheet_configured(cfg)
+    check_anchor_sheet_configured(cfg, sheet_names=_sn)
     check_single_selection_based_clone(cfg)
-    check_templates_and_pads_exist(adapter, cfg)
+    check_templates_and_pads_exist(adapter, cfg, sheet_names=_sn)
     check_role_pool_sufficiency(adapter, cfg)
     check_clone_nets_exist_on_board(adapter, cfg)
     logger.info(_("All pre‑validation checks passed"))

@@ -368,12 +368,6 @@ class Config:
     # for the same board profile. CLI flag --log-file, if given, TAKES PRIORITY
     # over this field (see main() in kicadspoke_cli.py).
     log_file: Optional[str] = None
-    # Computed in load_config from schematic_dir/schematic_files — NOT read from
-    # YAML directly. {uuid: Sheetname}, empty if neither schematic_dir nor
-    # schematic_files are set (and anchor_sheet cannot be used then — fatal in
-    # validation.py).
-    sheet_names: Dict[str, str] = field(default_factory=dict)
-
     @property
     def anchor_refs(self) -> set:
         """All anchor refs in the config: spoke rules + thermal via array."""

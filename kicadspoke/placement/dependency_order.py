@@ -107,7 +107,8 @@ def _resolve_rule_produces(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) 
     return produces
 
 
-def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: ClonePlacement) -> Set[str]:
+def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: ClonePlacement,
+                            sheet_names=None) -> Set[str]:
     """
     Lightweight equivalent of ClonePositionCalculator.compute_raw_positions()
     that returns ONLY the set of refs this clone will produce — without
@@ -145,27 +146,28 @@ def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: Clon
             role_to_ref = resolve_roles_by_selection(
                 adapter, template, clone,
                 anchor_position=None,
-                sheet_names=cfg.sheet_names,
+                sheet_names=sheet_names or {},
             )
         else:
             role_to_ref = resolve_roles_by_nets(
                 adapter, template, clone,
                 anchor_position=None,
-                sheet_names=cfg.sheet_names,
+                sheet_names=sheet_names or {},
             )
 
     return set(role_to_ref.values())
 
 
-def _build_items(adapter: KiCadBoardAdapter, cfg: Config) -> List[Item]:
+def _build_items(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> List[Item]:
     """Read-only: resolves every enabled rule/clone_placement's anchor ref and
     produced refs against the board as it is RIGHT NOW. No board mutation —
     lightweight ref-resolution only, no geometry computation (see
     _resolve_rule_produces / _resolve_clone_produces for what is skipped)."""
+    _sn = sheet_names or {}
     items: List[Item] = []
 
     for rule in cfg.rules:
-        anchor_ref = resolve_rule_anchor_ref(adapter, cfg, rule)
+        anchor_ref = resolve_rule_anchor_ref(adapter, cfg, rule, sheet_names=_sn)
         produces = _resolve_rule_produces(adapter, cfg, rule)
         items.append(Item(
             kind='rule', obj=rule, label=_("rule (net {net!r})").format(net=rule.net),
@@ -180,8 +182,8 @@ def _build_items(adapter: KiCadBoardAdapter, cfg: Config) -> List[Item]:
         # for real planning, and both must see the selection the same way
         # (see temporarily_ignore_selection's docstring in kicad/adapter.py).
         with adapter.temporarily_ignore_selection(clone.ignore_selection):
-            anchor_ref = resolve_clone_anchor_ref(adapter, cfg, clone)
-            produces = _resolve_clone_produces(adapter, cfg, clone)
+            anchor_ref = resolve_clone_anchor_ref(adapter, cfg, clone, sheet_names=_sn)
+            produces = _resolve_clone_produces(adapter, cfg, clone, sheet_names=_sn)
         items.append(Item(
             kind='clone', obj=clone, label=_("clone_placement {name!r}").format(name=clone.name),
             anchor_ref=anchor_ref, produces=produces,
@@ -190,7 +192,7 @@ def _build_items(adapter: KiCadBoardAdapter, cfg: Config) -> List[Item]:
     return items
 
 
-def resolve_execution_order(adapter: KiCadBoardAdapter, cfg: Config) -> List[Item]:
+def resolve_execution_order(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> List[Item]:
     """
     Read-only: resolves cfg.rules + cfg.clone_placements (already filtered by
     drop_disabled_rules/apply_only_filter/apply_cluster_filter) into
@@ -198,7 +200,7 @@ def resolve_execution_order(adapter: KiCadBoardAdapter, cfg: Config) -> List[Ite
     cycle — a config where two or more items anchor on each other's output has
     no valid order and must be fixed in the YAML.
     """
-    items = _build_items(adapter, cfg)
+    items = _build_items(adapter, cfg, sheet_names=sheet_names)
 
     producer_of = {}  # ref -> Item that produces it
     for item in items:

@@ -193,7 +193,7 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
         print(f"wrote {len(clones)} clone_placements to {output_path}")
 
         if args.apply:
-            cfg = load_config(root_config_path)
+            cfg, _ctx = load_config(root_config_path)
             apply_config(cfg, root_config_path, dry_run=args.dry_run)
     except PlacerError as e:
         logging.error(f"Error: {e}")

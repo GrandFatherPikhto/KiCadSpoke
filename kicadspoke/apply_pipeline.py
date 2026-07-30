@@ -25,6 +25,7 @@ from typing import Dict, Any, List, Optional, Set
 from kipy.errors import ApiError, ApiStatusCode
 
 from .config import load_config, rule_effective_name, thermal_via_array_effective_name
+from .runtime_context import RuntimeContext
 from .kicad.adapter import KiCadBoardAdapter
 from .placement.planner import PlacementPlanner
 from .placement.dependency_order import resolve_execution_order
@@ -237,6 +238,7 @@ class ApplyPipeline:
         only: Optional[List[str]] = None,
         cluster: Optional[List[str]] = None,
         preloaded_cfg=None,
+        preloaded_ctx=None,
     ):
         self.config_path = config_path
         self.timeout_ms = timeout_ms
@@ -250,6 +252,7 @@ class ApplyPipeline:
 
         # Internal state
         self.cfg = preloaded_cfg
+        self.ctx: Optional[RuntimeContext] = preloaded_ctx
         self.adapter: Optional[KiCadBoardAdapter] = None
         self.planner: Optional[PlacementPlanner] = None
         self.items = None
@@ -260,7 +263,7 @@ class ApplyPipeline:
     def _load_config(self) -> None:
         if self.cfg is None:
             logger.info(_("Loading config: {config}").format(config=self.config_path))
-            self.cfg = load_config(self.config_path)
+            self.cfg, self.ctx = load_config(self.config_path)
 
     def _filter_config(self) -> None:
         drop_disabled_rules(self.cfg)
@@ -278,16 +281,18 @@ class ApplyPipeline:
         self.adapter.refresh_board()
 
     def _validate(self) -> None:
-        run_all_checks(self.adapter, self.cfg)
+        run_all_checks(self.adapter, self.cfg, sheet_names=self.ctx.sheet_names if self.ctx else {})
 
     def _resolve_order(self) -> None:
         logger.info(_("Resolving item execution order (dependency chain — see dependency_order.py)..."))
-        self.items = resolve_execution_order(self.adapter, self.cfg)
+        _sn = self.ctx.sheet_names if self.ctx else {}
+        self.items = resolve_execution_order(self.adapter, self.cfg, sheet_names=_sn)
         logger.info(_("Execution order: {order}")
                     .format(order=" -> ".join(it.label for it in self.items)))
 
     def _create_planner(self) -> None:
-        self.planner = PlacementPlanner(self.adapter, self.cfg)
+        _sn = self.ctx.sheet_names if self.ctx else {}
+        self.planner = PlacementPlanner(self.adapter, self.cfg, sheet_names=_sn)
 
     # ── Dry‑run ─────────────────────────────────────────────────────────────
 

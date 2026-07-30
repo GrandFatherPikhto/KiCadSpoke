@@ -41,7 +41,7 @@ clone_placements:
     origin_y_mm: 0.0
 """, encoding="utf-8")
 
-    cfg = load_config(str(root))
+    cfg, _ = load_config(str(root))
     names = {cp.name for cp in cfg.clone_placements}
     assert names == {"from_root", "from_sub"}
     assert "one_role" in cfg.templates
@@ -73,7 +73,7 @@ include:
   - sub.yaml
 """, encoding="utf-8")
 
-    cfg = load_config(str(root))
+    cfg, _ = load_config(str(root))
     assert set(cfg.templates.keys()) == {"from_include", "from_templates_file"}
 
 
@@ -142,7 +142,7 @@ include:
   - sub.yaml
 """, encoding="utf-8")
 
-    cfg = load_config(str(root))
+    cfg, _ = load_config(str(root))
     assert cfg.layer == "B.Cu"
 
 
@@ -154,7 +154,7 @@ include:
     enabled: false
 """ + MINIMAL_TEMPLATE, encoding="utf-8")
 
-    cfg = load_config(str(root))
+    cfg, _ = load_config(str(root))
     assert cfg.clone_placements == []
 
 
@@ -231,5 +231,5 @@ clone_placements:
     root = tmp_path / "root.yaml"
     root.write_text("include:\n  - b.yaml\n", encoding="utf-8")
 
-    cfg = load_config(str(root))
+    cfg, _ = load_config(str(root))
     assert [cp.name for cp in cfg.clone_placements] == ["from_c"]

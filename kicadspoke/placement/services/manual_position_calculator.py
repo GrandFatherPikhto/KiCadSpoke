@@ -15,7 +15,8 @@ from ...i18n import _
 logger = logging.getLogger(__name__)
 
 
-def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) -> Optional[str]:
+def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule,
+                            sheet_names=None) -> Optional[str]:
     """
     Resolves rule's anchor to a concrete ref — see resolve_clone_anchor_ref in
     clone_position_calculator.py, same rationale (used by dependency_order.py
@@ -25,9 +26,10 @@ def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule)
         return rule.anchor_ref
     if rule.anchor_role is not None:
         from .clone_role_resolver import resolve_footprint_by_role
+        _sn = sheet_names or {}
         fp = resolve_footprint_by_role(
             adapter, rule.anchor_role, rule.anchor_sheet, rule.anchor_cluster,
-            cfg.sheet_names, label=_("rule (net {net!r})").format(net=rule.net),
+            _sn, label=_("rule (net {net!r})").format(net=rule.net),
         )
         return fp.reference_field.text.value
     return None
@@ -62,9 +64,10 @@ class ManualPositionCalculator:
     ComponentPool is built, and spokes take components from their own cluster.
     """
 
-    def __init__(self, adapter: KiCadBoardAdapter, config: Config):
+    def __init__(self, adapter: KiCadBoardAdapter, config: Config, sheet_names=None):
         self.adapter = adapter
         self.cfg = config
+        self.sheet_names = sheet_names or {}
 
     def compute_raw_positions(
         self,
@@ -91,7 +94,7 @@ class ManualPositionCalculator:
                     rule.anchor_role,
                     rule.anchor_sheet,
                     rule.anchor_cluster,
-                    self.cfg.sheet_names,
+                    self.sheet_names,
                     label=_("rule (net {net!r})").format(net=rule.net),
                 )
             anchor_ref_resolved = target_fp.reference_field.text.value
