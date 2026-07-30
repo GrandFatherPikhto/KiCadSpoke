@@ -9,6 +9,7 @@ template_files:
   - templates/ldo_adj_pi_filter.yaml
   - templates/ldo_out_pi_filter.yaml
   - templates/power_pi_filters.yaml
+  - templates/ldo_1v2.yaml
 
 include:
   - power_extracts.yaml  # Коллекция экстраторов для силовой части платы
@@ -17,6 +18,7 @@ clone_placements:
 # ±5V Input Filters
   - name: p5v_pi_filter
     enabled: true
+    active: true
     template: 5v_pi_filter
     anchor_role: CONN_PM5V
     anchor_pad: '1'
@@ -29,6 +31,7 @@ clone_placements:
 
   - name: p5v_led_spoke
     enabled: true
+    active: true
     template: led_spoke
     anchor_cluster: In_Pi_Filter_Pos
     anchor_role: C_OUT_BYPASS
@@ -41,6 +44,7 @@ clone_placements:
 
   - name: n5v_pi_filter
     enabled: true
+    active: true
     template: 5v_pi_filter
     anchor_role: CONN_PM5V
     anchor_pad: '1'
@@ -54,6 +58,7 @@ clone_placements:
 
   - name: n5v_led_spoke
     enabled: true
+    active: true
     template: led_spoke
     anchor_cluster: In_Pi_Filter_Neg
     anchor_role: C_OUT_BYPASS
@@ -67,6 +72,7 @@ clone_placements:
 # 3V3 LDO System
   - name: 3v3_ldo
     enabled: true
+    active: true
     role: LDO_3V3
     nets:
       LDO_3V3: '+3V3_DIRTY'
@@ -78,6 +84,7 @@ clone_placements:
 
   - name: 3v3_led_spoke
     enabled: true
+    active: true
     template: led_spoke
     anchor_cluster: Pi_Filter_Out_3V3
     anchor_role: C_OUT_BYPASS
@@ -90,6 +97,7 @@ clone_placements:
 
   - name: 3v3_ldo_out_pi_filter
     enabled: true
+    active: true
     template: ldo_out_pi_filter
     anchor_role: LDO_3V3
     anchor_pad: '2'
@@ -104,6 +112,7 @@ clone_placements:
 #   +2V5 LDO Subsystem
   - name: p2v5_dirty_ldo
     enabled: true
+    active: true
     template: ldo_adj
     # anchor_cluster: In_Pi_Filter_Pos
     # anchor_role: C_OUT_BYPASS
@@ -118,6 +127,7 @@ clone_placements:
 
   - name: p2v5_adj_pi_filter
     enabled: true
+    active: true
     template: ldo_adj_pi_filter
     anchor_cluster: LDO_Subsystem_P2V5
     anchor_role: D_PROT_BACK
@@ -130,6 +140,7 @@ clone_placements:
 
   - name: p2v5_led_spoke
     enabled: true
+    active: true
     template: led_spoke
     anchor_cluster: LDO_Subsystem_P2V5
     anchor_role: LDO_ADJ
@@ -143,6 +154,7 @@ clone_placements:
 #   -2V5 LDO Subsystem
   - name: n2v5_dirty_ldo
     enabled: true
+    active: true
     template: ldo_adj
     # anchor_cluster: In_Pi_Filter_Neg
     anchor_role: CONN_PM5V
@@ -156,6 +168,7 @@ clone_placements:
 
   - name: n2v5_adj_pi_filter
     enabled: true
+    active: true
     template: ldo_adj_pi_filter
     anchor_cluster: LDO_Subsystem_N2V5
     anchor_role: D_PROT_BACK
@@ -168,6 +181,7 @@ clone_placements:
 
   - name: n2v5_led_spoke
     enabled: true
+    active: true
     template: led_spoke
     anchor_cluster: LDO_Subsystem_N2V5
     anchor_role: LDO_ADJ
@@ -181,9 +195,13 @@ clone_placements:
 # 1V2 LDO Subsystem
   - name: 1v2_ldo
     enabled: true
-    role: LDO_1V2
+    active: true
+    template: p1v2_ldo
     nets:
       LDO_1V2: '+1V2_DIRTY'
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '+1V2_DIRTY'
     anchor_role: C_OUT_BYPASS
     anchor_cluster: In_Pi_Filter_Pos
     # anchor_role: CONN_PM5V
@@ -193,6 +211,7 @@ clone_placements:
 
   - name: 1v2_ldo_out_pi_filter
     enabled: true
+    active: true
     template: ldo_out_pi_filter
     anchor_role: LDO_1V2
     anchor_pad: '2'
@@ -205,6 +224,7 @@ clone_placements:
 
   - name: 1v2_led_spoke
     enabled: true
+    active: true
     template: led_spoke
     anchor_cluster: Pi_Filter_Out_1V2
     anchor_role: C_OUT_BYPASS

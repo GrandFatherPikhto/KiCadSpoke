@@ -79,6 +79,14 @@ extract_profiles:
     origin_by_component_role: 'C_IN_BYPASS'
     origin_by_component_pad: '1'
 
+  p1v2_ldo:
+    name: p1v2_ldo
+    output: boards/3ch-awg-tia/profiles/templates/ldo_1v2.yaml
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '+1V2_DIRTY'
+    origin_by_component_role: LDO_1V2
+
   1v2_ldo_out_pi_filter:
     name: ldo_out_pi_filter
     output: boards/3ch-awg-tia/profiles/templates/ldo_out_pi_filter.yaml

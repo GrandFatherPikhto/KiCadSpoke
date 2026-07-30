@@ -1,0 +1,38 @@
+p1v2_ldo:
+  vias:
+  - offset_along_mm: -5.52
+    offset_across_mm: -2.3
+    net: GND
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  - offset_along_mm: -5.52
+    offset_across_mm: 2.3
+    net: '{PWR_IN}'
+    drill_mm: 0.5
+    diameter_mm: 1.0
+  components:
+  - role: LDO_1V2
+    offset_along_mm: 0.0
+    offset_across_mm: 0.0
+    angle_deg: 0.0
+    # net_template: could not determine automatically — 2 matching nets on pads (['+1V2_DIRTY', '+5V']) — fill in manually or use --net-template-role LDO_1V2=<net>
+  tracks:
+  - start_along_mm: -3.15
+    start_across_mm: 0.0
+    end_along_mm: 3.15
+    end_across_mm: 0.0
+    width_mm: 0.8
+    net: '{PWR_OUT}'
+  - start_along_mm: -3.15
+    start_across_mm: 2.3
+    end_along_mm: -5.52
+    end_across_mm: 2.3
+    width_mm: 0.8
+    net: '{PWR_IN}'
+  - start_along_mm: -3.15
+    start_across_mm: -2.3
+    end_along_mm: -5.52
+    end_across_mm: -2.3
+    width_mm: 0.8
+    net: GND
+  layer: F.Cu

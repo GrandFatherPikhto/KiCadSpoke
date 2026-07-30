@@ -32,20 +32,19 @@ extract_profiles:
     origin_by_component_pad: '1'
 
 
-  p3v3_flash_r_filter:
+  p3v3_oscill_r_filter:
     name: fpga_r_pi_filter
     output: boards/3ch-awg-tia/profiles/templates/fpga_r_pi_filters.yaml
     params:
       PWR_IN: '+3V3'
-      PWR_OUT: '+3V3_FLASH'
+      PWR_OUT: '+3V3_OSCILL'
     net_template_role:
       C_IN_BYPASS: '+3V3'
-      C_OUT_BYPASS: '+3V3_FLASH'
-      C_OUT_BULK: '+3V3_FLASH'
+      C_OUT_BYPASS: '+3V3_OSCILL'
+      C_OUT_BULK: '+3V3_OSCILL'
       C_IN_BULK: '+3V3'
-      R_PI_FLT: '+3V3_FLASH'
-    origin_by_component_role: 'C_OUT_BYPASS'
-    origin_by_component_pad: '1'
+      R_PI_FLT: '+3V3_OSCILL'
+    origin_by_via_net: '+3V3_OSCILL'
 
   fpga_oscillator:
     name: fpga_oscill
@@ -58,4 +57,11 @@ extract_profiles:
     origin_by_component_role: R_FPGA_CLK_IN
     origin_by_component_pad: '2'
 
+  fpga_flash:
+    name: fpga_flash
+    output: boards/3ch-awg-tia/profiles/templates/fpga_flash.yaml
+    params:
+      PWR_IN: '+3V3_FLASH'
+    origin_by_component_role: FPGA_FLASH
+    # origin_by_component_pad: '4'
     
