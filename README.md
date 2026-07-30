@@ -66,6 +66,18 @@ pip install kipy pyyaml sexpdata
 
 ## Key Concepts
 
+### Why "Spoke"?
+In electronics, decoupling/support components (capacitors, pi‑filters) often radiate outward from an
+IC's pins, like spokes on a wheel. KiCadStamp automates building this kind of "spoke" topology, letting
+you **stamp** it out by rule and role wherever it's needed:
+- **Template (`SpokeTemplate`)** – the geometry of one spoke (a capacitor + via + track, or a whole filter block).
+- **Spoke (`ManualSpoke`)** – a rule that takes a spoke template and attaches it to a specific pad.
+- **Cloning (`ClonePlacement`)** – the next level: takes a template – one spoke or a whole bundle of them
+  (e.g. a channel) – and stamps it as an independent unit anywhere on the board, not just on an IC pad.
+
+That maps onto the tool's two names: **Spoke** is the domain shape (the radiating placement pattern),
+**Stamp** is the action – the tool that replicates it by rule.
+
 ### Template (SpokeTemplate)
 A template describes the **local geometry** of one "spoke" – a set of components, vias, and tracks relative to a local origin (0,0) in the `along/across` coordinate system. It contains:
 - **`vias`** – vias at the spoke level (usually the power net).
