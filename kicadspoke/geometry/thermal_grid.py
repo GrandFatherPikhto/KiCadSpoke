@@ -9,7 +9,7 @@ from ..exceptions import GeometryError
 from ..i18n import _
 
 def get_pad_size(pad: Pad) -> tuple:
-    """Возвращает (width, height) медного слоя падстека."""
+    """Returns (width, height) of the padstack copper layer."""
     layers = pad.padstack.copper_layers
     if not layers:
         raise GeometryError(_("pad has no copper layers in its padstack"))
@@ -17,7 +17,7 @@ def get_pad_size(pad: Pad) -> tuple:
     return size.x, size.y
 
 def compute_thermal_via_grid(pad: Pad, rows: int, cols: int, margin_mm: float, stagger: bool = False) -> List[Vector2]:
-    """Возвращает список абсолютных позиций для виа."""
+    """Returns a list of absolute via positions."""
     if rows < 1 or cols < 1:
         raise GeometryError(_("rows and cols must be >= 1"))
 

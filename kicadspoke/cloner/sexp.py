@@ -1,17 +1,17 @@
 # kicadspoke/cloner/sexp.py
 """
-Тонкие помощники над sexpdata. Выбор sexpdata вместо schema-aware
-библиотек — осознанный: формат KiCad синтаксически стабилен с v6,
-словарь только растёт, и generic-парсер переваривает новые токены
-прозрачно (проверено: kinparse спотыкается о нетлист KiCad 10,
-sexpdata — нет).
+Thin helpers over sexpdata. The choice of sexpdata over schema-aware
+libraries is deliberate: the KiCad format is syntactically stable since v6,
+the vocabulary only grows, and a generic parser digests new tokens
+transparently (verified: kinparse stumbles on a KiCad 10 netlist,
+sexpdata — does not).
 """
 
 import sexpdata
 
 
 def sval(x):
-    """Symbol -> str, остальное как есть."""
+    """Symbol -> str, everything else as-is."""
     return x.value() if isinstance(x, sexpdata.Symbol) else x
 
 
@@ -20,12 +20,12 @@ def is_node(n, key: str) -> bool:
 
 
 def children(node, key: str):
-    """Все дочерние узлы (key ...)."""
+    """All child nodes (key ...)."""
     return [n for n in node if is_node(n, key)]
 
 
 def child(node, key: str, default=None):
-    """Первый дочерний узел (key ...) или default."""
+    """First child node (key ...) or default."""
     for n in node:
         if is_node(n, key):
             return n
@@ -33,7 +33,7 @@ def child(node, key: str, default=None):
 
 
 def atom(node, key: str, default=None):
-    """Значение первого атома узла (key value): child(node,key)[1]."""
+    """Value of the first atom of node (key value): child(node,key)[1]."""
     c = child(node, key)
     if c is None or len(c) < 2:
         return default

@@ -1,11 +1,11 @@
 # kicadspoke/config/__init__.py
 """
-config/__init__.py — реэкспорт models.py + loader.py. Публичный интерфейс
-пакета НЕ ИЗМЕНИЛСЯ этим рефакторингом: любой существующий
+config/__init__.py — re-export of models.py + loader.py. The public interface
+of the package has NOT CHANGED with this refactoring: any existing
 `from kicadspoke.config import Config` / `from ...config import ClonePlacement`
-и т.п. по всему остальному проекту продолжает работать один в один — до
-рефакторинга kicadspoke/config.py был модулем, теперь kicadspoke/config/ —
-пакет с тем же самым набором имён на верхнем уровне.
+etc. throughout the rest of the project continues to work exactly as before — prior
+to the refactoring kicadspoke/config.py was a module, now kicadspoke/config/ is
+a package with the same set of names at the top level.
 """
 from .models import (
     ThermalViaArrayConfig,

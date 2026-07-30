@@ -1,6 +1,6 @@
 # kicadspoke/placement/services/__init__.py
 """
-Сервисы для расчёта позиций, коррекции углов, релаксации и планирования via.
+Services for position calculation, angle correction, relaxation and via planning.
 """
 
 from .via_planner import ViaPlanner
