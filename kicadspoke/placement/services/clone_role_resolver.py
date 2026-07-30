@@ -79,34 +79,15 @@ def _narrow_ambiguous_candidates(candidates, clone: ClonePlacement, adapter, sel
     membership is the more structural signal here (survives even when
     Cluster isn't set at all on these particular components).
     """
-    narrowed = list(candidates)
-
+    resolved_anchor_sheet = None
     if clone.anchor_sheet:
-        anchor_sheet = resolve_placeholder(clone.anchor_sheet, clone.params, what="anchor_sheet")
-        by_sheet = [fp for fp in narrowed if _fp_on_sheet(fp, anchor_sheet, sheet_names)]
-        if by_sheet and len(by_sheet) < len(narrowed):
-            logger.info(_("[{name}] role {role!r}: {count} candidates narrowed to {narrowed} by anchor_sheet {sheet!r}")
-                        .format(name=clone_name, role=role, count=len(narrowed),
-                                narrowed=len(by_sheet), sheet=anchor_sheet))
-            narrowed = by_sheet
+        resolved_anchor_sheet = resolve_placeholder(clone.anchor_sheet, clone.params, what="anchor_sheet")
 
-    if len(narrowed) > 1 and clone.anchor_cluster:
-        by_cluster = [fp for fp in narrowed
-                     if _cluster_prefix_match(
-                         adapter.get_field_value(fp, CLUSTER_FIELD_NAME) or '',
-                         clone.anchor_cluster)]
-        if by_cluster and len(by_cluster) < len(narrowed):
-            logger.info(_("[{name}] role {role!r}: {count} candidates narrowed to {narrowed} by anchor_cluster {cluster!r}")
-                        .format(name=clone_name, role=role, count=len(narrowed),
-                                narrowed=len(by_cluster), cluster=clone.anchor_cluster))
-            narrowed = by_cluster
-
-    if len(narrowed) > 1 and selected_refs:
-        by_selection = [fp for fp in narrowed if fp.reference_field.text.value in selected_refs]
-        if by_selection and len(by_selection) < len(narrowed):
-            logger.info(_("[{name}] role {role!r}: {count} candidates narrowed to {narrowed} by current selection")
-                        .format(name=clone_name, role=role, count=len(narrowed), narrowed=len(by_selection)))
-            narrowed = by_selection
+    narrowed = _narrow_by_sheet_cluster_selection(
+        candidates, adapter, selected_refs,
+        resolved_anchor_sheet, clone.anchor_cluster,
+        sheet_names, clone_name, role,
+    )
 
     note = ""
     if len(narrowed) > 1 and anchor_position is not None:
@@ -134,6 +115,58 @@ def _narrow_ambiguous_candidates(candidates, clone: ClonePlacement, adapter, sel
                          .format(name=clone_name, role=role, d=closest_dist, d2=second_dist))
 
     return narrowed, note
+
+
+def _narrow_by_sheet_cluster_selection(
+    candidates,
+    adapter,
+    selected_refs: set,
+    anchor_sheet: Optional[str],
+    anchor_cluster: Optional[str],
+    sheet_names: Dict[str, str],
+    label: str,
+    role_str: str,
+) -> list:
+    """3-level narrowing cascade shared by _narrow_ambiguous_candidates and
+    resolve_footprint_by_role.
+
+    Each step only narrows if it reduces the set — never chooses for the user:
+      1. anchor_sheet — filter by _fp_on_sheet (structural, survives Cluster absence).
+      2. anchor_cluster — filter by _cluster_prefix_match.
+      3. selected_refs — filter intersection with current board selection.
+
+    Returns the (possibly narrowed) list — same list if no narrowing applied.
+    """
+    narrowed = list(candidates)
+
+    if anchor_sheet and len(narrowed) > 1:
+        by_sheet = [fp for fp in narrowed if _fp_on_sheet(fp, anchor_sheet, sheet_names)]
+        if by_sheet and len(by_sheet) < len(narrowed):
+            logger.info(_("[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by anchor_sheet {sheet!r}")
+                        .format(label=label, role_str=role_str, count=len(narrowed),
+                                narrowed=len(by_sheet), sheet=anchor_sheet))
+            narrowed = by_sheet
+
+    if anchor_cluster and len(narrowed) > 1:
+        by_cluster = [fp for fp in narrowed
+                     if _cluster_prefix_match(
+                         adapter.get_field_value(fp, CLUSTER_FIELD_NAME) or '',
+                         anchor_cluster)]
+        if by_cluster and len(by_cluster) < len(narrowed):
+            logger.info(_("[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by anchor_cluster {cluster!r}")
+                        .format(label=label, role_str=role_str, count=len(narrowed),
+                                narrowed=len(by_cluster), cluster=anchor_cluster))
+            narrowed = by_cluster
+
+    if len(narrowed) > 1 and selected_refs:
+        by_selection = [fp for fp in narrowed if fp.reference_field.text.value in selected_refs]
+        if by_selection and len(by_selection) < len(narrowed):
+            logger.info(_("[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by current selection")
+                        .format(label=label, role_str=role_str, count=len(narrowed),
+                                narrowed=len(by_selection)))
+            narrowed = by_selection
+
+    return narrowed
 
 
 def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePlacement,
@@ -433,43 +466,15 @@ def resolve_footprint_by_role(adapter, anchor_role: str, anchor_sheet: Optional[
                "(Update PCB from Schematic)")]
         ))
 
-    narrowed = candidates
-    if len(narrowed) > 1 and anchor_sheet:
-        by_sheet = [fp for fp in narrowed if _fp_on_sheet(fp, anchor_sheet, sheet_names)]
-        if by_sheet:
-            if len(by_sheet) < len(narrowed):
-                logger.info(_("[{label}] anchor_role {role!r}: {count} candidates narrowed to {narrowed} "
-                              "by anchor_sheet {sheet!r}")
-                            .format(label=label, role=anchor_role, count=len(narrowed),
-                                    narrowed=len(by_sheet), sheet=anchor_sheet))
-            narrowed = by_sheet
+    selected_items = adapter.get_selected_items()
+    selected_refs = {i.reference_field.text.value for i in selected_items
+                     if isinstance(i, FootprintInstance)}
 
-    if len(narrowed) > 1 and anchor_cluster:
-        by_cluster = [fp for fp in narrowed
-                     if _cluster_prefix_match(
-                         adapter.get_field_value(fp, CLUSTER_FIELD_NAME) or '',
-                         anchor_cluster)]
-        if by_cluster:
-            if len(by_cluster) < len(narrowed):
-                logger.info(_("[{label}] anchor_role {role!r}: {count} candidates narrowed to {narrowed} "
-                              "by anchor_cluster {cluster!r}")
-                            .format(label=label, role=anchor_role, count=len(narrowed),
-                                    narrowed=len(by_cluster), cluster=anchor_cluster))
-            narrowed = by_cluster
-
-    if len(narrowed) > 1:
-        selected_items = adapter.get_selected_items()
-        selected_refs = {i.reference_field.text.value for i in selected_items
-                         if isinstance(i, FootprintInstance)}
-        if selected_refs:
-            by_selection = [fp for fp in narrowed
-                            if fp.reference_field.text.value in selected_refs]
-            if by_selection and len(by_selection) < len(narrowed):
-                logger.info(_("[{label}] anchor_role {role!r}: {count} candidates narrowed to {narrowed} "
-                              "by current selection")
-                            .format(label=label, role=anchor_role, count=len(narrowed),
-                                    narrowed=len(by_selection)))
-                narrowed = by_selection
+    narrowed = _narrow_by_sheet_cluster_selection(
+        candidates, adapter, selected_refs,
+        anchor_sheet, anchor_cluster,
+        sheet_names, label, anchor_role,
+    )
 
     if len(narrowed) == 1:
         return narrowed[0]
