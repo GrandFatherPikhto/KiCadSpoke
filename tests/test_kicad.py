@@ -169,6 +169,40 @@ class TestFootprintsCache:
         assert adapter._board.get_footprints.call_count == 2
 
 
+class TestIgnoreSelection:
+    """adapter.ignore_selection / --no-selection (added 2026-07-30): a stray
+    leftover GUI selection in the PCB editor feeds into role-based
+    ClonePlacement resolution (resolve_roles_by_selection) and ambiguity
+    narrowing (_narrow_ambiguous_candidates/resolve_footprint_by_role) as
+    real input — found live: an unrelated component (J1) selected from
+    earlier browsing made an otherwise-unique-by-role clone_placement fatal
+    with "role X is not in the template". ignore_selection makes
+    get_selected_items() always report nothing selected, regardless of the
+    live board's actual selection."""
+
+    def test_default_reads_the_real_selection(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+        adapter.ignore_selection = False
+        adapter._board.get_selection.return_value = [_make_fp("J1")]
+
+        items = adapter.get_selected_items()
+
+        assert len(items) == 1
+        adapter._board.get_selection.assert_called_once()
+
+    def test_ignore_selection_reports_nothing_without_querying_the_board(self):
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+        adapter.ignore_selection = True
+        adapter._board.get_selection.return_value = [_make_fp("J1")]
+
+        items = adapter.get_selected_items()
+
+        assert items == []
+        adapter._board.get_selection.assert_not_called()
+
+
 if __name__ == "__main__":
     print("Running kicad tests (without KiCad connection)...")
     test_import()

@@ -181,6 +181,7 @@ class TestGetSelectedItems:
         board.get_vias.return_value = [via_direct]
         adapter._board = board
         adapter._footprints_cache = None
+        adapter.ignore_selection = False
 
         items = adapter.get_selected_items()
         assert len(items) == 3

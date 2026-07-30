@@ -25,6 +25,17 @@ class KiCadBoardAdapter(IBoardAdapter):
         self._board = None
         self._write_risk_checked = False
         self._footprints_cache: Optional[List[FootprintInstance]] = None
+        # Settable by the caller (see kicadspoke_cli.py's --no-selection) —
+        # makes get_selected_items() always report "nothing selected",
+        # regardless of what's actually highlighted in the PCB editor GUI.
+        # ClonePlacement's "by selection" mode (role:/template: without nets/
+        # params) and the selection-narrowing step in _narrow_ambiguous_
+        # candidates/resolve_footprint_by_role both read the selection as
+        # part of a normal resolution cascade — a stray leftover mouse
+        # selection from earlier browsing then fatals or silently changes
+        # which candidate wins, with no indication it came from the GUI, not
+        # the config. This flag lets a whole apply run opt out of that input.
+        self.ignore_selection = False
 
     def refresh_board(self):
         logger.debug(_("Refreshing board from KiCad"))
@@ -82,7 +93,12 @@ class KiCadBoardAdapter(IBoardAdapter):
         local cache wrapper); actual group members are in .proto.items (list of
         KIID). Expand groups into their real members by matching IDs against all
         footprints/vias on the board.
+
+        self.ignore_selection short-circuits this to always report "nothing
+        selected" — see its docstring in __init__.
         """
+        if self.ignore_selection:
+            return []
         raw_selection = list(self._board.get_selection())
         direct_items = [item for item in raw_selection if not isinstance(item, Group)]
         group_uuids = set()

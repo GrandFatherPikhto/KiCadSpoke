@@ -304,6 +304,9 @@ def cmd_apply(args, cfg=None):
 
     logger.info(_("Connecting to KiCad (timeout {timeout} ms)").format(timeout=args.timeout_ms))
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
+    if getattr(args, "no_selection", False):
+        adapter.ignore_selection = True
+        logger.info(_("--no-selection: current PCB editor selection will be ignored for this run"))
     adapter.refresh_board()
 
     run_all_checks(adapter, cfg)
@@ -615,6 +618,13 @@ def main():
     apply_parser.add_argument("--verbose", action="store_true", help=_("Verbose output"))
     apply_parser.add_argument("--log-file", help=_("File to save logs"))
     apply_parser.add_argument("--no-collision-check", action="store_true", help=_("Disable collision checking"))
+    apply_parser.add_argument("--no-selection", action="store_true",
+                              help=_("Ignore the current PCB editor selection for the whole run — "
+                                     "role-based ClonePlacements (role: without nets:/params:) and "
+                                     "ambiguity narrowing normally fall back to whatever is selected in "
+                                     "KiCad; a stray leftover selection then either fatals or silently "
+                                     "changes the resolved candidate. With this flag every such lookup "
+                                     "behaves as if nothing were selected."))
     apply_parser.add_argument("--collision-margin", type=float, default=0.2, help=_("Extra clearance for collision check in mm"))
     apply_parser.add_argument("--only", action="append", metavar="NAME",
                               help=_("Process only rules/clone_placements/thermal_via_array with this "
