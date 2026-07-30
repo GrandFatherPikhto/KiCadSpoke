@@ -1,52 +1,183 @@
 # Модули верхнего уровня KiCadSpoke (актуальная версия)
 
-В папке `kicadspoke/` находятся основные модули, обеспечивающие загрузку конфигурации, обработку исключений, логирование, откат операций, валидацию, реестры расстановки via и треков, извлечение шаблонов и точку входа CLI. Каждый модуль решает конкретную задачу и взаимодействует с остальными через чёткие интерфейсы.
+В папке `kicadspoke/` находятся основные модули, обеспечивающие загрузку конфигурации, обработку исключений, логирование, откат операций, валидацию, реестры расстановки via и треков, извлечение шаблонов, скриптовые хелперы и точку входа CLI. Каждый модуль решает конкретную задачу и взаимодействует с остальными через чёткие интерфейсы.
 
 ---
 
-## 1. `kicadspoke_cli.py` — точка входа (CLI)
+## 1. `kicadspoke_cli.py` — точка входа (CLI, диспетчер)
 
 **Назначение:**  
-Главный исполняемый скрипт, обрабатывающий аргументы командной строки, инициализирующий логирование, загружающий конфигурацию (с поддержкой `templates_file`), подключающийся к KiCad, выполняющий предварительную валидацию, запускающий планировщик и исполнитель, а также поддерживающий команды `undo`, `extract`, `clone-extract` и опциональный флаг `--only`.
+Тонкий диспетчер, который парсит аргументы командной строки и делегирует выполнение соответствующему обработчику команд. Логика команд `apply`, `extract`, `undo`, `clone-extract` вынесена в отдельные модули для тестируемости и поддержки.
 
 **Основные функции:**
 
 | Функция | Описание |
 |---------|----------|
-| `setup_logging(verbose, log_file)` | Настраивает логирование: уровень (INFO/DEBUG), вывод в консоль и/или файл. |
-| `cmd_apply(args)` | Команда `apply`: загружает конфиг, подключается к KiCad, запускает валидацию, планирование и **трёхфазное** исполнение (перемещения → refresh → via → треки). Поддерживает `--dry-run` и `--only <имя>[, ...]` для обработки только именованных `rules`/`clone_placements`/`thermal_via_array`. |
-| `cmd_extract(args)` | Команда `extract`: извлекает шаблон из текущего выделения на плате (включая **треки**) и записывает его в JSON или YAML. Поддерживает `--param`, `--net-template`, `--origin-by-via-net`, `--origin-by-component-role`, а также **профили** (`--profiles`, `--profile`) для удобного переиспользования параметров. Формат определяется расширением файла; при `.json` файл записывается как плоский словарь без обёртки `templates:`. |
-| `cmd_undo(args)` | Команда `undo`: находит последний JSON-лог в папке `logs/`, вызывает `undo_last_operation()` (удаляет созданные via **и треки**, восстанавливает компоненты). |
-| `main()` | Парсит аргументы (поддерживает неявный `apply`), настраивает логирование, вызывает соответствующую команду, перехватывает исключения. |
+| `cmd_apply(args)` | Делегирует `apply_pipeline.cmd_apply()` — загружает конфиг, подключается к KiCad, выполняет валидацию, планирование и трёхфазное исполнение. |
+| `cmd_extract(args)` | Делегирует `cli_extract.cmd_extract()` — извлекает шаблон из текущего выделения на плате. |
+| `cmd_undo(args)` | Делегирует `undo.undo_last_operation()` — восстанавливает состояние платы до последней расстановки. |
+| `cmd_clone_extract(args)` | Делегирует `cloner.extract.extract_channel()` — файловый клонер. |
+| `main()` | Парсит аргументы, настраивает логирование через `logging_setup.setup_logging()`, вызывает соответствующую команду, перехватывает исключения. |
 
 **Ключевые зависимости:**  
-`config.load_config`, `kicad.adapter.KiCadBoardAdapter`, `validation.run_all_checks`, `placement.planner.PlacementPlanner`, `placement.executor.BatchExecutor`, `registry.PlacementRegistry`, `registry.TrackRegistry`, `template_extraction.extract_template_from_selection`, `undo.undo_last_operation`, `cloner.extract.extract_channel`.
-
-**Особенности:**  
-- Поддерживает четыре команды: `apply`, `undo`, `extract`, `clone-extract`.
-- В режиме `apply` выполняет трёхфазный процесс: перемещения → via → треки (с промежуточным перечитыванием платы).
-- Флаг `--only NAME` (можно повторять) позволяет обработать только `rules`/`clone_placements`/`thermal_via_array` с этим именем — например, один клон в режиме «по выделению» (полезно для отладки), не трогая остальной конфиг вообще. `name:` обязателен у каждой такой записи.
-- В режиме `extract` использует выделение в PCB-редакторе для создания шаблона; извлекает компоненты, via и треки. Поддерживает профили, которые хранят параметры (`name`, `output`, `param`, `net_template`, `origin_by_via_net`, `origin_by_component_role`) в отдельном YAML-файле.
-- Все исключения перехватываются и логируются; пользовательские (`PlacerError`) выводятся без стека.
+`apply_pipeline.cmd_apply`, `cli_extract.cmd_extract`, `undo.undo_last_operation`, `logging_setup.setup_logging`, `cloner.extract.extract_channel`.
 
 ---
 
-## 2. `config.py` — загрузка и хранение конфигурации
+## 2. `apply_pipeline.py` — Логика команды apply
 
 **Назначение:**  
-Определяет все структуры данных (dataclass'ы), описывающие конфигурацию расстановки, и предоставляет функцию `load_config()` для загрузки YAML-файла в типизированные объекты Python. Включает проверку уникальности ролей внутри шаблона (фатальная ошибка при дублировании), поддержку **внешних файлов шаблонов** (`templates_file`), **треков** (`TemplateTrack`), а также перекрёстную валидацию `layer`/`mirror` для `ClonePlacement`.
+Содержит класс `ApplyPipeline` и точку входа `cmd_apply()`. Реализует полный workflow `apply`: загрузка конфига, применение CLI-фильтров (`--only`, `--cluster`), подключение к KiCad, валидация, разрешение порядка выполнения, планирование перемещений/via/треков и трёхфазное исполнение.
 
-**Основные классы (dataclass'ы):**
+**Основные классы и функции:**
+
+| Класс/Функция | Описание |
+|---------------|----------|
+| `ApplyPipeline` | Главный оркестратор: `load_config` → `filter_config` → `connect_adapter` → `resolve_order` → `dry_run`/`execute`. |
+| `cmd_apply(args, cfg, ctx)` | Точка входа; создаёт `ApplyPipeline`, вызывает `run()`. |
+| `drop_disabled_rules(cfg)` | Удаляет `enabled: false` элементы из конфига. |
+| `drop_inactive_items(cfg)` | Удаляет `active: false` элементы (ортогонально `enabled`). |
+| `apply_only_filter(cfg, only_names)` | Сужает конфиг до именованных правил/клонов/термовиа. |
+| `apply_cluster_filter(cfg, cluster_paths)` | Сужает конфиг по пути кластера. |
+
+**Ключевые зависимости:**  
+`config.load_config`, `kicad.adapter.KiCadBoardAdapter`, `validation.run_all_checks`, `placement.dependency_order.resolve_execution_order`, `placement.planner.PlacementPlanner`, `placement.executor.BatchExecutor`, `registry.PlacementRegistry`, `registry.TrackRegistry`.
+
+**Особенности:**  
+- Трёхфазное исполнение: перемещения → refresh → via → треки.
+- Поддержка `--dry-run`, `--only`, `--cluster`.
+- Композиция CLI-фильтров: `--only` и `--cluster` работают как AND.
+
+---
+
+## 3. `cli_extract.py` — Логика команды extract
+
+**Назначение:**  
+Содержит `cmd_extract()` — реализацию команды `extract`, выделенную из монолитного CLI для тестируемости.
+
+**Основная функция:**
+
+| Функция | Описание |
+|---------|----------|
+| `cmd_extract(args)` | Загружает профиль/конфиг, вызывает `template_extraction.extract_template_from_selection()`, записывает результат в JSON или YAML. |
+
+**Ключевые зависимости:**  
+`template_extraction.extract_template_from_selection`, `config.load_config`, `config.includes.load_profile`.
+
+---
+
+## 4. `logging_setup.py` — Настройка логирования
+
+**Назначение:**  
+Содержит `setup_logging()` — настраивает уровень логирования (INFO/DEBUG), вывод в консоль и/или файл. Выделена из монолитного CLI для переиспользования скриптами и тестами.
+
+**Основная функция:**
+
+| Функция | Описание |
+|---------|----------|
+| `setup_logging(verbose, log_file)` | Настраивает логирование: уровень, консольный обработчик, опциональный файловый обработчик. |
+
+---
+
+## 5. `runtime_context.py` — Контекст выполнения
+
+**Назначение:**  
+Определяет датакласс `RuntimeContext`, который переносит состояние прогона (имена листов и т.д.) через конвейер.
+
+**Основной датакласс:**
 
 | Класс | Описание |
 |-------|----------|
-| `ThermalViaArrayConfig` | Настройки массива термовиа под термопадом (теперь с `anchor_ref` вместо `target_ref`). |
+| `RuntimeContext` | Содержит `sheet_names: Dict[str, str]` — отображение UUID листов в имена. |
+
+---
+
+## 6. `sheet_names.py` — Парсинг UUID листов
+
+**Назначение:**  
+Парсит `.kicad_sch` файлы для построения отображения UUID листов в их имена. Используется резолвером ролей для разрешения неоднозначности компонентов на разных листах иерархии.
+
+**Основные функции:**
+
+| Функция | Описание |
+|---------|----------|
+| `build_sheet_name_map(config_path, schematic_dir, adapter)` | Читает иерархию схемы, возвращает `{uuid: имя_листа}`. |
+| `resolve_sheet_path_names(fp, sheet_names)` | Возвращает путь листа для футпринта как список имён. |
+
+---
+
+## 7. `i18n.py` — Интернационализация
+
+**Назначение:**  
+Настраивает gettext для русскоязычных пользовательских сообщений. Использует домен перевода `kicadspoke`. Предоставляет функцию `_()`, используемую во всём коде.
+
+**Основные элементы:**
+
+| Элемент | Описание |
+|---------|----------|
+| `_()` | Функция перевода gettext — оборачивает пользовательские строки для русской локализации. |
+| `setup_i18n()` | Инициализирует gettext с путём к locale и доменом. |
+
+**Используется в:** Всех модулях, формирующих пользовательские сообщения (42 файла по состоянию на июль 2026).
+
+---
+
+## 8. `author.py` — Скриптовые хелперы
+
+**Назначение:**  
+Предоставляет вспомогательные функции для написания скриптов расстановки (Python-код вместо YAML-конфигов). Включает функции дампа, `apply_config()` для программного применения сгенерированных конфигов и `cli_main()` как стандартную обёртку точки входа.
+
+**Основные функции:**
+
+| Функция | Описание |
+|---------|----------|
+| `dump_clone_placements(clones, path)` | Сериализует список `ClonePlacement` в YAML, обрезая значения по умолчанию. |
+| `dump_rules(rules, path)` | Сериализует список `Rule` в YAML, обрезая значения по умолчанию. |
+| `dump_template(template_dict, path)` | Записывает словарь шаблона в JSON или YAML. |
+| `apply_config(cfg, config_path, *, dry_run, ...)` | Загружает конфиг и запускает `cmd_apply` программно. |
+| `cli_main(build_fn, output_path, ...)` | Стандартное тело `if __name__ == "__main__":` для скриптов расстановки. |
+
+---
+
+## 9. `explore.py` — Запросы к плате только на чтение
+
+**Назначение:**  
+Предоставляет read-only вспомогательные функции для инспекции состояния платы. Используется в диагностических скриптах и интерактивном исследовании.
+
+**Основные функции:**
+
+| Функция | Описание |
+|---------|----------|
+| `get_footprints_by_role(adapter, role)` | Находит все футпринты с заданным значением поля `Role`. |
+| `get_footprint_field(adapter, ref, field_name)` | Читает значение конкретного поля футпринта. |
+
+---
+
+## 10. `config/` Пакет — загрузка и хранение конфигурации
+
+**Назначение:**  
+Заменил старый монолитный `config.py`. Теперь это пакет с отдельными модулями для моделей, загрузки и включений.
+
+**Состав пакета:**
+
+| Модуль | Описание |
+|--------|----------|
+| `__init__.py` | Экспортирует все типы конфига и `load_config()`. |
+| `models.py` | Датаклассы: `Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `Rule`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, `ThermalViaArrayConfig`. |
+| `loader.py` | `load_config()` и вспомогательные функции `_load_*` для каждой секции конфига. Обрабатывает `templates_file` и проверки уникальности ролей. |
+| `includes.py` | Обрабатывает директивы `include:` — загружает и объединяет конфиги из нескольких файлов с обнаружением циклов и проверкой дубликатов ключей. |
+
+**Основные датаклассы:**
+
+| Класс | Описание |
+|-------|----------|
+| `ThermalViaArrayConfig` | Настройки массива термовиа под термопадом (с `anchor_ref` вместо `target_ref`). |
 | `TemplateVia` | Описание via в шаблоне (локальные координаты, цепь, размеры). |
 | `TemplateTrack` | Описание прямого отрезка дорожки в шаблоне: начальная и конечная точки (локальные), ширина, цепь, опциональный слой. |
 | `TemplateComponentSlot` | Слот компонента в шаблоне: роль, локальные координаты, угол, список via, опциональный `net_template` и `layer`. |
 | `SpokeTemplate` | Полный шаблон спицы: имя, список via, список треков, список слотов компонентов, абсолютный `layer`. |
-| `ManualSpoke` | Конкретная спица: пад, шаблон, сдвиг, поворот, флаг `enabled`. |
-| `Rule` | Правило для одной цепи: имя цепи, список спиц, `anchor_ref` (обязательное поле). |
+| `ManualSpoke` | Конкретная спица: пад, шаблон, сдвиг, поворот, флаги `enabled`, `active`. |
+| `Rule` | Правило для одной цепи: имя цепи, список спиц, `anchor_ref` (обязательное), флаг `active`. |
 | `ClonePlacement` | Клонируемое размещение: имя, шаблон, абсолютная точка или сдвиг от якоря, угол, словари `nets`, `params`, `net_overrides`, `layer`, `mirror`, `refs`, `by_selection`, `anchor_role`, `anchor_sheet`, `anchor_pad`. |
 | `Config` | Главный объект: глобальный `layer`, шаблоны, термовиа, правила, клонирования, флаги. |
 
@@ -54,26 +185,26 @@
 
 | Функция | Описание |
 |---------|----------|
-| `load_config(path)` | Читает YAML, загружает внешний файл шаблонов (`templates_file`), если указан, и объединяет с инлайновыми `templates` (инлайновые имеют приоритет). Парсит все секции, возвращает объект `Config`. Проверяет уникальность ролей в шаблонах, корректность `layer`/`mirror` в `ClonePlacement`, наличие якоря при использовании `anchor_pad`, уникальность имён и физических якорей (`anchor_ref`/`anchor_role`) среди `clone_placements`. |
-| `_load_template_via(data)` | Загружает `TemplateVia`. Проверяет, что `net` — строка (защита от случайного вложения `net_overrides`). |
+| `load_config(path)` | Читает YAML, загружает внешний файл шаблонов (`templates_file`), объединяет с инлайновыми. Парсит все секции, возвращает `Config` и `RuntimeContext`. |
+| `_load_template_via(data)` | Загружает `TemplateVia`. Проверяет, что `net` — строка. |
 | `_load_template_track(data)` | Загружает `TemplateTrack`. Проверяет, что `net` — строка. |
 | `_load_template_component_slot(data)` | Загружает `TemplateComponentSlot`. |
 | `_load_spoke_template(name, data)` | Загружает `SpokeTemplate` с проверкой уникальности ролей. |
 | `_load_manual_spoke(data)` | Загружает `ManualSpoke`. |
-| `_load_clone_placement(data)` | Загружает `ClonePlacement`. Проверяет наличие `anchor_ref` для `anchor_pad`, обязательность координат при отсутствии якоря, а также взаимную исключительность `anchor_ref` и `anchor_role`. |
+| `_load_clone_placement(data)` | Загружает `ClonePlacement`. Проверяет ограничения на якоря и координаты. |
 
 **Особенности:**  
 - **`templates_file`** — путь к внешнему файлу шаблонов (JSON или YAML). Инлайновые `templates` дополняют/переопределяют внешние.
-- Проверка уникальности ролей внутри шаблона (дублирование недопустимо).
-- Поддержка `net_template` для клонирования (плейсхолдеры для цепей).
-- Для `ClonePlacement` поддерживаются два режима сопоставления ролей: «по выделению» (без `nets`/`params`) и «по цепям» (с `nets` или `params`). Явный флаг `by_selection` переопределяет автоматическое определение.
-- Наследование `net` для via и треков: если `net` не указан, берётся из `rule.net` (для ManualSpoke) или обязателен для ClonePlacement.
-- Перекрёстная валидация `layer`/`mirror`: `mirror` без смены слоя или смена слоя без `mirror` — фатальная ошибка.
-- Устаревшие поля `target_ref` и `side` в корне конфига — фатальная ошибка.
+- **`include:`** — множество файлов конфига с объединением и обнаружением циклов.
+- Проверка уникальности ролей внутри шаблона.
+- `net_template` для клонирования (плейсхолдеры для цепей).
+- Два режима сопоставления ролей: «по выделению» и «по цепям».
+- Перекрёстная валидация `layer`/`mirror`.
+- Устаревшие поля `target_ref` и `side` — фатальная ошибка.
 
 ---
 
-## 3. `exceptions.py` — иерархия исключений
+## 11. `exceptions.py` — иерархия исключений
 
 **Назначение:**  
 Определяет пользовательские исключения для проекта и единую функцию форматирования фатальных ошибок. Все исключения наследуются от базового `PlacerError`.
@@ -86,41 +217,36 @@
 | `BoardNotFoundError` | Не удалось получить плату из KiCad. |
 | `ComponentNotFoundError` | Компонент не найден на плате. |
 | `GeometryError` | Ошибка в геометрических расчётах. |
-| `ValidationError` | Фатальная ошибка предварительной проверки конфигурации — программа останавливается до изменения платы. |
+| `ValidationError` | Фатальная ошибка предварительной проверки — программа останавливается до изменения платы. |
 
 **Вспомогательная функция:**
 
 | Функция | Описание |
 |---------|----------|
-| `format_fatal_error(title, problems)` | Форматирует список проблем в единое многострочное сообщение с рамкой из `=`. Используется как в `config.py` (проверки на этапе загрузки YAML), так и в `validation.py` (проверки после подключения к KiCad). Живёт здесь, чтобы избежать циклических импортов. |
+| `format_fatal_error(title, problems)` | Форматирует список проблем в единое многострочное сообщение с рамкой из `=`. Используется в `config/loader.py` и `validation.py`. Живёт здесь, чтобы избежать циклических импортов. |
 
 ---
 
-## 4. `net_resolution.py` — разрешение цепей для клонируемых шаблонов
+## 12. `net_resolution.py` — разрешение цепей для клонируемых шаблонов
 
 **Назначение:**  
-Обеспечивает трёхслойное разрешение имени цепи для `ClonePlacement` (TemplatePlacer). Позволяет подставлять плейсхолдеры из `params` и применять переопределения `net_overrides`. Также предоставляет **обратную параметризацию** (`parametrize_net`) для `extract`.
+Обеспечивает трёхслойное разрешение имени цепи для `ClonePlacement`. Позволяет подставлять плейсхолдеры из `params` и применять переопределения `net_overrides`. Также предоставляет обратную параметризацию (`parametrize_net`) для `extract`.
 
 **Основные функции:**
 
 | Функция | Описание |
 |---------|----------|
-| `resolve_net(net_template, params, net_overrides)` | Принимает шаблон имени цепи (возможно с `{placeholder}`), словарь параметров для подстановки и словарь переопределений. Возвращает итоговое имя цепи. В случае отсутствия параметра для плейсхолдера бросает `ValidationError`. |
-| `parametrize_net(literal_net, net_template_map, params)` | Обратная операция для `extract`: по реальному имени цепи и карте `net_template_map` восстанавливает паттерн с плейсхолдером. Проверяет round-trip (резолв паттерна с `params` должен дать исходный литерал). |
+| `resolve_net(net_template, params, net_overrides)` | Принимает шаблон имени цепи (возможно с `{placeholder}`), словарь параметров и словарь переопределений. Возвращает итоговое имя цепи. |
+| `parametrize_net(literal_net, net_template_map, params)` | Обратная операция для `extract`: восстанавливает паттерн с плейсхолдером из реального имени цепи. |
 
-**Принцип работы `resolve_net`:**
-1. Если в `net_template` нет плейсхолдеров — возвращает как есть.
-2. Иначе выполняет `str.format(**params)`.
-3. Затем применяет `net_overrides.get(resolved, resolved)` для точечной подмены.
-
-**Используется в:** `placement/services/clone_role_resolver.py` (при разрешении ролей для клонированных размещений) и `geometry/clone_geometry.py` (при разрешении цепей via и треков).
+**Используется в:** `placement/services/clone_role_resolver.py` и `geometry/clone_geometry.py`.
 
 ---
 
-## 5. `registry.py` — реестры расстановки via и треков
+## 13. `registry.py` — реестры расстановки via и треков
 
 **Назначение:**  
-Обеспечивает идемпотентность расстановки via и треков между прогонами. Сохраняет в JSON-файлы рядом с конфигом информацию о созданных объектах (UUID, позиция, параметры, цепь). При повторном запуске сверяет запланированные объекты с **реальными объектами на плате** (`adapter.get_vias()`, `adapter.get_tracks()`), удаляет устаревшие (prune) и создаёт только новые или изменившие параметры.
+Обеспечивает идемпотентность расстановки via и треков между прогонами. Сохраняет информацию о созданных объектах в JSON-файлы. При повторном запуске сверяет запланированные объекты с реальными объектами на плате, удаляет устаревшие (prune) и создаёт только новые или изменившие параметры.
 
 **Основные классы и функции:**
 
@@ -128,119 +254,91 @@
 |---------------|----------|
 | `make_registry_key(anchor_id, template_name, role, via_index)` | Генерирует составной ключ для реестра via. |
 | `registry_path_for_config(config_path)` | Возвращает путь к файлу реестра via. |
-| `track_registry_path_for_config(config_path)` | Возвращает путь к файлу реестра треков (отдельный файл). |
+| `track_registry_path_for_config(config_path)` | Возвращает путь к файлу реестра треков. |
 | `RegistryEntry` | Dataclass для via: UUID, позиция, цепь, параметры отверстия. |
-| `TrackRegistryEntry` | Dataclass для трека: UUID, координаты начала/конца, ширина, цепь, слой. |
+| `TrackRegistryEntry` | Dataclass для трека: UUID, координаты, ширина, цепь, слой. |
 | `PlacementRegistry` | Класс, управляющий реестром via. |
 | `TrackRegistry` | Класс, управляющий реестром треков. |
-| `reconcile(planned_objects, known_anchor_ids)` | Сравнивает запланированные объекты с реестром и реальными объектами на плате, удаляет устаревшие, возвращает список объектов для реального создания. |
-| `record_created(cmd, created_uuid)` | Записывает созданный объект в реестр. |
 
 **Особенности:**
-- **Сверка с живыми объектами на плате** — источник истины, а не только JSON-запись. Это предотвращает рассинхронизацию при ручном удалении или сбоях между записью в реестр и коммитом на плату.
-- Ключи реестра строятся по схеме: `anchor_id|template_name|role|via_index` (для треков аналогично).
-- `anchor_id` для ManualSpoke — `f"pad:{pad}"`, для ClonePlacement — `f"name:{clone.name}"` (или `anchor:{ref}:{pad}` / `role:{role}:{sheet}:{pad}` для физических якорей).
-- `role` для via уровня спицы — `__spoke__`.
+- **Сверка с живыми объектами на плате** — источник истины, а не только JSON.
+- Ключи реестра: `anchor_id|template_name|role|via_index` (для треков аналогично).
 - Допуск на позицию: 0.01 мм.
-- Поддержка `known_anchor_ids` — при использовании `--only` via/треки других клонов не удаляются (prune).
-- Отдельные реестры для via и треков (разные файлы и разные структуры записей).
+- Отдельные реестры для via и треков.
 
-**Используется в:** `kicadspoke_cli.py` (при выполнении `apply`), `executor/via_executor.py` и `executor/track_executor.py`.
+**Используется в:** `apply_pipeline.py` (при `apply`), `executor/via_executor.py`, `executor/track_executor.py`.
 
 ---
 
-## 6. `template_extraction.py` — извлечение шаблона из выделения
+## 14. `template_extraction.py` — извлечение шаблона из выделения
 
 **Назначение:**  
-Реализует команду `extract`: из текущего выделения в PCB-редакторе KiCad извлекает шаблон спицы (компоненты, via **и треки**) и формирует структуру для записи в файл. Поддерживает параметризацию цепей через `--net-template` и выбор origin через `--origin-by-via-net` или `--origin-by-component-role`.
+Реализует логику команды `extract`: из текущего выделения в PCB-редакторе KiCad извлекает шаблон спицы (компоненты, via и треки) и формирует структуру для записи в файл.
 
 **Основные функции:**
 
 | Функция | Описание |
 |---------|----------|
-| `extract_template_from_selection(adapter, name, params, net_template_map, origin_via_net, origin_component_role)` | Основная функция. Читает выделение (с учётом групп), фильтрует треки (только те, у которых оба конца совпадают с падами, via или другими треками из выделения), проверяет наличие и уникальность ролей, вычисляет origin (bbox или конкретный элемент), формирует список компонентов, via и треков, возвращает словарь для записи. |
-| `_bbox_origin(footprints, vias)` | Вычисляет левый нижний угол bounding box'а выделения (min_x, max_y). |
-| `_find_origin(...)` | Определяет origin по заданным параметрам (via_net, component_role или bbox). |
-| `_filter_tracks_within_selection(...)` | Отфильтровывает треки, у которых хотя бы один конец не совпадает с чем-то ещё в выделении (защита от захвата длинных дорожек). |
+| `extract_template_from_selection(adapter, name, params, net_template_map, ...)` | Основная функция. Читает выделение, фильтрует треки, проверяет роли, вычисляет origin, формирует выходной словарь. |
+| `render_uncertain_comments(yaml_text, name)` | Добавляет YAML-комментарии, помечающие неопределённые значения геометрии. |
 
-**Алгоритм:**
-1. Получает выделенные объекты через `adapter.get_selected_items()`.
-2. Разделяет на `FootprintInstance`, `Via`, `Track`; остальное игнорируется.
-3. Фильтрует треки (`_filter_tracks_within_selection`), оставляя только замкнутые в пределах выделения.
-4. Проверяет наличие поля `Role` у каждого компонента и уникальность ролей.
-5. Определяет origin (по `--origin-by-via-net`, `--origin-by-component-role` или bbox).
-6. Для каждого компонента вычисляет `along/across` и сохраняет угол, роль и опциональный `layer`.
-7. Для каждой via и трека вычисляет локальные координаты, сохраняет `net` (с параметризацией через `net_template_map`), параметры отверстия/ширины и слой.
-8. Возвращает словарь `{name: {"vias": [...], "components": [...], "tracks": [...], "layer": ...}}`, готовый для записи в JSON или YAML.
-
-**Используется в:** `kicadspoke_cli.py` (команда `extract`).
+**Используется в:** `cli_extract.py` (команда `extract`).
 
 ---
 
-## 7. `undo.py` — откат последней операции
+## 15. `undo.py` — откат последней операции
 
 **Назначение:**  
-Реализует команду `undo`, которая восстанавливает состояние платы до выполнения последней операции расстановки. Использует JSON-логи, создаваемые `executor/operation_logger.py` при каждом успешном применении изменений.
+Реализует команду `undo`. Использует JSON-логи, создаваемые `executor/operation_logger.py`.
 
 **Основная функция:**
 
 | Функция | Описание |
 |---------|----------|
-| `undo_last_operation(json_path)` | Загружает JSON-лог, для каждого перемещённого компонента: определяет исходный слой (по строке), при необходимости выполняет флип, затем восстанавливает позицию и угол. Для каждой созданной via и трека удаляет их по UUID. После успешного отката удаляет JSON-файл. |
-
-**Алгоритм восстановления слоя:**
-- `original_layer` хранится в логе как строка `"F.Cu"` или `"B.Cu"`.
-- Если текущий слой футпринта отличается от исходного, выполняется `adapter.flip_selected([fp])`, затем футпринт перечитывается через `adapter.get_footprint(ref)`.
-- Затем восстанавливаются позиция и угол.
+| `undo_last_operation(json_path)` | Восстанавливает состояние платы: возвращает компоненты на исходные позиции/слой, удаляет созданные via и треки. |
 
 **Используется в:** `kicadspoke_cli.py` (команда `undo`).
 
 ---
 
-## 8. `validation.py` — предварительные проверки конфигурации
+## 16. `validation.py` — предварительные проверки конфигурации
 
 **Назначение:**  
-Выполняет фатальные проверки конфигурации **до** любых изменений на плате. Если обнаружена проблема — программа останавливается с подробным списком ошибок, не трогая плату.
+Выполняет фатальные проверки конфигурации **до** любых изменений на плате. Собирает все проблемы, а не останавливается на первой.
 
 **Основные функции:**
 
 | Функция | Описание |
 |---------|----------|
-| `check_templates_and_pads_exist(adapter, cfg)` | Проверяет, что каждая включённая спица ссылается на существующий шаблон и существующую площадку целевого компонента (якоря). Пропускает отключённые спицы (`enabled=False`). |
-| `check_role_pool_sufficiency(adapter, cfg)` | Для каждого правила строит `ComponentPool` и сверяет требуемое количество компонентов каждой роли с доступным. Если не хватает — сообщает все нехватки разом. |
-| `check_clone_templates_exist(cfg)` | Проверяет, что каждый `ClonePlacement` ссылается на существующий шаблон (чисто конфиговая проверка, без подключения к KiCad). |
-| `check_no_duplicate_clone_anchors(cfg)` | Проверяет уникальность имён `clone_placements` и уникальность физических якорей (комбинации `template`, `anchor_ref`, `anchor_pad` или `template`, `anchor_role`, `anchor_sheet`, `anchor_pad`) среди включённых клонов. Фатально при дублировании. |
-| `check_clone_nets_exist_on_board(adapter, cfg)` | Резолвит `via.net` и `track.net` для каждого `ClonePlacement` и сверяет результат с реальными цепями платы (`adapter.get_all_nets()`). Отлавливает опечатки в `params` и `net_overrides`. |
-| `check_single_selection_based_clone(cfg)` | Проверяет, что в конфиге не более одного `ClonePlacement` в режиме «по выделению» (без `nets`/`params`, или с `by_selection: true`), так как в KiCad активно только одно выделение. Подсказывает использовать `--only NAME` для отладки. |
-| `run_all_checks(adapter, cfg)` | Запускает все проверки по порядку: `check_clone_templates_exist`, `check_no_duplicate_clone_anchors`, `check_single_selection_based_clone`, `check_templates_and_pads_exist`, `check_role_pool_sufficiency`, `check_clone_nets_exist_on_board`. |
+| `check_templates_and_pads_exist(adapter, cfg)` | Проверяет, что каждая включённая спица ссылается на существующий шаблон и пад. |
+| `check_role_pool_sufficiency(adapter, cfg)` | Проверяет доступность компонентов по ролям. |
+| `check_clone_templates_exist(cfg)` | Проверка существования шаблонов (только конфиг). |
+| `check_no_duplicate_clone_anchors(cfg)` | Уникальность имён и физических якорей клонов. |
+| `check_anchor_sheet_configured(cfg, sheet_names)` | Проверяет `anchor_sheet` на соответствие реальным именам листов. |
+| `check_clone_nets_exist_on_board(adapter, cfg)` | Резолвит цепи via/треков и сверяет с реальными цепями платы. |
+| `check_single_selection_based_clone(cfg)` | Гарантирует не более одного клона в режиме «по выделению». |
+| `run_all_checks(adapter, cfg, sheet_names)` | Запускает все проверки по порядку. |
 
-**Особенности:**  
-- Сбор всех проблем: проверки собирают список ошибок, а не останавливаются на первой.
-- Использование `ComponentPool`: в `check_role_pool_sufficiency` строится пул для каждой цепи.
-- Для `ClonePlacement` проверяется, что не более одного клона в режиме «по выделению» (иначе фатальная ошибка).
-- `check_clone_nets_exist_on_board` — проверяет, что резолвнутые цепи via и треков действительно существуют на плате.
-- `check_no_duplicate_clone_anchors` — предотвращает конфликты в реестре при одинаковых физических якорях.
-- Форматирование ошибок через `format_fatal_error()` из `exceptions.py`.
-
-**Используется в:** `kicadspoke_cli.py` (перед планированием).
+**Используется в:** `apply_pipeline.py` (перед планированием).
 
 ---
 
-## 9. `constants.py` — глобальные константы
+## 17. `constants.py` — глобальные константы
 
 **Назначение:**  
-Содержит глобальные константы, используемые в различных модулях проекта, что упрощает их изменение и поддержку.
+Содержит глобальные константы, используемые в различных модулях проекта.
 
 | Константа | Значение | Использование |
 |-----------|----------|---------------|
-| `ROLE_FIELD_NAME` | `"Role"` | Имя пользовательского поля в схеме для ролей (используется в `component_pool.py`, `template_extraction.py`, `clone_role_resolver.py`). |
-| `POSITION_TOLERANCE_NM` | `10_000` (0.01 мм) | Допуск по позиции для проверки «уже на месте» (используется в `planner.py`). |
-| `ANGLE_TOLERANCE_DEG` | `0.1` | Допуск по углу для проверки «уже на месте» (используется в `planner.py`). |
-| `POSITION_TOLERANCE_MM` | `0.01` | Допуск по позиции в миллиметрах для реестра (используется в `registry.py`). |
-| `DEFAULT_BATCH_SIZE` | `10` | Размер батча по умолчанию для транзакций (используется в `executor/batch_executor.py` и `kicadspoke_cli.py`). |
-| `DEFAULT_TIMEOUT_MS` | `20000` | Таймаут IPC по умолчанию (используется в `kicad/adapter.py` и `kicadspoke_cli.py`). |
-| `DEFAULT_LOG_DIR` | `"logs"` | Папка для логов по умолчанию (используется в `executor/operation_logger.py`). |
-| `SPOKE_LEVEL_ROLE_PLACEHOLDER` | `"__spoke__"` | Плейсхолдер для via уровня спицы в реестре (используется в `registry.py`). |
+| `ROLE_FIELD_NAME` | `"Role"` | Имя пользовательского поля для ролей (используется в `component_pool.py`, `template_extraction.py`, `clone_role_resolver.py`). |
+| `CLUSTER_FIELD_NAME` | `"Cluster"` | Имя пользовательского поля для путей кластера. |
+| `POSITION_TOLERANCE_NM` | `10_000` (0.01 мм) | Допуск по позиции для проверки «уже на месте». |
+| `ANGLE_TOLERANCE_DEG` | `0.1` | Допуск по углу для проверки «уже на месте». |
+| `POSITION_TOLERANCE_MM` | `0.01` | Допуск по позиции для реестра. |
+| `DEFAULT_BATCH_SIZE` | `10` | Размер батча по умолчанию. |
+| `DEFAULT_TIMEOUT_MS` | `20000` | Таймаут IPC по умолчанию. |
+| `DEFAULT_LOG_DIR` | `"logs"` | Папка для логов по умолчанию. |
+| `SPOKE_LEVEL_ROLE_PLACEHOLDER` | `"__spoke__"` | Плейсхолдер для via уровня спицы в реестре. |
 
 ---
 
@@ -248,44 +346,61 @@
 
 ```mermaid
 graph TD
-    CLI[kicadspoke_cli.py] --> Config[config.py]
-    CLI --> Adapter[kicad/adapter.py]
-    CLI --> Validation[validation.py]
-    CLI --> Planner[placement/planner.py]
-    CLI --> Executor[placement/executor/batch_executor.py]
-    CLI --> ViaRegistry[registry.PlacementRegistry]
-    CLI --> TrackRegistry[registry.TrackRegistry]
-    CLI --> Extract[template_extraction.py]
+    CLI[kicadspoke_cli.py] --> ApplyPipe[apply_pipeline.py]
+    CLI --> CliExtract[cli_extract.py]
     CLI --> Undo[undo.py]
-    CLI --> Constants[constants.py]
-    CLI --> NetResolution[net_resolution.py]
+    CLI --> LogSetup[logging_setup.py]
+    CLI --> Cloner[cloner/extract.py]
 
-    Config --> Exceptions[exceptions.py]
-    Config --> TemplatesFile[templates_file (external JSON/YAML)]
+    ApplyPipe --> ConfigPkg[config/ package]
+    ApplyPipe --> Adapter[kicad/adapter.py]
+    ApplyPipe --> Validation[validation.py]
+    ApplyPipe --> Order[placement/dependency_order.py]
+    ApplyPipe --> Planner[placement/planner.py]
+    ApplyPipe --> Executor[placement/executor/batch_executor.py]
+    ApplyPipe --> ViaRegistry[registry.PlacementRegistry]
+    ApplyPipe --> TrackRegistry[registry.TrackRegistry]
+    ApplyPipe --> NetResolution[net_resolution.py]
+    ApplyPipe --> Constants[constants.py]
+    ApplyPipe --> SheetNames[sheet_names.py]
 
-    Validation --> Config
+    CliExtract --> ConfigPkg
+    CliExtract --> Extract[template_extraction.py]
+    CliExtract --> Adapter
+    CliExtract --> NetResolution
+
+    ConfigPkg --> Exceptions[exceptions.py]
+    ConfigPkg --> Models[config/models.py]
+    ConfigPkg --> Loader[config/loader.py]
+    ConfigPkg --> Includes[config/includes.py]
+    ConfigPkg --> TemplatesFile[templates_file (external JSON/YAML)]
+
+    Validation --> ConfigPkg
     Validation --> ComponentPool[placement/services/component_pool.py]
     Validation --> Exceptions
     Validation --> Adapter
 
-    ViaRegistry --> Config
+    ViaRegistry --> ConfigPkg
     ViaRegistry --> Adapter
     ViaRegistry --> Exceptions
 
-    TrackRegistry --> Config
+    TrackRegistry --> ConfigPkg
     TrackRegistry --> Adapter
     TrackRegistry --> Exceptions
 
     Extract --> Adapter
-    Extract --> Config
+    Extract --> ConfigPkg
     Extract --> Exceptions
 
     Undo --> Adapter
     Undo --> Exceptions
 
     NetResolution --> Exceptions
-    NetResolution --> Config (используется ClonePlacement)
+    NetResolution --> ConfigPkg (используется ClonePlacement)
     NetResolution --> Extract (parametrize_net)
+
+    Order --> Adapter
+    Order --> ConfigPkg
 ```
 
 Каждый модуль решает свою задачу и взаимодействует с другими через чётко определённые интерфейсы, что обеспечивает модульность и тестируемость. Благодаря централизованным константам, единому форматтеру ошибок и поддержке внешних файлов шаблонов проект легко поддерживать и расширять.

@@ -37,8 +37,16 @@
 
 ```
 kicadspoke/
-├── kicadspoke_cli.py                 # Точка входа (CLI)
-├── config.py                         # Загрузка и хранение конфигурации (поддерживает templates_file)
+├── __init__.py                       # Пакетный инициализатор
+├── kicadspoke_cli.py                 # Точка входа (CLI) — dispatch по командам
+├── apply_pipeline.py                 # ApplyPipeline: apply-команда целиком (загрузка, фильтры, выполнение)
+├── cli_extract.py                    # cmd_extract — команда extract
+├── logging_setup.py                  # setup_logging — настройка логирования
+├── runtime_context.py                # RuntimeContext (sheet_names)
+├── sheet_names.py                    # Парсинг UUID листов из .kicad_sch → build_sheet_name_map()
+├── i18n.py                           # gettext i18n: _() для русских сообщений
+├── author.py                         # Скриптовые хелперы: dump/apply/cli_main
+├── explore.py                        # Запросы к плате только на чтение
 ├── exceptions.py                     # Иерархия исключений
 ├── undo.py                           # Откат операций
 ├── validation.py                     # Предварительные проверки (включая проверку цепей via/треков)
@@ -46,32 +54,46 @@ kicadspoke/
 ├── net_resolution.py                 # Разрешение цепей для клонирования (и обратная параметризация)
 ├── template_extraction.py            # Извлечение шаблонов из выделения (с поддержкой треков, JSON, параметризации)
 ├── constants.py                      # Глобальные константы
+├── config/                           # Конфигурация (пакет, вместо одного config.py)
+│   ├── __init__.py                   # Экспорт типов и функций
+│   ├── loader.py                     # load_config() и _load_* функции
+│   ├── models.py                     # Датаклассы (Config, Rule, ClonePlacement, SpokeTemplate …)
+│   └── includes.py                   # Обработка include: директив
+├── utils/                            # Вспомогательные утилиты
+│   ├── __init__.py
+│   └── units.py                      # MM = 1_000_000 и другие константы единиц
 ├── geometry/                         # Геометрические утилиты (независимые от KiCad)
+│   ├── __init__.py
 │   ├── keepout.py                    # Ограничивающие прямоугольники и поиск свободного места
 │   ├── pad_projection.py             # Предсказание позиции пада
 │   ├── spoke_layout.py               # Преобразование локальных координат шаблона в глобальные (для ManualSpoke)
 │   ├── clone_geometry.py             # Преобразование для ClonePlacement (с поддержкой треков и mirror)
 │   └── thermal_grid.py               # Генерация сетки термовиа
 ├── kicad/                            # Адаптер для KiCad
+│   ├── __init__.py
 │   ├── adapter.py                    # Реализация KiCadBoardAdapter (с поддержкой треков)
 │   └── interfaces.py                 # Абстрактный интерфейс IBoardAdapter
 ├── placement/                        # Основная логика
+│   ├── __init__.py
 │   ├── planner.py                    # Главный планировщик (plan_moves, plan_vias, plan_tracks)
 │   ├── commands.py                   # Структуры данных (MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo)
 │   ├── collision.py                  # Проверка коллизий
-│   ├── interfaces.py                 # Интерфейсы IPositionCalculator, IViaPlanner
+│   ├── dependency_order.py           # Разрешение порядка выполнения по anchor_ref/anchor_role
 │   ├── executor/                     # Исполнитель команд (разбит на модули)
+│   │   ├── __init__.py
 │   │   ├── batch_executor.py         # Фасад, объединяющий перемещения, via и треки
 │   │   ├── move_executor.py          # Исполнение перемещений
 │   │   ├── via_executor.py           # Исполнение создания via
 │   │   ├── track_executor.py         # Исполнение создания треков
 │   │   ├── flip_manager.py           # Управление флипом компонентов
-│   │   ├── operation_logger.py       # Логирование операций в JSON (включая треки)
-│   │   └── base.py                   # Общие утилиты (layer_to_str)
+│   │   └── operation_logger.py       # Логирование операций в JSON (включая треки)
 │   └── services/                     # Сервисные классы
+│       ├── __init__.py
 │       ├── component_pool.py         # Подбор компонентов по ролям и цепи (для ManualSpoke)
 │       ├── clone_role_resolver.py    # Разрешение ролей для ClonePlacement (с учётом близости к якорю и выделения)
 │       ├── clone_position_calculator.py # Расчёт позиций, via и треков для ClonePlacement
+│       ├── component_resolver.py     # Общая логика resolve_anchor_fp / build_pools
+│       ├── position_tracker.py       # Трекинг позиций для разрешения зависимостей
 │       ├── manual_position_calculator.py  # Расчёт позиций и via для ManualSpoke
 │       └── via_planner.py            # Планирование термовиа и фильтрация via через реестр
 ├── cloner/                           # Файловый клонер (без IPC)
@@ -80,8 +102,7 @@ kicadspoke/
 │   ├── netlist.py
 │   ├── pcb.py
 │   └── sexp.py
-├── diagnostics/                      # Диагностические скрипты
-└── tests/                            # Модульные и интеграционные тесты
+└── diagnostics/                      # Диагностические скрипты
 ```
 
 ---
@@ -123,7 +144,7 @@ kicadspoke/
 
 ### 4.4. Конфигурация и валидация
 
-- **`config.py`** – определяет датаклассы для всех структур конфига (`Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot` и т.д.) и функцию `load_config()` для загрузки YAML. Поддерживает **`templates_file`** — внешний файл шаблонов (JSON или YAML), который загружается и объединяется с инлайновыми `templates`. Это позволяет выносить тяжёлую геометрию из основного конфига.
+- **`config/` пакет** (`__init__.py`, `loader.py`, `models.py`, `includes.py`) – определяет датаклассы для всех структур конфига (`Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot` и т.д.) и функцию `load_config()` для загрузки YAML. Поддерживает **`templates_file`** — внешний файл шаблонов (JSON или YAML), который загружается и объединяется с инлайновыми `templates`. Модуль `includes.py` обрабатывает директивы `include:` для разделения конфигов на несколько файлов. Это позволяет выносить тяжёлую геометрию из основного конфига.
 - **`validation.py`** – предварительные проверки: существование шаблонов и падов, достаточность компонентов в пуле по ролям, корректность `clone_placements` (не более одного клона в режиме «по выделению» за прогон), **а также резолвинг цепей via/треков и проверка их наличия на плате**. Бросает `ValidationError` с понятным списком проблем.
 
 ### 4.5. Реестр расстановки (`registry.py`)

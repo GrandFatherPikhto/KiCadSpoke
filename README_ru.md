@@ -1,4 +1,4 @@
-# KiCadSpoke v1.37.0
+# KiCadSpoke v1.5.0
 
 **KiCadSpoke** — это инструмент командной строки для автоматизации разводки и **клонирования блоков** печатных плат в **KiCad 10**. Он позволяет **реплицировать** (клонировать) повторяющиеся участки схемы и трассировки, автоматически размещать компоненты и переходные отверстия на основе **шаблонов** и **ролей**. Подключается к открытому экземпляру KiCad через IPC и выполняет:
 
@@ -379,21 +379,32 @@ KiCad. Полный разбор, связанный баг (#24970) и весь
 
 ```
 kicadspoke/
+├── __init__.py
 ├── kicadspoke_cli.py          # CLI точка входа
-├── config.py                  # Загрузка YAML → датаклассы (поддерживает templates_file)
-├── constants.py               # Глобальные константы
+├── apply_pipeline.py          # cmd_apply и класс ApplyPipeline
+├── cli_extract.py             # cmd_extract (логика команды extract)
+├── logging_setup.py           # Настройка логирования
+├── runtime_context.py         # Dataclass RuntimeContext
+├── sheet_names.py             # Преобразование UUID листов → имена
+├── i18n.py                    # gettext-интернационализация
+├── author.py                  # Скриптинг: дамп/применение (explore/author)
+├── explore.py                 # Помощники запросов к плате
+├── config/                    # Пакет конфигурации (loader.py, models.py, includes.py)
+├── constants.py               # Глобальные константы (ROLE_FIELD_NAME, допуски и т.д.)
 ├── exceptions.py              # Иерархия исключений
-├── validation.py              # Предварительные проверки (включая проверку цепей via, уникальность якорей, режим выделения)
+├── validation.py              # Предварительные проверки (цепи via, уникальность якорей, режим выделения)
 ├── registry.py                # Реестр via и треков (сверка с живыми элементами)
 ├── net_resolution.py          # Разрешение цепей для ClonePlacement и обратная параметризация
 ├── template_extraction.py     # Извлечение шаблона из выделения (с новыми опциями)
 ├── undo.py                    # Откат операции
 ├── geometry/                  # Геометрические расчёты (spoke_layout, keepout, thermal_grid, pad_projection, clone_geometry)
-├── kicad/                     # Адаптер к KiCad IPC
-├── placement/                 # Планировщик, исполнители, сервисы (collision, planner, executor, services)
-│   ├── services/              # Включая clone_role_resolver с разрешением по близости к якорю и выделению
+├── kicad/                     # Адаптер KiCad IPC и интерфейс IBoardAdapter
+├── placement/                 # Планировщик, исполнители, сервисы
+│   ├── services/              # component_pool, clone_role_resolver, position_tracker, component_resolver и др.
 ├── cloner/                    # Файловый клонер (extract, netlist, pcb, models, sexp)
 ├── diagnostics/               # Диагностические скрипты
+├── utils/                     # Утилиты
+│   └── units.py               # MM = 1_000_000
 └── tests/                     # Модульные и интеграционные тесты
 ```
 
@@ -415,11 +426,11 @@ kicadspoke/
 - [Модули верхнего уровня](./docs/uplevel_modules_ru.md)
 - [Файловый клонер](./docs/cloner_ru.md)
 - [Диагностика](./docs/diagnostics_ru.md)
-- [Охота за крашами KiCad (#24966 / #24970) — включая снятие core dump (Windows + Linux)](./docs/crash_hunting_ru.md)
+- [Охота за крашами KiCad (#24966 / #24970)](./docs/crash_hunting_ru.md)
 - [Справка по `diagnose_first_write_crash.py`](./docs/diagnose_first_write_crash_ru.md)
 - [Интернационализация (i18n) — gettext/Babel](./docs/i18n_ru.md)
-
-> **Примечание:** некоторые из перечисленных файлов могут отсутствовать, если они ещё не созданы или были объединены. Актуальный список документации всегда можно найти в папке `docs/`.
+- [Поворот и трансформация шаблонов](./docs/rotate_template_ru.md)
+- [Диаграмма зависимостей модулей](./docs/diagram_ru.md)
 
 ---
 

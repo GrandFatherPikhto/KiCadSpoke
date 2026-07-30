@@ -1,52 +1,183 @@
 # Top-level Modules of KiCadSpoke (Current Version)
 
-The `kicadspoke/` folder contains the core modules responsible for configuration loading, exception handling, logging, undo, validation, placement registries for vias and tracks, template extraction, and the CLI entry point. Each module addresses a specific task and interacts with others through well-defined interfaces.
+The `kicadspoke/` folder contains the core modules responsible for configuration loading, exception handling, logging, undo, validation, placement registries for vias and tracks, template extraction, scripting helpers, and the CLI entry point. Each module addresses a specific task and interacts with others through well-defined interfaces.
 
 ---
 
-## 1. `kicadspoke_cli.py` – CLI Entry Point
+## 1. `kicadspoke_cli.py` – CLI Entry Point (Dispatcher)
 
 **Purpose:**  
-Main executable script that processes command-line arguments, initialises logging, loads the configuration (with support for `templates_file`), connects to KiCad, runs pre-validation, invokes the planner and executor, and supports the `undo`, `extract`, `clone-extract` commands and the optional `--only` flag.
+Thin dispatcher that parses command-line arguments and delegates to the appropriate command handler. The actual logic for `apply`, `extract`, `undo`, `clone-extract` has been extracted into separate modules for testability and maintainability.
 
 **Main functions:**
 
 | Function | Description |
 |----------|-------------|
-| `setup_logging(verbose, log_file)` | Configures logging: level (INFO/DEBUG), output to console and/or file. |
-| `cmd_apply(args)` | `apply` command: loads config, connects to KiCad, runs validation, planning, and **three-phase** execution (moves → refresh → vias → tracks). Supports `--dry-run` and `--only <name>[, ...]` for processing only the named `rules`/`clone_placements`/`thermal_via_array`. |
-| `cmd_extract(args)` | `extract` command: extracts a template from the current selection on the board (including **tracks**) and writes it as JSON or YAML. Supports `--param`, `--net-template`, `--origin-by-via-net`, `--origin-by-component-role`, and **profiles** (`--profiles`, `--profile`) for convenient parameter reuse. The format is determined by the file extension; for `.json` the file is written as a flat dictionary without a `templates:` wrapper. |
-| `cmd_undo(args)` | `undo` command: finds the latest JSON log in `logs/`, calls `undo_last_operation()` (removes created vias **and tracks**, restores components). |
-| `main()` | Parses arguments (supports implicit `apply`), configures logging, invokes the appropriate command, catches exceptions. |
+| `cmd_apply(args)` | Delegates to `apply_pipeline.cmd_apply()` — loads config, connects to KiCad, runs validation, planning, and **three-phase** execution. |
+| `cmd_extract(args)` | Delegates to `cli_extract.cmd_extract()` — extracts a template from the current selection on the board. |
+| `cmd_undo(args)` | Delegates to `undo.undo_last_operation()` — restores board state before the last placement. |
+| `cmd_clone_extract(args)` | Delegates to `cloner.extract.extract_channel()` — file-based cloner. |
+| `main()` | Parses arguments (supports implicit `apply`), sets up logging via `logging_setup.setup_logging()`, invokes the appropriate command, catches exceptions. |
 
 **Key dependencies:**  
-`config.load_config`, `kicad.adapter.KiCadBoardAdapter`, `validation.run_all_checks`, `placement.planner.PlacementPlanner`, `placement.executor.BatchExecutor`, `registry.PlacementRegistry`, `registry.TrackRegistry`, `template_extraction.extract_template_from_selection`, `undo.undo_last_operation`, `cloner.extract.extract_channel`.
-
-**Features:**  
-- Supports four commands: `apply`, `undo`, `extract`, `clone-extract`.
-- In `apply` mode, performs a three-phase process: moves → vias → tracks (with intermediate board reload).
-- The `--only NAME` flag (repeatable) allows processing only the `rules`/`clone_placements`/`thermal_via_array` with that name — e.g., a single clone in selection mode (useful for debugging), without touching the rest of the config at all. `name:` is mandatory on every such entry.
-- In `extract` mode, uses the current selection in the PCB editor to create a template; extracts components, vias, and tracks. Supports profiles that store parameters (`name`, `output`, `param`, `net_template`, `origin_by_via_net`, `origin_by_component_role`) in a separate YAML file.
-- All exceptions are caught and logged; user‑defined (`PlacerError`) are printed without a stack trace.
+`apply_pipeline.cmd_apply`, `cli_extract.cmd_extract`, `undo.undo_last_operation`, `logging_setup.setup_logging`, `cloner.extract.extract_channel`.
 
 ---
 
-## 2. `config.py` – Configuration Loading and Storage
+## 2. `apply_pipeline.py` – Apply Command Logic
 
 **Purpose:**  
-Defines all data structures (dataclasses) describing the placement configuration, and provides the `load_config()` function to load a YAML file into typed Python objects. Includes checking for unique roles inside a template (fatal error on duplicates), support for **external template files** (`templates_file`), **tracks** (`TemplateTrack`), and cross-validation of `layer`/`mirror` for `ClonePlacement`.
+Contains the `ApplyPipeline` class and the `cmd_apply()` entry point. Handles the full `apply` workflow: loading config, applying CLI filters (`--only`, `--cluster`), connecting to KiCad, running validation, resolving execution order, planning moves/vias/tracks, and executing them in three phases.
+
+**Main classes and functions:**
+
+| Class/Function | Description |
+|----------------|-------------|
+| `ApplyPipeline` | Main orchestrator: `load_config` → `filter_config` → `connect_adapter` → `resolve_order` → `dry_run`/`execute`. |
+| `cmd_apply(args, cfg, ctx)` | Entry point; creates `ApplyPipeline`, calls `run()`. |
+| `drop_disabled_rules(cfg)` | Removes `enabled: false` items from config. |
+| `drop_inactive_items(cfg)` | Removes `active: false` items (orthogonal to `enabled`). |
+| `apply_only_filter(cfg, only_names)` | Narrows config to only the named rules/clones/thermal vias. |
+| `apply_cluster_filter(cfg, cluster_paths)` | Narrows config by cluster path. |
+
+**Key dependencies:**  
+`config.load_config`, `kicad.adapter.KiCadBoardAdapter`, `validation.run_all_checks`, `placement.dependency_order.resolve_execution_order`, `placement.planner.PlacementPlanner`, `placement.executor.BatchExecutor`, `registry.PlacementRegistry`, `registry.TrackRegistry`.
+
+**Features:**  
+- Three-phase execution: moves → refresh → vias → tracks.
+- Support for `--dry-run`, `--only`, `--cluster`.
+- CLI filter composition: `--only` and `--cluster` compose as AND.
+
+---
+
+## 3. `cli_extract.py` – Extract Command Logic
+
+**Purpose:**  
+Contains `cmd_extract()` — the implementation of the `extract` command, extracted from the monolithic CLI for testability.
+
+**Main function:**
+
+| Function | Description |
+|----------|-------------|
+| `cmd_extract(args)` | Loads profile/config, calls `template_extraction.extract_template_from_selection()`, writes output as JSON or YAML. |
+
+**Key dependencies:**  
+`template_extraction.extract_template_from_selection`, `config.load_config`, `config.includes.load_profile`.
+
+---
+
+## 4. `logging_setup.py` – Logging Configuration
+
+**Purpose:**  
+Contains `setup_logging()` — configures logging level (INFO/DEBUG), console and/or file output. Extracted from the monolithic CLI to be reusable by scripts and tests.
+
+**Main function:**
+
+| Function | Description |
+|----------|-------------|
+| `setup_logging(verbose, log_file)` | Configures logging: level, console handler, optional file handler. |
+
+---
+
+## 5. `runtime_context.py` – Runtime Context
+
+**Purpose:**  
+Defines the `RuntimeContext` dataclass that carries per-run state (sheet names, etc.) through the pipeline.
+
+**Main dataclass:**
+
+| Class | Description |
+|-------|-------------|
+| `RuntimeContext` | Holds `sheet_names: Dict[str, str]` — mapping from sheet UUID to sheet name, used by clone role resolver. |
+
+---
+
+## 6. `sheet_names.py` – Sheet UUID Parsing
+
+**Purpose:**  
+Parses `.kicad_sch` files to build a mapping from sheet UUIDs to sheet names. This mapping is used by the clone role resolver to disambiguate components on different hierarchy sheets.
+
+**Main functions:**
+
+| Function | Description |
+|----------|-------------|
+| `build_sheet_name_map(config_path, schematic_dir, adapter)` | Reads the schematic hierarchy, returns `{uuid: sheet_name}`. |
+| `resolve_sheet_path_names(fp, sheet_names)` | Returns the sheet path for a footprint as a list of names. |
+
+---
+
+## 7. `i18n.py` – Internationalisation
+
+**Purpose:**  
+Sets up gettext for Russian-language user-facing messages. Uses `kicadspoke` translation domain. Provides the `_()` function used throughout the codebase.
+
+**Main elements:**
+
+| Element | Description |
+|---------|-------------|
+| `_()` | gettext translation function — wraps user-facing strings for Russian localisation. |
+| `setup_i18n()` | Initialises gettext with locale path and domain. |
+
+**Used in:** All source modules that produce user-facing messages (42 files as of July 2026).
+
+---
+
+## 8. `author.py` – Scripting Helpers
+
+**Purpose:**  
+Provides helper functions for writing placement scripts (Python code instead of YAML configs). Includes dump functions, `apply_config()` for applying generated configs, and `cli_main()` as a standard entry-point wrapper.
+
+**Main functions:**
+
+| Function | Description |
+|----------|-------------|
+| `dump_clone_placements(clones, path)` | Serialises `ClonePlacement` list to YAML, pruning defaults. |
+| `dump_rules(rules, path)` | Serialises `Rule` list to YAML, pruning defaults. |
+| `dump_template(template_dict, path)` | Writes a template dictionary as JSON or YAML. |
+| `apply_config(cfg, config_path, *, dry_run, ...)` | Loads config and runs `cmd_apply` programmatically. |
+| `cli_main(build_fn, output_path, ...)` | Standard `if __name__ == "__main__":` body for placement scripts. |
+
+---
+
+## 9. `explore.py` – Read-only Board Querying
+
+**Purpose:**  
+Provides read-only helper functions for inspecting the board state. Used in diagnostic scripts and interactive exploration.
+
+**Main functions:**
+
+| Function | Description |
+|----------|-------------|
+| `get_footprints_by_role(adapter, role)` | Finds all footprints with a given `Role` field value. |
+| `get_footprint_field(adapter, ref, field_name)` | Reads a specific field value from a footprint. |
+
+---
+
+## 10. `config/` Package – Configuration Loading and Storage
+
+**Purpose:**  
+Replaced the old monolithic `config.py`. Now a package with separate modules for models, loading, and includes.
+
+**Package contents:**
+
+| Module | Description |
+|--------|-------------|
+| `__init__.py` | Exports all config types and `load_config()`. |
+| `models.py` | Dataclasses: `Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `Rule`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, `ThermalViaArrayConfig`. |
+| `loader.py` | `load_config()` and `_load_*` helper functions for each config section. Handles `templates_file` merging and role uniqueness checks. |
+| `includes.py` | Handles `include:` directives — loads and merges configs from multiple files with cycle detection and duplicate key checks. |
 
 **Main dataclasses:**
 
 | Class | Description |
 |-------|-------------|
-| `ThermalViaArrayConfig` | Thermal via array settings (now uses `anchor_ref` instead of `target_ref`). |
+| `ThermalViaArrayConfig` | Thermal via array settings (uses `anchor_ref` instead of `target_ref`). |
 | `TemplateVia` | Via slot in a template (local coordinates, net, dimensions). |
 | `TemplateTrack` | Straight track segment in a template: start/end points (local), width, net, optional layer. |
 | `TemplateComponentSlot` | Component slot in a template: role, local coordinates, angle, list of vias, optional `net_template` and `layer`. |
 | `SpokeTemplate` | Complete spoke template: name, list of vias, list of tracks, list of component slots, absolute `layer`. |
-| `ManualSpoke` | Specific spoke: pad, template, shift, rotation, `enabled` flag. |
-| `Rule` | Rule for one net: net name, list of spokes, `anchor_ref` (mandatory). |
+| `ManualSpoke` | Specific spoke: pad, template, shift, rotation, `enabled` flag, `active` flag. |
+| `Rule` | Rule for one net: net name, list of spokes, `anchor_ref` (mandatory), `active` flag. |
 | `ClonePlacement` | Cloned placement: name, template, absolute point or shift from anchor, angle, dicts `nets`, `params`, `net_overrides`, `layer`, `mirror`, `refs`, `by_selection`, `anchor_role`, `anchor_sheet`, `anchor_pad`. |
 | `Config` | Main object: global `layer`, templates, thermal vias, rules, clones, flags. |
 
@@ -54,26 +185,26 @@ Defines all data structures (dataclasses) describing the placement configuration
 
 | Function | Description |
 |----------|-------------|
-| `load_config(path)` | Reads YAML, loads external template file (`templates_file`) if specified, merges with inline `templates` (inline take precedence). Parses all sections, returns a `Config` object. Checks for unique roles in templates, validity of `layer`/`mirror` in `ClonePlacement`, presence of anchor when using `anchor_pad`, uniqueness of names and physical anchors (`anchor_ref`/`anchor_role`) among `clone_placements`. |
-| `_load_template_via(data)` | Loads `TemplateVia`. Checks that `net` is a string (protection against accidental `net_overrides` nesting). |
+| `load_config(path)` | Reads YAML, loads external template file (`templates_file`) if specified, merges with inline `templates` (inline take precedence). Parses all sections, returns a `Config` object and `RuntimeContext`. |
+| `_load_template_via(data)` | Loads `TemplateVia`. Checks that `net` is a string. |
 | `_load_template_track(data)` | Loads `TemplateTrack`. Checks that `net` is a string. |
 | `_load_template_component_slot(data)` | Loads `TemplateComponentSlot`. |
 | `_load_spoke_template(name, data)` | Loads `SpokeTemplate` with role uniqueness check. |
 | `_load_manual_spoke(data)` | Loads `ManualSpoke`. |
-| `_load_clone_placement(data)` | Loads `ClonePlacement`. Checks that `anchor_ref` is present if `anchor_pad` is given, that coordinates are mandatory if no anchor, and mutual exclusivity of `anchor_ref` and `anchor_role`. |
+| `_load_clone_placement(data)` | Loads `ClonePlacement`. Checks anchor and coordinate constraints. |
 
 **Features:**  
-- **`templates_file`** – path to an external template file (JSON or YAML). Inline `templates` complement/override external ones.
-- Role uniqueness check inside a template (duplicates are not allowed).
-- Support for `net_template` for cloning (placeholders for nets).
-- For `ClonePlacement`, two role resolution modes: "by selection" (no `nets`/`params`) and "by nets" (with `nets` or `params`). The explicit `by_selection` flag overrides automatic detection.
-- Net inheritance for vias and tracks: if `net` is omitted, it is taken from `rule.net` (for ManualSpoke) or is mandatory for ClonePlacement.
-- Cross-validation of `layer`/`mirror`: `mirror` without a layer change, or a layer change without `mirror`, is a fatal error.
-- Deprecated fields `target_ref` and `side` at the root of the config cause a fatal error.
+- **`templates_file`** – path to external template file (JSON or YAML). Inline `templates` complement/override external ones.
+- **`include:`** – multiple config files with merging and cycle detection.
+- Role uniqueness check inside a template.
+- `net_template` for cloning (placeholders for nets).
+- Two role resolution modes: "by selection" and "by nets".
+- Cross-validation of `layer`/`mirror`.
+- Deprecated fields `target_ref` and `side` cause fatal error.
 
 ---
 
-## 3. `exceptions.py` – Exception Hierarchy
+## 11. `exceptions.py` – Exception Hierarchy
 
 **Purpose:**  
 Defines custom exceptions for the project and a common fatal error formatting function. All exceptions inherit from the base `PlacerError`.
@@ -92,35 +223,30 @@ Defines custom exceptions for the project and a common fatal error formatting fu
 
 | Function | Description |
 |----------|-------------|
-| `format_fatal_error(title, problems)` | Formats a list of problems into a single multi‑line message with a border of `=`. Used both in `config.py` (checks at YAML load time) and `validation.py` (checks after connecting to KiCad). Lives here to avoid circular imports. |
+| `format_fatal_error(title, problems)` | Formats a list of problems into a single multi‑line message with a border of `=`. Used both in `config/loader.py` and `validation.py`. Lives here to avoid circular imports. |
 
 ---
 
-## 4. `net_resolution.py` – Net Resolution for Cloned Templates
+## 12. `net_resolution.py` – Net Resolution for Cloned Templates
 
 **Purpose:**  
-Provides three‑layer net name resolution for `ClonePlacement` (TemplatePlacer). Allows substitution of placeholders from `params` and application of `net_overrides`. Also provides **reverse parametrisation** (`parametrize_net`) for `extract`.
+Provides three‑layer net name resolution for `ClonePlacement`. Allows substitution of placeholders from `params` and application of `net_overrides`. Also provides **reverse parametrisation** (`parametrize_net`) for `extract`.
 
 **Main functions:**
 
 | Function | Description |
 |----------|-------------|
-| `resolve_net(net_template, params, net_overrides)` | Takes a net name template (possibly with `{placeholder}`), a params dict for substitution, and a net_overrides dict. Returns the final net name. If a placeholder parameter is missing, raises `ValidationError`. |
-| `parametrize_net(literal_net, net_template_map, params)` | Reverse operation for `extract`: given a real net name and a mapping from literal to pattern, reconstructs the pattern with placeholders. Performs a round‑trip check (resolving the pattern with `params` must yield the original literal). |
+| `resolve_net(net_template, params, net_overrides)` | Takes a net name template (possibly with `{placeholder}`), a params dict for substitution, and a net_overrides dict. Returns the final net name. |
+| `parametrize_net(literal_net, net_template_map, params)` | Reverse operation for `extract`: reconstructs the pattern with placeholders from a real net name. |
 
-**How `resolve_net` works:**
-1. If `net_template` has no placeholders, return as‑is.
-2. Otherwise, do `str.format(**params)`.
-3. Then apply `net_overrides.get(resolved, resolved)` for point overrides.
-
-**Used in:** `placement/services/clone_role_resolver.py` (for role resolution in cloned placements) and `geometry/clone_geometry.py` (for via and track net resolution).
+**Used in:** `placement/services/clone_role_resolver.py` and `geometry/clone_geometry.py`.
 
 ---
 
-## 5. `registry.py` – Placement Registries for Vias and Tracks
+## 13. `registry.py` – Placement Registries for Vias and Tracks
 
 **Purpose:**  
-Ensures idempotency of via and track placement across runs. Stores information about created objects (UUID, position, parameters, net) in JSON files next to the config. On subsequent runs, reconciles planned objects against **real objects on the board** (`adapter.get_vias()`, `adapter.get_tracks()`), removes obsolete ones (prune), and creates only new or changed objects.
+Ensures idempotency of via and track placement across runs. Stores information about created objects in JSON files. On subsequent runs, reconciles planned objects against **real objects on the board**, removes obsolete ones (prune), and creates only new or changed objects.
 
 **Main classes and functions:**
 
@@ -128,119 +254,91 @@ Ensures idempotency of via and track placement across runs. Stores information a
 |----------------|-------------|
 | `make_registry_key(anchor_id, template_name, role, via_index)` | Generates a composite key for the via registry. |
 | `registry_path_for_config(config_path)` | Returns the path to the via registry file. |
-| `track_registry_path_for_config(config_path)` | Returns the path to the track registry file (separate file). |
+| `track_registry_path_for_config(config_path)` | Returns the path to the track registry file. |
 | `RegistryEntry` | Dataclass for vias: UUID, position, net, drill/diameter parameters. |
 | `TrackRegistryEntry` | Dataclass for tracks: UUID, start/end coordinates, width, net, layer. |
 | `PlacementRegistry` | Class managing the via registry. |
 | `TrackRegistry` | Class managing the track registry. |
-| `reconcile(planned_objects, known_anchor_ids)` | Compares planned objects against the registry and real objects on the board, removes obsolete entries, returns the list of objects to actually create. |
-| `record_created(cmd, created_uuid)` | Records a created object in the registry. |
 
 **Features:**
-- **Reconciliation against live board objects** – source of truth, not just JSON. This prevents desynchronisation due to manual deletions or crashes between registry write and board commit.
-- Registry keys follow the pattern: `anchor_id|template_name|role|via_index` (similar for tracks).
-- `anchor_id` for ManualSpoke is `f"pad:{pad}"`, for ClonePlacement it can be `f"name:{clone.name}"`, `f"anchor:{ref}:{pad}"`, or `f"role:{role}:{sheet}:{pad}"` depending on the anchor type.
-- `role` for spoke‑level vias is `__spoke__`.
+- **Reconciliation against live board objects** – source of truth, not just JSON.
+- Registry keys: `anchor_id|template_name|role|via_index` (similar for tracks).
 - Position tolerance: 0.01 mm.
-- Support for `known_anchor_ids` – when using `--only`, vias/tracks of other clones are not pruned.
-- Separate registries for vias and tracks (different files and record structures).
+- Separate registries for vias and tracks.
 
-**Used in:** `kicadspoke_cli.py` (during `apply`), `executor/via_executor.py`, and `executor/track_executor.py`.
+**Used in:** `apply_pipeline.py` (during `apply`), `executor/via_executor.py`, and `executor/track_executor.py`.
 
 ---
 
-## 6. `template_extraction.py` – Template Extraction from Selection
+## 14. `template_extraction.py` – Template Extraction from Selection
 
 **Purpose:**  
-Implements the `extract` command: from the current selection in the KiCad PCB editor, extracts a spoke template (components, vias, **and tracks**) and builds a structure ready for file output. Supports net parametrisation via `--net-template` and origin selection via `--origin-by-via-net` or `--origin-by-component-role`.
+Implements the `extract` command logic: from the current selection in the KiCad PCB editor, extracts a spoke template (components, vias, **and tracks**) and builds a structure ready for file output.
 
 **Main functions:**
 
 | Function | Description |
 |----------|-------------|
-| `extract_template_from_selection(adapter, name, params, net_template_map, origin_via_net, origin_component_role)` | Main function. Reads the selection (expanding groups), filters tracks (only those whose both ends match pads, vias, or other tracks in the selection), checks for presence and uniqueness of roles, computes origin (bbox or specific element), builds lists of components, vias, and tracks, returns a dictionary for writing. |
-| `_bbox_origin(footprints, vias)` | Computes the lower‑left corner of the selection bounding box (min_x, max_y). |
-| `_find_origin(...)` | Determines origin based on given parameters (via_net, component_role, or bbox). |
-| `_filter_tracks_within_selection(...)` | Filters out tracks where at least one end does not match anything else in the selection (protection against capturing long traces). |
+| `extract_template_from_selection(adapter, name, params, net_template_map, ...)` | Main function. Reads selection, filters tracks, checks roles, computes origin, builds output dictionary. |
+| `render_uncertain_comments(yaml_text, name)` | Adds YAML comments marking uncertain geometry values. |
 
-**Algorithm:**
-1. Retrieves selected objects via `adapter.get_selected_items()`.
-2. Splits into `FootprintInstance`, `Via`, `Track`; ignores the rest.
-3. Filters tracks (`_filter_tracks_within_selection`), keeping only those that are self‑contained within the selection.
-4. Checks that every component has a `Role` field and roles are unique.
-5. Determines origin (via `--origin-by-via-net`, `--origin-by-component-role`, or bbox).
-6. For each component, computes `along/across`, stores angle, role, and optional `layer`.
-7. For each via and track, computes local coordinates, stores `net` (with parametrisation via `net_template_map`), via/track parameters, and layer.
-8. Returns a dictionary `{name: {"vias": [...], "components": [...], "tracks": [...], "layer": ...}}`, ready for JSON or YAML output.
-
-**Used in:** `kicadspoke_cli.py` (`extract` command).
+**Used in:** `cli_extract.py` (`extract` command).
 
 ---
 
-## 7. `undo.py` – Undo Last Operation
+## 15. `undo.py` – Undo Last Operation
 
 **Purpose:**  
-Implements the `undo` command, which restores the board state before the last placement operation. Uses JSON logs created by `executor/operation_logger.py` on every successful application of changes.
+Implements the `undo` command. Uses JSON logs created by `executor/operation_logger.py`.
 
 **Main function:**
 
 | Function | Description |
 |----------|-------------|
-| `undo_last_operation(json_path)` | Loads the JSON log; for each moved component, determines the original layer (from string), flips if necessary, then restores position and angle. For each created via and track, deletes it by UUID. After successful undo, deletes the JSON file. |
-
-**Layer restoration algorithm:**
-- `original_layer` is stored in the log as `"F.Cu"` or `"B.Cu"`.
-- If the current footprint layer differs, `adapter.flip_selected([fp])` is called, then the footprint is re‑fetched via `adapter.get_footprint(ref)`.
-- Then position and angle are restored.
+| `undo_last_operation(json_path)` | Restores board state: returns components to original positions/layers, deletes created vias and tracks. |
 
 **Used in:** `kicadspoke_cli.py` (`undo` command).
 
 ---
 
-## 8. `validation.py` – Pre‑validation Checks
+## 16. `validation.py` – Pre‑validation Checks
 
 **Purpose:**  
-Performs fatal checks on the configuration **before** any board modifications. If a problem is found, the program stops with a detailed list of errors, leaving the board untouched.
+Performs fatal checks on the configuration **before** any board modifications. Collects all problems rather than stopping at the first one.
 
 **Main functions:**
 
 | Function | Description |
 |----------|-------------|
-| `check_templates_and_pads_exist(adapter, cfg)` | Ensures that every enabled spoke references an existing template and a valid pad of the target component (anchor). Skips disabled spokes (`enabled=False`). |
-| `check_role_pool_sufficiency(adapter, cfg)` | For each rule, builds a `ComponentPool` and checks that the required number of components for each role is available. Reports all shortages at once. |
-| `check_clone_templates_exist(cfg)` | Checks that every `ClonePlacement` references an existing template (config‑only check, no KiCad connection). |
-| `check_no_duplicate_clone_anchors(cfg)` | Checks uniqueness of `clone_placements` names and uniqueness of physical anchors (combination of `template`, `anchor_ref`, `anchor_pad` or `template`, `anchor_role`, `anchor_sheet`, `anchor_pad`) among enabled clones. Fatal on duplicates. |
-| `check_clone_nets_exist_on_board(adapter, cfg)` | Resolves `via.net` and `track.net` for each `ClonePlacement` and checks the result against actual board nets (`adapter.get_all_nets()`). Catches typos in `params` and `net_overrides`. |
-| `check_single_selection_based_clone(cfg)` | Ensures that no more than one `ClonePlacement` is in selection mode (without `nets`/`params`, or with `by_selection: true`), because KiCad supports only one selection at a time. Suggests using `--only NAME` for debugging. |
-| `run_all_checks(adapter, cfg)` | Runs all checks in order: `check_clone_templates_exist`, `check_no_duplicate_clone_anchors`, `check_single_selection_based_clone`, `check_templates_and_pads_exist`, `check_role_pool_sufficiency`, `check_clone_nets_exist_on_board`. |
+| `check_templates_and_pads_exist(adapter, cfg)` | Ensures every enabled spoke references an existing template and valid pad. |
+| `check_role_pool_sufficiency(adapter, cfg)` | Checks component availability per role. |
+| `check_clone_templates_exist(cfg)` | Config-only template existence check. |
+| `check_no_duplicate_clone_anchors(cfg)` | Uniqueness of clone names and physical anchors. |
+| `check_anchor_sheet_configured(cfg, sheet_names)` | Validates `anchor_sheet` references against actual sheet names. |
+| `check_clone_nets_exist_on_board(adapter, cfg)` | Resolves via/track nets and checks against actual board nets. |
+| `check_single_selection_based_clone(cfg)` | Ensures at most one clone in selection mode. |
+| `run_all_checks(adapter, cfg, sheet_names)` | Runs all checks in order. |
 
-**Features:**
-- Collects all problems rather than stopping at the first one.
-- Uses `ComponentPool` in `check_role_pool_sufficiency` for each net.
-- For `ClonePlacement`, checks that no more than one clone is in selection mode (otherwise fatal).
-- `check_clone_nets_exist_on_board` is a new check that guarantees that resolved via and track nets actually exist on the board.
-- `check_no_duplicate_clone_anchors` prevents registry conflicts from identical physical anchors.
-- Error formatting via `format_fatal_error()` from `exceptions.py`.
-
-**Used in:** `kicadspoke_cli.py` (before planning).
+**Used in:** `apply_pipeline.py` (before planning).
 
 ---
 
-## 9. `constants.py` – Global Constants
+## 17. `constants.py` – Global Constants
 
 **Purpose:**  
-Holds global constants used across various modules, making them easy to change and maintain.
+Holds global constants used across various modules.
 
 | Constant | Value | Usage |
 |----------|-------|-------|
-| `ROLE_FIELD_NAME` | `"Role"` | Name of the custom field for roles in the schematic (used in `component_pool.py`, `template_extraction.py`, `clone_role_resolver.py`). |
-| `POSITION_TOLERANCE_NM` | `10_000` (0.01 mm) | Position tolerance for "already in place" checks (used in `planner.py`). |
-| `ANGLE_TOLERANCE_DEG` | `0.1` | Angle tolerance for "already in place" checks (used in `planner.py`). |
-| `POSITION_TOLERANCE_MM` | `0.01` | Position tolerance in millimetres for the registry (used in `registry.py`). |
-| `DEFAULT_BATCH_SIZE` | `10` | Default batch size for transactions (used in `executor/batch_executor.py` and `kicadspoke_cli.py`). |
-| `DEFAULT_TIMEOUT_MS` | `20000` | Default IPC timeout (used in `kicad/adapter.py` and `kicadspoke_cli.py`). |
-| `DEFAULT_LOG_DIR` | `"logs"` | Default log directory (used in `executor/operation_logger.py`). |
-| `SPOKE_LEVEL_ROLE_PLACEHOLDER` | `"__spoke__"` | Placeholder for spoke‑level vias in the registry (used in `registry.py`). |
+| `ROLE_FIELD_NAME` | `"Role"` | Custom field name for roles (used in `component_pool.py`, `template_extraction.py`, `clone_role_resolver.py`). |
+| `CLUSTER_FIELD_NAME` | `"Cluster"` | Custom field name for cluster paths. |
+| `POSITION_TOLERANCE_NM` | `10_000` (0.01 mm) | Position tolerance for "already in place" checks. |
+| `ANGLE_TOLERANCE_DEG` | `0.1` | Angle tolerance for "already in place" checks. |
+| `POSITION_TOLERANCE_MM` | `0.01` | Position tolerance for registry. |
+| `DEFAULT_BATCH_SIZE` | `10` | Default batch size for transactions. |
+| `DEFAULT_TIMEOUT_MS` | `20000` | Default IPC timeout. |
+| `DEFAULT_LOG_DIR` | `"logs"` | Default log directory. |
+| `SPOKE_LEVEL_ROLE_PLACEHOLDER` | `"__spoke__"` | Placeholder for spoke‑level vias in registry. |
 
 ---
 
@@ -248,44 +346,61 @@ Holds global constants used across various modules, making them easy to change a
 
 ```mermaid
 graph TD
-    CLI[kicadspoke_cli.py] --> Config[config.py]
-    CLI --> Adapter[kicad/adapter.py]
-    CLI --> Validation[validation.py]
-    CLI --> Planner[placement/planner.py]
-    CLI --> Executor[placement/executor/batch_executor.py]
-    CLI --> ViaRegistry[registry.PlacementRegistry]
-    CLI --> TrackRegistry[registry.TrackRegistry]
-    CLI --> Extract[template_extraction.py]
+    CLI[kicadspoke_cli.py] --> ApplyPipe[apply_pipeline.py]
+    CLI --> CliExtract[cli_extract.py]
     CLI --> Undo[undo.py]
-    CLI --> Constants[constants.py]
-    CLI --> NetResolution[net_resolution.py]
+    CLI --> LogSetup[logging_setup.py]
+    CLI --> Cloner[cloner/extract.py]
 
-    Config --> Exceptions[exceptions.py]
-    Config --> TemplatesFile[templates_file (external JSON/YAML)]
+    ApplyPipe --> ConfigPkg[config/ package]
+    ApplyPipe --> Adapter[kicad/adapter.py]
+    ApplyPipe --> Validation[validation.py]
+    ApplyPipe --> Order[placement/dependency_order.py]
+    ApplyPipe --> Planner[placement/planner.py]
+    ApplyPipe --> Executor[placement/executor/batch_executor.py]
+    ApplyPipe --> ViaRegistry[registry.PlacementRegistry]
+    ApplyPipe --> TrackRegistry[registry.TrackRegistry]
+    ApplyPipe --> NetResolution[net_resolution.py]
+    ApplyPipe --> Constants[constants.py]
+    ApplyPipe --> SheetNames[sheet_names.py]
 
-    Validation --> Config
+    CliExtract --> ConfigPkg
+    CliExtract --> Extract[template_extraction.py]
+    CliExtract --> Adapter
+    CliExtract --> NetResolution
+
+    ConfigPkg --> Exceptions[exceptions.py]
+    ConfigPkg --> Models[config/models.py]
+    ConfigPkg --> Loader[config/loader.py]
+    ConfigPkg --> Includes[config/includes.py]
+    ConfigPkg --> TemplatesFile[templates_file (external JSON/YAML)]
+
+    Validation --> ConfigPkg
     Validation --> ComponentPool[placement/services/component_pool.py]
     Validation --> Exceptions
     Validation --> Adapter
 
-    ViaRegistry --> Config
+    ViaRegistry --> ConfigPkg
     ViaRegistry --> Adapter
     ViaRegistry --> Exceptions
 
-    TrackRegistry --> Config
+    TrackRegistry --> ConfigPkg
     TrackRegistry --> Adapter
     TrackRegistry --> Exceptions
 
     Extract --> Adapter
-    Extract --> Config
+    Extract --> ConfigPkg
     Extract --> Exceptions
 
     Undo --> Adapter
     Undo --> Exceptions
 
     NetResolution --> Exceptions
-    NetResolution --> Config (used by ClonePlacement)
+    NetResolution --> ConfigPkg (used by ClonePlacement)
     NetResolution --> Extract (parametrize_net)
+
+    Order --> Adapter
+    Order --> ConfigPkg
 ```
 
 Each module addresses a specific task and interacts with others through clearly defined interfaces, ensuring modularity and testability. Thanks to centralised constants, a unified error formatter, and support for external template files, the project is easy to maintain and extend.

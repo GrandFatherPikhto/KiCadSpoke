@@ -12,7 +12,7 @@
 4. **Проверка коллизий** – упрощённая проверка перекрытий компонентов (опционально); коллизии треков **не проверяются** (полагаемся на DRC KiCad).
 5. **Идемпотентность** – пропуск уже существующих via, треков и компонентов, уже стоящих на целевых позициях (через `skip_existing_components` и реестры расстановки для via и треков).
 
-Все сервисы используют адаптер `kicad/adapter.py`, геометрические утилиты `geometry/` и конфигурацию `config.py`.
+Все сервисы используют адаптер `kicad/adapter.py`, геометрические утилиты `geometry/` и пакет конфигурации `config/`.
 
 ---
 
@@ -244,7 +244,7 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 - **`geometry/spoke_layout.py`** – преобразование шаблона для `ManualSpoke` (via и треки).
 - **`geometry/clone_geometry.py`** – преобразование для `ClonePlacement` (via и треки, с mirror).
 - **`geometry/thermal_grid.py`** и **`geometry/keepout.py`** – для термовиа и keepout.
-- **`config.py`** – структуры данных (Config, SpokeTemplate, ManualSpoke, ClonePlacement и т.д.).
+- **`config/`** – пакет конфигурации (loader.py, models.py, includes.py, __init__.py).
 - **`validation.py`** – предварительные проверки (включая цепей via и треков).
 - **`registry.py`** – реестры via (`PlacementRegistry`) и треков (`TrackRegistry`) с живой сверкой.
 - **`net_resolution.py`** – разрешение цепей с плейсхолдерами.
@@ -279,7 +279,5 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 - **Слой размещения** – для каждого компонента может быть свой (per‑placement), для `ManualSpoke` используется глобальный `layer` из конфига. При зеркалировании (`mirror`) слои инвертируются.
 
 - **Якорь по роли** – вместо `anchor_ref` можно использовать `anchor_role` (поле Role якорного компонента). Это устойчиво к перенумерации. Дополнительно можно сузить поиск с помощью `anchor_sheet` (префикс локальной цепи) или `anchor_pad`.
-
 - **Явные refs** – в `ClonePlacement` можно задать `refs: {role: refdes}` для крайних случаев, когда кандидаты неразличимы ни по цепям, ни по выделению, ни по близости к якорю.
-```
 

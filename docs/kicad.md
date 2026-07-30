@@ -107,7 +107,7 @@ Thus, the adapter does not prevent the crash (impossible from the client side) b
 
 #### 8. Deletion by UUID
 
-`remove_by_id(uuid_str)` is used by registries to delete obsolete vias and tracks. It creates a `KIID` object and calls `board.remove_items_by_id()`. If the object no longer exists, it returns `False` and logs a warning, but does not raise an exception – allowing graceful handling of manually deleted objects.
+`remove_by_id(uuid_str)` is used by registries to delete obsolete vias and tracks. It creates a `KIID` object and calls the internal adapter method to remove items by UUID. If the object no longer exists, it returns `False` and logs a warning, but does not raise an exception – allowing graceful handling of manually deleted objects.
 
 #### 9. Retrieving Existing Tracks
 
@@ -183,7 +183,7 @@ The adapter uses the following elements that go beyond the stable public API of 
 | `Group.proto.items` | **Undocumented** | Internal protobuf field needed to obtain group members. |
 | `footprint.texts_and_fields` | **Undocumented** | Used to read custom fields (`Field`). |
 | `footprint.definition.items` | **Undocumented** | Used to obtain component pads. |
-| `board.remove_items_by_id()` | **New, potentially unstable** | Added recently (July 2025), may change. |
+| `adapter.remove_by_id()` | **New, potentially unstable** | Added recently (July 2025), may change. |
 | `board.get_tracks()` | **Undocumented** | Used to retrieve all tracks on the board for registry reconciliation. |
 | `board.get_item_bounding_box(list)` | **Undocumented** | Used for batch bounding‑box requests. |
 | `kicad.get_open_documents()` | **Official but rarely used** | Used to check if the schematic is open (crash warning). |

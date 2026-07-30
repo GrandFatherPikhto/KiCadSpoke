@@ -12,7 +12,7 @@ The `placement/` directory contains the core logic for placing components, creat
 4. **Collision checking** – simplified overlap checking for components (optional); track collisions are **not checked** (rely on KiCad DRC).
 5. **Idempotency** – skips already‑existing vias, tracks, and components already in place (via `skip_existing_components` and the placement registries for vias and tracks).
 
-All services use the `kicad/adapter.py` adapter, the `geometry/` utilities, and the `config.py` configuration.
+All services use the `kicad/adapter.py` adapter, the `geometry/` utilities, and the `config/` configuration package.
 
 ---
 
@@ -244,7 +244,7 @@ Functions:
 - **`geometry/spoke_layout.py`** – template transformation for `ManualSpoke` (vias and tracks).
 - **`geometry/clone_geometry.py`** – transformation for `ClonePlacement` (vias and tracks, with mirror).
 - **`geometry/thermal_grid.py`** and **`geometry/keepout.py`** – thermal vias and keepout.
-- **`config.py`** – data structures (Config, SpokeTemplate, ManualSpoke, ClonePlacement, etc.).
+- **`config/`** – configuration package (loader.py, models.py, includes.py, __init__.py).
 - **`validation.py`** – pre‑validation (including via/track nets).
 - **`registry.py`** – via (`PlacementRegistry`) and track (`TrackRegistry`) registries with live reconciliation.
 - **`net_resolution.py`** – net resolution with placeholders.

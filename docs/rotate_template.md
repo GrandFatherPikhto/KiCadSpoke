@@ -54,7 +54,7 @@ other fields are preserved as-is.
 
 ## 🛠️ Where to put the script
 
-Place it in the project root or in a `utils/` folder. Run it from the command line.
+Place it in the project root or in `tools/`. Run it from the command line.
 
 If you ever need to support several templates in one file, the script can be extended — but for this use
 case a single template is enough.

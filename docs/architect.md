@@ -37,8 +37,21 @@ The core concept is a **spoke** – a set of components, vias, and tracks that b
 
 ```
 kicadspoke/
+├── __init__.py
 ├── kicadspoke_cli.py                 # CLI entry point
-├── config.py                         # Config loading (supports templates_file)
+├── apply_pipeline.py                 # cmd_apply and ApplyPipeline class
+├── cli_extract.py                    # cmd_extract command logic
+├── logging_setup.py                  # Logging configuration
+├── runtime_context.py                # RuntimeContext dataclass
+├── sheet_names.py                    # Sheet UUID → name resolution
+├── i18n.py                           # gettext internationalisation
+├── author.py                         # Scripting: dump/apply helpers
+├── explore.py                        # Board query helpers
+├── config/                           # Configuration package (loader, models, includes)
+│   ├── __init__.py                   # Public exports
+│   ├── loader.py                     # YAML → dataclass loading
+│   ├── models.py                     # Dataclasses (Config, Rule, ClonePlacement, etc.)
+│   └── includes.py                   # Include resolution for `include:` key
 ├── exceptions.py                     # Exception hierarchy
 ├── undo.py                           # Undo operations
 ├── validation.py                     # Pre‑validation checks (including net resolution)
@@ -56,11 +69,13 @@ kicadspoke/
 │   ├── adapter.py                    # KiCadBoardAdapter implementation (supports tracks)
 │   └── interfaces.py                 # IBoardAdapter abstraction
 ├── placement/                        # Core placement logic
+│   ├── __init__.py                   # Public exports (BatchExecutor, PlacementPlanner, commands)
 │   ├── planner.py                    # Main orchestrator (plan_moves, plan_vias, plan_tracks)
 │   ├── commands.py                   # DTOs (MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo)
 │   ├── collision.py                  # Collision checking
-│   ├── interfaces.py                 # IPositionCalculator, IViaPlanner
+│   ├── dependency_order.py           # Execution order resolution (anchor_ref/anchor_role dependencies)
 │   ├── executor/                     # Command executors
+│   │   ├── __init__.py
 │   │   ├── batch_executor.py         # Façade combining moves, vias, tracks
 │   │   ├── move_executor.py          # Move execution
 │   │   ├── via_executor.py           # Via creation
@@ -69,11 +84,14 @@ kicadspoke/
 │   │   ├── operation_logger.py       # JSON logging (includes tracks)
 │   │   └── base.py                   # Utilities (layer_to_str)
 │   └── services/                     # Service classes
+│       ├── __init__.py
 │       ├── component_pool.py         # Component pool by role and net (for ManualSpoke)
 │       ├── clone_role_resolver.py    # Role resolution for ClonePlacement (with anchor‑proximity disambiguation)
 │       ├── clone_position_calculator.py # Position/via/track calculation for ClonePlacement
 │       ├── manual_position_calculator.py  # Position/via calculation for ManualSpoke
-│       └── via_planner.py            # Thermal via planning and registry filtering
+│       ├── via_planner.py            # Thermal via planning and registry filtering
+│       ├── position_tracker.py       # Shared position tracking helper
+│       └── component_resolver.py     # Common anchor/pool resolution for ManualSpoke/ClonePlacement
 ├── cloner/                           # File‑based cloner (no IPC)
 │   ├── extract.py
 │   ├── models.py
@@ -82,9 +100,7 @@ kicadspoke/
 │   └── sexp.py
 ├── diagnostics/                      # Diagnostic scripts
 ├── utils/                            # Utilities
-│   ├── units.py                      # MM constant
-│   ├── transform_template.py         # Template transformation (rotate, mirror, shift)
-│   └── generate_10cl006.py           # Example config generator for FPGA
+│   └── units.py                      # MM constant for unit conversion
 └── tests/                            # Unit and integration tests
 ```
 
@@ -127,7 +143,7 @@ Modules that work with coordinates, independent of KiCad:
 
 ### 4.4. Configuration and Validation
 
-- **`config.py`** – defines dataclasses for all config structures (`Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, etc.) and the `load_config()` function. Supports **`templates_file`** – an external JSON/YAML template file that is loaded and merged with inline `templates`. This allows moving heavy geometry out of the main config.
+- **`config/` package** (`__init__.py`, `loader.py`, `models.py`, `includes.py`) – defines dataclasses for all config structures (`Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, etc.) and the `load_config()` function. Supports **`templates_file`** – an external JSON/YAML template file that is loaded and merged with inline `templates`. The `includes.py` module handles `include:` directives for splitting configs across multiple files. This allows moving heavy geometry out of the main config.
 - **`validation.py`** – pre‑validation checks: template/pad existence, component pool sufficiency, clone correctness (no more than one selection‑based clone per run), **resolution of via/track nets against actual board nets**, uniqueness of clone names/physical anchors, validity of `layer`/`mirror` combinations. Throws `ValidationError` with a clear list of issues.
 
 ### 4.5. Placement Registry (`registry.py`)

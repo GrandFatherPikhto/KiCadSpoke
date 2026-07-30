@@ -51,29 +51,29 @@ python -m kicadspoke.diagnostics.diagnose_first_write_crash             # full t
 ### `diagnostic_charset.py`
 
 **Purpose:**
-Walks every footprint on the board (by default the `Role` and `Cluster` fields, configurable via
+Walks every footprint on the board (by default the `ROLE_FIELD_NAME` and `CLUSTER_FIELD_NAME` constants — `"Role"` and `"Cluster"` — configurable via
 `--fields`) and looks for characters outside printable ASCII (`0x20`–`0x7E`). The script exists because of
-a live finding on `3CH-AWG-TIA`: three components (`C3`, `C9`, `C170`) had a `Role` value whose first
+a live finding on `3CH-AWG-TIA`: three components (`C3`, `C9`, `C170`) had a `ROLE_FIELD_NAME` value whose first
 letter was the Cyrillic "С" (`U+0421`) instead of the Latin "C" (`U+0043`) — apparently the keyboard
 layout had switched to Russian mid-way through typing the field value in Eeschema Bulk Edit. The letters
 are visually indistinguishable in almost any font, but `component_pool.py`/`clone_role_resolver.py`
-compare `Role` with strict character-by-character equality — a component with this typo matches no rule
+compare fields (`ROLE_FIELD_NAME`/`CLUSTER_FIELD_NAME`) with strict character-by-character equality — a component with this typo matches no rule
 looking for the "correct" (Latin) role, and the mismatch is essentially impossible to spot by eye.
 
 **Usage:**
 ```bash
-# Check Role and Cluster board-wide (default)
+# Check ROLE_FIELD_NAME and CLUSTER_FIELD_NAME board-wide (default)
 python -m kicadspoke.diagnostics.diagnostic_charset
 
 # Check a different set of fields
-python -m kicadspoke.diagnostics.diagnostic_charset --fields Role,Cluster,Value
+python -m kicadspoke.diagnostics.diagnostic_charset --fields "Role,Cluster,Value"
 
 # Also print clean fields (not just findings)
 python -m kicadspoke.diagnostics.diagnostic_charset --verbose
 ```
 
 **Parameters:**
-- `--fields` – comma-separated list of fields, no spaces (default `Role,Cluster`).
+- `--fields` – comma-separated list of fields, no spaces (default `ROLE_FIELD_NAME,CLUSTER_FIELD_NAME` i.e. `"Role,Cluster"`).
 - `--timeout-ms` – IPC timeout (default `20000`).
 - `--verbose` – also log "clean" fields (no findings).
 
@@ -82,7 +82,7 @@ A list of findings: refdes, field name, the value in full, and for each "bad" ch
 the string, the character itself, its codepoint (`U+XXXX`), and its Unicode name (`unicodedata.name`).
 Exit code is `0` if nothing was found, `1` if at least one field had a finding (handy as a standalone step
 before `apply` or in CI:
-`python -m kicadspoke.diagnostics.diagnostic_charset || echo "suspicious characters found in Role/Cluster"`).
+`python -m kicadspoke.diagnostics.diagnostic_charset || echo "suspicious characters found in Role/Cluster fields"`).
 
 **Dependencies:**
 `kicadspoke.kicad.adapter.KiCadBoardAdapter` (`get_footprints`/`get_field_value`), `unicodedata` from the

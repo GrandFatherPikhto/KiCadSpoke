@@ -15,23 +15,36 @@
 ```
 tests/
 ├── conftest.py                       # Общие фикстуры для модульных тестов
+├── test_author.py                    # Скриптовые хелперы: prune defaults, dump round‑trip, cli_main
+├── test_cli_filters.py               # CLI-фильтры: --only, --cluster, active/drop/inactive логика
+├── test_clone_anchor_id.py           # Разрешение anchor ID для клонов
 ├── test_clone_geometry.py            # Геометрия ClonePlacement (поворот, зеркало, треки)
+├── test_clone_ignore_selection.py    # Флаг ignore_selection для клонов
 ├── test_clone_placement_config.py    # Загрузка ClonePlacement из YAML
 ├── test_clone_placement_integration.py # Сквозной тест ClonePlacement (моки)
 ├── test_clone_role_resolver.py       # Разрешение ролей для клонирования (выделение, цепи, близость к якорю)
 ├── test_clone_selection_conflict.py  # Проверка конфликта нескольких клонов в режиме выделения
+├── test_config_includes.py           # Директивы include: объединение, циклы, дубликаты
+├── test_dependency_order.py          # Разрешение порядка выполнения по anchor_ref/anchor_role
 ├── test_execute_vias_owner_ref.py    # Корректность owner_ref в логах (via)
+├── test_explore.py                   # Хелперы запросов к плате только на чтение
 ├── test_full_pipeline_templates.py   # Сквозной тест конвейера (моки) для ManualSpoke
+├── test_i18n.py                      # Доступность функции _() и импорт gettext
 ├── test_kicad.py                     # Проверка адаптера (наличие методов)
+├── test_manual_position_calculator.py # Логика ManualPositionCalculator (пулы, позиции)
+├── test_naming.py                    # Доступоры name/effective_name, валидация обязательных имён
 ├── test_net_resolution.py            # Разрешение цепей с плейсхолдерами (net_resolution)
 ├── test_pad_projection.py            # Предсказание позиции пада
 ├── test_registry_integration.py      # Полный цикл реестра (создание, обновление, prune) на моках
-├── test_skip_existing.py             # Идемпотентность компонентов, via и треков
+├── test_registry_pruning_granularity.py # Точность pruning реестра
+├── test_registry_rule_protection.py  # Защита реестра через known_anchor_ids
 ├── test_spoke_layout.py              # Преобразование локальных координат шаблона (spoke_layout)
 ├── test_template_extraction.py       # Извлечение шаблона из выделения (логика, треки)
+├── test_templates_file.py            # Объединение templates_file / template_files
 ├── test_two_phase_execution.py       # Двухфазное выполнение (moves → refresh → vias) на моках
 ├── test_undo_layer.py                # Сохранение и восстановление слоя в undo
 ├── test_unique_roles.py              # Уникальность ролей в шаблоне
+├── test_unknown_keys_validation.py   # Проверка check_unknown_keys для секций конфига
 ├── test_validation.py                # Предварительные проверки конфигурации
 │
 └── integration_tests/                # Интеграционные тесты с реальным KiCad
@@ -115,23 +128,36 @@ pytest tests/integration_tests/ -v -s -m integration
 
 | Файл | Что тестирует |
 |------|---------------|
+| `test_author.py` | Скриптовые хелперы: `_prune_defaults` (удаление полей со значениями по умолчанию), YAML round‑trip для `ClonePlacement`/`Rule`, совместимость `apply_config` с `cmd_apply`, поведение `cli_main`. |
+| `test_cli_filters.py` | Логику CLI-фильтров: `--only NAME` (сужение по имени/цепи), `--cluster PATH` (сужение по пути кластера), `drop_disabled_rules`, `drop_inactive_items`, композицию `--only`/`--cluster` (AND), `load_profile` и корневые значения по умолчанию. |
+| `test_clone_anchor_id.py` | Разрешение anchor ID для клонов: `clone_anchor_id()` возвращает ключ на основе `anchor_ref`/`anchor_role`/`name`. |
 | `test_clone_geometry.py` | Геометрию `ClonePlacement`: преобразование локальных координат в абсолютные, углы компонентов, via и треки, зеркалирование (`mirror`), разрешение цепей через `params` и `net_overrides`. Проверяет фатальность via без `net`. |
+| `test_clone_ignore_selection.py` | Флаг `ignore_selection`: временное снятие выделения при обработке клона. |
 | `test_clone_placement_config.py` | Загрузку `ClonePlacement` из YAML, проверку полей `name`, `template`, `origin_x_mm`, `origin_y_mm`, `rotation_deg`, `nets`, `params`, `net_overrides`, `enabled`. |
 | `test_clone_placement_integration.py` | Сквозной тест `PlacementPlanner` с `ClonePlacement` (моки): совместная работа с `rules` (ManualSpoke) и клонами в одном прогоне, проверка `registry_key` для via. |
 | `test_clone_role_resolver.py` | Разрешение ролей для `ClonePlacement` двумя режимами: по выделению (`resolve_roles_by_selection`) и по цепям (`resolve_roles_by_nets`), включая плейсхолдеры, `net_overrides`, обработку неоднозначности и близость к якорю. |
 | `test_clone_selection_conflict.py` | Проверку, что в конфиге не более одного `ClonePlacement` в режиме «по выделению» (`check_single_selection_based_clone`), а также работу `clone_uses_selection_mode` с учётом `by_selection`, `nets`, `params`. |
+| `test_config_includes.py` | Директиву `include:`: объединение `clone_placements`/`rules`/`templates` из нескольких файлов, обнаружение дубликатов, циклов и алмазов, отключённые include, неподдерживаемые ключи, неверное использование dict/list. |
+| `test_dependency_order.py` | Разрешение порядка выполнения: отключённые клоны пропускаются, без зависимостей сохраняется исходный порядок, producer упорядочен перед consumer, self-якорь не цикл, настоящий цикл вызывает `ValidationError`. |
 | `test_execute_vias_owner_ref.py` | Корректность `owner_ref` в JSON-логах (каждая via получает свой владелец) и вызов `registry.record_created` с правильным UUID. |
+| `test_explore.py` | Хелперы запросов к плате только на чтение: `get_footprints_by_role`, `get_footprint_field`. |
 | `test_full_pipeline_templates.py` | Сквозной тест конвейера с шаблонами (моки): расчёт позиций и via для `ManualSpoke`, распределение компонентов по ролям, проверка `registry_key`. |
+| `test_i18n.py` | Доступность функции `_()`, настройка gettext, проверка импорта во всех исходных файлах. |
 | `test_kicad.py` | Наличие всех методов интерфейса `IBoardAdapter` в `KiCadBoardAdapter`, импорт и конструктор (без реального IPC). |
+| `test_manual_position_calculator.py` | Логику `ManualPositionCalculator`: построение пула, расчёт позиций, планирование via для `rules`. |
+| `test_naming.py` | Доступоры `rule_effective_name`/`thermal_via_array_effective_name`, загрузка `name:` из YAML, проверка обязательности имён (фатальность при отсутствии), опциональность Rule.name, значения по умолчанию enabled/active. |
 | `test_net_resolution.py` | Разрешение цепей с плейсхолдерами: подстановка из `params`, применение `net_overrides`, ошибки при отсутствии параметров. |
 | `test_pad_projection.py` | Предсказание позиции пада после перемещения/поворота (без флипа и с флипом), инвариантность `local_pad_offset` к углу. |
 | `test_registry_integration.py` | Полный цикл реестра (создание, обновление, prune) на моках, включая сверку с реальными via. |
-| `test_skip_existing.py` | Идемпотентность компонентов (пропуск уже стоящих на месте) и via (пропуск уже существующих с той же цепью и позицией). |
+| `test_registry_pruning_granularity.py` | Точность pruning реестра: корректное определение устаревших vs. актуальных via/треков. |
+| `test_registry_rule_protection.py` | Защиту реестра через `known_anchor_ids`: via/треки клонов не из `--only` не удаляются. |
 | `test_spoke_layout.py` | Геометрическое преобразование локальных координат шаблона в глобальные (`spoke_layout`), включая via уровня спицы и компонента, произвольное количество ролей. |
 | `test_template_extraction.py` | Извлечение шаблона из выделения: проверка ролей, уникальности, вычисление origin, фильтрация треков, параметризация цепей (`--net-template`), выбор origin по via/роли. |
+| `test_templates_file.py` | Объединение `templates_file` / `template_files`: один файл, несколько файлов, инлайн+внешние, обнаружение дубликатов, обработка отсутствующих файлов. |
 | `test_two_phase_execution.py` | Двухфазное выполнение (moves → refresh → vias) на моках – гарантирует, что via планируются после перемещений и имеют корректный `registry_key`. |
 | `test_undo_layer.py` | Сохранение и восстановление слоя компонента при undo (`original_layer` в JSON-логе). |
 | `test_unique_roles.py` | Проверка уникальности ролей внутри шаблона (фатальная ошибка при дублировании). |
+| `test_unknown_keys_validation.py` | Проверку `check_unknown_keys` для секций конфига: неизвестные ключи на верхнем уровне, внутри `clone_placements`, `rules`, `thermal_via_array`, `templates`. |
 | `test_validation.py` | Предварительные проверки конфигурации: существование шаблонов и падов, достаточность компонентов по ролям, уникальность якорей клонов, резолв цепей via/треков, режим выделения для клонов. |
 
 ---

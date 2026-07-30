@@ -46,8 +46,8 @@ python -m kicadspoke.diagnostics.diagnose_first_write_crash             # пол
 
 ### `diagnostic_charset.py`
 
-**Назначение:**  
-Проходит по всем футпринтам платы (по умолчанию — поля `Role` и `Cluster`, список настраивается через
+**Назначение:**
+Проходит по всем футпринтам платы (по умолчанию — поля, заданные константами `ROLE_FIELD_NAME` и `CLUSTER_FIELD_NAME`, т.е. `"Role"` и `"Cluster"`, список настраивается через
 `--fields`) и ищет символы вне печатной ASCII (`0x20`–`0x7E`). Повод для появления скрипта — живая находка на
 `3CH-AWG-TIA`: у трёх компонентов (`C3`, `C9`, `C170`) в значении `Role` первая буква оказалась
 кириллической «С» (`U+0421`) вместо латинской «C» (`U+0043`) — судя по всему, раскладка клавиатуры
@@ -58,18 +58,18 @@ python -m kicadspoke.diagnostics.diagnose_first_write_crash             # пол
 
 **Использование:**
 ```bash
-# Проверить Role и Cluster на всей плате (по умолчанию)
+# Проверить ROLE_FIELD_NAME и CLUSTER_FIELD_NAME на всей плате (по умолчанию)
 python -m kicadspoke.diagnostics.diagnostic_charset
 
 # Проверить другой набор полей
-python -m kicadspoke.diagnostics.diagnostic_charset --fields Role,Cluster,Value
+python -m kicadspoke.diagnostics.diagnostic_charset --fields "Role,Cluster,Value"
 
 # Печатать и чистые поля тоже (не только найденные проблемы)
 python -m kicadspoke.diagnostics.diagnostic_charset --verbose
 ```
 
 **Параметры:**
-- `--fields` – список полей через запятую, без пробелов (по умолчанию `Role,Cluster`).
+- `--fields` – список полей через запятую, без пробелов (по умолчанию `ROLE_FIELD_NAME,CLUSTER_FIELD_NAME`, т.е. `"Role,Cluster"`).
 - `--timeout-ms` – таймаут IPC (по умолчанию `20000`).
 - `--verbose` – логировать и «чистые» (без находок) поля тоже.
 

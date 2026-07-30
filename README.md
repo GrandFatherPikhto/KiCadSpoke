@@ -1,4 +1,4 @@
-# KiCadSpoke v1.37.0
+# KiCadSpoke v1.5.0
 
 **KiCadSpoke** is a command‑line **PCB cloning and layout automation** tool for **KiCad 10**, designed as an advanced script‑based alternative to the traditional **KiCad Replicate Layout** plugin. It enables automated **block replication**, component placement, and routing of complex multi‑channel designs using **templates**, **roles**, and the IPC API.
 
@@ -351,21 +351,32 @@ toolkit — see [docs/crash_hunting.md](./docs/crash_hunting.md).
 
 ```
 kicadspoke/
+├── __init__.py
 ├── kicadspoke_cli.py          # CLI entry point
-├── config.py                  # YAML loading with templates_file support
-├── constants.py
-├── exceptions.py
+├── apply_pipeline.py          # cmd_apply and ApplyPipeline class
+├── cli_extract.py             # cmd_extract command logic
+├── logging_setup.py           # Logging configuration
+├── runtime_context.py         # RuntimeContext dataclass
+├── sheet_names.py             # Sheet UUID → name resolution
+├── i18n.py                    # gettext internationalisation
+├── author.py                  # Scripting: dump/apply helpers (explore/author)
+├── explore.py                 # Board query helpers
+├── config/                    # Configuration package (loader.py, models.py, includes.py)
+├── constants.py               # Global constants (ROLE_FIELD_NAME, tolerances, etc.)
+├── exceptions.py              # Exception hierarchy
 ├── validation.py              # Pre‑checks (nets, uniqueness, selection mode, layer/mirror)
 ├── registry.py                # Via and track registries (reconcile with live elements)
-├── net_resolution.py
+├── net_resolution.py          # Net resolution with placeholders for ClonePlacement
 ├── template_extraction.py     # Extract with parametrisation and custom origin
-├── undo.py
+├── undo.py                    # Undo last placement operation
 ├── geometry/                  # Spoke_layout, keepout, thermal_grid, pad_projection, clone_geometry
-├── kicad/                     # KiCad IPC adapter
-├── placement/                 # Planner, executors, services (collision, planner, executor, services)
-│   ├── services/              # Including clone_role_resolver with proximity‑based disambiguation
+├── kicad/                     # KiCad IPC adapter and IBoardAdapter interface
+├── placement/                 # Planner, executors, services
+│   ├── services/              # component_pool, clone_role_resolver, position_tracker, component_resolver, etc.
 ├── cloner/                    # File‑based cloner (extract, netlist, pcb, models, sexp)
 ├── diagnostics/               # Diagnostic scripts
+├── utils/                     # Utilities
+│   └── units.py               # MM = 1_000_000 constant
 └── tests/                     # Unit and integration tests
 ```
 
@@ -387,11 +398,11 @@ Detailed documentation is in the `docs/` folder:
 - [Top‑level modules](./docs/uplevel_modules.md)
 - [File‑based cloner](./docs/cloner.md)
 - [Diagnostics](./docs/diagnostics.md)
-- [KiCad crash hunting toolkit (#24966 / #24970) — includes core dump capture (Windows + Linux)](./docs/crash_hunting.md)
+- [KiCad crash hunting toolkit (#24966 / #24970)](./docs/crash_hunting.md)
 - [`diagnose_first_write_crash.py` reference](./docs/diagnose_first_write_crash.md)
 - [Internationalization (i18n) — gettext/Babel](./docs/i18n.md)
-
-> **Note:** some of these files may be missing if they haven't been created yet. The actual list is always available in the `docs/` folder.
+- [Template rotation and transformation](./docs/rotate_template.md)
+- [Module dependency diagram](./docs/diagram.md)
 
 ---
 
