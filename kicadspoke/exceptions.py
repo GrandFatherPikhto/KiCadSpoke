@@ -1,7 +1,7 @@
-# kicadspoke/exceptions.py
+# kicadstamp/exceptions.py
 
 import difflib
-from kicadspoke.i18n import _
+from kicadstamp.i18n import _
 
 class PlacerError(Exception):
     """Base exception for all placer errors."""

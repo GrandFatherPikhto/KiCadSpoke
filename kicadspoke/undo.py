@@ -1,13 +1,13 @@
-# kicadspoke/undo.py
+# kicadstamp/undo.py
 
 import json
 import logging
 from pathlib import Path
 from kipy.board_types import BoardLayer
 from kipy.geometry import Vector2, Angle
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.utils.units import MM
-from kicadspoke.i18n import _
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.utils.units import MM
+from kicadstamp.i18n import _
 
 logger = logging.getLogger(__name__)
 

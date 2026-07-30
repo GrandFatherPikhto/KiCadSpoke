@@ -1,4 +1,4 @@
-# kicadspoke/placement/services/component_pool.py
+# kicadstamp/placement/services/component_pool.py
 """
 component_pool.py — selects concrete components for template roles by
 (real net, custom Role field), not by explicit ref in config.

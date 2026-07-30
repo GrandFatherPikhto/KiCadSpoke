@@ -1,10 +1,10 @@
-# `kicadspoke/diagnostics/` – Diagnostic Scripts
+# `kicadstamp/diagnostics/` – Diagnostic Scripts
 
 ## Purpose
 
-The `kicadspoke/diagnostics/` directory contains a set of diagnostic and debugging scripts that help
-developers and advanced users verify **KiCadSpoke**'s behaviour, debug configurations, analyse geometry,
-and test individual IPC operations. The scripts use the current `kicadspoke` API (adapter, geometry,
+The `kicadstamp/diagnostics/` directory contains a set of diagnostic and debugging scripts that help
+developers and advanced users verify **KiCadStamp**'s behaviour, debug configurations, analyse geometry,
+and test individual IPC operations. The scripts use the current `kicadstamp` API (adapter, geometry,
 config) and do not depend on legacy modules.
 
 All scripts require a **running KiCad instance** with an active board and are run from the project root
@@ -15,7 +15,7 @@ via `python -m`.
 ## Structure
 
 ```
-kicadspoke/diagnostics/
+kicadstamp/diagnostics/
 ├── diagnose_first_write_crash.py  # Diagnoses the KiCad crash on the first IPC write (issue #24966)
 ├── diagnostic_charset.py          # Finds non-ASCII characters (homoglyphs) in Role/Cluster board-wide
 ├── diagnostic_keepout.py          # Keepout and overlap analysis
@@ -42,8 +42,8 @@ set tied to one specific filed bug with its own dedicated hunting workflow:
 (#24966/#24970) and the rest of the hunting toolkit lives in [crash_hunting.md](crash_hunting.md).
 
 ```bash
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # reads only, safe
-python -m kicadspoke.diagnostics.diagnose_first_write_crash             # full test, may crash KiCad
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8   # reads only, safe
+python -m kicadstamp.diagnostics.diagnose_first_write_crash             # full test, may crash KiCad
 ```
 
 ---
@@ -63,13 +63,13 @@ looking for the "correct" (Latin) role, and the mismatch is essentially impossib
 **Usage:**
 ```bash
 # Check ROLE_FIELD_NAME and CLUSTER_FIELD_NAME board-wide (default)
-python -m kicadspoke.diagnostics.diagnostic_charset
+python -m kicadstamp.diagnostics.diagnostic_charset
 
 # Check a different set of fields
-python -m kicadspoke.diagnostics.diagnostic_charset --fields "Role,Cluster,Value"
+python -m kicadstamp.diagnostics.diagnostic_charset --fields "Role,Cluster,Value"
 
 # Also print clean fields (not just findings)
-python -m kicadspoke.diagnostics.diagnostic_charset --verbose
+python -m kicadstamp.diagnostics.diagnostic_charset --verbose
 ```
 
 **Parameters:**
@@ -82,10 +82,10 @@ A list of findings: refdes, field name, the value in full, and for each "bad" ch
 the string, the character itself, its codepoint (`U+XXXX`), and its Unicode name (`unicodedata.name`).
 Exit code is `0` if nothing was found, `1` if at least one field had a finding (handy as a standalone step
 before `apply` or in CI:
-`python -m kicadspoke.diagnostics.diagnostic_charset || echo "suspicious characters found in Role/Cluster fields"`).
+`python -m kicadstamp.diagnostics.diagnostic_charset || echo "suspicious characters found in Role/Cluster fields"`).
 
 **Dependencies:**
-`kicadspoke.kicad.adapter.KiCadBoardAdapter` (`get_footprints`/`get_field_value`), `unicodedata` from the
+`kicadstamp.kicad.adapter.KiCadBoardAdapter` (`get_footprints`/`get_field_value`), `unicodedata` from the
 standard library.
 
 ---
@@ -98,7 +98,7 @@ component and via positions fall inside the keepout. Prints detailed information
 
 **Usage:**
 ```bash
-python -m kicadspoke.diagnostics.diagnostic_keepout <config.yaml>
+python -m kicadstamp.diagnostics.diagnostic_keepout <config.yaml>
 ```
 
 **Output:**
@@ -107,7 +107,7 @@ python -m kicadspoke.diagnostics.diagnostic_keepout <config.yaml>
 - Status for each via (spoke and component).
 
 **Dependencies:**
-`kicadspoke.config`, `kicadspoke.kicad.adapter`, `kicadspoke.placement.planner`, `kicadspoke.geometry.keepout`.
+`kicadstamp.config`, `kicadstamp.kicad.adapter`, `kicadstamp.placement.planner`, `kicadstamp.geometry.keepout`.
 
 ---
 
@@ -119,7 +119,7 @@ verifying pad geometry.
 
 **Usage:**
 ```bash
-python -m kicadspoke.diagnostics.get_pad_bbox --ref IC1 --pad 17 --verbose
+python -m kicadstamp.diagnostics.get_pad_bbox --ref IC1 --pad 17 --verbose
 ```
 
 **Parameters:**
@@ -134,7 +134,7 @@ python -m kicadspoke.diagnostics.get_pad_bbox --ref IC1 --pad 17 --verbose
 - Copper layer size (if available).
 
 **Dependencies:**
-`kicadspoke.kicad.adapter`, `kicadspoke.geometry.thermal_grid`.
+`kicadstamp.kicad.adapter`, `kicadstamp.geometry.thermal_grid`.
 
 ---
 
@@ -148,14 +148,14 @@ size (bbox), the list of pads (numbers, nets, positions, sizes), and the `Role` 
 **Usage:**
 Select components in the PCB editor, then run:
 ```bash
-python -m kicadspoke.diagnostics.get_selected_component
+python -m kicadstamp.diagnostics.get_selected_component
 ```
 
 **Output:**
 A table with information about each component and its pads.
 
 **Dependencies:**
-`kicadspoke.kicad.adapter` (uses `get_selected_items`).
+`kicadstamp.kicad.adapter` (uses `get_selected_items`).
 
 ---
 
@@ -168,14 +168,14 @@ types and key parameters.
 **Usage:**
 Select objects in the PCB editor, then run:
 ```bash
-python -m kicadspoke.diagnostics.get_selection
+python -m kicadstamp.diagnostics.get_selection
 ```
 
 **Output:**
 A list of objects with type and key properties.
 
 **Dependencies:**
-`kicadspoke.kicad.adapter` (uses `get_selected_items`).
+`kicadstamp.kicad.adapter` (uses `get_selected_items`).
 
 ---
 
@@ -188,13 +188,13 @@ Creates a single via next to a given component. Saves the UUID of the created vi
 **Usage:**
 ```bash
 # Create a via
-python -m kicadspoke.diagnostics.test_create_one_via C5 --offset-mm 1.2
+python -m kicadstamp.diagnostics.test_create_one_via C5 --offset-mm 1.2
 
 # Remove the last created via
-python -m kicadspoke.diagnostics.test_create_one_via --remove
+python -m kicadstamp.diagnostics.test_create_one_via --remove
 
 # Remove a specific via by UUID
-python -m kicadspoke.diagnostics.test_create_one_via --remove <uuid>
+python -m kicadstamp.diagnostics.test_create_one_via --remove <uuid>
 ```
 
 **Parameters:**
@@ -205,7 +205,7 @@ python -m kicadspoke.diagnostics.test_create_one_via --remove <uuid>
 - `--timeout-ms` – IPC timeout.
 
 **Dependencies:**
-`kicadspoke.kicad.adapter`.
+`kicadstamp.kicad.adapter`.
 
 ---
 
@@ -218,7 +218,7 @@ work correctly.
 
 **Usage:**
 ```bash
-python -m kicadspoke.diagnostics.test_custom_fields C5 --field Role
+python -m kicadstamp.diagnostics.test_custom_fields C5 --field Role
 ```
 
 **Parameters:**
@@ -231,7 +231,7 @@ python -m kicadspoke.diagnostics.test_custom_fields C5 --field Role
 - The value of the requested field (or a message that it wasn't found).
 
 **Dependencies:**
-`kicadspoke.kicad.adapter` (uses `get_field_value`).
+`kicadstamp.kicad.adapter` (uses `get_field_value`).
 
 ---
 
@@ -243,7 +243,7 @@ state before and after the flip. Lets you confirm the flip works correctly (laye
 
 **Usage:**
 ```bash
-python -m kicadspoke.diagnostics.test_flip_one_cap C6
+python -m kicadstamp.diagnostics.test_flip_one_cap C6
 ```
 
 **Parameters:**
@@ -253,7 +253,7 @@ python -m kicadspoke.diagnostics.test_flip_one_cap C6
 Component state (layer, position, angle) before and after the flip.
 
 **Dependencies:**
-`kicadspoke.kicad.adapter` (uses `flip_selected` and `refresh_board`).
+`kicadstamp.kicad.adapter` (uses `flip_selected` and `refresh_board`).
 
 ---
 
@@ -266,10 +266,10 @@ problems (`begin_commit`, `update_items`, `push_commit` hanging).
 **Usage:**
 ```bash
 # Move by +1 mm
-python -m kicadspoke.diagnostics.test_move_one_cap C5 --delta-mm 1.0
+python -m kicadstamp.diagnostics.test_move_one_cap C5 --delta-mm 1.0
 
 # Move it back
-python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
+python -m kicadstamp.diagnostics.test_move_one_cap C5 --revert
 ```
 
 **Parameters:**
@@ -281,7 +281,7 @@ python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
 Execution time for each step (connect, begin_commit, update_items, push_commit) in milliseconds.
 
 **Dependencies:**
-`kicadspoke.kicad.adapter`.
+`kicadstamp.kicad.adapter`.
 
 ---
 
@@ -295,7 +295,7 @@ the component to its original state afterwards.
 
 **Usage:**
 ```bash
-python -m kicadspoke.diagnostics.test_pad_mirror_convention C6 --pad 2
+python -m kicadstamp.diagnostics.test_pad_mirror_convention C6 --pad 2
 ```
 
 **Parameters:**
@@ -308,14 +308,14 @@ python -m kicadspoke.diagnostics.test_pad_mirror_convention C6 --pad 2
 - The winner (mirror across X, across Y, or no mirror).
 
 **Dependencies:**
-`kicadspoke.kicad.adapter`, `kicadspoke.geometry.pad_projection` (helper).
+`kicadstamp.kicad.adapter`, `kicadstamp.geometry.pad_projection` (helper).
 
 ---
 
 ## General recommendations
 
 - **Run with `--verbose`** for debugging, if the script supports the flag.
-- **Always run from the project root** using `python -m kicadspoke.diagnostics.<script_name>`.
+- **Always run from the project root** using `python -m kicadstamp.diagnostics.<script_name>`.
 - **Make sure KiCad is open** with the relevant board active.
 - For scripts that work with the selection, select the relevant objects in the PCB editor **before**
   running them.
@@ -339,8 +339,8 @@ python -m kicadspoke.diagnostics.test_pad_mirror_convention C6 --pad 2
 
 To add a new diagnostic script:
 
-1. Place it in `kicadspoke/diagnostics/`.
-2. Use the current `kicadspoke` API (adapter, geometry, config).
+1. Place it in `kicadstamp/diagnostics/`.
+2. Use the current `kicadstamp` API (adapter, geometry, config).
 3. Add a description to this document.
 4. Make sure the script doesn't modify the board (or warns about it), unless it's meant to mutate.
 

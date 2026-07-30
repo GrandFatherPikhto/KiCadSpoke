@@ -37,5 +37,5 @@ for fp in footprints[:20]:  # ограничим для наглядности
             print(f"  sp.{attr}: {getattr(sp, attr)!r}")
 
 print("\nЕсли path_human_readable пуст, значит KiCad не сохраняет имена в PCB.")
-print("Для получения имён листов используйте .net файл и kicadspoke.cloner.netlist.")
-print("Пример: python -c \"from kicadspoke.cloner.netlist import parse_netlist; comps,_,_ = parse_netlist('project.net'); [print(c.ref, c.sheet_names) for c in comps]\"")
+print("Для получения имён листов используйте .net файл и kicadstamp.cloner.netlist.")
+print("Пример: python -c \"from kicadstamp.cloner.netlist import parse_netlist; comps,_,_ = parse_netlist('project.net'); [print(c.ref, c.sheet_names) for c in comps]\"")

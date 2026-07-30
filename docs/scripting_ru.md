@@ -1,18 +1,18 @@
 # Скриптинг: `explore` и `author`
 
-Два аддитивных, необязательных Python-модуля для использования kicadspoke как библиотеки, в
+Два аддитивных, необязательных Python-модуля для использования kicadstamp как библиотеки, в
 дополнение к CLI/YAML-потоку — ничего здесь не меняет формат YAML-конфига или пайплайн
 `apply`/`extract`; оба модуля — тонкие обёртки над уже существующим, дружелюбные к read-only
 использованию.
 
-## `kicadspoke.explore` — запросы только на чтение
+## `kicadstamp.explore` — запросы только на чтение
 
 Вырос из повторяющегося паттерна: отвечать на вопросы "у каких компонентов Role=X", "на какой
 цепи этот пад", "на каком инстансе листа (`Channel_0`/`Channel_1`/...) этот футпринт" — каждый
 раз новым одноразовым скриптом. `Board.select()` заменяет это одним переиспользуемым вызовом.
 
 ```python
-from kicadspoke.explore import Board
+from kicadstamp.explore import Board
 
 board = Board.connect(schematic_dir="../test_boards/3CH-AWG-TIA")
 
@@ -51,15 +51,15 @@ comp.fp.position      # сырой объект kipy
 никогда. Зовите `board.refresh()` после любого изменения платы (ручная правка в KiCad, или
 скриптованный запуск `apply_config()`) перед тем, как доверять следующему `select()`.
 
-## `kicadspoke.author` — кодить расстановку вместо копипаста YAML
+## `kicadstamp.author` — кодить расстановку вместо копипаста YAML
 
 Повторяющиеся `clone_placements` по каналам — ровно то место, где заводятся ошибки копипаста
 (не тот ключ в `nets:`, задвоенный `anchor_pad:`, неверный `anchor_sheet`) — цикл `for` так
-ошибиться не может. `ClonePlacement`/`Rule` (`kicadspoke.config`) — обычные dataclass, строим их
+ошибиться не может. `ClonePlacement`/`Rule` (`kicadstamp.config`) — обычные dataclass, строим их
 напрямую:
 
 ```python
-from kicadspoke.config import ClonePlacement
+from kicadstamp.config import ClonePlacement
 
 clones = [
     ClonePlacement(
@@ -76,8 +76,8 @@ clones = [
 **Вариант (a) — сразу в `apply`:**
 
 ```python
-from kicadspoke.config import Config, load_config
-from kicadspoke.author import apply_config
+from kicadstamp.config import Config, load_config
+from kicadstamp.author import apply_config
 
 cfg = load_config("profiles/3ch-awg-tia.yaml")   # или Config() с нуля
 cfg.clone_placements.extend(clones)
@@ -95,7 +95,7 @@ apply_config(cfg, "profiles/3ch-awg-tia.yaml", dry_run=True)
 используется только на этапе авторства):
 
 ```python
-from kicadspoke.author import dump_clone_placements
+from kicadstamp.author import dump_clone_placements
 
 dump_clone_placements(clones, "profiles/subsystems/dac_channels.yaml")
 ```

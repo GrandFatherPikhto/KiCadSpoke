@@ -14,11 +14,11 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2
 from kipy.board_types import Pad, FootprintInstance
 
-from kicadspoke.config import (
+from kicadstamp.config import (
     Config, ThermalViaArrayConfig, ClonePlacement, SpokeTemplate, TemplateComponentSlot,
 )
-from kicadspoke.exceptions import ValidationError
-from kicadspoke.placement.dependency_order import resolve_execution_order
+from kicadstamp.exceptions import ValidationError
+from kicadstamp.placement.dependency_order import resolve_execution_order
 
 MM = 1_000_000
 

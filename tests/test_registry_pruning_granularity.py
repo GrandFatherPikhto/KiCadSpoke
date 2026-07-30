@@ -19,13 +19,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from unittest.mock import MagicMock
 from kipy.geometry import Vector2
 
-# Import order matters here: kicadspoke.registry imports .placement.commands
+# Import order matters here: kicadstamp.registry imports .placement.commands
 # at module level, which (via the placement package __init__) pulls in
-# manual_position_calculator.py, which imports back from kicadspoke.registry —
-# importing something under kicadspoke.placement FIRST (as every other test
+# manual_position_calculator.py, which imports back from kicadstamp.registry —
+# importing something under kicadstamp.placement FIRST (as every other test
 # file touching the registry already does) avoids that circular-import trap.
-from kicadspoke.placement.commands import ViaCommand
-from kicadspoke.registry import PlacementRegistry, RegistryEntry
+from kicadstamp.placement.commands import ViaCommand
+from kicadstamp.registry import PlacementRegistry, RegistryEntry
 
 MM = 1_000_000
 

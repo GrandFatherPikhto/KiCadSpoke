@@ -34,19 +34,19 @@ read.
 
 ```bash
 # Full ladder: reads + no-op write (step 9) — may crash KiCad, that's the point of the test
-python -m kicadspoke.diagnostics.diagnose_first_write_crash
+python -m kicadstamp.diagnostics.diagnose_first_write_crash
 
 # Reads only (steps 1-8), no write — safe if KiCad is already open
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8
 
 # Pause before the write — tests hypothesis H1 (race)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --delay 30
 
 # Repeat the no-op write 3 times in a row — check whether the write stays stable after the first success
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --repeat 3
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --repeat 3
 
 # Custom log path and IPC timeout (default log is diag_<timestamp>.log, default timeout 15000 ms)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --log diag.log --timeout-ms 20000
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --log diag.log --timeout-ms 20000
 ```
 
 ## Parameters
@@ -65,7 +65,7 @@ ladder, and a final summary across all steps.
 
 ## Dependencies
 
-`kipy` directly (not through `kicadspoke.kicad.adapter`). The `kicad.exe` PID snapshot uses `tasklist`
+`kipy` directly (not through `kicadstamp.kicad.adapter`). The `kicad.exe` PID snapshot uses `tasklist`
 on Windows, and the optional `psutil` on other OSes (not in `requirements.txt`; without it, zombie-
 instance detection — hypothesis H2 — silently turns off, but the read/write ladder itself works as
 usual).

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-kicadspoke/diagnostics/get_pad_bbox.py
+kicadstamp/diagnostics/get_pad_bbox.py
 
 Diagnostic script to get the bounding box of a pad.
 Shows the real dimensions used for keepout construction.
@@ -14,9 +14,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import argparse
 import logging
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.utils.units import MM
-from kicadspoke.i18n import _
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.utils.units import MM
+from kicadstamp.i18n import _
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ def main():
     # If a specific pad is requested, show more detailed information (copper layer)
     if args.pad:
         pad = pads[0]
-        from kicadspoke.geometry.thermal_grid import get_pad_size
+        from kicadstamp.geometry.thermal_grid import get_pad_size
         size = get_pad_size(pad)
         if size:
             logger.info(_("Copper layer of pad {num}: {w:.3f} x {h:.3f} mm")

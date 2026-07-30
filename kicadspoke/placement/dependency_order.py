@@ -1,4 +1,4 @@
-# kicadspoke/placement/dependency_order.py
+# kicadstamp/placement/dependency_order.py
 """
 dependency_order.py — determines the order in which rules/clone_placements
 must be planned+executed within one apply run, so that an item anchored on a

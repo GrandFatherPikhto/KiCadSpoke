@@ -1,4 +1,4 @@
-# `tests/` – Модульные и интеграционные тесты KiCadSpoke
+# `tests/` – Модульные и интеграционные тесты KiCadStamp
 
 ## Назначение
 
@@ -76,7 +76,7 @@ tests/
 |----------|---------|----------|
 | `adapter` | `session` | Один экземпляр `KiCadBoardAdapter` на всю сессию. |
 | `board` | `session` | Доска из адаптера. |
-| `test_config` | `session` | Загруженный тестовый конфиг из `kicadspoke_templates_example.yaml`. |
+| `test_config` | `session` | Загруженный тестовый конфиг из `kicadstamp_templates_example.yaml`. |
 | `test_component_ref` | `function` | Refdes компонента для тестов (по умолчанию `C5`). |
 | `test_pad_number` | `function` | Номер пада для тестов (по умолчанию `17`). |
 | `temp_via` | `function` | Создаёт временную via на GND, удаляет после теста. Возвращает `(via_id, position, net)`. |

@@ -34,15 +34,15 @@ def main():
 
     # 2. Обновление/создание .po для каждого языка
     for lang in ("en", "ru"):
-        po_file = ROOT / "locales" / lang / "LC_MESSAGES" / "kicadspoke.po"
+        po_file = ROOT / "locales" / lang / "LC_MESSAGES" / "kicadstamp.po"
         if po_file.exists():
-            run(["pybabel", "update", "-i", "messages.pot", "-d", "locales", "-l", lang, "-D", "kicadspoke"])
+            run(["pybabel", "update", "-i", "messages.pot", "-d", "locales", "-l", lang, "-D", "kicadstamp"])
         else:
-            run(["pybabel", "init", "-i", "messages.pot", "-d", "locales", "-l", lang, "-D", "kicadspoke"])
+            run(["pybabel", "init", "-i", "messages.pot", "-d", "locales", "-l", lang, "-D", "kicadstamp"])
 
     # 3. Компиляция .mo
     for lang in ("en", "ru"):
-        run(["pybabel", "compile", "-d", "locales", "-l", lang, "-D", "kicadspoke"])
+        run(["pybabel", "compile", "-d", "locales", "-l", lang, "-D", "kicadstamp"])
 
     # 4. Удаление временного .pot
     (ROOT / "messages.pot").unlink(missing_ok=True)

@@ -1,4 +1,4 @@
-# kicadspoke/placement/services/__init__.py
+# kicadstamp/placement/services/__init__.py
 """
 Services for position calculation, angle correction, relaxation and via planning.
 """

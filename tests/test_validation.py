@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Тесты на фатальные предварительные проверки (validation.py), KiCadSpoke 4.0."""
+"""Тесты на фатальные предварительные проверки (validation.py), KiCadStamp 4.0."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -7,12 +7,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import pytest
 from unittest.mock import MagicMock
 
-from kicadspoke.config import (
+from kicadstamp.config import (
     Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
     TemplateComponentSlot, TemplateVia, Rule, ClonePlacement
 )
-from kicadspoke.exceptions import ValidationError
-from kicadspoke.validation import (
+from kicadstamp.exceptions import ValidationError
+from kicadstamp.validation import (
     check_templates_and_pads_exist,
     check_role_pool_sufficiency,
     check_no_duplicate_clone_anchors,

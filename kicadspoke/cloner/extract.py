@@ -1,4 +1,4 @@
-# kicadspoke/cloner/extract.py
+# kicadstamp/cloner/extract.py
 """
 extract-channel: snapshot of a channel in YAML — components with positions,
 tracks, vias, twin map, and summary. This is the cloner's "eyes": before any

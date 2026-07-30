@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Tests for the pure (no KiCad adapter) apply filters: enabled/--only/--cluster —
-kicadspoke_cli.py:drop_disabled_rules/apply_only_filter/apply_cluster_filter.
+kicadstamp_cli.py:drop_disabled_rules/apply_only_filter/apply_cluster_filter.
 Order matters: enabled wins UNCONDITIONALLY, before --only/--cluster (see the
 Rule docstring in config/models.py) — --only cannot resurrect a disabled rule."""
 import sys
@@ -10,12 +10,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 import yaml
-from kicadspoke.config import Config, Rule, ManualSpoke, ClonePlacement, ThermalViaArrayConfig
-from kicadspoke.apply_pipeline import (
+from kicadstamp.config import Config, Rule, ManualSpoke, ClonePlacement, ThermalViaArrayConfig
+from kicadstamp.apply_pipeline import (
     _split_comma_values, _matches_any_cluster,
     drop_disabled_rules, drop_inactive_items, apply_only_filter, apply_cluster_filter,
 )
-from kicadspoke.cli_extract import load_profile
+from kicadstamp.cli_extract import load_profile
 
 logger = logging.getLogger("test_cli_filters")
 
@@ -333,7 +333,7 @@ class TestLoadProfileRootDefaults:
 
 
 class TestLoadProfileIncludes:
-    """load_profile() resolves include: (kicadspoke/config/includes.py) the
+    """load_profile() resolves include: (kicadstamp/config/includes.py) the
     same way load_config() does, so a subsystem file's extract_profiles/
     clone_profiles are visible here too — not just rules/clone_placements."""
 

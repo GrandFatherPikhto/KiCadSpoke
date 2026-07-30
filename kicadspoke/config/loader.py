@@ -1,4 +1,4 @@
-# kicadspoke/config/loader.py
+# kicadstamp/config/loader.py
 from typing import Tuple
 """
 config/loader.py — all YAML loading/validation logic for dataclasses
@@ -177,7 +177,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
         raise ValidationError(format_fatal_error(
             _("clone_placement without name"),
             [_("every clone_placement must have a name – used in --only "
-               "(kicadspoke_cli.py) for isolated runs; write name: <string>. "
+               "(kicadstamp_cli.py) for isolated runs; write name: <string>. "
                "Previously missing name would silently substitute '?' – that was a bug")]
         ))
     check_unknown_keys(data, _CLONE_PLACEMENT_KNOWN_KEYS,
@@ -314,7 +314,7 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
         raise ValidationError(format_fatal_error(
             _("thermal_via_array without name"),
             [_("thermal_via_array must have a name – used in --only "
-               "(kicadspoke_cli.py) for isolated runs; write name: <any understandable string>, "
+               "(kicadstamp_cli.py) for isolated runs; write name: <any understandable string>, "
                "e.g. name: fpga_thermal")]
         ))
     check_unknown_keys(tva_data, _THERMAL_VIA_ARRAY_KNOWN_KEYS,

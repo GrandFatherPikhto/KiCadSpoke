@@ -1,4 +1,4 @@
-# kicadspoke/geometry/thermal_grid.py
+# kicadstamp/geometry/thermal_grid.py
 
 import math
 from typing import List

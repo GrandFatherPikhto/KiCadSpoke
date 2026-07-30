@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-diagnostic_keepout.py — keepout and via position diagnostics (KiCadSpoke).
+diagnostic_keepout.py — keepout and via position diagnostics (KiCadStamp).
 
 Loads the config, plans moves, builds keepout, and prints detailed information.
-Uses the new KiCadSpoke API.
+Uses the new KiCadStamp API.
 
 Run:
     python diagnostic_keepout.py <config.yaml>
@@ -16,12 +16,12 @@ from pathlib import Path
 # Add project root to sys.path if running from root
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from kicadspoke.config import load_config
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.placement.planner import PlacementPlanner
-from kicadspoke.geometry.keepout import build_keepout
-from kicadspoke.utils.units import MM
-from kicadspoke.i18n import _
+from kicadstamp.config import load_config
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.placement.planner import PlacementPlanner
+from kicadstamp.geometry.keepout import build_keepout
+from kicadstamp.utils.units import MM
+from kicadstamp.i18n import _
 
 logger = logging.getLogger(__name__)
 

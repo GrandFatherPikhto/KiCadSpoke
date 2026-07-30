@@ -1,9 +1,9 @@
 # test_via_ops.py
 import pytest
-from kicadspoke.utils.units import MM
+from kicadstamp.utils.units import MM
 from kipy.geometry import Vector2
-from kicadspoke.placement.commands import ViaCommand
-from kicadspoke.registry import PlacementRegistry, registry_path_for_config
+from kicadstamp.placement.commands import ViaCommand
+from kicadstamp.registry import PlacementRegistry, registry_path_for_config
 
 
 @pytest.mark.integration
@@ -97,7 +97,7 @@ def test_temp_via_creation(temp_via):
 @pytest.mark.integration
 def test_registry_with_via(registry, temp_via):
     via_id, pos, net = temp_via
-    from kicadspoke.placement.commands import ViaCommand
+    from kicadstamp.placement.commands import ViaCommand
     cmd = ViaCommand(pos, 0.3, 0.6, "GND", "test", "test|via|0")
     # Сначала записываем созданную via в реестр
     registry.record_created(cmd, via_id)

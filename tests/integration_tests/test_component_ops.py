@@ -1,6 +1,6 @@
 import pytest
 from kipy.geometry import Vector2
-from kicadspoke.utils.units import MM
+from kicadstamp.utils.units import MM
 from kipy.board_types import BoardLayer
 
 @pytest.mark.integration

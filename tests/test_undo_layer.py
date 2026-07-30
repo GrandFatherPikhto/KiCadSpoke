@@ -25,10 +25,10 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer
 
-from kicadspoke.config import Config, ThermalViaArrayConfig
-from kicadspoke.placement.executor.base import layer_to_str as _layer_to_str
-from kicadspoke.placement.executor import BatchExecutor
-from kicadspoke.placement.commands import MoveCommand
+from kicadstamp.config import Config, ThermalViaArrayConfig
+from kicadstamp.placement.executor.base import layer_to_str as _layer_to_str
+from kicadstamp.placement.executor import BatchExecutor
+from kicadstamp.placement.commands import MoveCommand
 
 MM = 1_000_000
 

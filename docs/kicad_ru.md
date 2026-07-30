@@ -1,4 +1,4 @@
-# `kicadspoke/kicad` – Адаптер для взаимодействия с KiCad через IPC
+# `kicadstamp/kicad` – Адаптер для взаимодействия с KiCad через IPC
 
 ## Назначение
 
@@ -149,7 +149,7 @@ kicad/
 ### 1. Подключение и получение платы
 
 ```python
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
 
 adapter = KiCadBoardAdapter(timeout_ms=30000)
 adapter.refresh_board()

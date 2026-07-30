@@ -3,7 +3,7 @@
 Тесты на geometry/spoke_layout.py — развёртка шаблона спицы (локальные
 along/across) в абсолютные координаты платы через (сдвиг, поворот).
 
-KiCadSpoke, обобщённые via: TemplateVia используется и на уровне спицы
+KiCadStamp, обобщённые via: TemplateVia используется и на уровне спицы
 (была power_via), и на уровне компонента (была GND via) — ОБА случая
 чистая геометрия от нуля спицы, никакой зависимости от реального пада
 компонента.
@@ -15,10 +15,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from kipy.geometry import Vector2
 
-from kicadspoke.config import (
+from kicadstamp.config import (
     ManualSpoke, SpokeTemplate, TemplateVia, TemplateComponentSlot, TemplateTrack
 )
-from kicadspoke.geometry.spoke_layout import apply_spoke_geometry, rotate_local_offset
+from kicadstamp.geometry.spoke_layout import apply_spoke_geometry, rotate_local_offset
 
 MM = 1_000_000
 

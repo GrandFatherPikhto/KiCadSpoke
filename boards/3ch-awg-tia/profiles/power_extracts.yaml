@@ -26,7 +26,7 @@ extract_profiles:
     origin_by_component_pad: '1'
 
   # ldo_out_pi_filter вынесен в profiles/subsystems/ldo.yaml (include:) —
-  # живая проверка kicadspoke/config/includes.py.
+  # живая проверка kicadstamp/config/includes.py.
 
   p5v_led_spoke:
     # cluster: Led_P5V

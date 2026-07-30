@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-test_create_one_via.py — minimal diagnostic test for create_items() (KiCadSpoke).
+test_create_one_via.py — minimal diagnostic test for create_items() (KiCadStamp).
 
 Purpose: test CREATING a new object (Via) via IPC.
 Places one via on GND next to the specified capacitor (offset-mm from the
 capacitor centre outward).
 
-Uses the KiCadSpoke adapter.
+Uses the KiCadStamp adapter.
 
 Run:
-    python -m kicadspoke.diagnostics.test_create_one_via C5 --offset-mm 1.2
-    python -m kicadspoke.diagnostics.test_create_one_via --remove   # delete the last created via
+    python -m kicadstamp.diagnostics.test_create_one_via C5 --offset-mm 1.2
+    python -m kicadstamp.diagnostics.test_create_one_via --remove   # delete the last created via
 """
 
 import argparse
@@ -19,10 +19,10 @@ import json
 import time
 from pathlib import Path
 
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.utils.units import MM
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.utils.units import MM
 from kipy.geometry import Vector2
-from kicadspoke.i18n import _
+from kicadstamp.i18n import _
 
 STATE_FILE = Path(__file__).parent / ".last_test_via.json"
 
@@ -114,7 +114,7 @@ def main():
         if created_id:
             STATE_FILE.write_text(json.dumps({"id": created_id, "ref": args.ref}), encoding="utf-8")
             print(_("id saved to {file} — to delete it, just run:\n"
-                    "  python -m kicadspoke.diagnostics.test_create_one_via --remove")
+                    "  python -m kicadstamp.diagnostics.test_create_one_via --remove")
                   .format(file=STATE_FILE.name))
     except Exception:
         step(_("adapter.drop_commit(commit)"), adapter.drop_commit, commit)

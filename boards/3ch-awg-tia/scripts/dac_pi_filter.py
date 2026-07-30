@@ -23,8 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from kicadspoke.author import cli_main
-from kicadspoke.config import ClonePlacement
+from kicadstamp.author import cli_main
+from kicadstamp.config import ClonePlacement
 
 HERE = Path(__file__).resolve().parent
 OUTPUT = HERE.parent / "generated" / "dac_pi_filter.yaml"

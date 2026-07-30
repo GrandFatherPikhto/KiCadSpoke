@@ -33,19 +33,19 @@ get_board → чтение футпринтов → повторное чтен�
 
 ```bash
 # Полная лесенка: чтения + no-op запись (ступень 9) — может уронить KiCad, в этом и цель теста
-python -m kicadspoke.diagnostics.diagnose_first_write_crash
+python -m kicadstamp.diagnostics.diagnose_first_write_crash
 
 # Только чтения (ступени 1-8), без записи — безопасно, если KiCad открыт
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8
 
 # Пауза перед записью — проверка гипотезы H1 о гонке
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --delay 30
 
 # Повторить no-op запись 3 раза подряд — проверить, стабильна ли запись после первой удачной
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --repeat 3
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --repeat 3
 
 # Свой путь к лог-файлу и таймаут IPC (по умолчанию лог — diag_<timestamp>.log, таймаут 15000 мс)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --log diag.log --timeout-ms 20000
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --log diag.log --timeout-ms 20000
 ```
 
 ## Параметры
@@ -64,7 +64,7 @@ python -m kicadspoke.diagnostics.diagnose_first_write_crash --log diag.log --tim
 
 ## Зависимости
 
-`kipy` напрямую (не через `kicadspoke.kicad.adapter`). Снимок PID `kicad.exe` на Windows — через
+`kipy` напрямую (не через `kicadstamp.kicad.adapter`). Снимок PID `kicad.exe` на Windows — через
 `tasklist`, на остальных ОС — через опциональный `psutil` (не входит в `requirements.txt`; без него
 обнаружение зомби-инстансов, гипотеза H2, молча отключается, но сама лесенка чтений/записи работает как
 обычно).

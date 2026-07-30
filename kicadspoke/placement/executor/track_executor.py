@@ -1,7 +1,7 @@
-# kicadspoke/placement/executor/track_executor.py
+# kicadstamp/placement/executor/track_executor.py
 import logging
 from typing import List, Tuple, Dict, Optional
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from ...config import Config
 from ..commands import TrackCommand
 from ...registry import TrackRegistry

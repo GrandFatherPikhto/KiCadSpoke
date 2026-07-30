@@ -1,4 +1,4 @@
-# kicadspoke/kicad/adapter.py
+# kicadstamp/kicad/adapter.py
 
 import time
 import logging
@@ -26,7 +26,7 @@ class KiCadBoardAdapter(IBoardAdapter):
         self._board = None
         self._write_risk_checked = False
         self._footprints_cache: Optional[List[FootprintInstance]] = None
-        # Settable by the caller (see kicadspoke_cli.py's --no-selection) —
+        # Settable by the caller (see kicadstamp_cli.py's --no-selection) —
         # makes get_selected_items() always report "nothing selected",
         # regardless of what's actually highlighted in the PCB editor GUI.
         # ClonePlacement's "by selection" mode (role:/template: without nets/
@@ -145,7 +145,7 @@ class KiCadBoardAdapter(IBoardAdapter):
 
     def get_field_value(self, footprint: FootprintInstance, field_name: str) -> Optional[str]:
         """
-        Value of a custom component field (e.g., Role for KiCadSpoke 4.0).
+        Value of a custom component field (e.g., Role for KiCadStamp 4.0).
         IMPORTANT: texts_and_fields contains a mix of actual Field objects
         (name+text.value) and plain BoardText (silkscreen text without a field
         name at all) — filter by type, otherwise we get AttributeError on .name

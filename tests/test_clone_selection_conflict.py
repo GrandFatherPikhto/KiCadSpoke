@@ -8,10 +8,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadspoke.config import Config, ClonePlacement, ThermalViaArrayConfig, SpokeTemplate
-from kicadspoke.validation import check_single_selection_based_clone, check_clone_templates_exist
-from kicadspoke.exceptions import ValidationError
-from kicadspoke.placement.services.clone_role_resolver import clone_uses_selection_mode
+from kicadstamp.config import Config, ClonePlacement, ThermalViaArrayConfig, SpokeTemplate
+from kicadstamp.validation import check_single_selection_based_clone, check_clone_templates_exist
+from kicadstamp.exceptions import ValidationError
+from kicadstamp.placement.services.clone_role_resolver import clone_uses_selection_mode
 
 
 def _cfg(clones, templates=None):

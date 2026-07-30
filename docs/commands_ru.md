@@ -1,13 +1,13 @@
-# Команды KiCadSpoke (CLI)
+# Команды KiCadStamp (CLI)
 
-Этот документ содержит полный справочник по командам и флагам `kicadspoke_cli.py`, генераторам конфигов из `tools/`, а также практические примеры для типовых сценариев. Сверено с кодом в ветке `main` (проект не ведёт номера версий/тегов, ориентируйтесь на дату/коммит).
+Этот документ содержит полный справочник по командам и флагам `kicadstamp_cli.py`, генераторам конфигов из `tools/`, а также практические примеры для типовых сценариев. Сверено с кодом в ветке `main` (проект не ведёт номера версий/тегов, ориентируйтесь на дату/коммит).
 
 ---
 
 ## Базовый синтаксис
 
 ```bash
-python kicadspoke_cli.py <команда> [параметры]
+python kicadstamp_cli.py <команда> [параметры]
 ```
 
 Если команда не указана, по умолчанию подразумевается `apply`.
@@ -27,7 +27,7 @@ python kicadspoke_cli.py <команда> [параметры]
 реальном баге (2026‑07‑27): клон, заанкоренный на роль внутри шаблона ДРУГОГО клона, вставал на её СТАРОЕ
 место, а не туда, куда его в этом же прогоне должны были переставить. Если два и более элемента заанкорены
 друг на друга — валидного порядка не существует, и это fatal `ValidationError` ещё до того, как что-либо
-тронуто на плате (см. `kicadspoke/placement/dependency_order.py`). `apply --dry-run` печатает разрешённый
+тронуто на плате (см. `kicadstamp/placement/dependency_order.py`). `apply --dry-run` печатает разрешённый
 порядок, но, поскольку он ничего реально не двигает, всё равно планирует каждый элемент из одного
 неизменного снимка — позиции элементов дальше по цепочке в реальном (не dry-run) apply могут получиться
 другими; вывод dry-run об этом явно предупреждает.
@@ -35,7 +35,7 @@ python kicadspoke_cli.py <команда> [параметры]
 ### Синтаксис
 
 ```bash
-python kicadspoke_cli.py apply <путь_к_конфигу.yaml> [опции]
+python kicadstamp_cli.py apply <путь_к_конфигу.yaml> [опции]
 ```
 
 ### Опции
@@ -127,57 +127,57 @@ clone_placements:
 #### Стандартный запуск (расстановка компонентов, via и треков)
 
 ```bash
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml
 ```
 
 #### Запуск с подробным логированием в файл
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --verbose --log-file logs/placer.log
+python kicadstamp_cli.py apply 10CL006YE144C8G.yaml --verbose --log-file logs/placer.log
 ```
 
 #### Предварительный просмотр (dry-run) – ничего не меняет
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --dry-run
+python kicadstamp_cli.py apply 10CL006YE144C8G.yaml --dry-run
 ```
 
 #### Обработка только одного клона (например, для отладки)
 
 ```bash
-python kicadspoke_cli.py apply templates\pi_filter_vccio.yaml --only pi_filter_vccio
+python kicadstamp_cli.py apply templates\pi_filter_vccio.yaml --only pi_filter_vccio
 ```
 
 #### Изолированный прогон одного куска платы (--only)
 
 ```bash
 # Только один clone_placement, без FPGA-спиц и без термовиа в логе
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --dry-run
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --dry-run
 
 # Несколько имён/идентичностей сразу (правило по net + именованный thermal_via_array), флаг повтором или через запятую
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only +3V3_VCCIO,fpga_thermal
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --only +3V3_VCCIO,fpga_thermal
 ```
 
 #### Сузить по физическому экземпляру вместо имени (--cluster)
 
 ```bash
 # Только спицы/клоны/термовиа, чей Cluster совпадает с этим каналом (посегментное совпадение префикса)
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --cluster Channel_0 --dry-run
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --cluster Channel_0 --dry-run
 
 # Сочетание с --only — это AND, не ИЛИ: именно этот clone_placement, И только внутри этого канала
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --cluster Channel_0
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --cluster Channel_0
 ```
 
 #### Отключение проверки коллизий
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --no-collision-check
+python kicadstamp_cli.py apply 10CL006YE144C8G.yaml --no-collision-check
 ```
 
 #### Увеличение таймаута для медленного KiCad
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --timeout-ms 30000
+python kicadstamp_cli.py apply 10CL006YE144C8G.yaml --timeout-ms 30000
 ```
 
 ---
@@ -189,13 +189,13 @@ python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --timeout-ms 30000
 ### Синтаксис
 
 ```bash
-python kicadspoke_cli.py undo [--verbose] [--log-file]
+python kicadstamp_cli.py undo [--verbose] [--log-file]
 ```
 
 ### Пример
 
 ```bash
-python kicadspoke_cli.py undo --verbose
+python kicadstamp_cli.py undo --verbose
 ```
 
 ---
@@ -207,7 +207,7 @@ python kicadspoke_cli.py undo --verbose
 ### Синтаксис
 
 ```bash
-python kicadspoke_cli.py extract --name <имя_шаблона> --output <файл> [--timeout-ms] [--verbose] [--log-file] [--param KEY=VALUE] [--net-template ЛИТЕРАЛ=ПАТТЕРН] [--origin-by-via-net NET] [--origin-by-component-role ROLE] [--profiles FILE] [--profile NAME]
+python kicadstamp_cli.py extract --name <имя_шаблона> --output <файл> [--timeout-ms] [--verbose] [--log-file] [--param KEY=VALUE] [--net-template ЛИТЕРАЛ=ПАТТЕРН] [--origin-by-via-net NET] [--origin-by-component-role ROLE] [--profiles FILE] [--profile NAME]
 ```
 
 ### Опции
@@ -238,7 +238,7 @@ python kicadspoke_cli.py extract --name <имя_шаблона> --output <фай
 #### Извлечение шаблона в JSON с параметризацией цепей и origin по via
 
 ```bash
-python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
+python kicadstamp_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
   --origin-by-via-net '+3V3_VCCIO' \
   --param PWR_IN='+3V3' --param PWR_OUT='+3V3_VCCIO' \
   --net-template '+3V3_VCCIO={PWR_OUT}' --net-template '+3V3={PWR_IN}' \
@@ -270,19 +270,19 @@ extract_profiles:
 
 Запуск:
 ```bash
-python kicadspoke_cli.py extract --profiles extract_profiles.yaml --profile my_filter --verbose
+python kicadstamp_cli.py extract --profiles extract_profiles.yaml --profile my_filter --verbose
 ```
 
 #### Извлечение шаблона в YAML (без параметризации)
 
 ```bash
-python kicadspoke_cli.py extract --name my_filter --output my_filter.yaml --verbose
+python kicadstamp_cli.py extract --name my_filter --output my_filter.yaml --verbose
 ```
 
 #### Добавление шаблона в существующий конфиг (YAML)
 
 ```bash
-python kicadspoke_cli.py extract --name my_filter --output 10CL006YE144C8G.yaml --verbose
+python kicadstamp_cli.py extract --name my_filter --output 10CL006YE144C8G.yaml --verbose
 ```
 
 Примечание: если шаблон с таким именем уже существует, он будет перезаписан.
@@ -296,7 +296,7 @@ python kicadspoke_cli.py extract --name my_filter --output 10CL006YE144C8G.yaml 
 ### Синтаксис
 
 ```bash
-python kicadspoke_cli.py clone-extract --net <файл.net> --pcb <файл.kicad_pcb> --channel <имя_канала> --output <файл.yaml> [--profiles FILE] [--profile NAME] [--verbose]
+python kicadstamp_cli.py clone-extract --net <файл.net> --pcb <файл.kicad_pcb> --channel <имя_канала> --output <файл.yaml> [--profiles FILE] [--profile NAME] [--verbose]
 ```
 
 ### Опции
@@ -314,7 +314,7 @@ python kicadspoke_cli.py clone-extract --net <файл.net> --pcb <файл.kica
 ### Пример
 
 ```bash
-python kicadspoke_cli.py clone-extract --net my_project.net --pcb my_project.kicad_pcb --channel Channel_0 --output snapshot.yaml --verbose
+python kicadstamp_cli.py clone-extract --net my_project.net --pcb my_project.kicad_pcb --channel Channel_0 --output snapshot.yaml --verbose
 ```
 
 С использованием профиля (`clone_profiles.yaml`):
@@ -329,7 +329,7 @@ clone_profiles:
 
 Запуск:
 ```bash
-python kicadspoke_cli.py clone-extract --profiles clone_profiles.yaml --profile channel0 --verbose
+python kicadstamp_cli.py clone-extract --profiles clone_profiles.yaml --profile channel0 --verbose
 ```
 
 После выполнения вы получите YAML-файл с информацией о канале, который можно использовать для написания шаблона и `ClonePlacement`.
@@ -434,7 +434,7 @@ python tools/generate_config.py
 
 Правит `.kicad_sch` напрямую (без KiCad), по YAML-конфигу `refdes -> {Role, Cluster}` — альтернатива багованному
 Bulk Edit в Eeschema для массовой разметки. **Единственный писатель `.kicad_sch` во всём проекте** — до
-2026-07-26 KiCadSpoke не писал в схему вообще ни разу, поэтому у скрипта усиленные страховки: dry-run по
+2026-07-26 KiCadStamp не писал в схему вообще ни разу, поэтому у скрипта усиленные страховки: dry-run по
 умолчанию, `.bak` перед записью, самопроверка результата через `sexpdata`, отказ при не-ASCII в значениях
 (тот же класс опечатки, что нашёлся в `Role` живьём — кириллическая «С» вместо латинской, см.
 `diagnostic_charset.py` выше) и отказ при запущенном KiCad (файл может быть открыт в Eeschema).
@@ -489,9 +489,9 @@ python tools/apply_role_cluster.py roles.yaml --write            # затем р
 
 ### `update_i18n.py` – пересборка каталогов переводов (gettext)
 
-Извлекает все строки, обёрнутые в `_()` (`kicadspoke/`, `kicadspoke_cli.py`, `tools/`, `tests/`, ...) в
-`messages.pot`, сливает их с существующими `locales/en/LC_MESSAGES/kicadspoke.po` и
-`locales/ru/LC_MESSAGES/kicadspoke.po` (pybabel сохраняет уже переведённые строки, новые добавляет пустыми
+Извлекает все строки, обёрнутые в `_()` (`kicadstamp/`, `kicadstamp_cli.py`, `tools/`, `tests/`, ...) в
+`messages.pot`, сливает их с существующими `locales/en/LC_MESSAGES/kicadstamp.po` и
+`locales/ru/LC_MESSAGES/kicadstamp.po` (pybabel сохраняет уже переведённые строки, новые добавляет пустыми
 или помечает `#, fuzzy`, если нашёл похожую), компилирует оба каталога в `.mo`. Временный `messages.pot`
 удаляется в конце. Замороженные архивы (`files/`, `old/`, `arch/`, `test_sample/`) в сканирование не
 попадают. Требует `pip install babel` (уже в `requirements.txt`).
@@ -507,30 +507,30 @@ python tools/update_i18n.py
 #### Когда запускать
 
 - После добавления/изменения ЛЮБОГО текста, обёрнутого в `_(...)` (новый `logger.info`, новая fatal-ошибка,
-  новый argparse `help=`, и т.п.) — иначе `locales/*/kicadspoke.mo` устареет, и часть сообщений будет
+  новый argparse `help=`, и т.п.) — иначе `locales/*/kicadstamp.mo` устареет, и часть сообщений будет
   показываться на английском (fallback) даже при `LANG=ru`.
 - Каталоги коммитятся в git (`.po` и скомпилированные `.mo`) — запускать нужно ДО коммита, CI/build-хука на
   это нет.
 
 #### После запуска
 
-- Новые/изменившиеся строки в `locales/ru/LC_MESSAGES/kicadspoke.po` появляются с пустым `msgstr ""` (нужен
+- Новые/изменившиеся строки в `locales/ru/LC_MESSAGES/kicadstamp.po` появляются с пустым `msgstr ""` (нужен
   перевод) или с пометкой `#, fuzzy` (pybabel сам подобрал похожую по смыслу старую строку — **не доверять
   вслепую**, проверить и убрать метку `fuzzy`, иначе gettext игнорирует запись как черновую и показывает
   `msgid` (английский) вместо неё).
-- Найти непереведённые строки: `grep -B2 'msgstr ""' locales/ru/LC_MESSAGES/kicadspoke.po` (первое
+- Найти непереведённые строки: `grep -B2 'msgstr ""' locales/ru/LC_MESSAGES/kicadstamp.po` (первое
   совпадение — заголовок каталога с пустым `msgid ""`, это норма, не баг).
-- Проверить fuzzy-записи: `grep -c '#, fuzzy' locales/ru/LC_MESSAGES/kicadspoke.po`.
+- Проверить fuzzy-записи: `grep -c '#, fuzzy' locales/ru/LC_MESSAGES/kicadstamp.po`.
 
 #### Пример
 
 ```bash
 python tools/update_i18n.py
 # ... extracting messages from ...
-# updating catalog locales\en\LC_MESSAGES\kicadspoke.po based on messages.pot
-# updating catalog locales\ru\LC_MESSAGES\kicadspoke.po based on messages.pot
-# compiling catalog locales\en\LC_MESSAGES\kicadspoke.po to locales\en\LC_MESSAGES\kicadspoke.mo
-# compiling catalog locales\ru\LC_MESSAGES\kicadspoke.po to locales\ru\LC_MESSAGES\kicadspoke.mo
+# updating catalog locales\en\LC_MESSAGES\kicadstamp.po based on messages.pot
+# updating catalog locales\ru\LC_MESSAGES\kicadstamp.po based on messages.pot
+# compiling catalog locales\en\LC_MESSAGES\kicadstamp.po to locales\en\LC_MESSAGES\kicadstamp.mo
+# compiling catalog locales\ru\LC_MESSAGES\kicadstamp.po to locales\ru\LC_MESSAGES\kicadstamp.mo
 # ✅ Переводы обновлены.
 ```
 
@@ -538,38 +538,38 @@ python tools/update_i18n.py
 
 ## Диагностические команды (для отладки и тестирования)
 
-Эти команды вызывают диагностические скрипты из папки `kicadspoke/diagnostics/`. Они помогают проверить работу IPC, геометрию, чтение полей, флип и т.д.
+Эти команды вызывают диагностические скрипты из папки `kicadstamp/diagnostics/`. Они помогают проверить работу IPC, геометрию, чтение полей, флип и т.д.
 
 ### Проверка чтения пользовательского поля `Role`
 
 ```bash
-python -m kicadspoke.diagnostics.test_custom_fields C5 --field Role --verbose
+python -m kicadstamp.diagnostics.test_custom_fields C5 --field Role --verbose
 ```
 
 ### Тест перемещения одного компонента
 
 ```bash
 # Сдвинуть на +1 мм по X
-python -m kicadspoke.diagnostics.test_move_one_cap C5 --delta-mm 1.0
+python -m kicadstamp.diagnostics.test_move_one_cap C5 --delta-mm 1.0
 
 # Вернуть обратно
-python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
+python -m kicadstamp.diagnostics.test_move_one_cap C5 --revert
 ```
 
 ### Тест флипа компонента
 
 ```bash
-python -m kicadspoke.diagnostics.test_flip_one_cap C6
+python -m kicadstamp.diagnostics.test_flip_one_cap C6
 ```
 
 ### Тест создания одной via
 
 ```bash
 # Создать via рядом с C5
-python -m kicadspoke.diagnostics.test_create_one_via C5 --offset-mm 1.2
+python -m kicadstamp.diagnostics.test_create_one_via C5 --offset-mm 1.2
 
 # Удалить последнюю созданную via
-python -m kicadspoke.diagnostics.test_create_one_via --remove
+python -m kicadstamp.diagnostics.test_create_one_via --remove
 ```
 
 ### Тест на краш KiCad при первой записи (issue #24966)
@@ -578,26 +578,26 @@ python -m kicadspoke.diagnostics.test_create_one_via --remove
 [docs/diagnose_first_write_crash_ru.md](diagnose_first_write_crash_ru.md).
 
 ```bash
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # только чтения, безопасно
-python -m kicadspoke.diagnostics.diagnose_first_write_crash             # полный тест, может уронить KiCad
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8   # только чтения, безопасно
+python -m kicadstamp.diagnostics.diagnose_first_write_crash             # полный тест, может уронить KiCad
 ```
 
 ### Вывод информации о выделенных компонентах
 
 ```bash
-python -m kicadspoke.diagnostics.get_selected_component
+python -m kicadstamp.diagnostics.get_selected_component
 ```
 
 ### Получение bounding box пада
 
 ```bash
-python -m kicadspoke.diagnostics.get_pad_bbox --ref IC1 --pad 17
+python -m kicadstamp.diagnostics.get_pad_bbox --ref IC1 --pad 17
 ```
 
 ### Анализ keepout и позиций via
 
 ```bash
-python -m kicadspoke.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
+python -m kicadstamp.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
 ```
 
 ---
@@ -620,11 +620,11 @@ python -m kicadspoke.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
 Встроенная справка:
 
 ```bash
-python kicadspoke_cli.py --help
-python kicadspoke_cli.py apply --help
-python kicadspoke_cli.py extract --help
-python kicadspoke_cli.py undo --help
-python kicadspoke_cli.py clone-extract --help
+python kicadstamp_cli.py --help
+python kicadstamp_cli.py apply --help
+python kicadstamp_cli.py extract --help
+python kicadstamp_cli.py undo --help
+python kicadstamp_cli.py clone-extract --help
 ```
 
 ---
@@ -648,7 +648,7 @@ python kicadspoke_cli.py clone-extract --help
 ### Расстановка конденсаторов питания для FPGA (мастер-конфиг платы)
 
 ```bash
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --verbose --log-file logs/placer.log
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --verbose --log-file logs/placer.log
 ```
 
 ### Пересборка сгенерированных конфигов/таблицы кластеров для 10CL006
@@ -662,13 +662,13 @@ python tools/generate_10cl006.py
 ### Отмена расстановки
 
 ```bash
-python kicadspoke_cli.py undo --verbose
+python kicadstamp_cli.py undo --verbose
 ```
 
 ### Извлечение шаблона в JSON (рекомендуемый формат)
 
 ```bash
-python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
+python kicadstamp_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
   --origin-by-via-net '+3V3_VCCIO' \
   --param PWR_IN='+3V3' --param PWR_OUT='+3V3_VCCIO' \
   --net-template '+3V3_VCCIO={PWR_OUT}' --net-template '+3V3={PWR_IN}' \
@@ -678,7 +678,7 @@ python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter
 ### Применение клона с внешним файлом шаблонов
 
 ```bash
-python kicadspoke_cli.py apply config_with_templates_file.yaml --only fpga_filter_1v2_vccint
+python kicadstamp_cli.py apply config_with_templates_file.yaml --only fpga_filter_1v2_vccint
 ```
 
 ### Трансформация шаблона
@@ -691,13 +691,13 @@ python tools/transform_template.py -i templates/pi_filter_4.json -o templates/pi
 
 ```bash
 # Только чтения
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8
 
 # Полный тест (чтения + запись)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash
+python -m kicadstamp.diagnostics.diagnose_first_write_crash
 
 # С паузой 30 секунд перед записью
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --delay 30
 ```
 
 ---

@@ -1,4 +1,4 @@
-# kicadspoke/placement/planner.py
+# kicadstamp/placement/planner.py
 
 import logging
 from typing import List, Tuple, Optional

@@ -1,4 +1,4 @@
-# kicadspoke/placement/executor/base.py
+# kicadstamp/placement/executor/base.py
 from kipy.board_types import BoardLayer
 
 def layer_to_str(layer) -> str:

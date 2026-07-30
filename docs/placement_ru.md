@@ -1,4 +1,4 @@
-# `kicadspoke/placement` – Планирование и исполнение расстановки
+# `kicadstamp/placement` – Планирование и исполнение расстановки
 
 ## Назначение
 
@@ -114,7 +114,7 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 | `plan_tracks()` | Возвращает сохранённые `_planned_tracks` (без дополнительной обработки; коллизии не проверяются). |
 | `plan()` | Обратно совместимая обёртка (вызывает все три фазы подряд). Не рекомендуется для боевого использования. |
 
-**Используется в:** `kicadspoke_cli.py` для получения плана.
+**Используется в:** `kicadstamp_cli.py` для получения плана.
 
 ---
 
@@ -260,7 +260,7 @@ from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
   2. Выполнить `adapter.refresh_board()`.
   3. Выполнить `plan_vias()` → `execute_vias()` (с реестром via).
   4. Выполнить `plan_tracks()` → `execute_tracks()` (с реестром треков).
-  Это реализовано в `kicadspoke_cli.py:cmd_apply()`.
+  Это реализовано в `kicadstamp_cli.py:cmd_apply()`.
 
 - **Коллизии** – проверяются только для компонентов (опционально); треки не проверяются (полагаемся на DRC KiCad). Отключается флагом `--no-collision-check`.
 

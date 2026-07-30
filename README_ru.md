@@ -1,6 +1,6 @@
-# KiCadSpoke v1.4.0
+# KiCadStamp v1.4.0
 
-**KiCadSpoke** — это инструмент командной строки для автоматизации разводки и **клонирования блоков** печатных плат в **KiCad 10**. Он позволяет **реплицировать** (клонировать) повторяющиеся участки схемы и трассировки, автоматически размещать компоненты и переходные отверстия на основе **шаблонов** и **ролей**. Подключается к открытому экземпляру KiCad через IPC и выполняет:
+**KiCadStamp** — это инструмент командной строки для автоматизации разводки и **клонирования блоков** печатных плат в **KiCad 10**. Он позволяет **реплицировать** (клонировать) повторяющиеся участки схемы и трассировки, автоматически размещать компоненты и переходные отверстия на основе **шаблонов** и **ролей**. Подключается к открытому экземпляру KiCad через IPC и выполняет:
 
 - Перемещение компонентов (конденсаторов, резисторов, ферритов, кварцев и т.д.) на заданные позиции.
 - Создание via и **дорожек (треков)** с привязкой как к спице в целом, так и к отдельным компонентам.
@@ -36,13 +36,13 @@
 - **Дорожки (треки) в шаблонах** – шаблоны могут содержать прямые отрезки дорожек (ломаные поддерживаются через последовательность сегментов). Коллизии дорожек не проверяются автоматически (полагаемся на DRC KiCad).
 - **Внешние файлы шаблонов** – шаблоны можно хранить отдельно как JSON или YAML и подключать через `templates_file:` в основном конфиге, чтобы не загромождать основной файл геометрией.
 - **Разбиение профиля на файлы подсистем** – `include:` в корне профиля подключает один или несколько других YAML-файлов (каждый может нести любую комбинацию `extract_profiles`/`clone_placements`/`rules`/`templates`), рекурсивно, с `enabled: false` на записи инклюда, чтобы выключить всю подсистему разом. Независим от `templates_file` (см. [docs/commands_ru.md](docs/commands_ru.md) — семантика мёржа, дубликаты, циклы).
-- **Scripting API** – `kicadspoke.explore.Board` для точечных read-only запросов (`board.select(role=..., cluster=..., sheet=..., net=...)`), и `kicadspoke.author` для построения `ClonePlacement`/`Rule` в коде вместо копипаста YAML — с прямым запуском через `apply_config()` или сохранением в `include:`-совместимый YAML (см. [docs/scripting_ru.md](docs/scripting_ru.md)).
+- **Scripting API** – `kicadstamp.explore.Board` для точечных read-only запросов (`board.select(role=..., cluster=..., sheet=..., net=...)`), и `kicadstamp.author` для построения `ClonePlacement`/`Rule` в коде вместо копипаста YAML — с прямым запуском через `apply_config()` или сохранением в `include:`-совместимый YAML (см. [docs/scripting_ru.md](docs/scripting_ru.md)).
 
 ---
 
 ## Почему это не просто конфиг, а инструмент клонирования PCB
 
-KiCadSpoke изначально создавался для решения конкретной проблемы: как быстро и без ошибок размножить десятки одинаковых блоков на сложных платах (FPGA, многоканальные ЦАП, массивы питания). В отличие от ручного копирования (Ctrl+C/Ctrl+V) в KiCad, наш подход:
+KiCadStamp изначально создавался для решения конкретной проблемы: как быстро и без ошибок размножить десятки одинаковых блоков на сложных платах (FPGA, многоканальные ЦАП, массивы питания). В отличие от ручного копирования (Ctrl+C/Ctrl+V) в KiCad, наш подход:
 
 - **Автоматически подбирает компоненты** по ролям, а не по refdes – вам не нужно править сотни ссылок при реаннотации.
 - **Сохраняет связность** – via и дорожки клонируются вместе с компонентами, что исключает ручную перерисовку.
@@ -51,7 +51,7 @@ KiCadSpoke изначально создавался для решения ко�
 - **Интегрируется с Git** – благодаря разделению шаблонов (JSON) и размещения (YAML/генераторы) изменения легко отслеживать в системе контроля версий.
 - **Поддерживает дорожки** – теперь можно клонировать не только компоненты и via, но и готовую трассировку внутри блока.
 
-Это делает KiCadSpoke идеальным выбором для проектов с высокой степенью повторяемости: от плат питания до многоканальных измерительных систем.
+Это делает KiCadStamp идеальным выбором для проектов с высокой степенью повторяемости: от плат питания до многоканальных измерительных систем.
 
 ---
 
@@ -75,7 +75,7 @@ pip install kipy pyyaml sexpdata
 3. Выполните **Update PCB from Schematic**, чтобы поле перенеслось на плату.
 4. Проверьте читаемость поля диагностическим скриптом:
    ```bash
-   python -m kicadspoke.diagnostics.test_custom_field C5 --field Role
+   python -m kicadstamp.diagnostics.test_custom_field C5 --field Role
    ```
 
 ---
@@ -268,12 +268,12 @@ thermal_via_array:
 
 ## Команды CLI
 
-Все команды выполняются через `kicadspoke_cli.py`. Если подкоманда не указана, подразумевается `apply`.
+Все команды выполняются через `kicadstamp_cli.py`. Если подкоманда не указана, подразумевается `apply`.
 
 ### `apply` – применить расстановку
 
 ```bash
-python kicadspoke_cli.py apply config.yaml [options]
+python kicadstamp_cli.py apply config.yaml [options]
 ```
 
 Опции:
@@ -289,7 +289,7 @@ python kicadspoke_cli.py apply config.yaml [options]
 ### `extract` – извлечь шаблон из выделения (расширенный)
 
 ```bash
-python kicadspoke_cli.py extract --name имя_шаблона --output config.yaml [--verbose] [--log-file] [--param KEY=VALUE] [--net-template ЛИТЕРАЛ=ПАТТЕРН] [--origin-by-via-net NET] [--origin-by-component-role ROLE]
+python kicadstamp_cli.py extract --name имя_шаблона --output config.yaml [--verbose] [--log-file] [--param KEY=VALUE] [--net-template ЛИТЕРАЛ=ПАТТЕРН] [--origin-by-via-net NET] [--origin-by-component-role ROLE]
 ```
 
 Новые опции:
@@ -305,13 +305,13 @@ python kicadspoke_cli.py extract --name имя_шаблона --output config.ya
 ### `undo` – откатить последнюю операцию
 
 ```bash
-python kicadspoke_cli.py undo [--verbose] [--log-file]
+python kicadstamp_cli.py undo [--verbose] [--log-file]
 ```
 
 ### `clone-extract` – снятие снимка канала (файловый клонер)
 
 ```bash
-python kicadspoke_cli.py clone-extract --net project.net --pcb project.kicad_pcb --channel Channel_0 --output snapshot.yaml [--verbose]
+python kicadstamp_cli.py clone-extract --net project.net --pcb project.kicad_pcb --channel Channel_0 --output snapshot.yaml [--verbose]
 ```
 
 Анализирует иерархический проект, извлекает все компоненты, дорожки и via, относящиеся к указанному каналу, и сохраняет снимок в YAML. Полезно для изучения структуры перед написанием конфига клонирования.
@@ -322,28 +322,28 @@ python kicadspoke_cli.py clone-extract --net project.net --pcb project.kicad_pcb
 
 ### 1. Стандартный запуск
 ```bash
-python kicadspoke_cli.py 10CL006YE144C8G.yaml
+python kicadstamp_cli.py 10CL006YE144C8G.yaml
 ```
 
 ### 2. Просмотр плана без изменений
 ```bash
-python kicadspoke_cli.py config.yaml --dry-run
+python kicadstamp_cli.py config.yaml --dry-run
 ```
 
 ### 3. Обработка одного клона при нескольких в режиме выделения
 ```bash
-python kicadspoke_cli.py config.yaml --only pi_filter_vccio
+python kicadstamp_cli.py config.yaml --only pi_filter_vccio
 ```
 
 ### 4. Извлечение шаблона с параметризацией и origin по via
 Выделите элементы на плате, затем:
 ```bash
-python kicadspoke_cli.py extract --name my_filter --output my_config.json --net-template "DAC1_DB1=DAC{channel}_DB1" --param channel=1 --origin-by-via-net "/Channel_0/DAC/+3V3_CLKVDD" --verbose
+python kicadstamp_cli.py extract --name my_filter --output my_config.json --net-template "DAC1_DB1=DAC{channel}_DB1" --param channel=1 --origin-by-via-net "/Channel_0/DAC/+3V3_CLKVDD" --verbose
 ```
 
 ### 5. Откат
 ```bash
-python kicadspoke_cli.py undo --verbose
+python kicadstamp_cli.py undo --verbose
 ```
 
 ---
@@ -363,7 +363,7 @@ KiCad. На практике уязвима именно *первая запи�
 (#24970) и весь набор инструментов охоты за крашами — см. [docs/crash_hunting_ru.md](./docs/crash_hunting_ru.md).
 
 ### Диагностические скрипты
-В папке `kicadspoke/diagnostics/` находятся скрипты для отладки:
+В папке `kicadstamp/diagnostics/` находятся скрипты для отладки:
 - `diagnose_first_write_crash.py` – воспроизводит лесенку чтений/записи для локализации краша, см.
   [docs/diagnose_first_write_crash_ru.md](./docs/diagnose_first_write_crash_ru.md).
 - `test_custom_fields.py` – проверяет чтение поля `Role`.
@@ -379,9 +379,9 @@ KiCad. На практике уязвима именно *первая запи�
 ## Структура проекта (кратко)
 
 ```
-kicadspoke/
+kicadstamp/
 ├── __init__.py
-├── kicadspoke_cli.py          # CLI точка входа
+├── kicadstamp_cli.py          # CLI точка входа
 ├── apply_pipeline.py          # cmd_apply и класс ApplyPipeline
 ├── cli_extract.py             # cmd_extract (логика команды extract)
 ├── logging_setup.py           # Настройка логирования
@@ -437,8 +437,8 @@ kicadspoke/
 
 ## Версионирование
 
-Единый источник правды — `__version__` в [`kicadspoke/__init__.py`](./kicadspoke/__init__.py): заголовок
-этого README и `kicadspoke_cli.py --version`/`-V` читают версию оттуда, а не хранят отдельный литерал.
+Единый источник правды — `__version__` в [`kicadstamp/__init__.py`](./kicadstamp/__init__.py): заголовок
+этого README и `kicadstamp_cli.py --version`/`-V` читают версию оттуда, а не хранят отдельный литерал.
 Считаем по сессиям/этапам, не по коммитам: MINOR растёт на 1 за каждый заметный блок работы (например,
 одна сессия архитектурного рефакторинга — один шаг, независимо от числа коммитов внутри), PATCH — точечные
 фиксы между этапами, MAJOR — только реальные breaking-изменения CLI или формата YAML-конфига.
@@ -451,4 +451,4 @@ kicadspoke/
 
 ---
 
-**KiCadSpoke** — это не просто утилита, а современная альтернатива ручному копированию блоков в KiCad.
+**KiCadStamp** — это не просто утилита, а современная альтернатива ручному копированию блоков в KiCad.

@@ -1,17 +1,17 @@
 # Scripting: `explore` and `author`
 
-Two additive, optional Python modules for using kicadspoke as a library instead of (or alongside)
+Two additive, optional Python modules for using kicadstamp as a library instead of (or alongside)
 the CLI/YAML workflow — nothing here changes the YAML config format or the `apply`/`extract`
 pipeline; both modules are thin, read-only-friendly wrappers around what already exists.
 
-## `kicadspoke.explore` — read-only querying
+## `kicadstamp.explore` — read-only querying
 
 Grew out of a recurring pattern: answering "which components have Role=X", "what net is this
 pad on", "which sheet instance (`Channel_0`/`Channel_1`/...) is this footprint under" by writing
 a new throwaway script every time. `Board.select()` replaces that with one reusable call.
 
 ```python
-from kicadspoke.explore import Board
+from kicadstamp.explore import Board
 
 board = Board.connect(schematic_dir="../test_boards/3CH-AWG-TIA")
 
@@ -50,14 +50,14 @@ comp.fp.position      # raw kipy object
 own. Call `board.refresh()` after any board change (a manual edit in KiCad, or a scripted
 `apply_config()` run) before trusting the next `select()`.
 
-## `kicadspoke.author` — coding placement instead of copy-pasting YAML
+## `kicadstamp.author` — coding placement instead of copy-pasting YAML
 
 Per-channel `clone_placements` written by hand are exactly where copy-paste mistakes creep in
 (wrong `nets:` key, duplicate `anchor_pad:`, wrong `anchor_sheet`) — a `for` loop can't make
-those. `ClonePlacement`/`Rule` (`kicadspoke.config`) are plain dataclasses; build them directly:
+those. `ClonePlacement`/`Rule` (`kicadstamp.config`) are plain dataclasses; build them directly:
 
 ```python
-from kicadspoke.config import ClonePlacement
+from kicadstamp.config import ClonePlacement
 
 clones = [
     ClonePlacement(
@@ -74,8 +74,8 @@ clones = [
 **Option (a) — straight into `apply`:**
 
 ```python
-from kicadspoke.config import Config, load_config
-from kicadspoke.author import apply_config
+from kicadstamp.config import Config, load_config
+from kicadstamp.author import apply_config
 
 cfg = load_config("profiles/3ch-awg-tia.yaml")   # or build a Config() from scratch
 cfg.clone_placements.extend(clones)
@@ -93,7 +93,7 @@ it). Point it at the real profile path you're extending, or set `cfg.registry_pa
 authoring time):
 
 ```python
-from kicadspoke.author import dump_clone_placements
+from kicadstamp.author import dump_clone_placements
 
 dump_clone_placements(clones, "profiles/subsystems/dac_channels.yaml")
 ```

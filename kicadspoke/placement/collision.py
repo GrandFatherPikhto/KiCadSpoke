@@ -1,4 +1,4 @@
-# kicadspoke/placement/collision.py
+# kicadstamp/placement/collision.py
 
 """
 * _radius_from_bbox – computes radius as half the diagonal.

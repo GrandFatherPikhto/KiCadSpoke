@@ -6,9 +6,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 from kipy.geometry import Vector2
-from kicadspoke.config import ClonePlacement, SpokeTemplate, TemplateVia, TemplateComponentSlot
-from kicadspoke.geometry.clone_geometry import apply_clone_geometry
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.config import ClonePlacement, SpokeTemplate, TemplateVia, TemplateComponentSlot
+from kicadstamp.geometry.clone_geometry import apply_clone_geometry
+from kicadstamp.exceptions import ValidationError
 
 MM = 1_000_000
 

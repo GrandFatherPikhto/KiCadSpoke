@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from kicadspoke.cloner.netlist import parse_netlist
+from kicadstamp.cloner.netlist import parse_netlist
 import kipy
 
 def build_sheet_path_map(net_path):

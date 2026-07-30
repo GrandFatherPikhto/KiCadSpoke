@@ -1,8 +1,8 @@
-# KiCadSpoke Architecture (Current Version)
+# KiCadStamp Architecture (Current Version)
 
 ## 1. Overview
 
-**KiCadSpoke** is a command‑line tool for automated placement of components, vias, and tracks on PCBs in **KiCad 10** using **spoke templates**. It is an advanced script‑based alternative to the KiCad Replicate Layout plugin, designed for complex multi‑channel projects and automated design reuse via the IPC API.
+**KiCadStamp** is a command‑line tool for automated placement of components, vias, and tracks on PCBs in **KiCad 10** using **spoke templates**. It is an advanced script‑based alternative to the KiCad Replicate Layout plugin, designed for complex multi‑channel projects and automated design reuse via the IPC API.
 
 The tool connects to a running KiCad instance via IPC (the `kipy` library) and performs:
 
@@ -36,9 +36,9 @@ The core concept is a **spoke** – a set of components, vias, and tracks that b
 ## 3. Project Structure
 
 ```
-kicadspoke/
+kicadstamp/
 ├── __init__.py
-├── kicadspoke_cli.py                 # CLI entry point
+├── kicadstamp_cli.py                 # CLI entry point
 ├── apply_pipeline.py                 # cmd_apply and ApplyPipeline class
 ├── cli_extract.py                    # cmd_extract command logic
 ├── logging_setup.py                  # Logging configuration
@@ -178,14 +178,14 @@ Modules that work with coordinates, independent of KiCad:
 
 ### 4.10. User Interface (CLI)
 
-- **`kicadspoke_cli.py`** – the main executable, handling argument parsing, config loading, KiCad connection, validation, planning, and execution (three phases: moves → vias → tracks), plus `undo`, `extract`, `clone-extract`, and the optional `--only` flag for processing only the named `rules`/`clone_placements`/`thermal_via_array`.
+- **`kicadstamp_cli.py`** – the main executable, handling argument parsing, config loading, KiCad connection, validation, planning, and execution (three phases: moves → vias → tracks), plus `undo`, `extract`, `clone-extract`, and the optional `--only` flag for processing only the named `rules`/`clone_placements`/`thermal_via_array`.
 
 ---
 
 ## 5. Module Interaction (Workflow)
 
 ```
-1. CLI start (kicadspoke_cli.py)
+1. CLI start (kicadstamp_cli.py)
    │
    ├── Parse arguments (argparse)
    ├── Setup logging
@@ -340,7 +340,7 @@ These decisions ensure flexibility, reliability, and ease of use for complex pro
 
 ## 11. Conclusion
 
-The architecture of KiCadSpoke provides:
+The architecture of KiCadStamp provides:
 
 - **Flexibility** – easy addition of new templates, roles, via/track types, and cloned sections.
 - **Reliability** – three‑phase execution, validation, idempotency with live‑board reconciliation, registry, and undo.

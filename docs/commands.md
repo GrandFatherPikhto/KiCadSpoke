@@ -1,13 +1,13 @@
-# KiCadSpoke Commands (CLI)
+# KiCadStamp Commands (CLI)
 
-This document provides a complete reference for `kicadspoke_cli.py` commands and flags, config generators from `tools/`, and practical examples for typical scenarios. Verified against the code in the `main` branch (the project does not maintain version numbers/tags; refer to the commit date).
+This document provides a complete reference for `kicadstamp_cli.py` commands and flags, config generators from `tools/`, and practical examples for typical scenarios. Verified against the code in the `main` branch (the project does not maintain version numbers/tags; refer to the commit date).
 
 ---
 
 ## Basic Syntax
 
 ```bash
-python kicadspoke_cli.py <command> [options]
+python kicadstamp_cli.py <command> [options]
 ```
 
 If no command is given, `apply` is assumed.
@@ -27,14 +27,14 @@ absolute coordinate) go first, in their YAML order. Found via a real bug (2026�
 a role inside another clone's own template landed at that role's OLD position, not where the same run was
 about to move it to. A config where two or more items anchor on each other's output has no valid order and
 is a fatal `ValidationError` before anything is touched on the board (see
-`kicadspoke/placement/dependency_order.py`). `apply --dry-run` prints the resolved order but, since it
+`kicadstamp/placement/dependency_order.py`). `apply --dry-run` prints the resolved order but, since it
 never actually moves anything, still plans every item from one unchanged snapshot — positions for items
 later in the chain may come out different in a real (non‑dry‑run) apply; the dry‑run output says so.
 
 ### Syntax
 
 ```bash
-python kicadspoke_cli.py apply <config.yaml> [options]
+python kicadstamp_cli.py apply <config.yaml> [options]
 ```
 
 ### Options
@@ -126,57 +126,57 @@ that stay otherwise enabled.
 #### Standard run (place components, vias, and tracks)
 
 ```bash
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml
 ```
 
 #### Run with verbose logging to a file
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --verbose --log-file logs/placer.log
+python kicadstamp_cli.py apply 10CL006YE144C8G.yaml --verbose --log-file logs/placer.log
 ```
 
 #### Preview (dry‑run) – does not modify the board
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --dry-run
+python kicadstamp_cli.py apply 10CL006YE144C8G.yaml --dry-run
 ```
 
 #### Process only one clone (e.g., for debugging)
 
 ```bash
-python kicadspoke_cli.py apply templates\pi_filter_vccio.yaml --only pi_filter_vccio
+python kicadstamp_cli.py apply templates\pi_filter_vccio.yaml --only pi_filter_vccio
 ```
 
 #### Isolated run of a single board section (--only)
 
 ```bash
 # Only one clone_placement, no FPGA spokes or thermal vias in the log
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --dry-run
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --dry-run
 
 # Multiple names/identities at once (a rule via its net + a named thermal_via_array), repeat flag or comma
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only +3V3_VCCIO,fpga_thermal
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --only +3V3_VCCIO,fpga_thermal
 ```
 
 #### Narrow by physical instance instead of by name (--cluster)
 
 ```bash
 # Only spokes/clones/thermal-vias whose Cluster matches this channel (segment-prefix match)
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --cluster Channel_0 --dry-run
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --cluster Channel_0 --dry-run
 
 # Combine with --only – AND, not OR: this clone_placement, AND only within this channel
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --cluster Channel_0
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --cluster Channel_0
 ```
 
 #### Disable collision checking
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --no-collision-check
+python kicadstamp_cli.py apply 10CL006YE144C8G.yaml --no-collision-check
 ```
 
 #### Increase timeout for slow KiCad sessions
 
 ```bash
-python kicadspoke_cli.py apply 10CL006YE144C8G.yaml --timeout-ms 30000
+python kicadstamp_cli.py apply 10CL006YE144C8G.yaml --timeout-ms 30000
 ```
 
 ---
@@ -188,13 +188,13 @@ Finds the most recent JSON log in the `logs/` folder and restores the board (mov
 ### Syntax
 
 ```bash
-python kicadspoke_cli.py undo [--verbose] [--log-file]
+python kicadstamp_cli.py undo [--verbose] [--log-file]
 ```
 
 ### Example
 
 ```bash
-python kicadspoke_cli.py undo --verbose
+python kicadstamp_cli.py undo --verbose
 ```
 
 ---
@@ -206,7 +206,7 @@ Creates a spoke template from the current selection in the PCB editor. Each sele
 ### Syntax
 
 ```bash
-python kicadspoke_cli.py extract --name <template_name> --output <file> [--timeout-ms] [--verbose] [--log-file] [--param KEY=VALUE] [--net-template LITERAL=PATTERN] [--origin-by-via-net NET] [--origin-by-component-role ROLE] [--origin-by-component-pad PAD] [--profiles FILE] [--profile NAME]
+python kicadstamp_cli.py extract --name <template_name> --output <file> [--timeout-ms] [--verbose] [--log-file] [--param KEY=VALUE] [--net-template LITERAL=PATTERN] [--origin-by-via-net NET] [--origin-by-component-role ROLE] [--origin-by-component-pad PAD] [--profiles FILE] [--profile NAME]
 ```
 
 ### Options
@@ -242,7 +242,7 @@ mismatch as a copy‑paste trap).
 #### Extract a template to JSON with net parametrisation and origin by via
 
 ```bash
-python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
+python kicadstamp_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
   --origin-by-via-net '+3V3_VCCIO' \
   --param PWR_IN='+3V3' --param PWR_OUT='+3V3_VCCIO' \
   --net-template '+3V3_VCCIO={PWR_OUT}' --net-template '+3V3={PWR_IN}' \
@@ -274,19 +274,19 @@ extract_profiles:
 
 Run:
 ```bash
-python kicadspoke_cli.py extract --profiles extract_profiles.yaml --profile my_filter --verbose
+python kicadstamp_cli.py extract --profiles extract_profiles.yaml --profile my_filter --verbose
 ```
 
 #### Extract a template to YAML (no parametrisation)
 
 ```bash
-python kicadspoke_cli.py extract --name my_filter --output my_filter.yaml --verbose
+python kicadstamp_cli.py extract --name my_filter --output my_filter.yaml --verbose
 ```
 
 #### Add a template to an existing config (YAML)
 
 ```bash
-python kicadspoke_cli.py extract --name my_filter --output 10CL006YE144C8G.yaml --verbose
+python kicadstamp_cli.py extract --name my_filter --output 10CL006YE144C8G.yaml --verbose
 ```
 
 Note: if a template with the same name already exists, it will be overwritten.
@@ -300,7 +300,7 @@ Analyzes a hierarchical project (without IPC) and extracts all components, track
 ### Syntax
 
 ```bash
-python kicadspoke_cli.py clone-extract --net <file.net> --pcb <file.kicad_pcb> --channel <channel_name> --output <file.yaml> [--profiles FILE] [--profile NAME] [--verbose]
+python kicadstamp_cli.py clone-extract --net <file.net> --pcb <file.kicad_pcb> --channel <channel_name> --output <file.yaml> [--profiles FILE] [--profile NAME] [--verbose]
 ```
 
 ### Options
@@ -318,7 +318,7 @@ python kicadspoke_cli.py clone-extract --net <file.net> --pcb <file.kicad_pcb> -
 ### Example
 
 ```bash
-python kicadspoke_cli.py clone-extract --net my_project.net --pcb my_project.kicad_pcb --channel Channel_0 --output snapshot.yaml --verbose
+python kicadstamp_cli.py clone-extract --net my_project.net --pcb my_project.kicad_pcb --channel Channel_0 --output snapshot.yaml --verbose
 ```
 
 Using a profile (`clone_profiles.yaml`):
@@ -333,7 +333,7 @@ clone_profiles:
 
 Run:
 ```bash
-python kicadspoke_cli.py clone-extract --profiles clone_profiles.yaml --profile channel0 --verbose
+python kicadstamp_cli.py clone-extract --profiles clone_profiles.yaml --profile channel0 --verbose
 ```
 
 The resulting YAML file contains a complete overview of the channel, which can be used to create a template and ClonePlacement entries.
@@ -436,9 +436,9 @@ Use it as a starting point: copy it, replace `TEMPLATE` with a real template (e.
 
 ### `update_i18n.py` – rebuild the gettext translation catalogs
 
-Extracts every string wrapped in `_()` (`kicadspoke/`, `kicadspoke_cli.py`, `tools/`, `tests/`, ...) into
-`messages.pot`, merges it into the existing `locales/en/LC_MESSAGES/kicadspoke.po` and
-`locales/ru/LC_MESSAGES/kicadspoke.po` (pybabel keeps already‑translated strings, adds new ones empty or
+Extracts every string wrapped in `_()` (`kicadstamp/`, `kicadstamp_cli.py`, `tools/`, `tests/`, ...) into
+`messages.pot`, merges it into the existing `locales/en/LC_MESSAGES/kicadstamp.po` and
+`locales/ru/LC_MESSAGES/kicadstamp.po` (pybabel keeps already‑translated strings, adds new ones empty or
 marks them `#, fuzzy` if it found a similar old one), then compiles both catalogs to `.mo`. The temporary
 `messages.pot` is removed at the end. Frozen archives (`files/`, `old/`, `arch/`, `test_sample/`) are
 excluded from the scan. Requires `pip install babel` (already in `requirements.txt`).
@@ -454,30 +454,30 @@ No arguments or flags – paths and languages (`en`, `ru`) are hard‑coded in t
 #### When to run it
 
 - After adding or changing ANY text wrapped in `_(...)` (a new `logger.info`, a new fatal error, a new
-  argparse `help=`, etc.) – otherwise `locales/*/kicadspoke.mo` goes stale and some messages keep showing in
+  argparse `help=`, etc.) – otherwise `locales/*/kicadstamp.mo` goes stale and some messages keep showing in
   English (fallback) even under `LANG=ru`.
 - The catalogs are committed to git (`.po` and the compiled `.mo`) – run this BEFORE committing; there is no
   CI/build hook that does it for you.
 
 #### After running it
 
-- New/changed strings in `locales/ru/LC_MESSAGES/kicadspoke.po` show up with an empty `msgstr ""` (needs
+- New/changed strings in `locales/ru/LC_MESSAGES/kicadstamp.po` show up with an empty `msgstr ""` (needs
   translation) or marked `#, fuzzy` (pybabel guessed a similar old string by itself – **don't trust it
   blindly**, review it and remove the `fuzzy` marker, otherwise gettext treats the entry as a draft and shows
   the `msgid` (English) instead).
-- Find untranslated strings: `grep -B2 'msgstr ""' locales/ru/LC_MESSAGES/kicadspoke.po` (the first match is
+- Find untranslated strings: `grep -B2 'msgstr ""' locales/ru/LC_MESSAGES/kicadstamp.po` (the first match is
   the catalog header with an empty `msgid ""` too – that's expected, not a bug).
-- Check fuzzy entries: `grep -c '#, fuzzy' locales/ru/LC_MESSAGES/kicadspoke.po`.
+- Check fuzzy entries: `grep -c '#, fuzzy' locales/ru/LC_MESSAGES/kicadstamp.po`.
 
 #### Example
 
 ```bash
 python tools/update_i18n.py
 # ... extracting messages from ...
-# updating catalog locales\en\LC_MESSAGES\kicadspoke.po based on messages.pot
-# updating catalog locales\ru\LC_MESSAGES\kicadspoke.po based on messages.pot
-# compiling catalog locales\en\LC_MESSAGES\kicadspoke.po to locales\en\LC_MESSAGES\kicadspoke.mo
-# compiling catalog locales\ru\LC_MESSAGES\kicadspoke.po to locales\ru\LC_MESSAGES\kicadspoke.mo
+# updating catalog locales\en\LC_MESSAGES\kicadstamp.po based on messages.pot
+# updating catalog locales\ru\LC_MESSAGES\kicadstamp.po based on messages.pot
+# compiling catalog locales\en\LC_MESSAGES\kicadstamp.po to locales\en\LC_MESSAGES\kicadstamp.mo
+# compiling catalog locales\ru\LC_MESSAGES\kicadstamp.po to locales\ru\LC_MESSAGES\kicadstamp.mo
 # ✅ Translations updated.
 ```
 
@@ -485,38 +485,38 @@ python tools/update_i18n.py
 
 ## Diagnostic commands (debugging and testing)
 
-These commands execute diagnostic scripts located in `kicadspoke/diagnostics/`. They help test IPC, geometry, field reading, flipping, etc.
+These commands execute diagnostic scripts located in `kicadstamp/diagnostics/`. They help test IPC, geometry, field reading, flipping, etc.
 
 ### Check reading of the `Role` custom field
 
 ```bash
-python -m kicadspoke.diagnostics.test_custom_fields C5 --field Role --verbose
+python -m kicadstamp.diagnostics.test_custom_fields C5 --field Role --verbose
 ```
 
 ### Test moving a single component
 
 ```bash
 # Shift by +1 mm along X
-python -m kicadspoke.diagnostics.test_move_one_cap C5 --delta-mm 1.0
+python -m kicadstamp.diagnostics.test_move_one_cap C5 --delta-mm 1.0
 
 # Revert the shift
-python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
+python -m kicadstamp.diagnostics.test_move_one_cap C5 --revert
 ```
 
 ### Test component flip
 
 ```bash
-python -m kicadspoke.diagnostics.test_flip_one_cap C6
+python -m kicadstamp.diagnostics.test_flip_one_cap C6
 ```
 
 ### Test creating a single via
 
 ```bash
 # Create a via next to C5
-python -m kicadspoke.diagnostics.test_create_one_via C5 --offset-mm 1.2
+python -m kicadstamp.diagnostics.test_create_one_via C5 --offset-mm 1.2
 
 # Remove the last created via
-python -m kicadspoke.diagnostics.test_create_one_via --remove
+python -m kicadstamp.diagnostics.test_create_one_via --remove
 ```
 
 ### Test for KiCad crash on first write (issue #24966)
@@ -525,26 +525,26 @@ Full reference (parameters, hypotheses, output, dependencies) moved to a standal
 [docs/diagnose_first_write_crash.md](diagnose_first_write_crash.md).
 
 ```bash
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # read-only, safe
-python -m kicadspoke.diagnostics.diagnose_first_write_crash             # full test, may crash KiCad
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8   # read-only, safe
+python -m kicadstamp.diagnostics.diagnose_first_write_crash             # full test, may crash KiCad
 ```
 
 ### Display information about selected components
 
 ```bash
-python -m kicadspoke.diagnostics.get_selected_component
+python -m kicadstamp.diagnostics.get_selected_component
 ```
 
 ### Get a pad's bounding box
 
 ```bash
-python -m kicadspoke.diagnostics.get_pad_bbox --ref IC1 --pad 17
+python -m kicadstamp.diagnostics.get_pad_bbox --ref IC1 --pad 17
 ```
 
 ### Analyze keepout and via positions
 
 ```bash
-python -m kicadspoke.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
+python -m kicadstamp.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
 ```
 
 ---
@@ -565,11 +565,11 @@ python -m kicadspoke.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
 ## Built‑in help
 
 ```bash
-python kicadspoke_cli.py --help
-python kicadspoke_cli.py apply --help
-python kicadspoke_cli.py extract --help
-python kicadspoke_cli.py undo --help
-python kicadspoke_cli.py clone-extract --help
+python kicadstamp_cli.py --help
+python kicadstamp_cli.py apply --help
+python kicadstamp_cli.py extract --help
+python kicadstamp_cli.py undo --help
+python kicadstamp_cli.py clone-extract --help
 ```
 
 ---
@@ -593,7 +593,7 @@ python kicadspoke_cli.py clone-extract --help
 ### Place decoupling capacitors for an FPGA (master config for the board)
 
 ```bash
-python kicadspoke_cli.py apply profiles/3ch-awg-tia.yaml --verbose --log-file logs/placer.log
+python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --verbose --log-file logs/placer.log
 ```
 
 ### Regenerate generated configs/cluster table for 10CL006
@@ -607,13 +607,13 @@ Then run `apply profiles/3ch-awg-tia.yaml --dry-run --verbose` to verify that th
 ### Undo placement
 
 ```bash
-python kicadspoke_cli.py undo --verbose
+python kicadstamp_cli.py undo --verbose
 ```
 
 ### Extract a template to JSON (recommended format)
 
 ```bash
-python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
+python kicadstamp_cli.py extract --name pi_filter_4 --output templates/pi_filter_4.json \
   --origin-by-via-net '+3V3_VCCIO' \
   --param PWR_IN='+3V3' --param PWR_OUT='+3V3_VCCIO' \
   --net-template '+3V3_VCCIO={PWR_OUT}' --net-template '+3V3={PWR_IN}' \
@@ -623,7 +623,7 @@ python kicadspoke_cli.py extract --name pi_filter_4 --output templates/pi_filter
 ### Apply a clone using an external template file
 
 ```bash
-python kicadspoke_cli.py apply config_with_templates_file.yaml --only fpga_filter_1v2_vccint
+python kicadstamp_cli.py apply config_with_templates_file.yaml --only fpga_filter_1v2_vccint
 ```
 
 ### Transform a template
@@ -636,13 +636,13 @@ python tools/transform_template.py -i templates/pi_filter_4.json -o templates/pi
 
 ```bash
 # Read‑only
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8
 
 # Full test (reads + write)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash
+python -m kicadstamp.diagnostics.diagnose_first_write_crash
 
 # With a 30‑second pause before write
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --delay 30
 ```
 
 ---

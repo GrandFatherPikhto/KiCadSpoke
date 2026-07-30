@@ -5,7 +5,7 @@ dedupe_vias_tracks.py — finds vias/tracks stacked on top of each other at
 deletes all but one of each duplicate group.
 
 Why this exists (see techdocs/handoff/ 2026-07-29 Power duplicate incident):
-registry.json bookkeeping (kicadspoke/registry.py) only protects against
+registry.json bookkeeping (kicadstamp/registry.py) only protects against
 duplicates within ONE registry file. If the same physical clone_placement
 ever gets applied under two different registry_path/track_registry_path
 (e.g. registry_path added to a config after some vias were already created
@@ -53,9 +53,9 @@ from typing import Callable, List, Sequence, Tuple, TypeVar
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.utils.units import MM
-from kicadspoke.constants import POSITION_TOLERANCE_MM
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.utils.units import MM
+from kicadstamp.constants import POSITION_TOLERANCE_MM
 from kipy.board_types import BoardLayer, Via, Track
 
 T = TypeVar("T")

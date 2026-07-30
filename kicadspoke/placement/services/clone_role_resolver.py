@@ -1,4 +1,4 @@
-# kicadspoke/placement/services/clone_role_resolver.py
+# kicadstamp/placement/services/clone_role_resolver.py
 """
 clone_role_resolver.py — role‑to‑ref mapping for ClonePlacement, two independent mechanisms:
 
@@ -416,7 +416,7 @@ def _fp_on_sheet(fp, anchor_sheet: str, sheet_names: Dict[str, str]) -> bool:
     """
     anchor_sheet appears as ONE OF THE SEGMENTS of the human‑readable path of fp
     (not necessarily the last one — the component may be deeper than the specified
-    sheet). The path is built via sheet_names (see kicadspoke/sheet_names.py) —
+    sheet). The path is built via sheet_names (see kicadstamp/sheet_names.py) —
     direct parsing of .kicad_sch, empirically confirmed on a real project
     (0 conflicts, 0 unresolved UUIDs on mishin‑coil). Works for ANY component —
     unlike the previous approach via local net names, does not require fp to have
@@ -439,7 +439,7 @@ def resolve_footprint_by_role(adapter, anchor_role: str, anchor_sheet: Optional[
 
       1. candidates = all footprints with Role == anchor_role.
       2. several — narrow by anchor_sheet (if set): the human‑readable path of fp
-         (via sheet_names, see kicadspoke/sheet_names.py) contains this segment
+         (via sheet_names, see kicadstamp/sheet_names.py) contains this segment
          (see _fp_on_sheet).
       2b. still several — narrow by anchor_cluster (if set):
           Cluster field matches by prefix segments (see _cluster_prefix_match) —

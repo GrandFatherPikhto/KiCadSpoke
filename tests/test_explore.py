@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for kicadspoke/explore.py — read-only Board/select() facade."""
+"""Tests for kicadstamp/explore.py — read-only Board/select() facade."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -7,8 +7,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from unittest.mock import MagicMock
 from kipy.board_types import FootprintInstance
 
-from kicadspoke.constants import ROLE_FIELD_NAME, CLUSTER_FIELD_NAME
-from kicadspoke.explore import Board
+from kicadstamp.constants import ROLE_FIELD_NAME, CLUSTER_FIELD_NAME
+from kicadstamp.explore import Board
 
 
 def _make_pad(number, net_name):

@@ -1,8 +1,8 @@
-# kicadspoke/apply_pipeline.py
+# kicadstamp/apply_pipeline.py
 """
 apply_pipeline.py — orchestrates the full ``apply`` pipeline.
 
-Extracted from kicadspoke_cli.py's cmd_apply() to separate pipeline orchestration
+Extracted from kicadstamp_cli.py's cmd_apply() to separate pipeline orchestration
 from CLI argument parsing.  The pipeline is:
 
     load config
@@ -419,11 +419,11 @@ def cmd_apply(args, cfg=None, ctx=None):
     """Thin delegator from CLI/author to :class:`ApplyPipeline`.
 
     Accepts either CLI *args* (argparse.Namespace) or keyword equivalents so
-    both :mod:`kicadspoke_cli` and :mod:`kicadspoke.author` can call it without
+    both :mod:`kicadstamp_cli` and :mod:`kicadstamp.author` can call it without
     late imports.
 
-    Extracted from ``kicadspoke_cli.py`` to break the import cycle:
-    ``author.py → kicadspoke_cli.py → author.py``.
+    Extracted from ``kicadstamp_cli.py`` to break the import cycle:
+    ``author.py → kicadstamp_cli.py → author.py``.
     """
     pipeline = ApplyPipeline(
         config_path=args.config,

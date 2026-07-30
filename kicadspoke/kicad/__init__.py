@@ -1,4 +1,4 @@
-# kicadspoke/kicad/__init__.py
+# kicadstamp/kicad/__init__.py
 """
 Adapter for communicating with KiCad through IPC.
 Provides a unified interface for working with the board,

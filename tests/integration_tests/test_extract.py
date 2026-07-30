@@ -1,6 +1,6 @@
 import pytest
-from kicadspoke.template_extraction import extract_template_from_selection
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.template_extraction import extract_template_from_selection
+from kicadstamp.exceptions import ValidationError
 
 
 @pytest.mark.integration

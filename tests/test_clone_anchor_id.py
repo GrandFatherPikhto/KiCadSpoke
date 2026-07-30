@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Tests for clone_anchor_id (kicadspoke/placement/services/clone_position_calculator.py)."""
+"""Tests for clone_anchor_id (kicadstamp/placement/services/clone_position_calculator.py)."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from kicadspoke.config import ClonePlacement
-from kicadspoke.placement.services.clone_position_calculator import clone_anchor_id
+from kicadstamp.config import ClonePlacement
+from kicadstamp.placement.services.clone_position_calculator import clone_anchor_id
 
 
 def _clone(**kwargs):

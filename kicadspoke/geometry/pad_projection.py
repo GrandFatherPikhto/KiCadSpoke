@@ -1,4 +1,4 @@
-# kicadspoke/geometry/pad_projection.py
+# kicadstamp/geometry/pad_projection.py
 """
 pad_projection.py — predicts where a specific pad of a component will end up
 if the component is moved to a new position dest and rotated to a new angle

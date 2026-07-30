@@ -2,9 +2,9 @@
 
 ## Назначение
 
-Этот документ описывает набор инструментов, которыми в KiCadSpoke ловят и локализуют два разных,
+Этот документ описывает набор инструментов, которыми в KiCadStamp ловят и локализуют два разных,
 подтверждённых падения KiCad 10 (Windows и Linux/Flatpak), и порядок их совместного использования.
-Инструменты живут в двух местах: `kicadspoke/diagnostics/` (детальная пошаговая диагностика через `python -m`)
+Инструменты живут в двух местах: `kicadstamp/diagnostics/` (детальная пошаговая диагностика через `python -m`)
 и `tools/` (операционные скрипты — чистка состояния и статистика по сериям запусков). В конце документа —
 как снять и символизировать реальный core dump на любой ОС, если один из инструментов воспроизвёл краш.
 
@@ -18,7 +18,7 @@
 ### #24966 — краш IPC API на первой записи в сессии
 
 Null-разыменование в `API_HANDLER_EDITOR::checkForBusy()` (`m_frame == nullptr`), достижимое из нескольких
-IPC-точек входа, мутирующих редактор. Симптом со стороны KiCadSpoke — обрыв соединения (`ConnectionError`),
+IPC-точек входа, мутирующих редактор. Симптом со стороны KiCadStamp — обрыв соединения (`ConnectionError`),
 а не вежливый `ApiError`.
 
 **Точный триггер (уточнено 2026-07-26):** не любая мутирующая операция, а именно **первый
@@ -59,7 +59,7 @@ Editor *после* этого обычно безопасно — KiCad, как
 
 ## Набор инструментов
 
-### 1. `kicadspoke/diagnostics/diagnose_first_write_crash.py` — пошаговая лесенка (один прогон)
+### 1. `kicadstamp/diagnostics/diagnose_first_write_crash.py` — пошаговая лесенка (один прогон)
 
 Диагностирует **где именно** в цепочке read→write умирает процесс: connect → ping → version →
 open_documents → get_board → чтение футпринтов → повторное чтение → **no-op транзакция**
@@ -72,8 +72,8 @@ open_documents → get_board → чтение футпринтов → повт�
 дублируется.
 
 ```bash
-python -m kicadspoke.diagnostics.diagnose_first_write_crash            # полная лесенка (может уронить KiCad)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # только чтения, безопасно
+python -m kicadstamp.diagnostics.diagnose_first_write_crash            # полная лесенка (может уронить KiCad)
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8   # только чтения, безопасно
 ```
 
 ### 2. `tools/clean_kicad_crash_state.py` — чистка хвостов рухнувшей сессии
@@ -129,7 +129,7 @@ python tools/clean_kicad_crash_state.py --boards-dir path/to/boards
    отвечает раньше, чем pcbnew готов принимать команды **редактирования**, и это окно оказалось заметно шире
    на живом Windows, чем на Linux/Flatpak, где вообще не проявлялось (найдено 2026-07-27, на прогоне,
    показавшем 100% «crash» на Windows при чистых 100% OK на той же плате на Linux). Ретраится с бэкоффом
-   прямо здесь, тем же приёмом, что `commit_with_retry` в проде (`kicadspoke/kicad/adapter.py`) — не
+   прямо здесь, тем же приёмом, что `commit_with_retry` в проде (`kicadstamp/kicad/adapter.py`) — не
    считается падением.
 6. Записать исход: `ok` / `crash` (обрыв соединения — вот это настоящий #24966) / `busy` (не отпустило за
    все ретраи — сообщается отдельно, не как падение).
@@ -214,7 +214,7 @@ python tools/repeat_first_write_crash.py --kicad-exe "C:\Program Files\KiCad\9.0
 
 ## Как снять и разобрать core dump (Windows + Linux)
 
-KiCadSpoke работает через IPC-API живого KiCad (`kipy`), поэтому падения самого KiCad — не абстрактная
+KiCadStamp работает через IPC-API живого KiCad (`kipy`), поэтому падения самого KiCad — не абстрактная
 угроза, а то, с чем реально приходится разбираться (см. `techdocs/issues/` — историю обоих багов выше).
 Дальше — не общая теория, а то, что реально сработало при живой охоте за краш-дампом на обеих ОС.
 

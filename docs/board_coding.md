@@ -19,7 +19,7 @@ Before writing any placement config, use `explore` to see what you're actually d
 don't guess at Role/Cluster/net names or assume a Role is unique:
 
 ```python
-from kicadspoke.explore import Board
+from kicadstamp.explore import Board
 
 board = Board.connect(config_path="profiles/3ch-awg-tia.yaml",
                        schematic_dir="../test_boards/3CH-AWG-TIA")
@@ -54,7 +54,7 @@ Once the shape is confirmed, the per-channel components become a plain Python lo
 three hand-written, copy-pasted YAML blocks:
 
 ```python
-from kicadspoke.config import ClonePlacement
+from kicadstamp.config import ClonePlacement
 
 channels = ["Channel_0", "Channel_1", "Channel_2"]
 
@@ -78,7 +78,7 @@ for i, ch in enumerate(channels):
 ```
 
 Note `anchor_sheet="Channel_{channel}"` — a `{placeholder}` resolved from `params`, same mechanism
-as `nets`/`net_template` (see `resolve_placeholder` in `kicadspoke/net_resolution.py`). This is
+as `nets`/`net_template` (see `resolve_placeholder` in `kicadstamp/net_resolution.py`). This is
 what makes the per-instance disambiguation from Step 1 actually work across three loop iterations
 instead of three manually-typed sheet names.
 
@@ -89,8 +89,8 @@ neighbour — all three were real bugs hit while writing this exact config by ha
 ## Step 3 — try it
 
 ```python
-from kicadspoke.config import load_config
-from kicadspoke.author import apply_config
+from kicadstamp.config import load_config
+from kicadstamp.author import apply_config
 
 cfg = load_config("profiles/3ch-awg-tia.yaml")
 cfg.clone_placements.extend(clones)
@@ -112,7 +112,7 @@ Two options, not mutually exclusive:
   reviewable text, and the Python loop was only a drafting tool:
 
   ```python
-  from kicadspoke.author import dump_clone_placements
+  from kicadstamp.author import dump_clone_placements
   dump_clone_placements(clones, "profiles/subsystems/dac_channels.yaml")
   ```
 
@@ -125,7 +125,7 @@ Two options, not mutually exclusive:
 ## One thing to not get wrong
 
 `apply_config(cfg, config_path, ...)` — `config_path` decides where the via/track registries live
-(`registry_path_for_config()` in `kicadspoke/registry.py`, unless `cfg.registry_path` is set
+(`registry_path_for_config()` in `kicadstamp/registry.py`, unless `cfg.registry_path` is set
 explicitly). Pass the SAME `config_path` every time you re-run the same script, or the registry
 will treat each run as a fresh board and start duplicating vias/tracks instead of reconciling
 against what's already there — see [docs/scripting.md](scripting.md) for the full explanation.

@@ -1,8 +1,8 @@
-# `kicadspoke/diagnostics/` – Диагностические скрипты
+# `kicadstamp/diagnostics/` – Диагностические скрипты
 
 ## Назначение
 
-Директория `kicadspoke/diagnostics/` содержит набор диагностических и отладочных скриптов, которые помогают разработчикам и продвинутым пользователям проверять работу **KiCadSpoke**, отлаживать конфигурации, анализировать геометрию и тестировать отдельные операции IPC. Скрипты используют актуальный API `kicadspoke` (адаптер, геометрию, конфигурацию) и не зависят от устаревших модулей.
+Директория `kicadstamp/diagnostics/` содержит набор диагностических и отладочных скриптов, которые помогают разработчикам и продвинутым пользователям проверять работу **KiCadStamp**, отлаживать конфигурации, анализировать геометрию и тестировать отдельные операции IPC. Скрипты используют актуальный API `kicadstamp` (адаптер, геометрию, конфигурацию) и не зависят от устаревших модулей.
 
 Все скрипты требуют **открытого экземпляра KiCad** с активной платой и выполняются из корня проекта через `python -m`.
 
@@ -11,7 +11,7 @@
 ## Структура
 
 ```
-kicadspoke/diagnostics/
+kicadstamp/diagnostics/
 ├── diagnose_first_write_crash.py  # Диагностика краша KiCad на первой IPC-записи (issue #24966)
 ├── diagnostic_charset.py          # Поиск не-ASCII символов (гомоглифов) в Role/Cluster по всей плате
 ├── diagnostic_keepout.py          # Анализ keepout и пересечений
@@ -38,8 +38,8 @@ kicadspoke/diagnostics/
 [crash_hunting_ru.md](crash_hunting_ru.md).
 
 ```bash
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # только чтения, безопасно
-python -m kicadspoke.diagnostics.diagnose_first_write_crash             # полный тест, может уронить KiCad
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8   # только чтения, безопасно
+python -m kicadstamp.diagnostics.diagnose_first_write_crash             # полный тест, может уронить KiCad
 ```
 
 ---
@@ -59,13 +59,13 @@ python -m kicadspoke.diagnostics.diagnose_first_write_crash             # пол
 **Использование:**
 ```bash
 # Проверить ROLE_FIELD_NAME и CLUSTER_FIELD_NAME на всей плате (по умолчанию)
-python -m kicadspoke.diagnostics.diagnostic_charset
+python -m kicadstamp.diagnostics.diagnostic_charset
 
 # Проверить другой набор полей
-python -m kicadspoke.diagnostics.diagnostic_charset --fields "Role,Cluster,Value"
+python -m kicadstamp.diagnostics.diagnostic_charset --fields "Role,Cluster,Value"
 
 # Печатать и чистые поля тоже (не только найденные проблемы)
-python -m kicadspoke.diagnostics.diagnostic_charset --verbose
+python -m kicadstamp.diagnostics.diagnostic_charset --verbose
 ```
 
 **Параметры:**
@@ -77,10 +77,10 @@ python -m kicadspoke.diagnostics.diagnostic_charset --verbose
 Список находок: refdes, имя поля, значение целиком, и для каждого «плохого» символа — позиция в строке,
 сам символ, кодпоинт (`U+XXXX`) и его имя по Unicode (`unicodedata.name`). Код возврата — `0`, если проблем
 не найдено, `1` — если найдено хотя бы одно поле (удобно как самостоятельный шаг перед `apply` или в CI:
-`python -m kicadspoke.diagnostics.diagnostic_charset || echo "есть подозрительные символы в Role/Cluster"`).
+`python -m kicadstamp.diagnostics.diagnostic_charset || echo "есть подозрительные символы в Role/Cluster"`).
 
 **Зависимости:**  
-`kicadspoke.kicad.adapter.KiCadBoardAdapter` (`get_footprints`/`get_field_value`), `unicodedata` из
+`kicadstamp.kicad.adapter.KiCadBoardAdapter` (`get_footprints`/`get_field_value`), `unicodedata` из
 стандартной библиотеки.
 
 ---
@@ -92,7 +92,7 @@ python -m kicadspoke.diagnostics.diagnostic_charset --verbose
 
 **Использование:**
 ```bash
-python -m kicadspoke.diagnostics.diagnostic_keepout <config.yaml>
+python -m kicadstamp.diagnostics.diagnostic_keepout <config.yaml>
 ```
 
 **Вывод:**
@@ -101,7 +101,7 @@ python -m kicadspoke.diagnostics.diagnostic_keepout <config.yaml>
 - Для каждой via (спицевой и компонентной) – статус.
 
 **Зависимости:**  
-`kicadspoke.config`, `kicadspoke.kicad.adapter`, `kicadspoke.placement.planner`, `kicadspoke.geometry.keepout`.
+`kicadstamp.config`, `kicadstamp.kicad.adapter`, `kicadstamp.placement.planner`, `kicadstamp.geometry.keepout`.
 
 ---
 
@@ -112,7 +112,7 @@ python -m kicadspoke.diagnostics.diagnostic_keepout <config.yaml>
 
 **Использование:**
 ```bash
-python -m kicadspoke.diagnostics.get_pad_bbox --ref IC1 --pad 17 --verbose
+python -m kicadstamp.diagnostics.get_pad_bbox --ref IC1 --pad 17 --verbose
 ```
 
 **Параметры:**
@@ -127,7 +127,7 @@ python -m kicadspoke.diagnostics.get_pad_bbox --ref IC1 --pad 17 --verbose
 - Размер медного слоя (если доступен).
 
 **Зависимости:**  
-`kicadspoke.kicad.adapter`, `kicadspoke.geometry.thermal_grid`.
+`kicadstamp.kicad.adapter`, `kicadstamp.geometry.thermal_grid`.
 
 ---
 
@@ -139,14 +139,14 @@ python -m kicadspoke.diagnostics.get_pad_bbox --ref IC1 --pad 17 --verbose
 **Использование:**  
 Выделите компоненты в PCB-редакторе, затем выполните:
 ```bash
-python -m kicadspoke.diagnostics.get_selected_component
+python -m kicadstamp.diagnostics.get_selected_component
 ```
 
 **Вывод:**  
 Таблица с информацией о каждом компоненте и его падах.
 
 **Зависимости:**  
-`kicadspoke.kicad.adapter` (использует `get_selected_items`).
+`kicadstamp.kicad.adapter` (использует `get_selected_items`).
 
 ---
 
@@ -158,14 +158,14 @@ python -m kicadspoke.diagnostics.get_selected_component
 **Использование:**  
 Выделите объекты в PCB-редакторе, выполните:
 ```bash
-python -m kicadspoke.diagnostics.get_selection
+python -m kicadstamp.diagnostics.get_selection
 ```
 
 **Вывод:**  
 Список объектов с типом и ключевыми свойствами.
 
 **Зависимости:**  
-`kicadspoke.kicad.adapter` (использует `get_selected_items`).
+`kicadstamp.kicad.adapter` (использует `get_selected_items`).
 
 ---
 
@@ -177,13 +177,13 @@ python -m kicadspoke.diagnostics.get_selection
 **Использование:**
 ```bash
 # Создать via
-python -m kicadspoke.diagnostics.test_create_one_via C5 --offset-mm 1.2
+python -m kicadstamp.diagnostics.test_create_one_via C5 --offset-mm 1.2
 
 # Удалить последнюю созданную via
-python -m kicadspoke.diagnostics.test_create_one_via --remove
+python -m kicadstamp.diagnostics.test_create_one_via --remove
 
 # Удалить конкретную via по UUID
-python -m kicadspoke.diagnostics.test_create_one_via --remove <uuid>
+python -m kicadstamp.diagnostics.test_create_one_via --remove <uuid>
 ```
 
 **Параметры:**
@@ -194,7 +194,7 @@ python -m kicadspoke.diagnostics.test_create_one_via --remove <uuid>
 - `--timeout-ms` – таймаут IPC.
 
 **Зависимости:**  
-`kicadspoke.kicad.adapter`.
+`kicadstamp.kicad.adapter`.
 
 ---
 
@@ -205,7 +205,7 @@ python -m kicadspoke.diagnostics.test_create_one_via --remove <uuid>
 
 **Использование:**
 ```bash
-python -m kicadspoke.diagnostics.test_custom_fields C5 --field Role
+python -m kicadstamp.diagnostics.test_custom_fields C5 --field Role
 ```
 
 **Параметры:**
@@ -218,7 +218,7 @@ python -m kicadspoke.diagnostics.test_custom_fields C5 --field Role
 - Значение запрошенного поля (или сообщение, что оно не найдено).
 
 **Зависимости:**  
-`kicadspoke.kicad.adapter` (использует `get_field_value`).
+`kicadstamp.kicad.adapter` (использует `get_field_value`).
 
 ---
 
@@ -229,7 +229,7 @@ python -m kicadspoke.diagnostics.test_custom_fields C5 --field Role
 
 **Использование:**
 ```bash
-python -m kicadspoke.diagnostics.test_flip_one_cap C6
+python -m kicadstamp.diagnostics.test_flip_one_cap C6
 ```
 
 **Параметры:**
@@ -239,7 +239,7 @@ python -m kicadspoke.diagnostics.test_flip_one_cap C6
 Состояние компонента (слой, позиция, угол) до и после флипа.
 
 **Зависимости:**  
-`kicadspoke.kicad.adapter` (использует `flip_selected` и `refresh_board`).
+`kicadstamp.kicad.adapter` (использует `flip_selected` и `refresh_board`).
 
 ---
 
@@ -251,10 +251,10 @@ python -m kicadspoke.diagnostics.test_flip_one_cap C6
 **Использование:**
 ```bash
 # Сдвинуть на +1 мм
-python -m kicadspoke.diagnostics.test_move_one_cap C5 --delta-mm 1.0
+python -m kicadstamp.diagnostics.test_move_one_cap C5 --delta-mm 1.0
 
 # Вернуть обратно
-python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
+python -m kicadstamp.diagnostics.test_move_one_cap C5 --revert
 ```
 
 **Параметры:**
@@ -266,7 +266,7 @@ python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
 Время выполнения каждого шага (подключение, begin_commit, update_items, push_commit) в миллисекундах.
 
 **Зависимости:**  
-`kicadspoke.kicad.adapter`.
+`kicadstamp.kicad.adapter`.
 
 ---
 
@@ -277,7 +277,7 @@ python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
 
 **Использование:**
 ```bash
-python -m kicadspoke.diagnostics.test_pad_mirror_convention C6 --pad 2
+python -m kicadstamp.diagnostics.test_pad_mirror_convention C6 --pad 2
 ```
 
 **Параметры:**
@@ -290,14 +290,14 @@ python -m kicadspoke.diagnostics.test_pad_mirror_convention C6 --pad 2
 - Победитель (зеркало по X, по Y или без зеркала).
 
 **Зависимости:**  
-`kicadspoke.kicad.adapter`, `kicadspoke.geometry.pad_projection` (вспомогательно).
+`kicadstamp.kicad.adapter`, `kicadstamp.geometry.pad_projection` (вспомогательно).
 
 ---
 
 ## Общие рекомендации
 
 - **Запускайте с `--verbose`** для отладки, если скрипт поддерживает этот флаг.
-- **Всегда запускайте из корня проекта** с использованием `python -m kicadspoke.diagnostics.<имя_скрипта>`.
+- **Всегда запускайте из корня проекта** с использованием `python -m kicadstamp.diagnostics.<имя_скрипта>`.
 - **Убедитесь, что KiCad открыт** и активна нужная плата.
 - Для скриптов, работающих с выделением, выделите нужные объекты в PCB-редакторе **перед** запуском.
 
@@ -318,8 +318,8 @@ python -m kicadspoke.diagnostics.test_pad_mirror_convention C6 --pad 2
 
 Если вам необходимо добавить новый диагностический скрипт:
 
-1. Разместите его в `kicadspoke/diagnostics/`.
-2. Используйте актуальный API `kicadspoke` (адаптер, геометрию, конфигурацию).
+1. Разместите его в `kicadstamp/diagnostics/`.
+2. Используйте актуальный API `kicadstamp` (адаптер, геометрию, конфигурацию).
 3. Добавьте описание в этот документ.
 4. Обеспечьте, чтобы скрипт не изменял плату (или предупреждал об этом), если он не предназначен для мутации.
 

@@ -4,7 +4,7 @@ probe_kicad_sch_uuids.py — последняя проверка идеи UUID-�
 
 Шаг 1 (файлы, живой KiCad не нужен): сканирует все *.kicad_sch в
 указанной директории, парсит sexpdata напрямую (тот же формат, что уже
-читает kicadspoke.cloner), достаёт из каждого (sheet ...) блока
+читает kicadstamp.cloner), достаёт из каждого (sheet ...) блока
 uuid + property "Sheetname" — то есть словарь {uuid: имя} из ПЕРВЫХ РУК,
 не через kipy и не через path_human_readable.
 

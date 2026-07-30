@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_move_one_cap.py — minimal diagnostic test for IPC writes (KiCadSpoke).
+test_move_one_cap.py — minimal diagnostic test for IPC writes (KiCadStamp).
 
 Purpose: isolate begin_commit() hanging to the limit — take ONE capacitor,
 shift it by 1mm along X, commit. If this also hangs, the problem is not in
@@ -8,21 +8,21 @@ batch size/commit but in something more fundamental (stuck transaction from a
 previous run, broken KiCad session state, etc.) — then a full KiCad restart is
 definitely needed.
 
-Uses the KiCadSpoke adapter to interact with the board.
+Uses the KiCadStamp adapter to interact with the board.
 
 Run:
-    python -m kicadspoke.diagnostics.test_move_one_cap C5 --delta-mm 1.0
-    python -m kicadspoke.diagnostics.test_move_one_cap C5 --revert
+    python -m kicadstamp.diagnostics.test_move_one_cap C5 --delta-mm 1.0
+    python -m kicadstamp.diagnostics.test_move_one_cap C5 --revert
 """
 
 import argparse
 import sys
 import time
 
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.utils.units import MM
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.utils.units import MM
 from kipy.geometry import Vector2
-from kicadspoke.i18n import _
+from kicadstamp.i18n import _
 
 MM = 1_000_000
 
@@ -83,7 +83,7 @@ def main():
              f"test_move_one_cap: {args.ref}")
         print(_("\nDone. {ref} moved by {delta:+.2f} mm along X.")
               .format(ref=args.ref, delta=delta))
-        print(_("To revert: python -m kicadspoke.diagnostics.test_move_one_cap "
+        print(_("To revert: python -m kicadstamp.diagnostics.test_move_one_cap "
                 "{ref} --delta-mm {d} --revert")
               .format(ref=args.ref, d=args.delta_mm))
     except Exception:

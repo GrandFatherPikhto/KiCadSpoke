@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 Regression test for two‑phase execution (execute_moves -> adapter.refresh_board() ->
-plan_vias -> execute_vias), as in kicadspoke_cli.py:cmd_apply.
+plan_vias -> execute_vias), as in kicadstamp_cli.py:cmd_apply.
 
-REVISED (KiCadSpoke, generalised vias, 2026-07-15): previously this test
+REVISED (KiCadStamp, generalised vias, 2026-07-15): previously this test
 checked that plan_vias() sees the REAL (re‑read) pad of the component after
 the move commit — that was protection against a bug where GND vias were
 computed from the old, not‑yet‑moved position. Now vias (at both levels) are
@@ -24,14 +24,14 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
-from kicadspoke.config import (
+from kicadstamp.config import (
     Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
     TemplateVia, TemplateComponentSlot, Rule
 )
-from kicadspoke.placement.planner import PlacementPlanner
-from kicadspoke.placement.executor import BatchExecutor
-from kicadspoke.geometry.spoke_layout import rotate_local_offset
-from kicadspoke.constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
+from kicadstamp.placement.planner import PlacementPlanner
+from kicadstamp.placement.executor import BatchExecutor
+from kicadstamp.geometry.spoke_layout import rotate_local_offset
+from kicadstamp.constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 MM = 1_000_000
 
@@ -95,7 +95,7 @@ def test_two_phase_flow_completes_and_via_geometry_is_correct():
     planner = PlacementPlanner(adapter, cfg)
     executor = BatchExecutor(adapter, cfg, batch_size=10)
 
-    # The exact order from kicadspoke_cli.py:cmd_apply
+    # The exact order from kicadstamp_cli.py:cmd_apply
     moves = planner.plan_moves()
     assert len(moves) == 1
     executor.execute_moves(moves, check_collisions=False)

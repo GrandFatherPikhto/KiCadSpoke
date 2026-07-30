@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for kicadspoke/i18n.py — language detection precedence and the
+"""Tests for kicadstamp/i18n.py — language detection precedence and the
 setup_i18n() install mechanism. See docs/i18n_translation.md."""
 import sys
 from pathlib import Path
@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import gettext
 import pytest
-from kicadspoke.i18n import detect_language, setup_i18n
+from kicadstamp.i18n import detect_language, setup_i18n
 
 
 class TestDetectLanguagePrecedence:
@@ -78,7 +78,7 @@ class TestSetupI18n:
         monkeypatch.delenv("LC_MESSAGES", raising=False)
         monkeypatch.setenv("LANG", "ru_RU.UTF-8")
         setup_i18n()
-        import kicadspoke.i18n as i18n_module
+        import kicadstamp.i18n as i18n_module
         assert i18n_module._("Flip performed") == "Флип выполнен"
 
     def test_en_leaves_a_known_string_in_english(self, monkeypatch):
@@ -87,7 +87,7 @@ class TestSetupI18n:
         monkeypatch.delenv("LC_MESSAGES", raising=False)
         monkeypatch.setenv("LANG", "en_US.UTF-8")
         setup_i18n()
-        import kicadspoke.i18n as i18n_module
+        import kicadstamp.i18n as i18n_module
         assert i18n_module._("Flip performed") == "Flip performed"
 
     def test_unknown_locale_falls_back_without_raising(self, monkeypatch):

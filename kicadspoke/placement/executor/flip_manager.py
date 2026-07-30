@@ -1,8 +1,8 @@
-# kicadspoke/placement/executor/flip_manager.py
+# kicadstamp/placement/executor/flip_manager.py
 import logging
 import time
 from typing import List, Dict
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from ..commands import MoveCommand
 from .base import layer_to_str
 from ...i18n import _

@@ -1,4 +1,4 @@
-# kicadspoke/placement/executor/operation_logger.py
+# kicadstamp/placement/executor/operation_logger.py
 import json
 import logging
 from datetime import datetime

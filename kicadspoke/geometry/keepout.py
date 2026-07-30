@@ -1,4 +1,4 @@
-# kicadspoke/geometry/keepout.py
+# kicadstamp/geometry/keepout.py
 
 import math
 from typing import List, Tuple, Optional

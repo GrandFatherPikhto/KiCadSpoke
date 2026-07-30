@@ -1,4 +1,4 @@
-# kicadspoke/registry.py
+# kicadstamp/registry.py
 """
 registry.py — placement registry for vias and tracks between runs.
 
@@ -9,7 +9,7 @@ vias/tracks whose keys no longer appear in the current config (spoke/component
 removed from YAML entirely).
 
 Composite key — anchor_id/template_name/role/index:
-  anchor_id: f"pad:{spoke_pad}" for KiCadSpoke (anchor = IC pad number).
+  anchor_id: f"pad:{spoke_pad}" for KiCadStamp (anchor = IC pad number).
              Future extension: f"ref:{anchor_ref}" for section cloning.
   role: component role (unique within template, see config.py) for component‑level
         vias/tracks, or None for spoke‑level vias/tracks.

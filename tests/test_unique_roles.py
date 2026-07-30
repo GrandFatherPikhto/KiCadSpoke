@@ -5,8 +5,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadspoke.config import _load_spoke_template
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.config import _load_spoke_template
+from kicadstamp.exceptions import ValidationError
 
 
 def test_unique_roles_load_fine():

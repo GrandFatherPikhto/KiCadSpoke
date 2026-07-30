@@ -5,8 +5,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadspoke.config import load_config
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.config import load_config
+from kicadstamp.exceptions import ValidationError
 
 YAML_TEXT = """
 templates:
@@ -355,7 +355,7 @@ clone_placements:
 """
     config_file = tmp_path / "no_anchor_no_origin.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    # Message text is translated (see kicadspoke/i18n.py) — match either
+    # Message text is translated (see kicadstamp/i18n.py) — match either
     # locale the project ships (en/ru), not just the raw English msgid.
     with pytest.raises(ValidationError, match="no anchor.*absolute coordinates|нет ни якоря.*абсолютных координат"):
         load_config(str(config_file))

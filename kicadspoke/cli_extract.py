@@ -1,8 +1,8 @@
-# kicadspoke/cli_extract.py
+# kicadstamp/cli_extract.py
 """
 extract / clone-extract CLI commands.
 
-Extracted from kicadspoke_cli.py so the CLI entry point stays thin.
+Extracted from kicadstamp_cli.py so the CLI entry point stays thin.
 """
 
 import json
@@ -13,11 +13,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
-from kicadspoke.config.includes import resolve_includes
-from kicadspoke.exceptions import PlacerError, check_unknown_keys
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.template_extraction import extract_template_from_selection, render_uncertain_comments
-from kicadspoke.i18n import _
+from kicadstamp.config.includes import resolve_includes
+from kicadstamp.exceptions import PlacerError, check_unknown_keys
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.template_extraction import extract_template_from_selection, render_uncertain_comments
+from kicadstamp.i18n import _
 
 
 # extract_profiles: / clone_profiles: known keys — see load_profile's

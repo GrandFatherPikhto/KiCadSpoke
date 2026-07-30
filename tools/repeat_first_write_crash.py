@@ -69,7 +69,7 @@ import yaml
 # Legacy console codepages (Windows cp1251/cp866) can't encode every character
 # this script prints (Cyrillic text, typographic dashes) — UTF-8 can encode
 # any codepoint, so this avoids both mojibake and outright UnicodeEncodeError
-# crashes regardless of the terminal (see kicadspoke_cli.py for the same fix).
+# crashes regardless of the terminal (see kicadstamp_cli.py for the same fix).
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 if hasattr(sys.stderr, "reconfigure"):
@@ -159,7 +159,7 @@ def try_commit_once(busy_retries: int = 5, busy_backoff_s: float = 2.0) -> str:
     ready to accept EDITING commands (see the 2026-07-27 analysis — this
     window turned out wider on Windows than it had time to show up on
     Linux). Retried with backoff, the same technique as _mutating_call in
-    kicadspoke/kicad/adapter.py (production code). If busy never clears
+    kicadstamp/kicad/adapter.py (production code). If busy never clears
     within all retries — counted as a separate outcome, not mixed into the
     real-crash statistics."""
     import kipy

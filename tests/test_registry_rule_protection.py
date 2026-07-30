@@ -17,11 +17,11 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2
 
 # See test_registry_pruning_granularity.py for why this import order matters
-# (circular-import trap via kicadspoke.placement package __init__).
-from kicadspoke.placement.commands import ViaCommand
-from kicadspoke.registry import PlacementRegistry, RegistryEntry
-from kicadspoke.config import Rule, ManualSpoke
-from kicadspoke.placement.services.manual_position_calculator import rule_anchor_ids
+# (circular-import trap via kicadstamp.placement package __init__).
+from kicadstamp.placement.commands import ViaCommand
+from kicadstamp.registry import PlacementRegistry, RegistryEntry
+from kicadstamp.config import Rule, ManualSpoke
+from kicadstamp.placement.services.manual_position_calculator import rule_anchor_ids
 
 MM = 1_000_000
 

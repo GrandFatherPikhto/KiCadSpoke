@@ -1,4 +1,4 @@
-# kicadspoke/geometry/clone_geometry.py
+# kicadstamp/geometry/clone_geometry.py
 """
 clone_geometry.py — transforms a template into absolute board coordinates
 for ClonePlacement (TemplatePlacer), unlike spoke_layout.py:

@@ -1,4 +1,4 @@
-# kicadspoke/cloner/sexp.py
+# kicadstamp/cloner/sexp.py
 """
 Thin helpers over sexpdata. The choice of sexpdata over schema-aware
 libraries is deliberate: the KiCad format is syntactically stable since v6,

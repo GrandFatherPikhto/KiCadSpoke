@@ -1,4 +1,4 @@
-# kicadspoke/cloner/netlist.py
+# kicadstamp/cloner/netlist.py
 """
 Parsing .net (KiCad 10): components with hierarchical paths, channels,
 local/global nets, and the twin map between channels.

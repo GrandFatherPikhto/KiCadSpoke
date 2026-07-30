@@ -8,14 +8,14 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.config import load_config
-from kicadspoke.utils.units import MM
-from kicadspoke.placement.commands import ViaCommand
-from kicadspoke.registry import PlacementRegistry, registry_path_for_config
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.config import load_config
+from kicadstamp.utils.units import MM
+from kicadstamp.placement.commands import ViaCommand
+from kicadstamp.registry import PlacementRegistry, registry_path_for_config
 
 TEST_BOARD_PATH = Path("test_boards/10CL006YE144C8G.kicad_pcb")
-TEST_CONFIG_PATH = Path("kicadspoke_templates_example.yaml")
+TEST_CONFIG_PATH = Path("kicadstamp_templates_example.yaml")
 
 
 def pytest_configure(config):
@@ -168,7 +168,7 @@ def template_extraction(adapter):
     Fixture for template extraction tests.
     Selects components and vias from the config and returns the result of extract_template_from_selection.
     """
-    from kicadspoke.template_extraction import extract_template_from_selection
+    from kicadstamp.template_extraction import extract_template_from_selection
     def _extract(name):
         return extract_template_from_selection(adapter, name)
     return _extract

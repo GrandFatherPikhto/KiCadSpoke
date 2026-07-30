@@ -1,4 +1,4 @@
-# kicadspoke/constants.py
+# kicadstamp/constants.py
 
 # --- Fields and roles ---
 ROLE_FIELD_NAME = "Role"

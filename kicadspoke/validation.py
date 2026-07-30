@@ -1,10 +1,10 @@
-# kicadspoke/validation.py
+# kicadstamp/validation.py
 """
 validation.py — fatal pre‑validation checks, executed BEFORE planning and any
 board modifications. If a problem is found, a ValidationError is raised with a
 clear, consolidated message listing all issues at once (not one error per run).
 
-CHANGED (KiCadSpoke 4.0): previously explicit refs in config
+CHANGED (KiCadStamp 4.0): previously explicit refs in config
 (component1_ref/component2_ref) were checked — they no longer exist; components
 are selected from ComponentPool by (real net, role). The main protection is now
 built into ComponentPool.pop() itself (fatal on shortage), but here we do the

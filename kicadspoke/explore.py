@@ -1,4 +1,4 @@
-# kicadspoke/explore.py
+# kicadstamp/explore.py
 """
 explore.py — read-only query facade over KiCadBoardAdapter, for ad-hoc
 interactive inspection ("select by Role/Cluster/sheet/net, see what came

@@ -1,4 +1,4 @@
-# kicadspoke/placement/services/position_tracker.py
+# kicadstamp/placement/services/position_tracker.py
 
 import logging
 from typing import List

@@ -8,11 +8,11 @@ import pytest
 from unittest.mock import MagicMock
 from kipy.board_types import FootprintInstance
 
-from kicadspoke.config import SpokeTemplate, TemplateComponentSlot, ClonePlacement
-from kicadspoke.placement.services.clone_role_resolver import (
+from kicadstamp.config import SpokeTemplate, TemplateComponentSlot, ClonePlacement
+from kicadstamp.placement.services.clone_role_resolver import (
     resolve_roles_by_selection, resolve_roles_by_nets, resolve_anchor_by_role
 )
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.exceptions import ValidationError
 
 
 def _make_fp(ref, role, nets=None):
@@ -194,7 +194,7 @@ class TestResolveRolesByNets:
         adapter.get_footprints.return_value = []  # nothing at all on board
         clone = ClonePlacement(name="z", template="t5", origin_x_mm=0, origin_y_mm=0,
                               nets={"NONEXISTENT_ROLE": "GND"})
-        # Message text is translated (see kicadspoke/i18n.py) — match either
+        # Message text is translated (see kicadstamp/i18n.py) — match either
         # locale the project ships (en/ru), not just the raw English msgid.
         with pytest.raises(ValidationError, match="NO component with this role|НЕТ ни одного компонента с этой ролью"):
             resolve_roles_by_nets(adapter, tpl, clone)
@@ -372,7 +372,7 @@ def _make_anchor_fp(ref, role, sheet_uuid):
     fp.reference_field.text.value = ref
     fp._role = role
     # resolve_sheet_path_names reads fp.sheet_path.path[:-1] (last entry is
-    # the component's own uuid, excluded) — see kicadspoke/sheet_names.py.
+    # the component's own uuid, excluded) — see kicadstamp/sheet_names.py.
     fp.sheet_path.path = [MagicMock(value=sheet_uuid), MagicMock(value=f"{ref}-own-uuid")]
     return fp
 

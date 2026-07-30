@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for kicadspoke/config/includes.py — generic `include:` for splitting
+"""Tests for kicadstamp/config/includes.py — generic `include:` for splitting
 a profile YAML into subsystem files (extract_profiles + clone_placements +
 rules + templates together, unlike per-section *_file keys)."""
 import sys
@@ -7,8 +7,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadspoke.config import load_config
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.config import load_config
+from kicadstamp.exceptions import ValidationError
 
 MINIMAL_TEMPLATE = """
 templates:

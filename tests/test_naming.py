@@ -10,17 +10,17 @@ fine as the identity of a SINGLE rule when no explicit name is given. The
 loader fatals if two rules resolve to the same effective identity (see
 config/loader.py) — not a silent pick of one over the other.
 
-See --only in kicadspoke_cli.py."""
+See --only in kicadstamp_cli.py."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadspoke.config import (
+from kicadstamp.config import (
     Rule, ThermalViaArrayConfig,
     rule_effective_name, thermal_via_array_effective_name, load_config,
 )
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.exceptions import ValidationError
 
 
 class TestEffectiveNameAccessors:
@@ -234,7 +234,7 @@ templates: {}
 class TestRuleActive:
     """Rule.active / ManualSpoke.active — orthogonal to enabled (default True),
     the inline per-item counterpart of --only/--cluster (see
-    drop_inactive_items in kicadspoke_cli.py, added 2026-07-29)."""
+    drop_inactive_items in kicadstamp_cli.py, added 2026-07-29)."""
 
     def test_default_is_active(self, tmp_path):
         text = """

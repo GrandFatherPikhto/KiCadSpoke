@@ -4,7 +4,7 @@ apply_role_cluster.py — массовая простановка полей Rol
 символы схемы (.kicad_sch) по YAML-конфигу (refdes -> {Role: ..., Cluster: ...}).
 
 Повод: Bulk Edit в Eeschema багованный (крашится, требует двойного
-ввода — см. techdocs/status), а KiCadSpoke не пишет в .kicad_sch
+ввода — см. techdocs/status), а KiCadStamp не пишет в .kicad_sch
 ВООБЩЕ НИ РАЗУ за всю историю (проверено 2026-07-26) — это принципиально
 другая зона риска, чем правка PCB через kipy: там за нас всё держит
 транзакция/undo самого KiCad, тут — ничего подобного, и нет прецедента,

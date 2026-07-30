@@ -139,6 +139,7 @@ tests\integration_tests\test_track_ops.py
 tests\integration_tests\test_via_ops.py
 tests\test_author.py
 tests\test_cli_filters.py
+tests\test_cli_version.py
 tests\test_clone_anchor_id.py
 tests\test_clone_geometry.py
 tests\test_clone_ignore_selection.py

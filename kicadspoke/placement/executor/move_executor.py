@@ -1,7 +1,7 @@
-# kicadspoke/placement/executor/move_executor.py
+# kicadstamp/placement/executor/move_executor.py
 import logging
 from typing import List, Tuple, Dict
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from ...config import Config
 from ..commands import MoveCommand
 from ..collision import check_collisions as detect_collisions

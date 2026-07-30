@@ -19,9 +19,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from unittest.mock import MagicMock
 from kipy.geometry import Vector2
 
-from kicadspoke.config import Config, ThermalViaArrayConfig
-from kicadspoke.placement.executor import BatchExecutor
-from kicadspoke.placement.commands import ViaCommand
+from kicadstamp.config import Config, ThermalViaArrayConfig
+from kicadstamp.placement.executor import BatchExecutor
+from kicadstamp.placement.commands import ViaCommand
 
 MM = 1_000_000
 

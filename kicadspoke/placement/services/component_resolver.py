@@ -1,4 +1,4 @@
-# kicadspoke/placement/services/component_resolver.py
+# kicadstamp/placement/services/component_resolver.py
 
 import logging
 from typing import Dict, List, Optional, Set

@@ -13,8 +13,8 @@ import pytest
 # Add project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from kicadspoke.kicad import KiCadBoardAdapter, IBoardAdapter
-from kicadspoke.kicad.adapter import KiCadBoardAdapter as Adapter
+from kicadstamp.kicad import KiCadBoardAdapter, IBoardAdapter
+from kicadstamp.kicad.adapter import KiCadBoardAdapter as Adapter
 
 
 def test_import():

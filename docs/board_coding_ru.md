@@ -19,7 +19,7 @@
 не гадайте с именами Role/Cluster/цепей и не считайте Role уникальной по умолчанию:
 
 ```python
-from kicadspoke.explore import Board
+from kicadstamp.explore import Board
 
 board = Board.connect(config_path="profiles/3ch-awg-tia.yaml",
                        schematic_dir="../test_boards/3CH-AWG-TIA")
@@ -54,7 +54,7 @@ ref/Cluster — для стороны усилителя.
 скопипащенных вручную YAML-блоков:
 
 ```python
-from kicadspoke.config import ClonePlacement
+from kicadstamp.config import ClonePlacement
 
 channels = ["Channel_0", "Channel_1", "Channel_2"]
 
@@ -79,7 +79,7 @@ for i, ch in enumerate(channels):
 
 Обратите внимание на `anchor_sheet="Channel_{channel}"` — `{placeholder}`, резолвится из `params`,
 тот же механизм, что у `nets`/`net_template` (см. `resolve_placeholder` в
-`kicadspoke/net_resolution.py`). Именно это заставляет различение из Шага 1 реально работать на
+`kicadstamp/net_resolution.py`). Именно это заставляет различение из Шага 1 реально работать на
 трёх итерациях цикла, а не на трёх руками вписанных именах листов.
 
 Цикл `for` физически не может допустить ошибки, которые приходят от копипаста трёх похожих
@@ -89,8 +89,8 @@ for i, ch in enumerate(channels):
 ## Шаг 3 — попробовать
 
 ```python
-from kicadspoke.config import load_config
-from kicadspoke.author import apply_config
+from kicadstamp.config import load_config
+from kicadstamp.author import apply_config
 
 cfg = load_config("profiles/3ch-awg-tia.yaml")
 cfg.clone_placements.extend(clones)
@@ -112,7 +112,7 @@ apply_config(cfg, "profiles/3ch-awg-tia.yaml", dry_run=True)
   ревьюабельный текст, а цикл на Python был лишь черновым инструментом:
 
   ```python
-  from kicadspoke.author import dump_clone_placements
+  from kicadstamp.author import dump_clone_placements
   dump_clone_placements(clones, "profiles/subsystems/dac_channels.yaml")
   ```
 
@@ -125,7 +125,7 @@ apply_config(cfg, "profiles/3ch-awg-tia.yaml", dry_run=True)
 ## Одна вещь, которую легко упустить
 
 `apply_config(cfg, config_path, ...)` — `config_path` определяет, где живут via/track-реестры
-(`registry_path_for_config()` в `kicadspoke/registry.py`, если `cfg.registry_path` не задан явно).
+(`registry_path_for_config()` в `kicadstamp/registry.py`, если `cfg.registry_path` не задан явно).
 Передавайте ОДИН И ТОТ ЖЕ `config_path` при каждом перезапуске одного и того же скрипта, иначе
 реестр примет каждый прогон за новую плату и начнёт плодить дубликаты via/треков вместо сверки с
 уже существующими — подробнее в [docs/scripting_ru.md](scripting_ru.md).

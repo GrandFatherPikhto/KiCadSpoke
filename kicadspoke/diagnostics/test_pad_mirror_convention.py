@@ -5,10 +5,10 @@ confirming or refuting the assumption in pad_projection.predict_pad_position()
 about mirroring the local pad offset along X when flipping to the other side
 of the board.
 
-Uses the KiCadSpoke adapter and pad_projection geometry.
+Uses the KiCadStamp adapter and pad_projection geometry.
 
 Run:
-    python -m kicadspoke.diagnostics.test_pad_mirror_convention C6 --pad 2
+    python -m kicadstamp.diagnostics.test_pad_mirror_convention C6 --pad 2
 """
 
 import argparse
@@ -18,10 +18,10 @@ import time
 from kipy.board_types import BoardLayer, Pad
 from kipy.geometry import Vector2, Angle
 
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.geometry.pad_projection import local_pad_offset, predict_pad_position
-from kicadspoke.utils.units import MM
-from kicadspoke.i18n import _
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.geometry.pad_projection import local_pad_offset, predict_pad_position
+from kicadstamp.utils.units import MM
+from kicadstamp.i18n import _
 
 MM = 1_000_000
 

@@ -1,4 +1,4 @@
-# kicadspoke/placement/services/clone_position_calculator.py
+# kicadstamp/placement/services/clone_position_calculator.py
 """
 clone_position_calculator.py — counterpart to manual_position_calculator.py, but
 for ClonePlacement (TemplatePlacer). The two calculators share no base class

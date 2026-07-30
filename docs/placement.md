@@ -1,4 +1,4 @@
-# `kicadspoke/placement` – Placement Planning and Execution
+# `kicadstamp/placement` – Placement Planning and Execution
 
 ## Purpose
 
@@ -114,7 +114,7 @@ Defines abstract interfaces for position calculators and via planners.
 | `plan_tracks()` | Returns the stored `_planned_tracks` (no additional processing; collisions not checked). |
 | `plan()` | Backward‑compatible wrapper (calls all three phases). Not recommended for production use. |
 
-**Used in:** `kicadspoke_cli.py` to obtain the plan.
+**Used in:** `kicadstamp_cli.py` to obtain the plan.
 
 ---
 
@@ -260,7 +260,7 @@ Functions:
   2. Execute `adapter.refresh_board()`.
   3. Execute `plan_vias()` → `execute_vias()` (with via registry).
   4. Execute `plan_tracks()` → `execute_tracks()` (with track registry).
-  This is implemented in `kicadspoke_cli.py:cmd_apply()`.
+  This is implemented in `kicadstamp_cli.py:cmd_apply()`.
 
 - **Collisions** – checked only for components (optional); tracks are not checked (rely on KiCad DRC). Disable with `--no-collision-check`.
 

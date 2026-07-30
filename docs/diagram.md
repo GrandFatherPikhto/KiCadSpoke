@@ -1,5 +1,5 @@
 graph TD
-    CLI[kicadspoke_cli.py] --> Config[config/]
+    CLI[kicadstamp_cli.py] --> Config[config/]
     CLI --> Adapter[kicad/adapter.py]
     CLI --> Validation[validation.py]
     CLI --> Planner[placement/planner.py]

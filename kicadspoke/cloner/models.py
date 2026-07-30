@@ -1,4 +1,4 @@
-# kicadspoke/cloner/models.py
+# kicadstamp/cloner/models.py
 """
 Channel cloner models. All file‑based: source of truth is .kicad_pcb /
 .kicad_sch / .net, no IPC (see issue #24966 and why writing through the API

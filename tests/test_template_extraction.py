@@ -9,9 +9,9 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import FootprintInstance, Via, Group
 
-from kicadspoke.template_extraction import extract_template_from_selection, render_uncertain_comments
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.template_extraction import extract_template_from_selection, render_uncertain_comments
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.exceptions import ValidationError
 
 MM = 1_000_000
 
@@ -116,7 +116,7 @@ class TestExtractTemplateFromSelection:
 
 
 class TestExplicitItemsParameter:
-    """items= (added for scripted extract, see kicadspoke.explore.Board.select_items)
+    """items= (added for scripted extract, see kicadstamp.explore.Board.select_items)
     — None (default) keeps using live GUI selection unchanged; an explicit
     list bypasses adapter.get_selected_items() entirely, same 'explicit flag,
     not implicit inference' principle as ClonePlacement.by_selection."""
@@ -215,7 +215,7 @@ class TestNetTemplateAutoDetect:
         )
         comp = result["t"]["components"][0]
         assert "net_template" not in comp
-        # Message text is translated (see kicadspoke/i18n.py) — match either
+        # Message text is translated (see kicadstamp/i18n.py) — match either
         # locale the project ships (en/ru), not just the raw English msgid.
         assert "nets from --net-template" in caplog.text or "цепей из --net-template" in caplog.text
 

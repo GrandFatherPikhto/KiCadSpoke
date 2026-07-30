@@ -1,4 +1,4 @@
-# kicadspoke/diagnostics/diagnose_first_write_crash.py
+# kicadstamp/diagnostics/diagnose_first_write_crash.py
 """
 diagnose_first_write_crash.py — reproducible ladder for localising KiCad crashes
 on the first write after startup.
@@ -17,16 +17,16 @@ without begin_commit()/push_commit() — and 8/8 runs passed cleanly. The same
 day a real `apply` crashed KiCad on Linux/KiCad 10.0.5 exactly on begin_commit()
 for Move batch 1 (the first transaction of the session; flips before that went
 through a separate API path run_action("...InteractiveEdit.flip"), not through
-commit — see kicadspoke/kicad/adapter.py:flip_selected). Step 9 now honestly
+commit — see kicadstamp/kicad/adapter.py:flip_selected). Step 9 now honestly
 repeats the combat path adapter.commit_with_retry(): begin_commit -> update_items
 -> push_commit, one transaction, with logging of each sub‑call separately
 (so even on breakage it is visible how far it got).
 
 Run (KiCad open, board loaded):
-  python -m kicadspoke.diagnostics.diagnose_first_write_crash
-  python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # reads only
-  python -m kicadspoke.diagnostics.diagnose_first_write_crash --delay 30  # pause before write
-  python -m kicadspoke.diagnostics.diagnose_first_write_crash --repeat 3  # repeat write
+  python -m kicadstamp.diagnostics.diagnose_first_write_crash
+  python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8   # reads only
+  python -m kicadstamp.diagnostics.diagnose_first_write_crash --delay 30  # pause before write
+  python -m kicadstamp.diagnostics.diagnose_first_write_crash --repeat 3  # repeat write
 
 Each step: time measurement, OK/FAIL verdict, then ping and comparison of
 kicad.exe PID list. Log is written TO FILE LINE BY LINE WITH FLUSH — even
@@ -44,7 +44,7 @@ import time
 import traceback
 from pathlib import Path
 
-from kicadspoke.i18n import _
+from kicadstamp.i18n import _
 
 logger = logging.getLogger("diagnose")
 
@@ -245,7 +245,7 @@ class Ladder:
         """
         SUSPECT: begin_commit() -> update_items([fp]) with no changes
         -> push_commit() — ONE transaction, exactly the path that
-        adapter.commit_with_retry() uses in combat (see kicadspoke/kicad/adapter.py).
+        adapter.commit_with_retry() uses in combat (see kicadstamp/kicad/adapter.py).
         Previously there was bare update_items() without begin_commit/push_commit
         — passed cleanly 8/8 times, but the live crash under Linux (2026-07-26)
         occurred exactly on begin_commit(), which that version of the script

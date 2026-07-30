@@ -15,10 +15,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from kicadspoke.config import load_config
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.sheet_names import resolve_sheet_path_names
-from kicadspoke.constants import ROLE_FIELD_NAME, CLUSTER_FIELD_NAME
+from kicadstamp.config import load_config
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.sheet_names import resolve_sheet_path_names
+from kicadstamp.constants import ROLE_FIELD_NAME, CLUSTER_FIELD_NAME
 
 CONFIG_PATH = str(Path(__file__).resolve().parents[1] / "boards" / "3ch-awg-tia" / "3ch-awg-tia.yaml")
 DEFAULT_TARGET_REFS = {"C139", "C143", "C148"}

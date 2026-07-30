@@ -23,13 +23,13 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
-from kicadspoke.config import (
+from kicadstamp.config import (
     Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
     TemplateVia, TemplateComponentSlot, Rule
 )
-from kicadspoke.placement.services.manual_position_calculator import ManualPositionCalculator
-from kicadspoke.registry import PlacementRegistry
-from kicadspoke.constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
+from kicadstamp.placement.services.manual_position_calculator import ManualPositionCalculator
+from kicadstamp.registry import PlacementRegistry
+from kicadstamp.constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 MM = 1_000_000
 

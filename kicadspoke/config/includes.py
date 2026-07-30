@@ -1,14 +1,14 @@
-# kicadspoke/config/includes.py
+# kicadstamp/config/includes.py
 """
 includes.py — generic `include:` for splitting one profile YAML into several
 files (e.g. by subsystem: ldo.yaml, pi_filters.yaml, dac_channels.yaml — each
 carrying whatever mix of extract_profiles/clone_placements/rules/templates
 that subsystem needs).
 
-Independent of templates_file (kicadspoke/config/loader.py) — that mechanism
+Independent of templates_file (kicadstamp/config/loader.py) — that mechanism
 stays as-is (single-purpose, templates only, inline-overrides-external).
 include: is general-purpose and used by BOTH load_config() (rules/
-clone_placements/templates) and load_profile() in kicadspoke_cli.py
+clone_placements/templates) and load_profile() in kicadstamp_cli.py
 (extract_profiles/clone_profiles) — the two existing, otherwise-independent
 YAML-reading entry points — since a subsystem file is meant to carry
 extract_profiles AND clone_placements together, not just one section.

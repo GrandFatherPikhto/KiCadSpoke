@@ -1,4 +1,4 @@
-# kicadspoke/template_extraction.py
+# kicadstamp/template_extraction.py
 """
 template_extraction.py — extracts a spoke template from the current selection
 on the board (not from sheet_path/schematic hierarchy — we decided that
@@ -145,7 +145,7 @@ def _find_origin(footprints: List[FootprintInstance], vias: List[Via],
     origin_component_role is set, origin is taken from the specific element
     in the selection (its current position on the board) rather than the bbox.
     origin_via_net and origin_component_role are mutually exclusive (checked in
-    kicadspoke_cli.py). origin_component_pad is ONLY a refinement of
+    kicadstamp_cli.py). origin_component_pad is ONLY a refinement of
     origin_component_role (without it it is meaningless — fatal in CLI):
     without it origin is the component centre, with it the position of the
     specific pad (same principle as anchor_pad in ClonePlacement).
@@ -215,7 +215,7 @@ def extract_template_from_selection(
     items — OPTIONAL explicit list of FootprintInstance/Via/Track (same shape
     adapter.get_selected_items() returns). None (default) — live GUI
     selection, unchanged from before. Explicit — the caller (e.g. a script
-    using kicadspoke.explore.Board.select_items()) fully describes what to
+    using kicadstamp.explore.Board.select_items()) fully describes what to
     extract instead of requiring a mouse selection in KiCad. Deliberately an
     explicit parameter, not inferred from whether anything is currently
     selected — same principle as ClonePlacement.by_selection (see
@@ -223,7 +223,7 @@ def extract_template_from_selection(
     extracting the wrong thing if a stale selection happens to be active.
 
     params/net_template_map — both optional and only work as a pair
-    (see --param/--net-template in kicadspoke_cli.py): net_template_map is an
+    (see --param/--net-template in kicadstamp_cli.py): net_template_map is an
     explicit literal‑to‑pattern mapping written once by the user at extraction;
     params are the values that will later resolve the pattern at apply time,
     used here ONLY for verification (see net_resolution.parametrize_net).
@@ -251,7 +251,7 @@ def extract_template_from_selection(
     "explicit opt-in" shape as items above). When given, every case where
     net_template could not be determined unambiguously (see "N nets from
     --net-template on pads" warning below) also appends a
-    (role, field_name, hint) tuple, so the caller (kicadspoke_cli.py's
+    (role, field_name, hint) tuple, so the caller (kicadstamp_cli.py's
     cmd_extract) can render it as a commented placeholder line in the
     written YAML via render_uncertain_comments() instead of leaving the gap
     only visible in the log.

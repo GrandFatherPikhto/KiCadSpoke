@@ -1,4 +1,4 @@
-# kicadspoke/placement/commands.py
+# kicadstamp/placement/commands.py
 
 from dataclasses import dataclass
 from typing import Optional

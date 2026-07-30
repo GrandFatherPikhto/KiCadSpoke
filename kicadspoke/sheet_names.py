@@ -1,7 +1,7 @@
-# kicadspoke/sheet_names.py
+# kicadstamp/sheet_names.py
 """
 sheet_names.py — dictionary {uuid: Sheetname} built by direct parsing of
-*.kicad_sch files (sexpdata, same format already read by kicadspoke.cloner).
+*.kicad_sch files (sexpdata, same format already read by kicadstamp.cloner).
 NOT via kipy — see discussion:
   - sheet_path.path_human_readable is broken in this KiCad version (always
     empty string; the field exists in the protocol but is not filled).

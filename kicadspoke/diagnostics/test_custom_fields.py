@@ -10,7 +10,7 @@ import math
 import yaml
 from typing import Dict, Any, Optional, Tuple
 
-from kicadspoke.i18n import _
+from kicadstamp.i18n import _
 
 
 def load_template(input_path: str) -> Dict[str, Any]:

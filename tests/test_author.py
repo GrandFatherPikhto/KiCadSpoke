@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for kicadspoke/author.py — build ClonePlacement/Rule in Python,
+"""Tests for kicadstamp/author.py — build ClonePlacement/Rule in Python,
 dump back to YAML, or feed straight into the apply pipeline."""
 import sys
 from pathlib import Path
@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 import yaml
 
-from kicadspoke.config import ClonePlacement, Config, ManualSpoke, Rule, load_config
-from kicadspoke.author import (_prune_defaults, apply_config, cli_main, dump_clone_placements,
+from kicadstamp.config import ClonePlacement, Config, ManualSpoke, Rule, load_config
+from kicadstamp.author import (_prune_defaults, apply_config, cli_main, dump_clone_placements,
                                dump_rules, dump_template)
 
 
@@ -106,7 +106,7 @@ class TestApplyConfig:
         this test must be updated too — otherwise apply_config would silently
         stop forwarding it and fail at runtime with AttributeError."""
         cfg = Config()
-        with patch("kicadspoke.author.cmd_apply") as mock_cmd_apply:
+        with patch("kicadstamp.author.cmd_apply") as mock_cmd_apply:
             apply_config(cfg, "my_run.yaml", dry_run=True, only=["a"], cluster=["b"],
                         timeout_ms=1234, batch_size=5, no_collision_check=True,
                         collision_margin=0.5)
@@ -126,7 +126,7 @@ class TestApplyConfig:
 
     def test_defaults_match_cli_defaults(self):
         cfg = Config()
-        with patch("kicadspoke.author.cmd_apply") as mock_cmd_apply:
+        with patch("kicadstamp.author.cmd_apply") as mock_cmd_apply:
             apply_config(cfg, "my_run.yaml")
 
         args = mock_cmd_apply.call_args[0][0]
@@ -148,8 +148,8 @@ class TestCliMain:
 
     def test_without_apply_only_writes_output(self, tmp_path):
         out = tmp_path / "generated.yaml"
-        with patch("kicadspoke.author.load_config") as mock_load_config, \
-             patch("kicadspoke.author.apply_config") as mock_apply_config:
+        with patch("kicadstamp.author.load_config") as mock_load_config, \
+             patch("kicadstamp.author.apply_config") as mock_apply_config:
             cli_main(self._build, str(out), "root.yaml", argv=[])
 
         assert out.exists()
@@ -158,8 +158,8 @@ class TestCliMain:
 
     def test_apply_dry_run_loads_root_config_and_forwards_dry_run(self, tmp_path):
         out = tmp_path / "generated.yaml"
-        with patch("kicadspoke.author.load_config") as mock_load_config, \
-             patch("kicadspoke.author.apply_config") as mock_apply_config:
+        with patch("kicadstamp.author.load_config") as mock_load_config, \
+             patch("kicadstamp.author.apply_config") as mock_apply_config:
             mock_load_config.return_value = ("cfg-sentinel", None)
             cli_main(self._build, str(out), "root.yaml", argv=["--apply", "--dry-run"])
 
@@ -168,8 +168,8 @@ class TestCliMain:
 
     def test_apply_without_dry_run_forwards_dry_run_false(self, tmp_path):
         out = tmp_path / "generated.yaml"
-        with patch("kicadspoke.author.load_config") as mock_load_config, \
-             patch("kicadspoke.author.apply_config") as mock_apply_config:
+        with patch("kicadstamp.author.load_config") as mock_load_config, \
+             patch("kicadstamp.author.apply_config") as mock_apply_config:
             mock_load_config.return_value = ("cfg-sentinel", None)
             cli_main(self._build, str(out), "root.yaml", argv=["--apply"])
 
@@ -177,8 +177,8 @@ class TestCliMain:
 
     def test_creates_missing_parent_directories(self, tmp_path):
         out = tmp_path / "nested" / "dir" / "generated.yaml"
-        with patch("kicadspoke.author.load_config"), \
-             patch("kicadspoke.author.apply_config"):
+        with patch("kicadstamp.author.load_config"), \
+             patch("kicadstamp.author.apply_config"):
             cli_main(self._build, str(out), "root.yaml", argv=[])
 
         assert out.exists()

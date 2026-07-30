@@ -1,4 +1,4 @@
-# kicadspoke/runtime_context.py
+# kicadstamp/runtime_context.py
 """
 runtime_context.py — runtime-computed data that is NOT part of the YAML config.
 

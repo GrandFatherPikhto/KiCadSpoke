@@ -16,7 +16,7 @@ adapter.py — adapter пока не умеет треки вообще, зде�
 import pytest
 from kipy.geometry import Vector2
 from kipy.board_types import Track, BoardLayer
-from kicadspoke.utils.units import MM
+from kicadstamp.utils.units import MM
 
 
 @pytest.mark.integration

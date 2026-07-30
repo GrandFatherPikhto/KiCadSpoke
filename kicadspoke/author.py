@@ -1,4 +1,4 @@
-# kicadspoke/author.py
+# kicadstamp/author.py
 """
 author.py — build ClonePlacement/Rule in real Python (loops, computed
 values) instead of hand-writing repetitive YAML, where copy-paste mistakes
@@ -8,7 +8,7 @@ are plain dataclasses already — this module adds nothing new to them, just
 two ways to get a built list somewhere useful:
 
   (a) apply_config() — straight into the existing apply pipeline
-      (kicadspoke_cli.cmd_apply already accepts a pre-built Config).
+      (kicadstamp_cli.cmd_apply already accepts a pre-built Config).
   (b) dump_clone_placements()/dump_rules() — serialize back to YAML, so
       generated subsystem files stay diffable/reviewable in git even when
       authored by a script.
@@ -72,7 +72,7 @@ def _prune_defaults(obj: Any) -> Any:
 
 def dump_clone_placements(clones: List[ClonePlacement], path: str) -> None:
     """Writes {'clone_placements': [...]} to path — a file directly usable
-    via include: (see kicadspoke/config/includes.py) or as a whole profile."""
+    via include: (see kicadstamp/config/includes.py) or as a whole profile."""
     data = {"clone_placements": [_prune_defaults(c) for c in clones]}
     with open(path, "w", encoding="utf-8") as f:
         yaml.dump(data, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
@@ -89,7 +89,7 @@ def dump_rules(rules: List[Rule], path: str) -> None:
 def dump_template(template_dict: dict, path: str) -> None:
     """Writes a template_extraction.extract_template_from_selection() result
     (already {name: {...}} shaped) straight to path, ready for templates_file.
-    Same yaml.dump style as kicadspoke_cli.py's cmd_extract, minus its
+    Same yaml.dump style as kicadstamp_cli.py's cmd_extract, minus its
     merge-into-existing-file behaviour: this always overwrites the whole
     file, matching dump_clone_placements/dump_rules — a script re-running
     extract for one subsystem should produce a clean, idempotent regeneration
@@ -104,7 +104,7 @@ def apply_config(cfg: Config, config_path: str, *, dry_run: bool = False,
                   timeout_ms: int = DEFAULT_TIMEOUT_MS, batch_size: int = DEFAULT_BATCH_SIZE,
                   no_collision_check: bool = False, collision_margin: float = 0.2) -> None:
     """Runs cfg through the exact same pipeline a YAML-driven `apply` run
-    uses (kicadspoke_cli.cmd_apply already accepts a pre-built Config — this
+    uses (kicadstamp_cli.cmd_apply already accepts a pre-built Config — this
     just builds the argparse.Namespace it expects).
 
     config_path is NOT cosmetic: when cfg.registry_path/cfg.track_registry_path
@@ -157,7 +157,7 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
 
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--apply", action="store_true",
-                        help="also apply to the live board via kicadspoke.author.apply_config() "
+                        help="also apply to the live board via kicadstamp.author.apply_config() "
                              "(connects to KiCad over IPC) after writing the YAML")
     parser.add_argument("--dry-run", action="store_true",
                         help="with --apply, only print the plan, don't touch the board")
@@ -166,14 +166,14 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
     args = parser.parse_args(argv)
 
     # Local import: without this, nothing configures a logging handler when a board script
-    # is run directly (as opposed to through kicadspoke_cli.py's own main()),
+    # is run directly (as opposed to through kicadstamp_cli.py's own main()),
     # so every logger.info/debug — including the role-resolver's ambiguity
     # narrowing cascade, exactly what you need to see when a role fails to
     # resolve — is silently dropped instead of printed.
-    from kicadspoke.logging_setup import setup_logging
+    from kicadstamp.logging_setup import setup_logging
     setup_logging(verbose=args.verbose)
 
-    # Mirrors kicadspoke_cli.py's own main() exception handling: without
+    # Mirrors kicadstamp_cli.py's own main() exception handling: without
     # this, a ValidationError/PlacerError from apply_config() (e.g. a role
     # ambiguity fatal — format_fatal_error's boxed message, already the
     # useful part) propagated as a raw Python traceback instead, burying the

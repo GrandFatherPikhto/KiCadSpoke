@@ -16,9 +16,9 @@ Cyrillic — the typo is almost impossible to reproduce manually; it is only
 detected by diffing character codes.
 
 Run:
-    python -m kicadspoke.diagnostics.diagnostic_charset
-    python -m kicadspoke.diagnostics.diagnostic_charset --fields Role,Cluster,Value
-    python -m kicadspoke.diagnostics.diagnostic_charset --verbose
+    python -m kicadstamp.diagnostics.diagnostic_charset
+    python -m kicadstamp.diagnostics.diagnostic_charset --fields Role,Cluster,Value
+    python -m kicadstamp.diagnostics.diagnostic_charset --verbose
 
 Return code: 0 — no non‑ASCII characters found, 1 — at least one found.
 Convenient as a standalone step before `apply` (like run_all_checks, but for
@@ -34,9 +34,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from kicadspoke.constants import CLUSTER_FIELD_NAME, ROLE_FIELD_NAME
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.i18n import _
+from kicadstamp.constants import CLUSTER_FIELD_NAME, ROLE_FIELD_NAME
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.i18n import _
 
 logger = logging.getLogger(__name__)
 

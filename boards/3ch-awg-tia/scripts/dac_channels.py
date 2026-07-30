@@ -3,7 +3,7 @@
 boards/3ch-awg-tia/scripts/dac_channels.py — generates clone_placements for
 the 3-channel DAC section (AD9707 + its immediate passives), reproducing
 what's already live and verified in profiles/3ch-awg-tia.yaml, via
-kicadspoke.author instead of hand-written YAML (see
+kicadstamp.author instead of hand-written YAML (see
 docs/board_coding.md for the walkthrough this mirrors).
 
 AD_DAC itself is placed on all 3 channels — a real per-channel lookup table,
@@ -14,10 +14,10 @@ row per role is the hand-verified baseline (see profiles/3ch-awg-tia.yaml);
 Channel_1/2 rows were derived by rotating that flat offset by the delta
 between each channel's AD_DAC rotation_deg and Channel_0's, using
 kipy.geometry.Vector2.rotate() — the SAME rotation the placement engine
-itself applies to template geometry (kicadspoke/geometry/spoke_layout.py's
+itself applies to template geometry (kicadstamp/geometry/spoke_layout.py's
 rotate_local_offset) — NOT hand-guessed numbers. This is needed because
 origin_x_mm/origin_y_mm is a FLAT shift from the anchor, NOT auto-rotated
-by the engine (see ClonePlacement's docstring in kicadspoke/config/models.py
+by the engine (see ClonePlacement's docstring in kicadstamp/config/models.py
 and clone_geometry.py:109-113): reusing Channel_0's numbers verbatim on a
 differently-rotated channel would silently misplace the passive.
 PASSIVE_LAYOUT's Channel_1/2 rows (and OP_AMPS below, same idea) have been
@@ -39,8 +39,8 @@ from typing import List, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from kicadspoke.author import cli_main
-from kicadspoke.config import ClonePlacement
+from kicadstamp.author import cli_main
+from kicadstamp.config import ClonePlacement
 
 HERE = Path(__file__).resolve().parent
 OUTPUT = HERE.parent / "generated" / "dac_channels.yaml"

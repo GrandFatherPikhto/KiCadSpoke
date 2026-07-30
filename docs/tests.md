@@ -1,4 +1,4 @@
-# `tests/` – Unit and Integration Tests for KiCadSpoke
+# `tests/` – Unit and Integration Tests for KiCadStamp
 
 ## Purpose
 
@@ -76,7 +76,7 @@ The following fixtures are provided for working with real KiCad:
 |---------|-------|-------------|
 | `adapter` | `session` | Single `KiCadBoardAdapter` instance for the entire session. |
 | `board` | `session` | Board from the adapter. |
-| `test_config` | `session` | Loaded test config from `kicadspoke_templates_example.yaml`. |
+| `test_config` | `session` | Loaded test config from `kicadstamp_templates_example.yaml`. |
 | `test_component_ref` | `function` | Refdes of a component for tests (default `C5`). |
 | `test_pad_number` | `function` | Pad number for tests (default `17`). |
 | `temp_via` | `function` | Creates a temporary via on GND, removes it after the test. Returns `(via_id, position, net)`. |

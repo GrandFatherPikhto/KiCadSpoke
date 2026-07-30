@@ -34,8 +34,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from kicadspoke.config import Rule, ManualSpoke, ThermalViaArrayConfig, ClonePlacement
-from kicadspoke.i18n import _
+from kicadstamp.config import Rule, ManualSpoke, ThermalViaArrayConfig, ClonePlacement
+from kicadstamp.i18n import _
 
 TEMPLATE_NAME = "cap_pair_standard"
 CLONE_TEMPLATE_NAME = "cap_pair_standard_clone"

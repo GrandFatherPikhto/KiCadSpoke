@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for templates_file/template_files (kicadspoke/config/loader.py) —
+"""Tests for templates_file/template_files (kicadstamp/config/loader.py) —
 external raw-shaped ({name: {...}}, no 'templates:' wrapper) template files,
 independent of include: (see test_config_includes.py for that mechanism)."""
 import sys
@@ -7,8 +7,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadspoke.config import load_config
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.config import load_config
+from kicadstamp.exceptions import ValidationError
 
 ONE_ROLE = """
 {name}:

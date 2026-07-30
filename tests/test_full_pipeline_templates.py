@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Integration test for the KiCadSpoke pipeline end‑to‑end: PlacementPlanner
+Integration test for the KiCadStamp pipeline end‑to‑end: PlacementPlanner
 (manual_position_calculator + component_pool + via_planner) with mocks.
 
-KiCadSpoke, generalised vias: spoke‑level and component‑level vias are now
+KiCadStamp, generalised vias: spoke‑level and component‑level vias are now
 computed SIMULTANEOUSLY with component positions in plan_moves() — no more
 reading of live component pads for vias.
 """
@@ -16,13 +16,13 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
-from kicadspoke.config import (
+from kicadstamp.config import (
     Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
     TemplateVia, TemplateComponentSlot, Rule
 )
-from kicadspoke.placement.planner import PlacementPlanner
-from kicadspoke.geometry.spoke_layout import rotate_local_offset
-from kicadspoke.constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
+from kicadstamp.placement.planner import PlacementPlanner
+from kicadstamp.geometry.spoke_layout import rotate_local_offset
+from kicadstamp.constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 MM = 1_000_000
 

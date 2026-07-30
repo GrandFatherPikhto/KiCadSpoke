@@ -1,4 +1,4 @@
-# kicadspoke/cloner/pcb.py
+# kicadstamp/cloner/pcb.py
 """
 Parsing .kicad_pcb: footprints (with hierarchical path), segments, vias,
 net table — and extracting "everything of channel N".

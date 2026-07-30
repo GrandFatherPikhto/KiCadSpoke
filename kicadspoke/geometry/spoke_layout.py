@@ -1,4 +1,4 @@
-# kicadspoke/geometry/spoke_layout.py
+# kicadstamp/geometry/spoke_layout.py
 """
 spoke_layout.py — expands a spoke template into absolute board coordinates.
 
@@ -18,7 +18,7 @@ Uses the SAME rotation formula as the rest of the project
 (kipy.geometry.Vector2.rotate(), empirically confirmed earlier for the flip
 convention) — does not reinvent rotation on its own.
 
-CHANGED (KiCadSpoke, generalised vias): previously component‑level vias
+CHANGED (KiCadStamp, generalised vias): previously component‑level vias
 ("GND via") were computed from the REAL ground pad of the already‑placed
 component — requiring live board reading after the move commit. Now vias
 (at both spoke and component level) are ALWAYS pure geometry from the spoke

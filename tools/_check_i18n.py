@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Check which kicadspoke source files use _() gettext calls and whether they import it."""
+"""Check which kicadstamp source files use _() gettext calls and whether they import it."""
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
 import re
 import glob
 import os
 
-src = [f for f in glob.glob('kicadspoke/**/*.py', recursive=True) 
+src = [f for f in glob.glob('kicadstamp/**/*.py', recursive=True) 
        if '__pycache__' not in f and '.tox' not in f]
 
 has_import = []
@@ -15,7 +15,7 @@ for f in sorted(src):
     txt = open(f, 'r', encoding='utf-8').read()
     # Check for _ import (any number of dots: .i18n, ..i18n, ...i18n)
     if re.search(r'from\s+\.+i18n\s+import\s+_', txt) or \
-       re.search(r'from\s+kicadspoke\.i18n\s+import\s+_', txt):
+       re.search(r'from\s+kicadstamp\.i18n\s+import\s+_', txt):
         has_import.append(f)
     # Check for _("...") or _('...') calls
     if re.search(r'_\s*\([\"\']', txt):

@@ -1,4 +1,4 @@
-# kicadspoke/placement/services/manual_position_calculator.py
+# kicadstamp/placement/services/manual_position_calculator.py
 
 import logging
 from typing import List, Optional, Set, Tuple
@@ -42,7 +42,7 @@ def rule_anchor_ids(rule: Rule) -> Set[str]:
     per placement), a Rule is a GROUP of per-pad spokes, each with its own
     registry identity — so this returns a set, not a single id.
 
-    Used for known_anchor_ids (kicadspoke_cli.py's cmd_apply, see
+    Used for known_anchor_ids (kicadstamp_cli.py's cmd_apply, see
     clone_anchor_id/thermal_anchor_id for the same idea). Without this, a
     rule excluded from a run (enabled: false, --only, --cluster) has its
     via/track registry entries pruned unconditionally —

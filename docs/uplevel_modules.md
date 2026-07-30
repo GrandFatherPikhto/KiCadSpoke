@@ -1,10 +1,10 @@
-# Top-level Modules of KiCadSpoke (Current Version)
+# Top-level Modules of KiCadStamp (Current Version)
 
-The `kicadspoke/` folder contains the core modules responsible for configuration loading, exception handling, logging, undo, validation, placement registries for vias and tracks, template extraction, scripting helpers, and the CLI entry point. Each module addresses a specific task and interacts with others through well-defined interfaces.
+The `kicadstamp/` folder contains the core modules responsible for configuration loading, exception handling, logging, undo, validation, placement registries for vias and tracks, template extraction, scripting helpers, and the CLI entry point. Each module addresses a specific task and interacts with others through well-defined interfaces.
 
 ---
 
-## 1. `kicadspoke_cli.py` – CLI Entry Point (Dispatcher)
+## 1. `kicadstamp_cli.py` – CLI Entry Point (Dispatcher)
 
 **Purpose:**  
 Thin dispatcher that parses command-line arguments and delegates to the appropriate command handler. The actual logic for `apply`, `extract`, `undo`, `clone-extract` has been extracted into separate modules for testability and maintainability.
@@ -109,7 +109,7 @@ Parses `.kicad_sch` files to build a mapping from sheet UUIDs to sheet names. Th
 ## 7. `i18n.py` – Internationalisation
 
 **Purpose:**  
-Sets up gettext for Russian-language user-facing messages. Uses `kicadspoke` translation domain. Provides the `_()` function used throughout the codebase.
+Sets up gettext for Russian-language user-facing messages. Uses `kicadstamp` translation domain. Provides the `_()` function used throughout the codebase.
 
 **Main elements:**
 
@@ -297,7 +297,7 @@ Implements the `undo` command. Uses JSON logs created by `executor/operation_log
 |----------|-------------|
 | `undo_last_operation(json_path)` | Restores board state: returns components to original positions/layers, deletes created vias and tracks. |
 
-**Used in:** `kicadspoke_cli.py` (`undo` command).
+**Used in:** `kicadstamp_cli.py` (`undo` command).
 
 ---
 
@@ -346,7 +346,7 @@ Holds global constants used across various modules.
 
 ```mermaid
 graph TD
-    CLI[kicadspoke_cli.py] --> ApplyPipe[apply_pipeline.py]
+    CLI[kicadstamp_cli.py] --> ApplyPipe[apply_pipeline.py]
     CLI --> CliExtract[cli_extract.py]
     CLI --> Undo[undo.py]
     CLI --> LogSetup[logging_setup.py]

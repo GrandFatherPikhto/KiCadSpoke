@@ -1,4 +1,4 @@
-# kicadspoke/placement/services/via_planner.py
+# kicadstamp/placement/services/via_planner.py
 
 import logging
 from typing import List, Optional, Set, Tuple
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def thermal_anchor_id(tva: ThermalViaArrayConfig) -> str:
     """Registry identity for thermal vias — single point shared with
-    kicadspoke_cli.py (known_anchor_ids), so the two never drift apart."""
+    kicadstamp_cli.py (known_anchor_ids), so the two never drift apart."""
     return f"thermal:{tva.name}"
 
 

@@ -1,6 +1,6 @@
-# KiCadSpoke v1.4.0
+# KiCadStamp v1.4.0
 
-**KiCadSpoke** is a command‑line **PCB cloning and layout automation** tool for **KiCad 10**, designed as an advanced script‑based alternative to the traditional **KiCad Replicate Layout** plugin. It enables automated **block replication**, component placement, and routing of complex multi‑channel designs using **templates**, **roles**, and the IPC API.
+**KiCadStamp** is a command‑line **PCB cloning and layout automation** tool for **KiCad 10**, designed as an advanced script‑based alternative to the traditional **KiCad Replicate Layout** plugin. It enables automated **block replication**, component placement, and routing of complex multi‑channel designs using **templates**, **roles**, and the IPC API.
 
 - Moving components (capacitors, resistors, ferrites, crystals, etc.) to specified positions.
 - Creating vias and **tracks** attached to the spoke as a whole or to individual components.
@@ -36,7 +36,7 @@
 - **Tracks in templates** – templates can include straight track segments (polylines are supported as a sequence of segments). Track collisions are not automatically checked (rely on KiCad DRC).
 - **External template files** – templates can be stored separately as JSON or YAML and referenced via `templates_file:` in the main config, keeping the main file clean and diff‑friendly.
 - **Splitting a profile into subsystem files** – `include:` at the root of a profile merges in one or more other YAML files (each carrying any mix of `extract_profiles`/`clone_placements`/`rules`/`templates`), recursively, with a per‑entry `enabled: false` to switch a whole subsystem off without touching every item inside it. Independent of `templates_file` (see [docs/commands.md](docs/commands.md) for merge semantics and duplicate/cycle handling).
-- **Scripting API** – `kicadspoke.explore.Board` for ad‑hoc read‑only querying (`board.select(role=..., cluster=..., sheet=..., net=...)`), and `kicadspoke.author` for building `ClonePlacement`/`Rule` in real Python instead of hand‑writing repetitive YAML, either applied directly or dumped back to an `include:`‑ready YAML file (see [docs/scripting.md](docs/scripting.md)).
+- **Scripting API** – `kicadstamp.explore.Board` for ad‑hoc read‑only querying (`board.select(role=..., cluster=..., sheet=..., net=...)`), and `kicadstamp.author` for building `ClonePlacement`/`Rule` in real Python instead of hand‑writing repetitive YAML, either applied directly or dumped back to an `include:`‑ready YAML file (see [docs/scripting.md](docs/scripting.md)).
 
 ---
 
@@ -59,7 +59,7 @@ pip install kipy pyyaml sexpdata
 3. Run **Update PCB from Schematic** to propagate the field to the board.
 4. Verify readability with:
    ```bash
-   python -m kicadspoke.diagnostics.test_custom_field C5 --field Role
+   python -m kicadstamp.diagnostics.test_custom_field C5 --field Role
    ```
 
 ---
@@ -251,12 +251,12 @@ thermal_via_array:
 
 ## CLI Commands
 
-All commands are run via `kicadspoke_cli.py`. If the subcommand is omitted, `apply` is assumed.
+All commands are run via `kicadstamp_cli.py`. If the subcommand is omitted, `apply` is assumed.
 
 ### `apply` – apply placement
 
 ```bash
-python kicadspoke_cli.py apply config.yaml [options]
+python kicadstamp_cli.py apply config.yaml [options]
 ```
 
 Options:
@@ -272,7 +272,7 @@ Options:
 ### `extract` – extract template from selection (enhanced)
 
 ```bash
-python kicadspoke_cli.py extract --name template_name --output config.yaml [--verbose] [--log-file] [--param KEY=VALUE] [--net-template LITERAL=PATTERN] [--origin-by-via-net NET] [--origin-by-component-role ROLE]
+python kicadstamp_cli.py extract --name template_name --output config.yaml [--verbose] [--log-file] [--param KEY=VALUE] [--net-template LITERAL=PATTERN] [--origin-by-via-net NET] [--origin-by-component-role ROLE]
 ```
 
 New options:
@@ -286,13 +286,13 @@ New options:
 ### `undo` – undo the last operation
 
 ```bash
-python kicadspoke_cli.py undo [--verbose] [--log-file]
+python kicadstamp_cli.py undo [--verbose] [--log-file]
 ```
 
 ### `clone-extract` – snapshot a channel (file‑based cloner)
 
 ```bash
-python kicadspoke_cli.py clone-extract --net project.net --pcb project.kicad_pcb --channel Channel_0 --output snapshot.yaml [--verbose]
+python kicadstamp_cli.py clone-extract --net project.net --pcb project.kicad_pcb --channel Channel_0 --output snapshot.yaml [--verbose]
 ```
 
 ---
@@ -301,28 +301,28 @@ python kicadspoke_cli.py clone-extract --net project.net --pcb project.kicad_pcb
 
 ### 1. Standard run
 ```bash
-python kicadspoke_cli.py 10CL006YE144C8G.yaml
+python kicadstamp_cli.py 10CL006YE144C8G.yaml
 ```
 
 ### 2. Dry run
 ```bash
-python kicadspoke_cli.py config.yaml --dry-run
+python kicadstamp_cli.py config.yaml --dry-run
 ```
 
 ### 3. Process a single clone (selection mode)
 ```bash
-python kicadspoke_cli.py config.yaml --only pi_filter_vccio
+python kicadstamp_cli.py config.yaml --only pi_filter_vccio
 ```
 
 ### 4. Extract a template with parametrisation and origin by via
 Select the elements on the board, then:
 ```bash
-python kicadspoke_cli.py extract --name my_filter --output my_filter.json --net-template "DAC1_DB1=DAC{channel}_DB1" --param channel=1 --origin-by-via-net "/Channel_0/DAC/+3V3_CLKVDD" --verbose
+python kicadstamp_cli.py extract --name my_filter --output my_filter.json --net-template "DAC1_DB1=DAC{channel}_DB1" --param channel=1 --origin-by-via-net "/Channel_0/DAC/+3V3_CLKVDD" --verbose
 ```
 
 ### 5. Undo
 ```bash
-python kicadspoke_cli.py undo --verbose
+python kicadstamp_cli.py undo --verbose
 ```
 
 ---
@@ -342,7 +342,7 @@ afterwards is usually safe. Full write-up, a related bug (#24970), and the full 
 see [docs/crash_hunting.md](./docs/crash_hunting.md).
 
 ### Diagnostic scripts
-`kicadspoke/diagnostics/` includes:
+`kicadstamp/diagnostics/` includes:
 - `diagnose_first_write_crash.py` – reproduces the crash ladder, see [docs/diagnose_first_write_crash.md](./docs/diagnose_first_write_crash.md).
 - `test_custom_fields.py` – checks `Role` field reading.
 - `test_move_one_cap.py`, `test_flip_one_cap.py`, `test_create_one_via.py`, `test_pad_mirror_convention.py`, `get_selected_component.py`, `get_pad_bbox.py`, `diagnostic_keepout.py`.
@@ -352,9 +352,9 @@ see [docs/crash_hunting.md](./docs/crash_hunting.md).
 ## Project Structure (brief)
 
 ```
-kicadspoke/
+kicadstamp/
 ├── __init__.py
-├── kicadspoke_cli.py          # CLI entry point
+├── kicadstamp_cli.py          # CLI entry point
 ├── apply_pipeline.py          # cmd_apply and ApplyPipeline class
 ├── cli_extract.py             # cmd_extract command logic
 ├── logging_setup.py           # Logging configuration
@@ -410,8 +410,8 @@ Detailed documentation is in the `docs/` folder:
 
 ## Versioning
 
-Single source of truth: `__version__` in [`kicadspoke/__init__.py`](./kicadspoke/__init__.py) — this README's
-header and `kicadspoke_cli.py --version`/`-V` both read it, not a separate literal. Versioned by
+Single source of truth: `__version__` in [`kicadstamp/__init__.py`](./kicadstamp/__init__.py) — this README's
+header and `kicadstamp_cli.py --version`/`-V` both read it, not a separate literal. Versioned by
 session/stage, not by commit: MINOR bumps once per notable block of work (e.g. one architecture‑refactor
 session, regardless of how many commits it took), PATCH for point fixes made between stages, MAJOR
 reserved for actual breaking changes to the CLI or YAML config format.
@@ -424,4 +424,4 @@ This project is distributed under the **MIT** license. See the `LICENSE` file fo
 
 ---
 
-**KiCadSpoke** is not just a utility – it's a modern alternative to manual block copying in KiCad.
+**KiCadStamp** is not just a utility – it's a modern alternative to manual block copying in KiCad.

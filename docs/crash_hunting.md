@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document describes the toolkit KiCadSpoke uses to catch and localize two distinct, confirmed KiCad 10
+This document describes the toolkit KiCadStamp uses to catch and localize two distinct, confirmed KiCad 10
 crashes (Windows and Linux/Flatpak), and the recommended order to run them in. The tools live in two places:
-`kicadspoke/diagnostics/` (detailed step-by-step diagnosis via `python -m`) and `tools/` (operational scripts —
+`kicadstamp/diagnostics/` (detailed step-by-step diagnosis via `python -m`) and `tools/` (operational scripts —
 state cleanup and crash-rate statistics across repeated runs). It also covers, at the end, how to capture and
 symbolize an actual core dump on either OS once one of the tools has reproduced a crash.
 
@@ -18,7 +18,7 @@ This isn't an abstract future risk — both bugs were caught live on the `3CH-AW
 ### #24966 — IPC API crash on the first write of a session
 
 A null dereference in `API_HANDLER_EDITOR::checkForBusy()` (`m_frame == nullptr`), reachable from several
-editor-mutating IPC entry points. The symptom on the KiCadSpoke side is a dropped connection
+editor-mutating IPC entry points. The symptom on the KiCadStamp side is a dropped connection
 (`ConnectionError`), not a polite `ApiError`.
 
 **Exact trigger (refined 2026-07-26):** not any mutating call, but specifically the session's **first
@@ -58,7 +58,7 @@ separate tickets. Full write-up: `techdocs/issues/issue_24970_description.md`.
 
 ## The toolkit
 
-### 1. `kicadspoke/diagnostics/diagnose_first_write_crash.py` — step-by-step ladder (single run)
+### 1. `kicadstamp/diagnostics/diagnose_first_write_crash.py` — step-by-step ladder (single run)
 
 Diagnoses **exactly where** in the read→write chain the process dies: connect → ping → version →
 open_documents → get_board → read footprints → re-read → **no-op transaction**
@@ -71,8 +71,8 @@ dependencies — standalone in [docs/diagnose_first_write_crash.md](diagnose_fir
 duplicated here.
 
 ```bash
-python -m kicadspoke.diagnostics.diagnose_first_write_crash            # full ladder (may crash KiCad)
-python -m kicadspoke.diagnostics.diagnose_first_write_crash --until 8   # reads only, safe
+python -m kicadstamp.diagnostics.diagnose_first_write_crash            # full ladder (may crash KiCad)
+python -m kicadstamp.diagnostics.diagnose_first_write_crash --until 8   # reads only, safe
 ```
 
 ### 2. `tools/clean_kicad_crash_state.py` — clean up a crashed session's leftovers
@@ -129,7 +129,7 @@ Per-iteration cycle:
    noticeably wider on native Windows than on Linux/Flatpak, where it didn't show up at all (found
    2026-07-27, chasing a run that reported 100% "crash" on Windows while the same board was a clean 100% OK
    on Linux). Retried here with backoff, the same technique as `commit_with_retry` in production
-   (`kicadspoke/kicad/adapter.py`) — not counted as a crash.
+   (`kicadstamp/kicad/adapter.py`) — not counted as a crash.
 6. Record the outcome: `ok` / `crash` (dropped connection — this one is actually #24966) / `busy` (still busy
    after all retries — reported separately, not as a crash).
 7. Kill KiCad, next iteration.
@@ -214,7 +214,7 @@ from the repo root) — that script itself stays Linux/Flatpak-only for now (see
 
 ## How to catch and analyze a core dump (Windows + Linux)
 
-KiCadSpoke drives a live KiCad instance through its IPC API (`kipy`), so KiCad crashing isn't an abstract
+KiCadStamp drives a live KiCad instance through its IPC API (`kipy`), so KiCad crashing isn't an abstract
 risk — it's something you'll actually have to debug (see `techdocs/issues/` for the history of the two
 bugs above). What follows is not general theory — only what actually worked during real crash hunts on
 both OSes.

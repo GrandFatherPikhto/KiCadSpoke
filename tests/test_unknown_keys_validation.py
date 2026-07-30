@@ -10,8 +10,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadspoke.config import load_config
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.config import load_config
+from kicadstamp.exceptions import ValidationError
 
 
 class TestManualSpokeUnknownKeys:

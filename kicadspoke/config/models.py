@@ -1,12 +1,12 @@
-# kicadspoke/config/models.py
+# kicadstamp/config/models.py
 """
 config/models.py — all configuration dataclasses (templates, ClonePlacement,
 Rule, Config, etc.) WITHOUT any YAML loading/validation logic — this is purely
 a description of the data shape. Loading is in config/loader.py.
 
 Split from monolithic config.py by refactoring. The public interface of the
-package remains unchanged — kicadspoke/config/__init__.py re‑exports everything
-from here and from loader.py, so `from kicadspoke.config import Config, ClonePlacement, load_config`
+package remains unchanged — kicadstamp/config/__init__.py re‑exports everything
+from here and from loader.py, so `from kicadstamp.config import Config, ClonePlacement, load_config`
 continues to work exactly as before.
 """
 from dataclasses import dataclass, field
@@ -19,7 +19,7 @@ from ..i18n import _
 class ThermalViaArrayConfig:
     """Configuration for a thermal via array under an IC thermal pad.
 
-    name — for --only (see kicadspoke_cli.py). REQUIRED in YAML if the
+    name — for --only (see kicadstamp_cli.py). REQUIRED in YAML if the
     thermal_via_array section is present at all (see config/loader.py — fatal,
     not a silent fallback). Here in the dataclass it's Optional only because
     tests/internal code that construct ThermalViaArrayConfig() directly in
@@ -28,11 +28,11 @@ class ThermalViaArrayConfig:
 
     active — orthogonal to enabled (default True). enabled: false means "does
     not exist on the board" (registry pruned, see drop_disabled_rules/
-    known_anchor_ids in kicadspoke_cli.py). active: false means "skip this
+    known_anchor_ids in kicadstamp_cli.py). active: false means "skip this
     run only" — same effect as being excluded by --only/--cluster, but
     written inline instead of on the command line: existing via/tracks stay
     protected in the registry (still counted in known_anchor_ids), just not
-    (re)planned this run. See drop_inactive_items in kicadspoke_cli.py.
+    (re)planned this run. See drop_inactive_items in kicadstamp_cli.py.
     """
     enabled: bool = False
     anchor_ref: Optional[str] = None
@@ -66,7 +66,7 @@ class TemplateVia:
     component role) — same formula (local_to_absolute) as for the component
     position. net=None means "use the rule net" (rule.net).
 
-    CHANGED (KiCadSpoke): previously power_via was the only field at the spoke
+    CHANGED (KiCadStamp): previously power_via was the only field at the spoke
     level, while the GND via of a component was computed from the REAL pad of
     the already‑placed component (required reading the live board after commit).
     Now both concepts are the same slot — pure template geometry, independent
@@ -213,7 +213,7 @@ class Rule:
     does NOT prune this rule's via/tracks from the registry, it only skips
     (re)planning them this run — the inline, per-item equivalent of --only/
     --cluster, for narrowing work without retyping CLI flags each time (see
-    drop_inactive_items in kicadspoke_cli.py, added 2026-07-29).
+    drop_inactive_items in kicadstamp_cli.py, added 2026-07-29).
     """
     net: str
     spokes: List[ManualSpoke]
@@ -264,7 +264,7 @@ class ClonePlacement:
     distinction.
 
     ignore_selection — per-item counterpart of the CLI's --no-selection
-    (kicadspoke_cli.py), default False. When True, this clone_placement's own
+    (kicadstamp_cli.py), default False. When True, this clone_placement's own
     anchor resolution and role resolution (by_selection mode, and the
     selection-narrowing step shared with by-nets ambiguity resolution) treat
     the live PCB editor selection as empty, regardless of --no-selection —
@@ -366,7 +366,7 @@ class Config:
     # Path to log file for `apply` of this config (relative to this YAML,
     # like registry_path) — useful to avoid passing --log-file manually each time
     # for the same board profile. CLI flag --log-file, if given, TAKES PRIORITY
-    # over this field (see main() in kicadspoke_cli.py).
+    # over this field (see main() in kicadstamp_cli.py).
     log_file: Optional[str] = None
     @property
     def anchor_refs(self) -> set:

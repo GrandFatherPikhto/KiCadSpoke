@@ -1,4 +1,4 @@
-# `kicadspoke/geometry` – Геометрические утилиты
+# `kicadstamp/geometry` – Геометрические утилиты
 
 ## Назначение
 
@@ -56,7 +56,7 @@ geometry/
 | `predict_pad_position(fp, pad, dest, angle_deg, needs_flip)` | Предсказывает абсолютную позицию пада после перемещения футпринта в `dest` и поворота на `angle_deg` с учётом зеркалирования локального X при `needs_flip=True`. |
 
 **Используется в:**  
-В текущей версии KiCadSpoke эта функция **не используется** в основном коде, так как все via (включая GND via) вычисляются исключительно по геометрии шаблона, без обращения к живой плате. Однако модуль оставлен для диагностических скриптов (например, `test_pad_mirror_convention.py`) и для возможного использования в будущем (например, для ручной корректировки позиций или проверки коллизий).
+В текущей версии KiCadStamp эта функция **не используется** в основном коде, так как все via (включая GND via) вычисляются исключительно по геометрии шаблона, без обращения к живой плате. Однако модуль оставлен для диагностических скриптов (например, `test_pad_mirror_convention.py`) и для возможного использования в будущем (например, для ручной корректировки позиций или проверки коллизий).
 
 ---
 
@@ -139,7 +139,7 @@ geometry/
 ### 1. Построение keepout и поиск свободной точки (для термовиа)
 
 ```python
-from kicadspoke.geometry.keepout import build_keepout, find_free_point
+from kicadstamp.geometry.keepout import build_keepout, find_free_point
 from kipy.geometry import Vector2
 
 # Получаем bounding box'ы падов через адаптер
@@ -159,8 +159,8 @@ else:
 ### 2. Генерация сетки термовиа
 
 ```python
-from kicadspoke.geometry.thermal_grid import compute_thermal_via_grid
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.geometry.thermal_grid import compute_thermal_via_grid
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
 
 adapter = KiCadBoardAdapter()
 adapter.refresh_board()
@@ -175,8 +175,8 @@ for p in points:
 ### 3. Преобразование шаблона для клонирования (с треками и mirror)
 
 ```python
-from kicadspoke.geometry.clone_geometry import apply_clone_geometry
-from kicadspoke.config import load_config
+from kicadstamp.geometry.clone_geometry import apply_clone_geometry
+from kicadstamp.config import load_config
 
 cfg = load_config("config.yaml")
 template = cfg.templates["pi_filter_4"]

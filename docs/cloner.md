@@ -1,4 +1,4 @@
-# `kicadspoke/cloner` – File‑Based Cloner (Channel Analysis Without IPC)
+# `kicadstamp/cloner` – File‑Based Cloner (Channel Analysis Without IPC)
 
 ## Purpose
 
@@ -8,7 +8,7 @@ The `cloner/` module provides the `clone-extract` command for offline (no‑IPC)
 - **Building a twin map** – automatically determining the correspondence of components and nets between different instances of the same hierarchical sheet (template).
 - **Visualising “foreign” copper** – identifying global nets (power, ground) that pass through the channel boundaries, so that the designer can consciously handle them when cloning.
 
-**Key difference** from the rest of KiCadSpoke: it **does not require** a running KiCad instance and works exclusively with project files (`.net` and `.kicad_pcb`). This makes it ideal for preliminary analysis, studying existing layouts, and preparing `ClonePlacement` configurations.
+**Key difference** from the rest of KiCadStamp: it **does not require** a running KiCad instance and works exclusively with project files (`.net` and `.kicad_pcb`). This makes it ideal for preliminary analysis, studying existing layouts, and preparing `ClonePlacement` configurations.
 
 ---
 
@@ -188,7 +188,7 @@ foreign_in_bbox:
 
 ## Relationships with Other Modules
 
-The `cloner/` module is **self‑contained** and does not depend on `kicad/adapter.py`, `placement/`, or `geometry/`. It is used only in `kicadspoke_cli.py` via the `clone-extract` command.
+The `cloner/` module is **self‑contained** and does not depend on `kicad/adapter.py`, `placement/`, or `geometry/`. It is used only in `kicadstamp_cli.py` via the `clone-extract` command.
 
 Its output (YAML snapshots) is intended for **manual analysis** by the developer. Based on these snapshots, configurations for `ClonePlacement` are written, specifying `params` and `nets`; they can also be used to create parameterised templates with `--net-template` and `--param` during extraction (see the `extract` command).
 
@@ -197,7 +197,7 @@ Its output (YAML snapshots) is intended for **manual analysis** by the developer
 ## CLI Usage
 
 ```bash
-python kicadspoke_cli.py clone-extract --net project.net --pcb project.kicad_pcb --channel Channel_0 --output snapshot.yaml
+python kicadstamp_cli.py clone-extract --net project.net --pcb project.kicad_pcb --channel Channel_0 --output snapshot.yaml
 ```
 
 **Parameters:**

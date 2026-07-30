@@ -5,7 +5,7 @@ about components selected on the board (refdes, value, footprint, position,
 angle, size, pads, nets, Role field).
 
 Run: select components in KiCad and execute:
-    python -m kicadspoke.diagnostics.get_selected_component
+    python -m kicadstamp.diagnostics.get_selected_component
 """
 
 import sys
@@ -14,10 +14,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import logging
 from kipy.board_types import FootprintInstance
-from kicadspoke.constants import ROLE_FIELD_NAME
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.utils.units import MM
-from kicadspoke.i18n import _
+from kicadstamp.constants import ROLE_FIELD_NAME
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.utils.units import MM
+from kicadstamp.i18n import _
 
 logger = logging.getLogger(__name__)
 

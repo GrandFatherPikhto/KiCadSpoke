@@ -14,8 +14,8 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2
 from kipy.board_types import Pad, FootprintInstance, BoardLayer
 
-from kicadspoke.config import Config, Rule, ManualSpoke, SpokeTemplate, TemplateComponentSlot
-from kicadspoke.placement.services.manual_position_calculator import ManualPositionCalculator
+from kicadstamp.config import Config, Rule, ManualSpoke, SpokeTemplate, TemplateComponentSlot
+from kicadstamp.placement.services.manual_position_calculator import ManualPositionCalculator
 
 MM = 1_000_000
 

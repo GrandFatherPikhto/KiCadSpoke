@@ -1,4 +1,4 @@
-# `kicadspoke/kicad` – Adapter for KiCad IPC Interaction
+# `kicadstamp/kicad` – Adapter for KiCad IPC Interaction
 
 ## Purpose
 

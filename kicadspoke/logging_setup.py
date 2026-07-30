@@ -1,8 +1,8 @@
-# kicadspoke/logging_setup.py
+# kicadstamp/logging_setup.py
 """
-Logging setup for the KiCadSpoke CLI.
+Logging setup for the KiCadStamp CLI.
 
-Extracted from kicadspoke_cli.py so board scripts (via author.py) and
+Extracted from kicadstamp_cli.py so board scripts (via author.py) and
 any other entry point can configure logging without importing the full CLI.
 """
 

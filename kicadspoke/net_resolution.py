@@ -1,4 +1,4 @@
-# kicadspoke/net_resolution.py
+# kicadstamp/net_resolution.py
 """
 net_resolution.py — three‑layer net name resolution for cloned templates
 (TemplatePlacer), in order of increasing specificity:

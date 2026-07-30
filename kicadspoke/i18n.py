@@ -1,4 +1,4 @@
-# kicadspoke/i18n.py
+# kicadstamp/i18n.py
 import os
 import sys
 import gettext
@@ -69,7 +69,7 @@ def setup_i18n():
     lang = detect_language()
     try:
         translation = gettext.translation(
-            "kicadspoke",
+            "kicadstamp",
             localedir=str(LOCALE_DIR),
             languages=[lang],
             fallback=True,

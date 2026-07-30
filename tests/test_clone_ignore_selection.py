@@ -23,10 +23,10 @@ import pytest
 from unittest.mock import MagicMock
 from kipy.board_types import FootprintInstance
 
-from kicadspoke.config import Config, ClonePlacement
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.placement.services.clone_position_calculator import ClonePositionCalculator
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.config import Config, ClonePlacement
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.placement.services.clone_position_calculator import ClonePositionCalculator
+from kicadstamp.exceptions import ValidationError
 
 
 def _make_fp(ref):

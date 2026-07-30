@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_flip_one_cap.py — minimal diagnostic test for "true" flip (KiCadSpoke).
+test_flip_one_cap.py — minimal diagnostic test for "true" flip (KiCadStamp).
 
 Context: simply assigning footprint.layer = BoardLayer.BL_B_Cu only changes
 the data field and does NOT mirror pads/silkscreen — visually the component
@@ -12,20 +12,20 @@ item(s) to opposite side of board"). Via IPC it is accessible as
 kicad.run_action(...) — but like any GUI action, it works through the CURRENT
 SELECTION, not by taking objects directly.
 
-Uses the KiCadSpoke adapter, which encapsulates the flip and re‑reading.
+Uses the KiCadStamp adapter, which encapsulates the flip and re‑reading.
 
 Run:
-    python -m kicadspoke.diagnostics.test_flip_one_cap C6
+    python -m kicadstamp.diagnostics.test_flip_one_cap C6
 """
 
 import argparse
 import sys
 import time
 
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
-from kicadspoke.utils.units import MM
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.utils.units import MM
 from kipy.board_types import BoardLayer
-from kicadspoke.i18n import _
+from kicadstamp.i18n import _
 
 
 def step(label, func, *args, **kwargs):

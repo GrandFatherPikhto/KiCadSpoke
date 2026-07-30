@@ -1,4 +1,4 @@
-# `kicadspoke/geometry` – Geometry Utilities
+# `kicadstamp/geometry` – Geometry Utilities
 
 ## Purpose
 
@@ -56,7 +56,7 @@ Predicts the absolute position of a specific pad after moving and rotating the c
 | `predict_pad_position(fp, pad, dest, angle_deg, needs_flip)` | Predicts the absolute pad position after moving the footprint to `dest` and rotating by `angle_deg`, with local X mirroring if `needs_flip=True`. |
 
 **Used in:**  
-In the current KiCadSpoke version, this function **is not used** in the main code, because all vias (including GND vias) are computed solely from template geometry without accessing the live board. However, it is kept for diagnostic scripts (e.g., `test_pad_mirror_convention.py`) and for potential future use (e.g., manual position adjustment or collision checking).
+In the current KiCadStamp version, this function **is not used** in the main code, because all vias (including GND vias) are computed solely from template geometry without accessing the live board. However, it is kept for diagnostic scripts (e.g., `test_pad_mirror_convention.py`) and for potential future use (e.g., manual position adjustment or collision checking).
 
 ---
 
@@ -139,7 +139,7 @@ Computes absolute coordinates for an array of thermal vias under a thermal pad (
 ### 1. Building keepout and finding a free point (for thermal vias)
 
 ```python
-from kicadspoke.geometry.keepout import build_keepout, find_free_point
+from kicadstamp.geometry.keepout import build_keepout, find_free_point
 from kipy.geometry import Vector2
 
 # Get pad bounding boxes via the adapter
@@ -159,8 +159,8 @@ else:
 ### 2. Generating a thermal via grid
 
 ```python
-from kicadspoke.geometry.thermal_grid import compute_thermal_via_grid
-from kicadspoke.kicad.adapter import KiCadBoardAdapter
+from kicadstamp.geometry.thermal_grid import compute_thermal_via_grid
+from kicadstamp.kicad.adapter import KiCadBoardAdapter
 
 adapter = KiCadBoardAdapter()
 adapter.refresh_board()
@@ -175,8 +175,8 @@ for p in points:
 ### 3. Transforming a template for cloning (with tracks and mirror)
 
 ```python
-from kicadspoke.geometry.clone_geometry import apply_clone_geometry
-from kicadspoke.config import load_config
+from kicadstamp.geometry.clone_geometry import apply_clone_geometry
+from kicadstamp.config import load_config
 
 cfg = load_config("config.yaml")
 template = cfg.templates["pi_filter_4"]

@@ -5,8 +5,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadspoke.net_resolution import resolve_net, resolve_placeholder
-from kicadspoke.exceptions import ValidationError
+from kicadstamp.net_resolution import resolve_net, resolve_placeholder
+from kicadstamp.exceptions import ValidationError
 
 
 class TestResolveNet:

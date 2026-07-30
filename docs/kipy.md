@@ -1,8 +1,8 @@
-# Using the kicad-python API in KiCadSpoke
+# Using the kicad-python API in KiCadStamp
 
 All official documentation for the KiCad Python bindings (`kicad-python`) is available at: **[https://docs.kicad.org/kicad-python-main/](https://docs.kicad.org/kicad-python-main/)**.
 
-In the `KiCadSpoke` project, all calls to KiCad are encapsulated in the `KiCadBoardAdapter` class (`kicad/adapter.py`), and are also used in `undo.py` and `diagnostics`. Below is a complete list of all APIs used, with their status and links to documentation.
+In the `KiCadStamp` project, all calls to KiCad are encapsulated in the `KiCadBoardAdapter` class (`kicad/adapter.py`), and are also used in `undo.py` and `diagnostics`. Below is a complete list of all APIs used, with their status and links to documentation.
 
 ---
 
@@ -141,9 +141,9 @@ In the `KiCadSpoke` project, all calls to KiCad are encapsulated in the `KiCadBo
 
 ---
 
-# Use of Unstable, Undocumented, and Deprecated APIs in KiCadSpoke
+# Use of Unstable, Undocumented, and Deprecated APIs in KiCadStamp
 
-The KiCadSpoke project solves real‑world automation problems for placing components, vias, and tracks in KiCad. Some of these tasks **cannot** be accomplished while staying strictly within the stable public API. Therefore, the project consciously uses:
+The KiCadStamp project solves real‑world automation problems for placing components, vias, and tracks in KiCad. Some of these tasks **cannot** be accomplished while staying strictly within the stable public API. Therefore, the project consciously uses:
 
 - **unstable** (officially not guaranteed) methods;
 - **undocumented** internal fields;
@@ -309,7 +309,7 @@ Always use `Angle.from_degrees()` or `Angle.from_radians()`.
 
 ## Conclusion
 
-KiCadSpoke **intentionally** uses APIs that go beyond the stable public interface because only this allows solving real‑world automation tasks for placing components, vias, and tracks. However, all such places are:
+KiCadStamp **intentionally** uses APIs that go beyond the stable public interface because only this allows solving real‑world automation tasks for placing components, vias, and tracks. However, all such places are:
 
 - **clearly documented** in code comments;
 - **accompanied by unit tests** covering critical scenarios;

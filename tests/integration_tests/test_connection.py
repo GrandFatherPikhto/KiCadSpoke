@@ -1,5 +1,5 @@
 import pytest
-from kicadspoke.exceptions import BoardNotFoundError
+from kicadstamp.exceptions import BoardNotFoundError
 
 
 @pytest.mark.integration
