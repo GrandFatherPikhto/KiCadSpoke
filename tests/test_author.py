@@ -136,6 +136,25 @@ class TestApplyConfig:
         assert args.no_collision_check is False
         assert args.collision_margin == 0.2
 
+    def test_forwards_ctx_to_cmd_apply(self):
+        """Regression: ctx (RuntimeContext, carries sheet_names built from
+        schematic_dir) must reach cmd_apply — otherwise anchor_sheet-based
+        clone_placements fatal with "sheet name dictionary is empty" even
+        though schematic_dir was set and parsed correctly."""
+        cfg = Config()
+        ctx = object()
+        with patch("kicadstamp.author.cmd_apply") as mock_cmd_apply:
+            apply_config(cfg, "my_run.yaml", ctx=ctx)
+
+        assert mock_cmd_apply.call_args.kwargs["ctx"] is ctx
+
+    def test_ctx_defaults_to_none(self):
+        cfg = Config()
+        with patch("kicadstamp.author.cmd_apply") as mock_cmd_apply:
+            apply_config(cfg, "my_run.yaml")
+
+        assert mock_cmd_apply.call_args.kwargs["ctx"] is None
+
 
 class TestCliMain:
     """cli_main — the shared --apply/--dry-run entry point every
@@ -157,14 +176,19 @@ class TestCliMain:
         mock_apply_config.assert_not_called()
 
     def test_apply_dry_run_loads_root_config_and_forwards_dry_run(self, tmp_path):
+        """Regression: cli_main used to discard load_config()'s ctx (RuntimeContext,
+        carries sheet_names) as `_ctx` and never forward it to apply_config(), so
+        anchor_sheet-based clone_placements would fatal with "sheet name dictionary
+        is empty" even though sheet_names had been built correctly."""
         out = tmp_path / "generated.yaml"
         with patch("kicadstamp.author.load_config") as mock_load_config, \
              patch("kicadstamp.author.apply_config") as mock_apply_config:
-            mock_load_config.return_value = ("cfg-sentinel", None)
+            mock_load_config.return_value = ("cfg-sentinel", "ctx-sentinel")
             cli_main(self._build, str(out), "root.yaml", argv=["--apply", "--dry-run"])
 
         mock_load_config.assert_called_once_with("root.yaml")
-        mock_apply_config.assert_called_once_with("cfg-sentinel", "root.yaml", dry_run=True)
+        mock_apply_config.assert_called_once_with(
+            "cfg-sentinel", "root.yaml", ctx="ctx-sentinel", dry_run=True)
 
     def test_apply_without_dry_run_forwards_dry_run_false(self, tmp_path):
         out = tmp_path / "generated.yaml"

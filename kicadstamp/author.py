@@ -28,7 +28,7 @@ from typing import Any, Callable, List, Optional
 import yaml
 from kipy.errors import ApiError, ApiStatusCode
 
-from .config import ClonePlacement, Config, Rule, load_config
+from .config import ClonePlacement, Config, Rule, RuntimeContext, load_config
 from .constants import DEFAULT_BATCH_SIZE, DEFAULT_TIMEOUT_MS
 from .exceptions import PlacerError
 from .apply_pipeline import cmd_apply
@@ -99,7 +99,8 @@ def dump_template(template_dict: dict, path: str) -> None:
         yaml.dump(template_dict, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
 
-def apply_config(cfg: Config, config_path: str, *, dry_run: bool = False,
+def apply_config(cfg: Config, config_path: str, *, ctx: Optional[RuntimeContext] = None,
+                  dry_run: bool = False,
                   only: Optional[List[str]] = None, cluster: Optional[List[str]] = None,
                   timeout_ms: int = DEFAULT_TIMEOUT_MS, batch_size: int = DEFAULT_BATCH_SIZE,
                   no_collision_check: bool = False, collision_margin: float = 0.2) -> None:
@@ -128,7 +129,7 @@ def apply_config(cfg: Config, config_path: str, *, dry_run: bool = False,
         timeout_ms=timeout_ms, batch_size=batch_size,
         no_collision_check=no_collision_check, collision_margin=collision_margin,
     )
-    cmd_apply(args, cfg=cfg)
+    cmd_apply(args, cfg=cfg, ctx=ctx)
 
 
 def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
@@ -186,8 +187,8 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
         print(f"wrote {len(clones)} clone_placements to {output_path}")
 
         if args.apply:
-            cfg, _ctx = load_config(root_config_path)
-            apply_config(cfg, root_config_path, dry_run=args.dry_run)
+            cfg, ctx = load_config(root_config_path)
+            apply_config(cfg, root_config_path, ctx=ctx, dry_run=args.dry_run)
     except PlacerError as e:
         logging.error(f"Error: {e}")
         sys.exit(1)
