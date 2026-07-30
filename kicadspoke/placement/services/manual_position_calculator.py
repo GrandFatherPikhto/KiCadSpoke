@@ -9,7 +9,7 @@ from ...kicad.adapter import KiCadBoardAdapter
 from ...geometry.spoke_layout import apply_spoke_geometry
 from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand
 from ...registry import make_registry_key
-from .component_pool import ComponentPool
+from .component_resolver import ComponentResolver
 from ...i18n import _
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,7 @@ class ManualPositionCalculator:
         self.adapter = adapter
         self.cfg = config
         self.sheet_names = sheet_names or {}
+        self._resolver = ComponentResolver(adapter, config, self.sheet_names)
 
     def compute_raw_positions(
         self,
@@ -79,24 +80,11 @@ class ManualPositionCalculator:
 
         for rule in rules:
             # --- Resolve anchor (anchor_ref or anchor_role) ---
-            if rule.anchor_ref is not None:
-                target_fp = self.adapter.get_footprint(rule.anchor_ref)
-                if target_fp is None:
-                    from ...exceptions import ComponentNotFoundError
-                    raise ComponentNotFoundError(
-                        _("rule (net {net!r}): anchor {anchor!r} not found on board")
-                        .format(net=rule.net, anchor=rule.anchor_ref)
-                    )
-            else:
-                from .clone_role_resolver import resolve_footprint_by_role
-                target_fp = resolve_footprint_by_role(
-                    self.adapter,
-                    rule.anchor_role,
-                    rule.anchor_sheet,
-                    rule.anchor_cluster,
-                    self.sheet_names,
-                    label=_("rule (net {net!r})").format(net=rule.net),
-                )
+            target_fp = self._resolver.resolve_anchor_fp(
+                rule.anchor_ref, rule.anchor_role,
+                rule.anchor_sheet, rule.anchor_cluster,
+                label=_("rule (net {net!r})").format(net=rule.net),
+            )
             anchor_ref_resolved = target_fp.reference_field.text.value
 
             # --- Collect all roles needed for this rule ---
@@ -119,17 +107,10 @@ class ManualPositionCalculator:
             # --- Collect clusters used in spokes (including None) ---
             clusters_needed = {spoke.cluster for spoke in rule.spokes if spoke.enabled}
 
-            # --- Build pools for each cluster, including None (spokes without
-            # cluster) — clusters_needed already contains None if any enabled
-            # spoke has no cluster, so no separate pass needed ---
-            pools_by_cluster = {}
-            for cluster in clusters_needed:
-                pools_by_cluster[cluster] = ComponentPool(
-                    self.adapter,
-                    rule.net,
-                    roles=sorted(roles_needed),
-                    cluster=cluster
-                )
+            # --- Build pools for each cluster ---
+            pools_by_cluster = ComponentResolver.build_pools(
+                self.adapter, rule.net, roles_needed, clusters_needed,
+            )
 
             # --- Process each spoke ---
             for spoke in rule.spokes:

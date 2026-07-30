@@ -2,8 +2,9 @@
 
 import logging
 from typing import List, Tuple, Optional
-from kipy.board_types import BoardLayer, Pad, FootprintInstance
-from kipy.geometry import Vector2, Angle
+
+from kipy.board_types import BoardLayer
+from kipy.geometry import Angle, Vector2
 
 from ..config import Config
 from ..kicad.adapter import KiCadBoardAdapter
@@ -11,9 +12,9 @@ from ..utils.units import MM
 from .services.via_planner import ViaPlanner
 from .services.manual_position_calculator import ManualPositionCalculator
 from .services.clone_position_calculator import ClonePositionCalculator
+from .services.position_tracker import PositionTracker
 from ..exceptions import ComponentNotFoundError, ValidationError
-from .commands import MoveCommand, ViaCommand, TrackCommand
-from ..constants import POSITION_TOLERANCE_NM, ANGLE_TOLERANCE_DEG
+from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
 from ..i18n import _
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ class PlacementPlanner:
         # No global target_fp any more: anchors are per‑rule (Rule.anchor_ref / anchor_role)
         # and per‑tva; resolved on the spot.
         self._target_layer = BoardLayer.BL_B_Cu if config.layer == 'B.Cu' else BoardLayer.BL_F_Cu
+        self._tracker = PositionTracker(adapter, self._target_layer,
+                                         skip_existing=config.skip_existing_components)
         self._planned = None
         self._planned_vias = None
         self._planned_tracks = None
@@ -36,25 +39,6 @@ class PlacementPlanner:
         logger.info(_("Planner initialised: layer={layer}, anchors in rules: {anchors}")
                     .format(layer=config.layer,
                             anchors=len({r.anchor_ref or r.anchor_role for r in config.rules})))
-
-    # Tolerances for "already in place" checks (skip_existing_components) —
-    # coarse enough to ignore rounding noise from IPC, but tight enough not to
-    # confuse with a truly different target position.
-    _POSITION_TOLERANCE_NM = POSITION_TOLERANCE_NM
-    _ANGLE_TOLERANCE_DEG = ANGLE_TOLERANCE_DEG
-
-    def _already_in_place(self, ref: str, dest: Vector2, angle_deg: float, layer: BoardLayer) -> bool:
-        fp = self.adapter.get_footprint(ref)
-        if fp is None:
-            return False
-        if fp.layer != layer:
-            return False
-        if abs(fp.position.x - dest.x) > self._POSITION_TOLERANCE_NM:
-            return False
-        if abs(fp.position.y - dest.y) > self._POSITION_TOLERANCE_NM:
-            return False
-        angle_diff = abs((fp.orientation.degrees - angle_deg + 180) % 360 - 180)
-        return angle_diff <= self._ANGLE_TOLERANCE_DEG
 
     def begin_planning(self) -> None:
         """Resets the accumulated plan — call once before either plan_moves()
@@ -84,27 +68,11 @@ class PlacementPlanner:
         self._planned.extend(placed)
         self._planned_vias.extend(vias)
         self._planned_tracks.extend(tracks)
-        return self.moves_from_placed(placed)
+        return self._tracker.moves_from_placed(placed)
 
     def moves_from_placed(self, placed: List) -> List[MoveCommand]:
-        moves = []
-        skipped = 0
-        for info in placed:
-            layer = info.layer if info.layer is not None else self._target_layer
-            if self.cfg.skip_existing_components and self._already_in_place(info.ref, info.dest, info.angle_deg, layer):
-                skipped += 1
-                logger.debug(_("  {ref}: already in place, move skipped (skip_existing_components)")
-                             .format(ref=info.ref))
-                continue
-            moves.append(MoveCommand(
-                ref=info.ref,
-                position=info.dest,
-                angle=Angle.from_degrees(info.angle_deg),
-                layer=layer
-            ))
-        if skipped:
-            logger.info(_("Skipped {count} components already at target position").format(count=skipped))
-        return moves
+        """Convenience wrapper — delegates to PositionTracker."""
+        return self._tracker.moves_from_placed(placed)
 
     def plan_items(self, items) -> List[MoveCommand]:
         """Convenience for dry-run: plan_item() for every item in dependency
@@ -145,7 +113,7 @@ class PlacementPlanner:
         # template.layer/slot.layer/mirror); None — only for ManualSpoke path
         # (manual_position_calculator.py does not set it), then inherit the global
         # target_layer from config.
-        moves = self.moves_from_placed(self._planned)
+        moves = self._tracker.moves_from_placed(self._planned)
         logger.info(_("plan_moves completed: {count} moves").format(count=len(moves)))
         return moves
 
