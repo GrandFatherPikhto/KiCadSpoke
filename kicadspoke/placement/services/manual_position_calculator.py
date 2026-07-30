@@ -7,8 +7,8 @@ from kipy.board_types import FootprintInstance, BoardLayer
 from ...config import Config, Rule
 from ...kicad.adapter import KiCadBoardAdapter
 from ...geometry.spoke_layout import apply_spoke_geometry
-from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand
-from ...registry import make_registry_key
+from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand, make_registry_key
+from .clone_role_resolver import resolve_footprint_by_role
 from .component_resolver import ComponentResolver
 from ...i18n import _
 
@@ -25,7 +25,6 @@ def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule,
     if rule.anchor_ref is not None:
         return rule.anchor_ref
     if rule.anchor_role is not None:
-        from .clone_role_resolver import resolve_footprint_by_role
         _sn = sheet_names or {}
         fp = resolve_footprint_by_role(
             adapter, rule.anchor_role, rule.anchor_sheet, rule.anchor_cluster,

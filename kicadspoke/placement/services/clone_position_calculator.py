@@ -23,8 +23,7 @@ from ...config import Config, ClonePlacement, SpokeTemplate, TemplateComponentSl
 from ...exceptions import ValidationError, format_fatal_error
 from ...kicad.adapter import KiCadBoardAdapter
 from ...geometry.clone_geometry import apply_clone_geometry
-from ...registry import make_registry_key
-from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand
+from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand, make_registry_key
 from .clone_role_resolver import (
     resolve_roles_by_selection,
     resolve_roles_by_nets,

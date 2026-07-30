@@ -106,7 +106,7 @@ class TestApplyConfig:
         this test must be updated too — otherwise apply_config would silently
         stop forwarding it and fail at runtime with AttributeError."""
         cfg = Config()
-        with patch("kicadspoke_cli.cmd_apply") as mock_cmd_apply:
+        with patch("kicadspoke.author.cmd_apply") as mock_cmd_apply:
             apply_config(cfg, "my_run.yaml", dry_run=True, only=["a"], cluster=["b"],
                         timeout_ms=1234, batch_size=5, no_collision_check=True,
                         collision_margin=0.5)
@@ -126,7 +126,7 @@ class TestApplyConfig:
 
     def test_defaults_match_cli_defaults(self):
         cfg = Config()
-        with patch("kicadspoke_cli.cmd_apply") as mock_cmd_apply:
+        with patch("kicadspoke.author.cmd_apply") as mock_cmd_apply:
             apply_config(cfg, "my_run.yaml")
 
         args = mock_cmd_apply.call_args[0][0]

@@ -20,7 +20,10 @@ from .kicad.adapter import KiCadBoardAdapter
 from .exceptions import ValidationError, format_fatal_error
 from .net_resolution import resolve_net
 from .placement.services.component_pool import ComponentPool
-from .placement.services.clone_role_resolver import clone_uses_selection_mode
+from .placement.services.clone_role_resolver import (
+    clone_uses_selection_mode,
+    resolve_footprint_by_role,
+)
 from .i18n import _
 
 logger = logging.getLogger(__name__)
@@ -43,7 +46,6 @@ def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config, shee
                                 .format(net=rule.net, anchor=rule.anchor_ref))
             anchors[rule.anchor_ref] = fp
         else:
-            from .placement.services.clone_role_resolver import resolve_footprint_by_role
             try:
                 fp = resolve_footprint_by_role(
                     adapter,

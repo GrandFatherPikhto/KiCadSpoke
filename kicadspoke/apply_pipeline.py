@@ -410,3 +410,32 @@ class ApplyPipeline:
             self._dry_run()
         else:
             self._execute()
+
+
+# ── Module-level convenience entry point ──────────────────────────────────
+
+
+def cmd_apply(args, cfg=None, ctx=None):
+    """Thin delegator from CLI/author to :class:`ApplyPipeline`.
+
+    Accepts either CLI *args* (argparse.Namespace) or keyword equivalents so
+    both :mod:`kicadspoke_cli` and :mod:`kicadspoke.author` can call it without
+    late imports.
+
+    Extracted from ``kicadspoke_cli.py`` to break the import cycle:
+    ``author.py → kicadspoke_cli.py → author.py``.
+    """
+    pipeline = ApplyPipeline(
+        config_path=args.config,
+        timeout_ms=args.timeout_ms,
+        batch_size=args.batch_size,
+        dry_run=args.dry_run,
+        no_selection=getattr(args, "no_selection", False),
+        no_collision_check=args.no_collision_check,
+        collision_margin=args.collision_margin,
+        only=getattr(args, "only", None),
+        cluster=getattr(args, "cluster", None),
+        preloaded_cfg=cfg,
+        preloaded_ctx=ctx,
+    )
+    pipeline.run()

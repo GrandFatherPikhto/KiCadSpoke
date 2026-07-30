@@ -39,15 +39,14 @@ from typing import Dict, List, Optional, TypeVar, Generic
 
 from kipy.board_types import BoardLayer
 
-from .placement.commands import ViaCommand, TrackCommand
+from .placement.commands import ViaCommand, TrackCommand, make_registry_key
 from .utils.units import MM
-from .constants import POSITION_TOLERANCE_MM, SPOKE_LEVEL_ROLE_PLACEHOLDER
+from .constants import POSITION_TOLERANCE_MM
 from .i18n import _
 
 logger = logging.getLogger(__name__)
 
 _POSITION_TOLERANCE_MM = POSITION_TOLERANCE_MM
-_SPOKE_LEVEL_ROLE_PLACEHOLDER = SPOKE_LEVEL_ROLE_PLACEHOLDER
 
 
 def _layer_to_str(layer: BoardLayer) -> str:
@@ -56,9 +55,6 @@ def _layer_to_str(layer: BoardLayer) -> str:
     return "B.Cu" if layer == BoardLayer.BL_B_Cu else "F.Cu"
 
 
-def make_registry_key(anchor_id: str, template_name: str, role: Optional[str], index: int) -> str:
-    role_part = role if role is not None else _SPOKE_LEVEL_ROLE_PLACEHOLDER
-    return f"{anchor_id}|{template_name}|{role_part}|{index}"
 
 
 def registry_path_for_config(config_path: str) -> str:

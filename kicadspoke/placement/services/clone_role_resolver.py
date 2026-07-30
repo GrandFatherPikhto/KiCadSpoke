@@ -31,6 +31,7 @@ from ...net_resolution import resolve_net, resolve_placeholder
 from ...utils.units import MM
 from .component_pool import ROLE_FIELD_NAME, _cluster_prefix_match
 from ...constants import CLUSTER_FIELD_NAME
+from ...sheet_names import resolve_sheet_path_names
 from ...i18n import _
 
 logger = logging.getLogger(__name__)
@@ -388,7 +389,6 @@ def _fp_on_sheet(fp, anchor_sheet: str, sheet_names: Dict[str, str]) -> bool:
     unlike the previous approach via local net names, does not require fp to have
     a local net at all.
     """
-    from ...sheet_names import resolve_sheet_path_names
     names = resolve_sheet_path_names(fp, sheet_names)
     return anchor_sheet in names
 

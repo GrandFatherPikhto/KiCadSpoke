@@ -11,7 +11,7 @@ from ...geometry.thermal_grid import compute_thermal_via_grid
 from ...kicad.adapter import KiCadBoardAdapter
 from ...utils.units import MM
 from ...exceptions import GeometryError, ComponentNotFoundError, ValidationError
-from ..commands import ViaCommand, PlacedComponentInfo
+from ..commands import ViaCommand, PlacedComponentInfo, make_registry_key
 from .clone_role_resolver import resolve_footprint_by_role
 from ...i18n import _
 
@@ -189,12 +189,6 @@ class ViaPlanner:
         # in the filtered result list, so it stays stable across runs even when a
         # point is skipped (keepout/already-exists) — same convention as
         # component-slot vias (see clone_position_calculator.py).
-        # Local import: registry.py imports .placement.commands at module
-        # level, which (via the placement package __init__) would otherwise
-        # create a circular import if this were a top-level import here — same
-        # reason manual_position_calculator.py imports clone_role_resolver
-        # locally instead of at module top.
-        from ...registry import make_registry_key
         anchor_id = thermal_anchor_id(tva)
         result = []
         skipped = 0

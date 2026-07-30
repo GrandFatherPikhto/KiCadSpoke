@@ -31,6 +31,7 @@ from kipy.errors import ApiError, ApiStatusCode
 from .config import ClonePlacement, Config, Rule, load_config
 from .constants import DEFAULT_BATCH_SIZE, DEFAULT_TIMEOUT_MS
 from .exceptions import PlacerError
+from .apply_pipeline import cmd_apply
 
 _MISSING = dataclasses.MISSING
 
@@ -121,12 +122,6 @@ def apply_config(cfg: Config, config_path: str, *, dry_run: bool = False,
     mutation — a separate pre-check here would only duplicate that work.
     """
     from argparse import Namespace
-    # Local import: kicadspoke_cli.py is the project's CLI entry point, not
-    # part of the kicadspoke package — importing it eagerly at module top
-    # would require the project root on sys.path even for callers who never
-    # call apply_config() at all. Same "import only when actually needed"
-    # convention as via_planner.py's local import of registry.make_registry_key.
-    from kicadspoke_cli import cmd_apply
 
     args = Namespace(
         config=config_path, dry_run=dry_run, only=only, cluster=cluster,
@@ -170,9 +165,7 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
                         help="DEBUG-level logging (default: INFO)")
     args = parser.parse_args(argv)
 
-    # Local import, same convention as apply_config()'s import of cmd_apply:
-    # kicadspoke_cli.py is the CLI entry point, not part of the package.
-    # Without this, nothing configures a logging handler when a board script
+    # Local import: without this, nothing configures a logging handler when a board script
     # is run directly (as opposed to through kicadspoke_cli.py's own main()),
     # so every logger.info/debug — including the role-resolver's ambiguity
     # narrowing cascade, exactly what you need to see when a role fails to

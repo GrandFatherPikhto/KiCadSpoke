@@ -29,7 +29,7 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
 from kicadspoke.config import load_config, RuntimeContext
-from kicadspoke.apply_pipeline import ApplyPipeline
+from kicadspoke.apply_pipeline import ApplyPipeline, cmd_apply
 from kicadspoke.cli_extract import cmd_extract, load_profile, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
 from kicadspoke.exceptions import PlacerError
 from kicadspoke.logging_setup import setup_logging
@@ -37,24 +37,6 @@ from kicadspoke.undo import undo_last_operation
 from kicadspoke.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
 from kicadspoke.i18n import _
 from kipy.errors import ApiError, ApiStatusCode
-
-
-def cmd_apply(args, cfg=None, ctx=None):
-    """Main command: apply placement.  Thin delegator to ApplyPipeline."""
-    pipeline = ApplyPipeline(
-        config_path=args.config,
-        timeout_ms=args.timeout_ms,
-        batch_size=args.batch_size,
-        dry_run=args.dry_run,
-        no_selection=getattr(args, "no_selection", False),
-        no_collision_check=args.no_collision_check,
-        collision_margin=args.collision_margin,
-        only=getattr(args, "only", None),
-        cluster=getattr(args, "cluster", None),
-        preloaded_cfg=cfg,
-        preloaded_ctx=ctx,
-    )
-    pipeline.run()
 
 
 def cmd_undo(args):

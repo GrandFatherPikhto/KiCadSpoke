@@ -1,8 +1,13 @@
 # kicadspoke/placement/commands.py
+
 from dataclasses import dataclass
 from typing import Optional
+
 from kipy.board_types import BoardLayer
 from kipy.geometry import Vector2, Angle
+
+from ..constants import SPOKE_LEVEL_ROLE_PLACEHOLDER
+
 
 @dataclass
 class MoveCommand:
@@ -10,6 +15,7 @@ class MoveCommand:
     position: Vector2
     angle: Angle
     layer: BoardLayer
+
 
 @dataclass
 class ViaCommand:
@@ -20,6 +26,7 @@ class ViaCommand:
     owner_ref: str
     registry_key: Optional[str] = None  # см. registry.py — None означает "не участвует в реестре"
 
+
 @dataclass
 class TrackCommand:
     start: Vector2
@@ -29,6 +36,7 @@ class TrackCommand:
     layer: BoardLayer
     owner_ref: str
     registry_key: Optional[str] = None  # см. registry.py — None означает "не участвует в реестре"
+
 
 @dataclass
 class PlacedComponentInfo:
@@ -46,3 +54,16 @@ class PlacedComponentInfo:
     # Слой ЭТОГО компонента (per-placement side у ClonePlacement).
     # None = наследовать глобальный target_layer планировщика.
     layer: Optional[BoardLayer] = None
+
+
+def make_registry_key(anchor_id: str, template_name: str, role: Optional[str], index: int) -> str:
+    """Build a composite registry key for vias/tracks.
+
+    ``anchor_id`` — e.g. ``"pad:{pad}"`` or ``"thermal:{name}"``.
+    ``template_name`` — the spoke/clone template name.
+    ``role`` — component role (unique within template) or ``None`` for
+    spoke‑level vias/tracks (substituted by :data:`SPOKE_LEVEL_ROLE_PLACEHOLDER`).
+    ``index`` — 0‑based index within the specific list (vias or tracks).
+    """
+    role_part = role if role is not None else SPOKE_LEVEL_ROLE_PLACEHOLDER
+    return f"{anchor_id}|{template_name}|{role_part}|{index}"
