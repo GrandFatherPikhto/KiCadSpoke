@@ -121,6 +121,7 @@ techdocs\handoff\handoff_2026_07_27.md
 techdocs\handoff\handoff_2026_07_27_i18n.md
 techdocs\handoff\handoff_2026_07_28_dac_pi_filter.md
 techdocs\handoff\handoff_2026_07_28_pcb_api.md
+techdocs\handoff\handoff_2026_07_29.md
 techdocs\handoff\i18n_gettext_handoff.md
 techdocs\handoff\i18n_translation_ru_handoff.md
 techdocs\handoff\project_status_2026_07.md
@@ -143,6 +144,7 @@ tests\test_author.py
 tests\test_cli_filters.py
 tests\test_clone_anchor_id.py
 tests\test_clone_geometry.py
+tests\test_clone_ignore_selection.py
 tests\test_clone_placement_config.py
 tests\test_clone_placement_integration.py
 tests\test_clone_role_resolver.py
@@ -154,14 +156,18 @@ tests\test_explore.py
 tests\test_full_pipeline_templates.py
 tests\test_i18n.py
 tests\test_kicad.py
+tests\test_manual_position_calculator.py
 tests\test_naming.py
 tests\test_net_resolution.py
 tests\test_pad_projection.py
 tests\test_registry_integration.py
 tests\test_registry_pruning_granularity.py
+tests\test_registry_rule_protection.py
 tests\test_spoke_layout.py
 tests\test_template_extraction.py
+tests\test_templates_file.py
 tests\test_two_phase_execution.py
 tests\test_undo_layer.py
 tests\test_unique_roles.py
+tests\test_unknown_keys_validation.py
 tests\test_validation.py

@@ -71,12 +71,6 @@ ldo_out_pi_filter:
     end_across_mm: 0.0
     width_mm: 0.65
     net: '{PWR_OUT}'
-  - start_along_mm: 7.35
-    start_across_mm: 0.0
-    end_along_mm: 7.35
-    end_across_mm: -1.7825
-    width_mm: 0.65
-    net: '{PWR_OUT}'
   - start_along_mm: 0.0
     start_across_mm: 0.0
     end_along_mm: 3.0633

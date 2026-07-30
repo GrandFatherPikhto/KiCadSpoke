@@ -10,6 +10,7 @@ template_files:
   - templates/ldo_out_pi_filter.yaml
   - templates/power_pi_filters.yaml
   - templates/ldo_1v2.yaml
+  - templates/ldo_3v3.yaml
 
 include:
   - power_extracts.yaml  # Коллекция экстраторов для силовой части платы
@@ -73,14 +74,19 @@ clone_placements:
   - name: 3v3_ldo
     enabled: true
     active: true
-    role: LDO_3V3
+    template: p3v3_ldo
     nets:
-      LDO_3V3: '+3V3_DIRTY'
+      LDO_1V2: '+3V3_DIRTY'
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '+3V3_DIRTY'
     anchor_role: C_OUT_BYPASS
     anchor_cluster: In_Pi_Filter_Pos
+    # anchor_role: CONN_PM5V
     anchor_pad: '1'
     origin_x_mm: -5.0
     origin_y_mm: 35.0
+
 
   - name: 3v3_led_spoke
     enabled: true

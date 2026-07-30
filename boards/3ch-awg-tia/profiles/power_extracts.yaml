@@ -85,7 +85,19 @@ extract_profiles:
     params:
       PWR_IN: '+5V'
       PWR_OUT: '+1V2_DIRTY'
+    net_template_role:
+      LDO_3V3: '+1V2_DIRTY'
     origin_by_component_role: LDO_1V2
+
+  p3v3_ldo:
+    name: p3v3_ldo
+    output: boards/3ch-awg-tia/profiles/templates/ldo_3v3.yaml
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '+3V3_DIRTY'
+    net_template_role:
+      LDO_3V3: '+3V3_DIRTY'
+    origin_by_component_role: LDO_3V3
 
   1v2_ldo_out_pi_filter:
     name: ldo_out_pi_filter

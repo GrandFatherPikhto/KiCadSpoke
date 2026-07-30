@@ -8,7 +8,7 @@ rules:
   name: +3V3_VCCIO
   anchor_role: FPGA
   enabled: true
-  active: false
+  active: true
   spokes:
   - pad: '17'
     template: fpga_cap_pair_spoke
@@ -86,7 +86,7 @@ rules:
   name: +1V2_VCCINT
   anchor_role: FPGA
   enabled: true
-  active: false
+  active: true
   spokes:
   - pad: '5'
     template: fpga_cap_pair_spoke
@@ -140,7 +140,7 @@ rules:
   name: +1V2_VCCD_PLL
   anchor_role: FPGA
   enabled: true
-  active: false
+  active: true
   spokes:
   - pad: '37'
     template: fpga_cap_pair_spoke
@@ -158,7 +158,7 @@ rules:
   name: +2V5_VCCA
   anchor_role: FPGA
   enabled: true
-  active: false
+  active: true
   spokes:
   - pad: '35'
     template: fpga_cap_pair_spoke

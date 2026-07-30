@@ -1,6 +1,4 @@
 clone_placements:
-
-# Channel 0
 - name: channel_0_ad9707
   origin_x_mm: 0.0
   origin_y_mm: 25.0

@@ -65,12 +65,6 @@
     end_across_mm: 5.0433
     width_mm: 0.65
     net: GND
-  - start_along_mm: 0.0
-    start_across_mm: 6.415
-    end_along_mm: 2.585
-    end_across_mm: 6.415
-    width_mm: 0.65
-    net: GND
   - start_along_mm: 6.0817
     start_across_mm: 1.725
     end_along_mm: 6.0817
@@ -81,12 +75,6 @@
     start_across_mm: 5.0433
     end_along_mm: 3.9567
     end_across_mm: 3.3
-    width_mm: 0.65
-    net: GND
-  - start_along_mm: 3.9567
-    start_across_mm: 1.725
-    end_along_mm: 6.0817
-    end_across_mm: 1.725
     width_mm: 0.65
     net: GND
   - start_along_mm: 3.9567
@@ -107,24 +95,6 @@
     end_across_mm: 1.725
     width_mm: 0.65
     net: GND
-  - start_along_mm: 3.9567
-    start_across_mm: 3.3
-    end_along_mm: 3.9567
-    end_across_mm: 1.725
-    width_mm: 0.65
-    net: GND
-  - start_along_mm: 2.585
-    start_across_mm: 6.415
-    end_along_mm: 3.9567
-    end_across_mm: 5.0433
-    width_mm: 0.65
-    net: GND
-  - start_along_mm: 3.9567
-    start_across_mm: 5.0433
-    end_along_mm: 3.9567
-    end_across_mm: 3.3
-    width_mm: 0.65
-    net: GND
   - start_along_mm: 6.0817
     start_across_mm: -2.255
     end_along_mm: 6.0817
@@ -137,12 +107,6 @@
     end_across_mm: 0.0
     width_mm: 0.8
     net: '{PWR_IN}'
-  - start_along_mm: 6.0817
-    start_across_mm: -2.255
-    end_along_mm: 6.0817
-    end_across_mm: 0.0
-    width_mm: 0.65
-    net: '{PWR_OUT}'
   - start_along_mm: 6.0817
     start_across_mm: 0.0
     end_along_mm: 8.21

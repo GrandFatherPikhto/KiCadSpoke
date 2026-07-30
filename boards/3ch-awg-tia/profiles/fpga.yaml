@@ -17,7 +17,7 @@ layer: B.Cu
 thermal_via_array:
   name: fpga_thermal
   enabled: true
-  active: false
+  active: true
   anchor_role: FPGA
   pad: '145'
   net: GND
@@ -41,9 +41,20 @@ include:
 
 clone_placements:
 
+  - name: fpga
+    enabled: true
+    active: true
+    role: FPGA
+    nets:
+      FPGA: GND
+    anchor_role: CONN_PM5V
+    origin_x_mm: 74.0
+    origin_y_mm: 36.0
+
+
   - name: p3v3_vccio_pi_filter
     enabled: true
-    active: false
+    active: true
     template: fpga_in_pi_filter
     anchor_cluster: Pi_Filter_3V3_VCCIO
     anchor_role: FPGA
@@ -56,7 +67,7 @@ clone_placements:
 
   - name: pi_filter_vccint
     enabled: true
-    active: false
+    active: true
     template: fpga_in_pi_filter
     anchor_cluster: Pi_Filter_1V2_VCCINT
     anchor_role: FPGA
@@ -69,7 +80,7 @@ clone_placements:
 
   - name: p2v5_vcca_pi_filter
     enabled: true
-    active: false
+    active: true
     template: fpga_in_pi_filter
     anchor_cluster: Pi_Filter_1V2_VCCA_P2V5
     anchor_role: FPGA
@@ -82,7 +93,7 @@ clone_placements:
 
   - name: p1v2_vcd_pll_fpga_in_pi_filter
     enabled: true
-    active: false
+    active: true
     template: fpga_in_pi_filter
     anchor_cluster: Pi_Filter_1V2_VCCD_PLL
     anchor_role: FPGA

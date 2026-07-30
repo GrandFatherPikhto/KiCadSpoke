@@ -108,11 +108,11 @@ def build() -> list:
             name=f"channel_{channel}_op_amp", role="OP_AMP",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}",
             nets={"OP_AMP": f"/Channel_{channel}/OpAmp/OA_IN_P"},
-            origin_x_mm=coords[0], origin_y_mm=coords[1], rotation_deg=coords[2],
+            origin_x_mm=coords[0], origin_y_mm=coords[1], rotation_deg=coords[2], enabled=True, active=True
         ))
 
     return clones
 
 
 if __name__ == "__main__":
-    cli_main(build, str(OUTPUT), str(HERE.parent / "3ch-awg-tia.yaml"), description=__doc__)
+    cli_main(build, str(OUTPUT), str(HERE.parent / "profiles/dac_channels.yaml"), description=__doc__)
