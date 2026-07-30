@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  kicadspoke\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-27 14:13+0300\n"
+"POT-Creation-Date: 2026-07-30 17:20+0300\n"
 "PO-Revision-Date: 2026-07-27 12:00+0000\n"
 "Last-Translator: \n"
 "Language: en\n"
@@ -12,322 +12,95 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.10.3\n"
+"Generated-By: Babel 2.18.0\n"
 
-#: kicadspoke_cli.py:85
-msgid "Rule {name!r} (net {net!r}): enabled=false, skipped entirely"
-msgstr ""
-
-#: kicadspoke_cli.py:115
-#, python-brace-format
-msgid " (maybe you meant {suggestion!r}?)"
-msgstr ""
-
-#: kicadspoke_cli.py:116
-#, python-brace-format
-msgid ""
-"  {name!r} — not found among rules, clone_placements, or "
-"thermal_via_array{hint}"
-msgstr ""
-
-#: kicadspoke_cli.py:118
-#, python-brace-format
-msgid ""
-"[error] --only: names not found:\n"
-"{lines}\n"
-"Available: {all}"
-msgstr ""
-
-#: kicadspoke_cli.py:125
-#, python-brace-format
-msgid ""
-"--only {requested}: rules={rules}, clone_placements={clones}, "
-"thermal_via_array={thermal} (everything else is ignored in this run)"
-msgstr ""
-
-#: kicadspoke_cli.py:130 kicadspoke_cli.py:168
-msgid "yes"
-msgstr ""
-
-#: kicadspoke_cli.py:130 kicadspoke_cli.py:168
-msgid "no"
-msgstr ""
-
-#: kicadspoke_cli.py:152
-msgid "Rule {name!r}: no spokes match --cluster {paths}, rule dropped"
-msgstr ""
-
-#: kicadspoke_cli.py:156
-msgid ""
-"[error] --cluster {paths}: matched nothing among rules' spokes, "
-"clone_placements, or thermal_via_array"
-msgstr ""
-
-#: kicadspoke_cli.py:163
-msgid ""
-"--cluster {paths}: rules={rules} (spokes narrowed), "
-"clone_placements={clones}, thermal_via_array={thermal}"
-msgstr ""
-
-#: kicadspoke_cli.py:175
-#, python-brace-format
-msgid "Loading config: {config}"
-msgstr ""
-
-#: kicadspoke_cli.py:184 kicadspoke_cli.py:284
-#, python-brace-format
-msgid "Connecting to KiCad (timeout {timeout} ms)"
-msgstr ""
-
-#: kicadspoke_cli.py:190
-msgid "Planning placement..."
-msgstr ""
-
-#: kicadspoke_cli.py:198
-msgid "Moves:"
-msgstr ""
-
-#: kicadspoke_cli.py:200
-#, python-brace-format
-msgid "  {ref}: ({x:.3f}, {y:.3f}) mm, angle={angle:.1f}°"
-msgstr ""
-
-#: kicadspoke_cli.py:202
-msgid "Vias:"
-msgstr ""
-
-#: kicadspoke_cli.py:204
-#, python-brace-format
-msgid "  via for {owner}: ({x:.3f}, {y:.3f}) mm, net={net}"
-msgstr ""
-
-#: kicadspoke_cli.py:206
-msgid "Tracks:"
-msgstr ""
-
-#: kicadspoke_cli.py:208
-#, python-brace-format
-msgid ""
-"  track for {owner}: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
-"net={net}, width={w} mm"
-msgstr ""
-
-#: kicadspoke_cli.py:211
-msgid ""
-"(thermal via keepout is computed based on CURRENT component positions, "
-"not the target ones — may slightly differ from the real run)"
-msgstr ""
-
-#: kicadspoke_cli.py:213
-msgid ""
-"(track collisions with other copper/components are NOT checked by this "
-"tool — rely on KiCad DRC after placement)"
-msgstr ""
-
-#: kicadspoke_cli.py:223
-#, python-brace-format
-msgid "Planned moves: {count}"
-msgstr ""
-
-#: kicadspoke_cli.py:224
-msgid "Applying moves..."
-msgstr ""
-
-#: kicadspoke_cli.py:231
-#, python-brace-format
-msgid "Failed to move: {refs}"
-msgstr ""
-
-#: kicadspoke_cli.py:234
-msgid "Reloading board data before planning vias..."
-msgstr ""
-
-#: kicadspoke_cli.py:240
-#, python-brace-format
-msgid ""
-"Planned vias: {total}, actually to create (registry filtered already "
-"correctly placed): {to_create}"
-msgstr ""
-
-#: kicadspoke_cli.py:242
-msgid "Applying vias..."
-msgstr ""
-
-#: kicadspoke_cli.py:245
-#, python-brace-format
-msgid "Failed to create vias near: {refs}"
-msgstr ""
-
-#: kicadspoke_cli.py:250
-#, python-brace-format
-msgid ""
-"Planned tracks: {total}, actually to create (registry filtered already "
-"correctly placed): {to_create}"
-msgstr ""
-
-#: kicadspoke_cli.py:252
-msgid "Applying tracks..."
-msgstr ""
-
-#: kicadspoke_cli.py:255
-#, python-brace-format
-msgid "Failed to create tracks near: {refs}"
-msgstr ""
-
-#: kicadspoke_cli.py:258
-msgid "✅ All operations completed successfully"
-msgstr ""
-
-#: kicadspoke_cli.py:260
-msgid "⚠️ Some operations failed – check the log."
-msgstr ""
-
-#: kicadspoke_cli.py:270
-#, python-brace-format
-msgid "[error] profiles file {path!r} not found"
-msgstr ""
-
-#: kicadspoke_cli.py:276
-#, python-brace-format
-msgid ""
-"[error] profile {name!r} not found in {top_key!r} of file {path!r}. "
-"Available: {avail}"
-msgstr ""
-
-#: kicadspoke_cli.py:293
-msgid ""
-"[error] --profile cannot be combined with --name/--output/--param/--net-"
-"template/--net-template-role/--origin-by-*: either all from profile or "
-"all as explicit flags, not mixed."
-msgstr ""
-
-#: kicadspoke_cli.py:299 kicadspoke_cli.py:513
-msgid "[error] --profile given without --profiles (profiles file)"
-msgstr ""
-
-#: kicadspoke_cli.py:303 kicadspoke_cli.py:517
-#, python-brace-format
-msgid "[error] profile {profile!r} missing required field {field!r}"
-msgstr ""
-
-#: kicadspoke_cli.py:313
-#, python-brace-format
-msgid "Profile {profile!r} from {profiles}: name={name}, output={output}"
-msgstr ""
-
-#: kicadspoke_cli.py:319
-msgid "[error] need --name and --output (or --profiles/--profile instead)"
-msgstr ""
-
-#: kicadspoke_cli.py:323
-#, python-brace-format
-msgid "--param {item!r} — need format KEY=VALUE"
-msgstr ""
-
-#: kicadspoke_cli.py:331
-#, python-brace-format
-msgid "--net-template {item!r} — need format LITERAL=PATTERN"
-msgstr ""
-
-#: kicadspoke_cli.py:339
-#, python-brace-format
-msgid "--net-template-role {item!r} — need format ROLE=LITERAL"
-msgstr ""
-
-#: kicadspoke_cli.py:348
-msgid ""
-"[error] --origin-by-component-pad without --origin-by-component-role — "
-"you can only refine a pad for a role that you first specify"
-msgstr ""
-
-#: kicadspoke_cli.py:366
-#, python-brace-format
-msgid "Template {name!r} already exists in {output} — will be overwritten"
-msgstr ""
-
-#: kicadspoke_cli.py:377
-#, python-brace-format
-msgid "✅ Template {name!r} written to {output}"
-msgstr ""
-
-#: kicadspoke_cli.py:385
+#: kicadspoke_cli.py:47
 msgid "logs directory not found."
 msgstr ""
 
-#: kicadspoke_cli.py:390
+#: kicadspoke_cli.py:52
 msgid "No operation files to undo."
 msgstr ""
 
-#: kicadspoke_cli.py:394
+#: kicadspoke_cli.py:56
 #, python-brace-format
 msgid "Undoing operation from {file}"
 msgstr ""
 
-#: kicadspoke_cli.py:397
+#: kicadspoke_cli.py:59
 msgid "✅ Operation successfully undone."
 msgstr ""
 
-#: kicadspoke_cli.py:399
+#: kicadspoke_cli.py:61
 msgid "❌ Failed to undo operation."
 msgstr ""
 
-#: kicadspoke_cli.py:407
+#: kicadspoke_cli.py:69
 msgid "KiCad Decap Placer – capacitor placement (manual strategy)"
 msgstr ""
 
-#: kicadspoke_cli.py:408
+#: kicadspoke_cli.py:70
 msgid "Example: kicadspoke_cli.py config.yaml --dry-run"
 msgstr ""
 
-#: kicadspoke_cli.py:410
+#: kicadspoke_cli.py:72
 msgid "Subcommand"
 msgstr ""
 
-#: kicadspoke_cli.py:412
+#: kicadspoke_cli.py:74
 msgid "Apply placement"
 msgstr ""
 
-#: kicadspoke_cli.py:413
+#: kicadspoke_cli.py:75
 msgid "YAML configuration file"
 msgstr ""
 
-#: kicadspoke_cli.py:414
+#: kicadspoke_cli.py:76
 msgid "Only print the plan, do not apply"
 msgstr ""
 
 #: kicadspoke/diagnostics/diagnose_first_write_crash.py:276
-#: kicadspoke/diagnostics/diagnostic_charset.py:71
+#: kicadspoke/diagnostics/diagnostic_charset.py:72
 #: kicadspoke/diagnostics/get_pad_bbox.py:28
 #: kicadspoke/diagnostics/test_create_one_via.py:56
 #: kicadspoke/diagnostics/test_flip_one_cap.py:58
 #: kicadspoke/diagnostics/test_move_one_cap.py:55
-#: kicadspoke/diagnostics/test_pad_mirror_convention.py:84
-#: kicadspoke_cli.py:415 kicadspoke_cli.py:460
+#: kicadspoke/diagnostics/test_pad_mirror_convention.py:84 kicadspoke_cli.py:77
+#: kicadspoke_cli.py:129
 msgid "IPC timeout in ms"
 msgstr ""
 
-#: kicadspoke_cli.py:416
+#: kicadspoke_cli.py:78
 msgid "Batch size for commits"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_pad_bbox.py:29 kicadspoke_cli.py:417
-#: kicadspoke_cli.py:434 kicadspoke_cli.py:450 kicadspoke_cli.py:461
+#: kicadspoke/diagnostics/get_pad_bbox.py:29 kicadspoke_cli.py:79
+#: kicadspoke_cli.py:103 kicadspoke_cli.py:119 kicadspoke_cli.py:130
 msgid "Verbose output"
 msgstr ""
 
-#: kicadspoke_cli.py:418 kicadspoke_cli.py:435 kicadspoke_cli.py:462
+#: kicadspoke_cli.py:80 kicadspoke_cli.py:104 kicadspoke_cli.py:131
 msgid "File to save logs"
 msgstr ""
 
-#: kicadspoke_cli.py:419
+#: kicadspoke_cli.py:81
 msgid "Disable collision checking"
 msgstr ""
 
-#: kicadspoke_cli.py:420
+#: kicadspoke_cli.py:83
+msgid ""
+"Ignore the current PCB editor selection for the whole run — role-based "
+"ClonePlacements (role: without nets:/params:) and ambiguity narrowing "
+"normally fall back to whatever is selected in KiCad; a stray leftover "
+"selection then either fatals or silently changes the resolved candidate. "
+"With this flag every such lookup behaves as if nothing were selected."
+msgstr ""
+
+#: kicadspoke_cli.py:89
 msgid "Extra clearance for collision check in mm"
 msgstr ""
 
-#: kicadspoke_cli.py:422
+#: kicadspoke_cli.py:91
 msgid ""
 "Process only rules/clone_placements/thermal_via_array with this identity "
 "(rule name if set, else its net; clone_placement/thermal_via_array name)."
@@ -335,7 +108,7 @@ msgid ""
 " is ignored in this run."
 msgstr ""
 
-#: kicadspoke_cli.py:427
+#: kicadspoke_cli.py:96
 msgid ""
 "Process only spokes/clone_placements/thermal_via_array whose Cluster "
 "(anchor_cluster / spoke cluster) matches this path or prefix (segment-"
@@ -344,69 +117,69 @@ msgid ""
 " OR)."
 msgstr ""
 
-#: kicadspoke_cli.py:433
+#: kicadspoke_cli.py:102
 msgid "Undo last operation"
 msgstr ""
 
-#: kicadspoke_cli.py:439
+#: kicadspoke_cli.py:108
 msgid "Snapshot a channel to YAML (file‑based cloner, no IPC)"
 msgstr ""
 
-#: kicadspoke_cli.py:441
+#: kicadspoke_cli.py:110
 msgid "Path to .net file"
 msgstr ""
 
-#: kicadspoke_cli.py:442
+#: kicadspoke_cli.py:111
 msgid "Path to .kicad_pcb file"
 msgstr ""
 
-#: kicadspoke_cli.py:443
+#: kicadspoke_cli.py:112
 msgid "Channel name, e.g. Channel_0"
 msgstr ""
 
-#: kicadspoke_cli.py:444
+#: kicadspoke_cli.py:113
 msgid "YAML snapshot file"
 msgstr ""
 
-#: kicadspoke_cli.py:446
+#: kicadspoke_cli.py:115
 msgid "YAML file with named profiles for clone-extract"
 msgstr ""
 
-#: kicadspoke_cli.py:448
+#: kicadspoke_cli.py:117
 msgid ""
 "Take net/pcb/channel/output from profile NAME in --profiles file (cannot "
 "combine with explicit flags)"
 msgstr ""
 
-#: kicadspoke_cli.py:452
+#: kicadspoke_cli.py:121
 msgid "Extract spoke template from current selection"
 msgstr ""
 
-#: kicadspoke_cli.py:453
+#: kicadspoke_cli.py:122
 msgid "Template name (key in templates:)"
 msgstr ""
 
-#: kicadspoke_cli.py:454
+#: kicadspoke_cli.py:123
 msgid "Output YAML/JSON file"
 msgstr ""
 
-#: kicadspoke_cli.py:456
+#: kicadspoke_cli.py:125
 msgid "YAML file with named profiles for extract"
 msgstr ""
 
-#: kicadspoke_cli.py:458
+#: kicadspoke_cli.py:127
 msgid ""
 "Take name/output/param/net-template/origin-by-* from profile NAME in "
 "--profiles file (cannot combine with explicit flags)"
 msgstr ""
 
-#: kicadspoke_cli.py:464
+#: kicadspoke_cli.py:133
 msgid ""
 "Parameter for --net-template verification (e.g. channel=1); can be "
 "repeated; not written to template, only round-trip check"
 msgstr ""
 
-#: kicadspoke_cli.py:467
+#: kicadspoke_cli.py:136
 #, python-brace-format
 msgid ""
 "Mapping real net -> pattern with {placeholder} (e.g. "
@@ -414,7 +187,7 @@ msgid ""
 "roles and parametrizes via.net at extraction"
 msgstr ""
 
-#: kicadspoke_cli.py:471
+#: kicadspoke_cli.py:140
 msgid ""
 "For components with multiple nets from --net-template on pads "
 "(ferrite/inductor/fuse between two rails) – explicitly tells which net is"
@@ -424,44 +197,53 @@ msgid ""
 "registered in --net-template/params."
 msgstr ""
 
-#: kicadspoke_cli.py:479
+#: kicadspoke_cli.py:148
 msgid ""
 "Template origin — position of via on this net (instead of bbox); fatal if"
 " no such via in selection or more than one"
 msgstr ""
 
-#: kicadspoke_cli.py:482
+#: kicadspoke_cli.py:151
 msgid ""
 "Template origin — position of component with this role (instead of bbox);"
 " fatal if role not found in selection"
 msgstr ""
 
-#: kicadspoke_cli.py:485
+#: kicadspoke_cli.py:154
 msgid ""
 "Refine --origin-by-component-role: origin is the position of the specific"
 " pad of that component, not its centre. Fatal without --origin-by-"
 "component-role."
 msgstr ""
 
-#: kicadspoke_cli.py:510
+#: kicadspoke_cli.py:181
 msgid "[error] --profile cannot be combined with --net/--pcb/--channel/--output"
 msgstr ""
 
-#: kicadspoke_cli.py:522
+#: kicadspoke/cli_extract.py:99 kicadspoke_cli.py:184
+msgid "[error] --profile given without --profiles (profiles file)"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:103 kicadspoke_cli.py:189
+#, python-brace-format
+msgid "[error] profile {profile!r} missing required field {field!r}"
+msgstr ""
+
+#: kicadspoke_cli.py:194
 msgid "[error] need --net/--pcb/--channel/--output (or --profiles/--profile)"
 msgstr ""
 
-#: kicadspoke_cli.py:527
+#: kicadspoke_cli.py:199
 #, python-brace-format
 msgid "[{channel}] footprints: {fp}, segments: {seg}, vias: {vias} -> {output}"
 msgstr ""
 
-#: kicadspoke_cli.py:536
+#: kicadspoke_cli.py:208
 #, python-brace-format
 msgid "Error: {e}"
 msgstr ""
 
-#: kicadspoke_cli.py:541
+#: kicadspoke_cli.py:213
 msgid ""
 "KiCad is busy and cannot respond right now. Usually this means an "
 "unfinished tool is active in the GUI (dimensioning, interactive routing, "
@@ -469,122 +251,407 @@ msgid ""
 "command again. The board was not modified."
 msgstr ""
 
-#: kicadspoke_cli.py:547
+#: kicadspoke_cli.py:219
 #, python-brace-format
 msgid "KiCad returned API error: {e}"
 msgstr ""
 
-#: kicadspoke_cli.py:550
+#: kicadspoke_cli.py:222
 msgid "Unexpected error"
 msgstr ""
 
-#: kicadspoke/exceptions.py:38
+#: kicadspoke/apply_pipeline.py:76
+#, python-brace-format
+msgid "Rule {name!r} (net {net!r}): enabled=false, skipped entirely"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:93
+#, python-brace-format
+msgid ""
+"ClonePlacement {name!r}: active=false, skipped this run (existing "
+"via/tracks stay protected)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:99
+#, python-brace-format
+msgid ""
+"Rule {name!r}: active=false, skipped this run (existing via/tracks stay "
+"protected)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:105
+#, python-brace-format
+msgid "Rule {name!r}: spoke on pad {pad} active=false, skipped this run"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:110
+#, python-brace-format
+msgid ""
+"Rule {name!r}: no active spokes left, skipped this run (existing "
+"via/tracks stay protected)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:115
+#, python-brace-format
+msgid ""
+"thermal_via_array {name!r}: active=false, skipped this run (existing vias"
+" stay protected)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:148
+#, python-brace-format
+msgid " (maybe you meant {suggestion!r}?)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:150
+#, python-brace-format
+msgid ""
+"  {name!r} — not found among rules, clone_placements, or "
+"thermal_via_array{hint}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:153
+#, python-brace-format
+msgid ""
+"[error] --only: names not found:\n"
+"{lines}\n"
+"Available: {all}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:160
+#, python-brace-format
+msgid ""
+"--only {requested}: rules={rules}, clone_placements={clones}, "
+"thermal_via_array={thermal} (everything else is ignored in this run)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:165 kicadspoke/apply_pipeline.py:202
+msgid "yes"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:165 kicadspoke/apply_pipeline.py:202
+msgid "no"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:186
+#, python-brace-format
+msgid "Rule {name!r}: no spokes match --cluster {paths}, rule dropped"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:190
+#, python-brace-format
+msgid ""
+"[error] --cluster {paths}: matched nothing among rules' spokes, "
+"clone_placements, or thermal_via_array"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:197
+#, python-brace-format
+msgid ""
+"--cluster {paths}: rules={rules} (spokes narrowed), "
+"clone_placements={clones}, thermal_via_array={thermal}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:265
+#, python-brace-format
+msgid "Loading config: {config}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:276 kicadspoke/cli_extract.py:84
+#, python-brace-format
+msgid "Connecting to KiCad (timeout {timeout} ms)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:280
+msgid "--no-selection: current PCB editor selection will be ignored for this run"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:287
+msgid ""
+"Resolving item execution order (dependency chain — see "
+"dependency_order.py)..."
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:290
+#, python-brace-format
+msgid "Execution order: {order}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:304
+#, python-brace-format
+msgid "Order: {order}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:305
+msgid "Moves:"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:307
+#, python-brace-format
+msgid "  {ref}: ({x:.3f}, {y:.3f}) mm, angle={angle:.1f}°"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:310
+msgid "Vias:"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:312
+#, python-brace-format
+msgid "  via for {owner}: ({x:.3f}, {y:.3f}) mm, net={net}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:315
+msgid "Tracks:"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:317
+#, python-brace-format
+msgid ""
+"  track for {owner}: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
+"net={net}, width={w} mm"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:321
+msgid ""
+"(thermal via keepout is computed based on CURRENT component positions, "
+"not the target ones — may slightly differ from the real run)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:323
+msgid ""
+"(track collisions with other copper/components are NOT checked by this "
+"tool — rely on KiCad DRC after placement)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:325
+msgid ""
+"(items later in the dependency chain above are ALSO planned from the "
+"CURRENT board, not the post-move board of their prerequisite — a real "
+"apply may place them differently; rerun without --dry-run for the true "
+"chained result)"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:349
+#, python-brace-format
+msgid ""
+"{label}: anchor {ref!r} failed to move earlier in this run — this item's "
+"placement is based on its OLD position"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:353
+#, python-brace-format
+msgid "  {label}: {count} moves"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:362
+#, python-brace-format
+msgid "Failed to move: {refs}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:365
+msgid "Reloading board data before planning vias..."
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:371
+#, python-brace-format
+msgid ""
+"Planned vias: {total}, actually to create (registry filtered already "
+"correctly placed): {to_create}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:374
+msgid "Applying vias..."
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:377
+#, python-brace-format
+msgid "Failed to create vias near: {refs}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:384
+#, python-brace-format
+msgid ""
+"Planned tracks: {total}, actually to create (registry filtered already "
+"correctly placed): {to_create}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:387
+msgid "Applying tracks..."
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:390
+#, python-brace-format
+msgid "Failed to create tracks near: {refs}"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:394
+msgid "✅ All operations completed successfully"
+msgstr ""
+
+#: kicadspoke/apply_pipeline.py:396
+msgid "⚠️ Some operations failed – check the log."
+msgstr ""
+
+#: kicadspoke/cli_extract.py:61
+#, python-brace-format
+msgid "[error] profiles file {path!r} not found"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:68
+#, python-brace-format
+msgid ""
+"[error] profile {name!r} not found in {top_key!r} of file {path!r}. "
+"Available: {avail}"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:76
+#, python-brace-format
+msgid "unknown fields in {top_key} {name!r} of {path!r}"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:93
+msgid ""
+"[error] --profile cannot be combined with --name/--output/--param/--net-"
+"template/--net-template-role/--origin-by-*: either all from profile or "
+"all as explicit flags, not mixed."
+msgstr ""
+
+#: kicadspoke/cli_extract.py:116
+#, python-brace-format
+msgid "Profile {profile!r} from {profiles}: name={name}, output={output}"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:123
+msgid "Template name (key under templates:): "
+msgstr ""
+
+#: kicadspoke/cli_extract.py:127
+msgid "[error] need --name and --output (or --profiles/--profile instead)"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:131
+#, python-brace-format
+msgid "--param {item!r} — need format KEY=VALUE"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:139
+#, python-brace-format
+msgid "--net-template {item!r} — need format LITERAL=PATTERN"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:147
+#, python-brace-format
+msgid "--net-template-role {item!r} — need format ROLE=LITERAL"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:156
+msgid ""
+"[error] --origin-by-component-pad without --origin-by-component-role — "
+"you can only refine a pad for a role that you first specify"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:176
+#, python-brace-format
+msgid "Template {name!r} already exists in {output} — will be overwritten"
+msgstr ""
+
+#: kicadspoke/cli_extract.py:191
+#, python-brace-format
+msgid "✅ Template {name!r} written to {output}"
+msgstr ""
+
+#: kicadspoke/exceptions.py:39
 #, python-brace-format
 msgid "  FATAL ERROR: {title}"
 msgstr ""
 
-#: kicadspoke/exceptions.py:44
+#: kicadspoke/exceptions.py:45
 msgid "Placement stopped, board not modified. Fix the config and run again."
 msgstr ""
 
-#: kicadspoke/net_resolution.py:34
+#: kicadspoke/exceptions.py:72 kicadspoke/validation.py:320
 #, python-brace-format
-msgid "net {template!r} has a placeholder with no parameter"
+msgid " — did you mean {suggestion!r}?"
 msgstr ""
 
-#: kicadspoke/net_resolution.py:35
+#: kicadspoke/exceptions.py:76
+#, python-brace-format
+msgid ""
+"unrecognised keys are silently ignored – common source of quiet "
+"bugs{extra}: {problems}"
+msgstr ""
+
+#: kicadspoke/net_resolution.py:39
+#, python-brace-format
+msgid "{what} {template!r} has a placeholder with no parameter"
+msgstr ""
+
+#: kicadspoke/net_resolution.py:40
 #, python-brace-format
 msgid ""
 "missing parameter {param} — add it to params of this clone_placement, or "
-"remove the placeholder from the template"
+"remove the placeholder"
 msgstr ""
 
-#: kicadspoke/net_resolution.py:65
+#: kicadspoke/net_resolution.py:80
 #, python-brace-format
 msgid "--net-template for {literal!r} fails round‑trip check"
 msgstr ""
 
-#: kicadspoke/net_resolution.py:66
+#: kicadspoke/net_resolution.py:81
 #, python-brace-format
 msgid ""
 "pattern {pattern!r} with params={params} resolves to {check!r}, not to "
 "{literal!r} — typo in pattern or wrong parameter passed via --param"
 msgstr ""
 
-#: kicadspoke/registry.py:93
+#: kicadspoke/registry.py:103
 #, python-brace-format
 msgid ""
 "Failed to read registry {path}: {type}: {e} — treating registry as empty "
 "(all vias will be created anew)"
 msgstr ""
 
-#: kicadspoke/registry.py:126
+#: kicadspoke/registry.py:124
 #, python-brace-format
 msgid ""
 "Failed to read track registry {path}: {type}: {e} — treating registry as "
 "empty (all tracks will be created anew)"
 msgstr ""
 
-#: kicadspoke/registry.py:207
+#: kicadspoke/registry.py:231
 #, python-brace-format
 msgid ""
-"  {key}: registry has an entry (uuid {uuid}), but no such via is on the "
+"  {key}: registry has an entry (uuid {uuid}), but no such item is on the "
 "board — registry is out of sync (manually deleted, Undo, PCB reloaded "
 "from git, or previous run crashed between registry write and board "
 "commit); recreating as if the entry never existed"
 msgstr ""
 
-#: kicadspoke/registry.py:218
+#: kicadspoke/registry.py:242
 #, python-brace-format
 msgid ""
-"  {key}: already correctly placed (checked against live via {uuid}), "
+"  {key}: already correctly placed (checked against live item {uuid}), "
 "skipped"
 msgstr ""
 
-#: kicadspoke/registry.py:223
+#: kicadspoke/registry.py:247
 #, python-brace-format
 msgid ""
-"  {key}: position/parameters changed, deleting old via ({uuid}) and "
+"  {key}: position/parameters changed, deleting old item ({uuid}) and "
 "creating a new one"
 msgstr ""
 
-#: kicadspoke/registry.py:236 kicadspoke/registry.py:347
+#: kicadspoke/registry.py:267
 #, python-brace-format
 msgid ""
 "  {key}: not processed in this run (--only filtered {anchor_id!r}), but "
 "it is still in the config — NOT pruned"
 msgstr ""
 
-#: kicadspoke/registry.py:244
+#: kicadspoke/registry.py:275
 #, python-brace-format
-msgid "  prune: {key} no longer appears in config, deleting via ({uuid})"
-msgstr ""
-
-#: kicadspoke/registry.py:320
-#, python-brace-format
-msgid ""
-"  {key}: track registry has an entry (uuid {uuid}), but no such track is "
-"on the board — registry is out of sync; recreating as if the entry never "
-"existed"
-msgstr ""
-
-#: kicadspoke/registry.py:329
-#, python-brace-format
-msgid ""
-"  {key}: already correctly placed (checked against live track {uuid}), "
-"skipped"
-msgstr ""
-
-#: kicadspoke/registry.py:334
-#, python-brace-format
-msgid ""
-"  {key}: geometry/parameters changed, deleting old track ({uuid}) and "
-"creating a new one"
-msgstr ""
-
-#: kicadspoke/registry.py:355
-#, python-brace-format
-msgid "  prune: {key} no longer appears in config, deleting track ({uuid})"
+msgid "  prune: {key} no longer appears in config, deleting ({uuid})"
 msgstr ""
 
 #: kicadspoke/sheet_names.py:44
@@ -685,108 +752,115 @@ msgstr ""
 msgid "among {count} selected components, none has role {role!r}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:255
+#: kicadspoke/template_extraction.py:276
 #, python-brace-format
 msgid ""
 "{count} selected objects — not footprint, via, or track, ignored "
 "(template only supports these)"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:261
+#: kicadspoke/template_extraction.py:282
 #, python-brace-format
 msgid ""
 "Tracks in selection: {total}, taken into template: {kept} (the rest "
 "extend beyond the selection, see warning above)"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:267
+#: kicadspoke/template_extraction.py:288
 msgid "nothing to extract"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:268
+#: kicadspoke/template_extraction.py:289
 msgid ""
 "Nothing is selected (or selected objects are not footprints/vias/tracks) "
 "— select the desired board area in KiCad before running"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:278
+#: kicadspoke/template_extraction.py:299
 #, python-brace-format
 msgid ""
 "{ref}: no {field!r} field — every selected component must have a Role for"
 " template extraction"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:283
+#: kicadspoke/template_extraction.py:304
 #, python-brace-format
 msgid ""
 "role {role!r} appears twice in selection: {ref1!r} and {ref2!r} — roles "
 "must be unique"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:290
+#: kicadspoke/template_extraction.py:311
 msgid "problems in current selection"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:294
+#: kicadspoke/template_extraction.py:315
 #, python-brace-format
 msgid "via on net {net!r}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:295
+#: kicadspoke/template_extraction.py:316
 #, python-brace-format
 msgid "component with role {role!r}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:296
+#: kicadspoke/template_extraction.py:317
 msgid "bbox of selection (lower‑left corner)"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:298
+#: kicadspoke/template_extraction.py:319
 #, python-brace-format
 msgid "Origin ({desc}): ({x:.3f}, {y:.3f}) mm"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:310
+#: kicadspoke/template_extraction.py:331
 #, python-brace-format
 msgid ""
 "Mixed selection: {back} on B.Cu, {front} on F.Cu; template layer = "
 "{layer}, deviating components will have explicit layer"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:313
+#: kicadspoke/template_extraction.py:334
 #, python-brace-format
 msgid "Template layer: {layer}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:335
+#: kicadspoke/template_extraction.py:356
 #, python-brace-format
 msgid ""
 "--net-template-role for role {role!r} asks for net {literal!r}, but it is"
 " not on any pad of {ref}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:338
+#: kicadspoke/template_extraction.py:359
 #, python-brace-format
 msgid ""
 "actual nets on pads: {nets} — check typo in --net-template-role or in the"
 " role itself"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:343
+#: kicadspoke/template_extraction.py:364
 #, python-brace-format
 msgid ""
 "--net-template-role for role {role!r} asks for net {literal!r}, which is "
 "not in net_template_map"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:345
+#: kicadspoke/template_extraction.py:366
 #, python-brace-format
 msgid ""
 "add {literal!r} to --net-template/net_template (or to params if it equals"
 " a parameter value) — otherwise there is no pattern to build"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:357
+#: kicadspoke/template_extraction.py:378
+#, python-brace-format
+msgid ""
+"could not determine automatically — {count} matching nets on pads "
+"({nets}) — fill in manually or use --net-template-role {role}=<net>"
+msgstr ""
+
+#: kicadspoke/template_extraction.py:381
 #, python-brace-format
 msgid ""
 "  {ref} (role {role}): {count} nets from --net-template on pads ({nets}) "
@@ -794,127 +868,114 @@ msgid ""
 "--net-template-role {role}=<net> in advance"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:363
+#: kicadspoke/template_extraction.py:389
 #, python-brace-format
 msgid ""
 "  {ref} (role {role}): along={along}, across={across}, "
 "angle={angle}{layer}{net}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:366 kicadspoke/template_extraction.py:409
+#: kicadspoke/template_extraction.py:392 kicadspoke/template_extraction.py:435
 #, python-brace-format
 msgid ", layer={layer}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:367
+#: kicadspoke/template_extraction.py:393
 #, python-brace-format
 msgid ", net_template={nt}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:383
+#: kicadspoke/template_extraction.py:409
 #, python-brace-format
 msgid "  via: along={along}, across={across}, net={net}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:406
+#: kicadspoke/template_extraction.py:432
 #, python-brace-format
 msgid "  track: ({sx},{sy}) -> ({ex},{ey}), net={net}{layer}"
 msgstr ""
 
-#: kicadspoke/template_extraction.py:411
+#: kicadspoke/template_extraction.py:437
 #, python-brace-format
 msgid ""
 "Extracted template {name!r}: {comp} components, {vias} spoke‑level vias, "
 "{tracks} tracks"
 msgstr ""
 
-#: kicadspoke/undo.py:24
-msgid "Failed to get board."
-msgstr ""
-
-#: kicadspoke/undo.py:32
+#: kicadspoke/undo.py:28
 #, python-brace-format
 msgid "Component {ref} not found, skipping"
 msgstr ""
 
-#: kicadspoke/undo.py:44
+#: kicadspoke/undo.py:40
 #, python-brace-format
 msgid "Restoring {ref} to layer {layer} (flip)"
 msgstr ""
 
-#: kicadspoke/undo.py:58
+#: kicadspoke/undo.py:54
 #, python-brace-format
 msgid "Restored {ref} to position ({x:.3f}, {y:.3f}) mm, angle {angle:.1f}°"
 msgstr ""
 
-#: kicadspoke/undo.py:70
+#: kicadspoke/undo.py:62
 #, python-brace-format
 msgid "Deleted via with UUID {uuid}"
 msgstr ""
 
-#: kicadspoke/undo.py:72
-#, python-brace-format
-msgid "Failed to delete via {uuid}: {e}"
-msgstr ""
-
-#: kicadspoke/undo.py:83
+#: kicadspoke/undo.py:69
 #, python-brace-format
 msgid "Deleted track with UUID {uuid}"
 msgstr ""
 
-#: kicadspoke/undo.py:85
-#, python-brace-format
-msgid "Failed to delete track {uuid}: {e}"
-msgstr ""
-
-#: kicadspoke/undo.py:90
+#: kicadspoke/undo.py:74
 #, python-brace-format
 msgid "File {name} deleted."
 msgstr ""
 
-#: kicadspoke/undo.py:92
+#: kicadspoke/undo.py:76
 #, python-brace-format
 msgid "Failed to delete file {name}: {e}"
 msgstr ""
 
-#: kicadspoke/placement/services/manual_position_calculator.py:45
-#: kicadspoke/validation.py:42
+#: kicadspoke/validation.py:45
 #, python-brace-format
 msgid "rule (net {net!r}): anchor {anchor!r} not found on board"
 msgstr ""
 
-#: kicadspoke/placement/services/manual_position_calculator.py:56
-#: kicadspoke/validation.py:54
+#: kicadspoke/placement/dependency_order.py:173
+#: kicadspoke/placement/services/manual_position_calculator.py:31
+#: kicadspoke/placement/services/manual_position_calculator.py:85
+#: kicadspoke/validation.py:56
 #, python-brace-format
 msgid "rule (net {net!r})"
 msgstr ""
 
-#: kicadspoke/validation.py:71
+#: kicadspoke/validation.py:73
 #, python-brace-format
 msgid ""
 "spoke (pad {pad}, net {net!r}): template {template!r} not found in "
 "templates"
 msgstr ""
 
-#: kicadspoke/validation.py:77
+#: kicadspoke/validation.py:79
 #, python-brace-format
 msgid "spoke (template {template!r}, net {net!r}): {anchor!r} has no pad {pad!r}"
 msgstr ""
 
-#: kicadspoke/validation.py:83
+#: kicadspoke/validation.py:85
 msgid "spoke references a non‑existent template or pad"
 msgstr ""
 
-#: kicadspoke/validation.py:86
+#: kicadspoke/validation.py:88
 msgid "Template/pad checks for spokes: all references valid"
 msgstr ""
 
-#: kicadspoke/validation.py:148
+#: kicadspoke/validation.py:150
 #, python-brace-format
 msgid " (cluster {cluster!r})"
 msgstr ""
 
-#: kicadspoke/validation.py:150
+#: kicadspoke/validation.py:152
 #, python-brace-format
 msgid ""
 "net {net!r}, role {role!r}{cluster}: need {needed}, found {available} "
@@ -922,136 +983,135 @@ msgid ""
 "connection)"
 msgstr ""
 
-#: kicadspoke/validation.py:158
+#: kicadspoke/validation.py:160
 msgid "not enough components for template roles"
 msgstr ""
 
-#: kicadspoke/validation.py:161
+#: kicadspoke/validation.py:163
 msgid "Role pool sufficiency checks passed"
 msgstr ""
 
-#: kicadspoke/validation.py:177
+#: kicadspoke/validation.py:179
 #, python-brace-format
 msgid "clone_placement {name!r}: template {template!r} not found in templates"
 msgstr ""
 
-#: kicadspoke/validation.py:181
+#: kicadspoke/validation.py:183
 msgid "clone_placement references a non‑existent template"
 msgstr ""
 
-#: kicadspoke/validation.py:184
+#: kicadspoke/validation.py:186
 msgid "Clone template existence checks passed"
 msgstr ""
 
-#: kicadspoke/validation.py:212
+#: kicadspoke/validation.py:226
 #, python-brace-format
 msgid "name {name!r} appears twice in clone_placements — names must be unique"
 msgstr ""
 
-#: kicadspoke/validation.py:216
+#: kicadspoke/validation.py:230
 #, python-brace-format
 msgid "role:{role}"
 msgstr ""
 
-#: kicadspoke/validation.py:222
+#: kicadspoke/validation.py:237
 #, python-brace-format
 msgid ""
-"{this!r} and {other!r} both point to the same anchor "
-"(template/role={content!r}, anchor_ref={ref!r}, anchor_pad={pad!r}) — the"
-" registry would confuse their vias/tracks; likely a copy‑paste typo"
+"{this!r} and {other!r} both point to the same anchor with the same offset"
+" (template/role={content!r}, anchor_ref={ref!r}, anchor_pad={pad!r}, "
+"origin=({ox}, {oy}) mm) — the registry would confuse their vias/tracks; "
+"likely a copy‑paste typo (if this is intentional, give them different "
+"origin_x_mm/origin_y_mm)"
 msgstr ""
 
-#: kicadspoke/validation.py:234
+#: kicadspoke/validation.py:252
 #, python-brace-format
 msgid ""
-"{this!r} and {other!r} both point to the same anchor "
-"(template/role={content!r}, anchor_role={role!r}, anchor_sheet={sheet!r},"
-" anchor_pad={pad!r}) — the registry would confuse their vias/tracks; "
-"likely a copy‑paste typo"
+"{this!r} and {other!r} both point to the same anchor with the same offset"
+" (template/role={content!r}, anchor_role={role!r}, "
+"anchor_sheet={sheet!r}, anchor_cluster={cluster!r}, anchor_pad={pad!r}, "
+"origin=({ox}, {oy}) mm) — the registry would confuse their vias/tracks; "
+"likely a copy‑paste typo (if this is intentional, give them different "
+"origin_x_mm/origin_y_mm)"
 msgstr ""
 
-#: kicadspoke/validation.py:244
+#: kicadspoke/validation.py:265
 msgid "clone_placements with ambiguous identity"
 msgstr ""
 
-#: kicadspoke/validation.py:247
+#: kicadspoke/validation.py:268
 msgid "Duplicate clone anchor checks passed"
 msgstr ""
 
-#: kicadspoke/validation.py:261
+#: kicadspoke/validation.py:283
 msgid "anchor_sheet is used but sheet name dictionary is empty"
 msgstr ""
 
-#: kicadspoke/validation.py:262
+#: kicadspoke/validation.py:284
 #, python-brace-format
 msgid "clone_placements with anchor_sheet: {users}"
 msgstr ""
 
-#: kicadspoke/validation.py:263
+#: kicadspoke/validation.py:285
 msgid ""
 "you need schematic_dir (or schematic_files) at the root of the config — "
 "path to the folder with *.kicad_sch files, relative to this YAML"
 msgstr ""
 
-#: kicadspoke/validation.py:266
+#: kicadspoke/validation.py:288
 msgid "anchor_sheet/sheet_names check passed"
 msgstr ""
 
-#: kicadspoke/config/loader.py:166 kicadspoke/validation.py:298
-#, python-brace-format
-msgid " — did you mean {suggestion!r}?"
-msgstr ""
-
-#: kicadspoke/validation.py:300
+#: kicadspoke/validation.py:322
 #, python-brace-format
 msgid ""
 "{name!r}, {where}: via.net {template!r} resolves to {resolved!r}, but "
 "that net does not exist on the board{suggestion}"
 msgstr ""
 
-#: kicadspoke/validation.py:313
+#: kicadspoke/validation.py:335
 msgid "spoke‑level via"
 msgstr ""
 
-#: kicadspoke/validation.py:316
+#: kicadspoke/validation.py:338
 #, python-brace-format
 msgid "via of role {role!r}"
 msgstr ""
 
-#: kicadspoke/validation.py:320
+#: kicadspoke/validation.py:342
 msgid "resolved via net references a non‑existent board net"
 msgstr ""
 
-#: kicadspoke/validation.py:323
+#: kicadspoke/validation.py:345
 msgid "clone via.net checks against real board nets passed"
 msgstr ""
 
-#: kicadspoke/validation.py:336
+#: kicadspoke/validation.py:358
 msgid "multiple clone_placements in 'by selection' mode in one run"
 msgstr ""
 
-#: kicadspoke/validation.py:337
+#: kicadspoke/validation.py:359
 #, python-brace-format
 msgid ""
 "found {count}: {names} — KiCad has only one selection at a time, so "
 "processing all at once is impossible"
 msgstr ""
 
-#: kicadspoke/validation.py:340
+#: kicadspoke/validation.py:362
 msgid ""
 "solution: either set enabled: false on all but one, or run apply "
 "separately for each using --only NAME"
 msgstr ""
 
-#: kicadspoke/validation.py:343
+#: kicadspoke/validation.py:365
 msgid "Single selection‑based clone check passed"
 msgstr ""
 
-#: kicadspoke/validation.py:348
+#: kicadspoke/validation.py:371
 msgid "Running pre‑validation checks..."
 msgstr ""
 
-#: kicadspoke/validation.py:356
+#: kicadspoke/validation.py:379
 msgid "All pre‑validation checks passed"
 msgstr ""
 
@@ -1114,75 +1174,183 @@ msgid ""
 " {fseg} segs, {fvia} vias"
 msgstr ""
 
-#: kicadspoke/config/loader.py:28
+#: kicadspoke/config/includes.py:50
+#, python-brace-format
+msgid "include: invalid entry {entry!r} in {source!r}"
+msgstr ""
+
+#: kicadspoke/config/includes.py:51
+msgid ""
+"each entry must be either a file path string, or a mapping {{path: <str>,"
+" enabled: <bool>}}"
+msgstr ""
+
+#: kicadspoke/config/includes.py:60
+#, python-brace-format
+msgid "{file!r}: top level must be a YAML mapping, got {type}"
+msgstr ""
+
+#: kicadspoke/config/includes.py:62
+msgid ""
+"check for a stray/misplaced list (e.g. list items left without a wrapping"
+" 'clone_placements:'/'rules:' key)"
+msgstr ""
+
+#: kicadspoke/config/includes.py:70
+#, python-brace-format
+msgid "{file!r}: {section!r} must be a list, got {type}"
+msgstr ""
+
+#: kicadspoke/config/includes.py:72
+#, python-brace-format
+msgid ""
+"{section!r} entries are a YAML list ('- name: ...'); {dict_sections} are "
+"mappings — check for a mixed-up section key"
+msgstr ""
+
+#: kicadspoke/config/includes.py:80
+#, python-brace-format
+msgid "{file!r}: {section!r} must be a mapping, got {type}"
+msgstr ""
+
+#: kicadspoke/config/includes.py:82
+#, python-brace-format
+msgid ""
+"{section!r} entries are a YAML mapping ('key: {{...}}'); {list_sections} "
+"are lists — check for a mixed-up section key"
+msgstr ""
+
+#: kicadspoke/config/includes.py:100
+#, python-brace-format
+msgid ""
+"include: {file!r} has top-level key(s) not supported inside an included "
+"file: {keys}"
+msgstr ""
+
+#: kicadspoke/config/includes.py:102
+#, python-brace-format
+msgid ""
+"include: only merges {list_sections} (lists) and {dict_sections} "
+"(mappings) from an included file — anything else (e.g. layer:, "
+"thermal_via_array:, schematic_dir:, registry_path:) has no defined way to"
+" merge across multiple included files and was previously silently "
+"dropped. Move {keys} to the root config file instead"
+msgstr ""
+
+#: kicadspoke/config/includes.py:124
+#, python-brace-format
+msgid "include: {file!r} disabled, skipped (not opened)"
+msgstr ""
+
+#: kicadspoke/config/includes.py:130
+#, python-brace-format
+msgid "include: file {file!r} not found"
+msgstr ""
+
+#: kicadspoke/config/includes.py:131
+#, python-brace-format
+msgid ""
+"expected at {path} (relative to {source!r}, not the current working "
+"directory)"
+msgstr ""
+
+#: kicadspoke/config/includes.py:136
+#, python-brace-format
+msgid ""
+"include: {file!r} is included more than once (directly or indirectly), "
+"from {source!r}"
+msgstr ""
+
+#: kicadspoke/config/includes.py:138
+msgid ""
+"either a cycle, or the same file included from two different branches — "
+"both are unsupported, split the shared content out instead"
+msgstr ""
+
+#: kicadspoke/config/includes.py:154
+#, python-brace-format
+msgid "include: duplicate {section} key {key!r}"
+msgstr ""
+
+#: kicadspoke/config/includes.py:155
+#, python-brace-format
+msgid "defined in {a!r} and again via include {b!r}"
+msgstr ""
+
+#: kicadspoke/config/includes.py:160
+#, python-brace-format
+msgid "include: merged {file!r} into {source!r}"
+msgstr ""
+
+#: kicadspoke/config/loader.py:30
 #, python-brace-format
 msgid "via.net must be a string, not {type}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:29
+#: kicadspoke/config/loader.py:31
 #, python-brace-format
 msgid "got: {net!r} (offset_along_mm={along}, offset_across_mm={across})"
 msgstr ""
 
-#: kicadspoke/config/loader.py:31
+#: kicadspoke/config/loader.py:33
 msgid ""
 "looks like broken YAML – e.g. net_overrides accidentally nested under "
 "this via's net instead of being a top-level field of clone_placement "
 "(net_overrides is a sibling of template/params, not under via)"
 msgstr ""
 
-#: kicadspoke/config/loader.py:48
+#: kicadspoke/config/loader.py:50
 #, python-brace-format
 msgid "track.net must be a string, not {type}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:49
+#: kicadspoke/config/loader.py:51
 #, python-brace-format
 msgid "got: {net!r} (start_along_mm={along}, start_across_mm={across})"
 msgstr ""
 
-#: kicadspoke/config/loader.py:51
+#: kicadspoke/config/loader.py:53
 msgid ""
 "looks like broken YAML – e.g. placeholder like {{NET}} without quotes: "
 "YAML reads it as flow-mapping, not a string; use quotes: net: '{{NET}}'"
 msgstr ""
 
-#: kicadspoke/config/loader.py:55
+#: kicadspoke/config/loader.py:57
 msgid "on track"
 msgstr ""
 
-#: kicadspoke/config/loader.py:70
+#: kicadspoke/config/loader.py:72
 #, python-brace-format
 msgid "invalid layer={value!r} {where}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:71
+#: kicadspoke/config/loader.py:73
 msgid "layer must be absolute: 'F.Cu' or 'B.Cu'"
 msgstr ""
 
-#: kicadspoke/config/loader.py:78
+#: kicadspoke/config/loader.py:80
 #, python-brace-format
 msgid "deprecated field 'side' in slot {role!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:79
+#: kicadspoke/config/loader.py:81
 msgid ""
 "relative 'side' is deprecated (see discussion v116): layer is now "
 "absolute – write layer: F.Cu or layer: B.Cu, or remove the field to "
 "inherit the template layer"
 msgstr ""
 
-#: kicadspoke/config/loader.py:84
+#: kicadspoke/config/loader.py:86
 #, python-brace-format
 msgid "on slot {role!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:103
+#: kicadspoke/config/loader.py:105
 #, python-brace-format
 msgid "role appears twice in template {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:104
+#: kicadspoke/config/loader.py:106
 #, python-brace-format
 msgid ""
 "role {role!r} appears {count} times in components of this template – "
@@ -1190,262 +1358,300 @@ msgid ""
 "in the placement registry)"
 msgstr ""
 
-#: kicadspoke/config/loader.py:112
+#: kicadspoke/config/loader.py:114
 #, python-brace-format
 msgid "deprecated field 'reference_side' in template {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:113
+#: kicadspoke/config/loader.py:115
 msgid ""
 "renamed (see discussion v116): use layer: F.Cu or layer: B.Cu – absolute "
 "template layer, as extracted"
 msgstr ""
 
-#: kicadspoke/config/loader.py:117
+#: kicadspoke/config/loader.py:119
 #, python-brace-format
 msgid "in template {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:153
+#: kicadspoke/config/loader.py:138
+#, python-brace-format
+msgid "unknown fields in spoke (pad {pad!r}) of rule (net {net!r})"
+msgstr ""
+
+#: kicadspoke/config/loader.py:178
 msgid "clone_placement without name"
 msgstr ""
 
-#: kicadspoke/config/loader.py:154
+#: kicadspoke/config/loader.py:179
 msgid ""
 "every clone_placement must have a name – used in --only "
 "(kicadspoke_cli.py) for isolated runs; write name: <string>. Previously "
 "missing name would silently substitute '?' – that was a bug"
 msgstr ""
 
-#: kicadspoke/config/loader.py:169
+#: kicadspoke/config/loader.py:184
 #, python-brace-format
 msgid "unknown fields in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:170
-#, python-brace-format
-msgid ""
-"unrecognised keys are silently ignored – common source of quiet bugs "
-"(e.g. 'pad' won't work; use 'anchor_pad'): {problems}"
+#: kicadspoke/config/loader.py:185
+msgid " (e.g. 'pad' won't work; use 'anchor_pad')"
 msgstr ""
 
-#: kicadspoke/config/loader.py:185
+#: kicadspoke/config/loader.py:197
 #, python-brace-format
 msgid "template and role together in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:186
+#: kicadspoke/config/loader.py:198
 msgid ""
 "these are mutually exclusive ways to define the content: either a ready-"
 "made template (template), or a single-component placement by role (role),"
 " not both"
 msgstr ""
 
-#: kicadspoke/config/loader.py:192
+#: kicadspoke/config/loader.py:204
 #, python-brace-format
 msgid "neither template nor role set in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:193
+#: kicadspoke/config/loader.py:205
 msgid ""
 "need either template: <name from templates:>, or role: <ROLE> for a "
 "single-component placement without a separate template file"
 msgstr ""
 
-#: kicadspoke/config/loader.py:199
+#: kicadspoke/config/loader.py:211
 #, python-brace-format
 msgid "anchor_ref and anchor_role together in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:200
+#: kicadspoke/config/loader.py:212
 msgid ""
 "these are mutually exclusive ways to define the anchor – either by refdes"
 " (anchor_ref) or by Role field (anchor_role), not both"
 msgstr ""
 
-#: kicadspoke/config/loader.py:206
+#: kicadspoke/config/loader.py:218
 #, python-brace-format
 msgid "anchor_sheet without anchor_role in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:207
+#: kicadspoke/config/loader.py:219
 #, python-brace-format
 msgid ""
 "anchor_sheet={sheet!r} is set but anchor_role is missing – anchor_sheet "
 "only narrows ambiguity of anchor_role, it is not an anchor itself"
 msgstr ""
 
-#: kicadspoke/config/loader.py:214
+#: kicadspoke/config/loader.py:226
 #, python-brace-format
 msgid "anchor_pad without anchor_ref/anchor_role in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:215
+#: kicadspoke/config/loader.py:227
 #, python-brace-format
 msgid ""
 "anchor_pad={pad!r} is set but no anchor specified – use anchor_ref: IC1 "
 "or anchor_role: SOME_ROLE"
 msgstr ""
 
-#: kicadspoke/config/loader.py:223
+#: kicadspoke/config/loader.py:235
 #, python-brace-format
 msgid "no anchor and no absolute coordinates in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:224
+#: kicadspoke/config/loader.py:236
 msgid ""
 "either set origin_x_mm/origin_y_mm (absolute point on board), or "
 "anchor_ref/anchor_role (+ optionally anchor_pad) for anchor‑based "
 "placement"
 msgstr ""
 
-#: kicadspoke/config/loader.py:230
+#: kicadspoke/config/loader.py:242
 #, python-brace-format
 msgid "deprecated field 'side' in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:231
+#: kicadspoke/config/loader.py:243
 msgid ""
 "side is now set by an explicit pair: layer: F.Cu|B.Cu (where we place – "
 "fact) + mirror: true (how we place – operation, only meaningful when the "
 "layer changes relative to the template)"
 msgstr ""
 
-#: kicadspoke/config/loader.py:239
+#: kicadspoke/config/loader.py:251
 #, python-brace-format
 msgid "by_selection: true with non-empty nets in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:240
+#: kicadspoke/config/loader.py:252
 msgid ""
 "nets is an explicit role->net mapping for 'by nets' mode; in selection "
 "mode roles are resolved by mouse selection, not by nets – nets is "
 "meaningless here. Either remove nets, or remove by_selection: true"
 msgstr ""
 
-#: kicadspoke/config/loader.py:246
+#: kicadspoke/config/loader.py:258
 #, python-brace-format
 msgid "in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:272
+#: kicadspoke/config/loader.py:286
 #, python-brace-format
 msgid "Loading configuration from {path}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:278
+#: kicadspoke/config/loader.py:293
 msgid "deprecated field 'target_ref' at root of config"
 msgstr ""
 
-#: kicadspoke/config/loader.py:279
+#: kicadspoke/config/loader.py:294
 msgid ""
 "global target_ref has been removed (see discussion v117): each spoke rule"
 " now has its own anchor – write anchor_ref: <ref> inside the rule in "
 "rules; thermal_via_array has its own anchor_ref field"
 msgstr ""
 
-#: kicadspoke/config/loader.py:285
+#: kicadspoke/config/loader.py:300
 msgid "deprecated field 'side' at root of config"
 msgstr ""
 
-#: kicadspoke/config/loader.py:286
+#: kicadspoke/config/loader.py:301
 msgid ""
 "use layer: F.Cu or layer: B.Cu instead (layer for ManualSpoke rules; back"
 " -> B.Cu)"
 msgstr ""
 
-#: kicadspoke/config/loader.py:290
+#: kicadspoke/config/loader.py:305
 msgid "at root of config"
 msgstr ""
 
-#: kicadspoke/config/loader.py:295
+#: kicadspoke/config/loader.py:310
 msgid "deprecated field 'target_ref' in thermal_via_array"
 msgstr ""
 
-#: kicadspoke/config/loader.py:296
+#: kicadspoke/config/loader.py:311
 msgid "renamed for consistency: use anchor_ref"
 msgstr ""
 
-#: kicadspoke/config/loader.py:300
+#: kicadspoke/config/loader.py:315
 msgid "thermal_via_array without name"
 msgstr ""
 
-#: kicadspoke/config/loader.py:301
+#: kicadspoke/config/loader.py:316
 msgid ""
 "thermal_via_array must have a name – used in --only (kicadspoke_cli.py) "
 "for isolated runs; write name: <any understandable string>, e.g. name: "
 "fpga_thermal"
 msgstr ""
 
-#: kicadspoke/config/loader.py:328
-#, python-brace-format
-msgid "templates_file {file!r} not found"
+#: kicadspoke/config/loader.py:321
+msgid "unknown fields in thermal_via_array"
 msgstr ""
 
-#: kicadspoke/config/loader.py:329
+#: kicadspoke/config/loader.py:346
+#, python-brace-format
+msgid "template_files must be a list, got {type}"
+msgstr ""
+
+#: kicadspoke/config/loader.py:347
+msgid ""
+"template_files: is a YAML list of paths ('- templates/a.yaml'); for a "
+"single file use templates_file: <path> instead"
+msgstr ""
+
+#: kicadspoke/config/loader.py:364
+#, python-brace-format
+msgid "templates file {file!r} not found"
+msgstr ""
+
+#: kicadspoke/config/loader.py:365
 #, python-brace-format
 msgid ""
 "expected at {path} (relative to the config file itself, not the current "
 "working directory)"
 msgstr ""
 
-#: kicadspoke/config/loader.py:340
+#: kicadspoke/config/loader.py:376
 #, python-brace-format
-msgid "Templates from {file}: {count_ext}, plus inline: {count_inline}"
+msgid "duplicate template {name!r} across templates_file/template_files"
 msgstr ""
 
-#: kicadspoke/config/loader.py:355
+#: kicadspoke/config/loader.py:377
+msgid ""
+"defined in more than one external templates file (templates_file and/or "
+"an entry of template_files) — external files are meant to be independent,"
+" a repeated name is far more likely a mistake than an intentional "
+"override; inline templates: in the config itself CAN still override an "
+"external one, that is unaffected"
+msgstr ""
+
+#: kicadspoke/config/loader.py:389
+#, python-brace-format
+msgid "Templates from {files}: {count_ext}, plus inline: {count_inline}"
+msgstr ""
+
+#: kicadspoke/config/loader.py:398
+#, python-brace-format
+msgid "unknown fields in rule (net {net!r})"
+msgstr ""
+
+#: kicadspoke/config/loader.py:406
 #, python-brace-format
 msgid "anchor_ref and anchor_role together in rule (net {net!r})"
 msgstr ""
 
-#: kicadspoke/config/loader.py:356
+#: kicadspoke/config/loader.py:407
 msgid ""
 "mutually exclusive: either by refdes (anchor_ref) or by Role field "
 "(anchor_role), not both"
 msgstr ""
 
-#: kicadspoke/config/loader.py:361
+#: kicadspoke/config/loader.py:412
 #, python-brace-format
 msgid "anchor_sheet without anchor_role in rule (net {net!r})"
 msgstr ""
 
-#: kicadspoke/config/loader.py:362
+#: kicadspoke/config/loader.py:413
 msgid ""
 "anchor_sheet only narrows ambiguity of anchor_role, it is not an anchor "
 "itself"
 msgstr ""
 
-#: kicadspoke/config/loader.py:366
+#: kicadspoke/config/loader.py:417
 #, python-brace-format
 msgid "rule (net {net!r}) without anchor_ref/anchor_role"
 msgstr ""
 
-#: kicadspoke/config/loader.py:367
+#: kicadspoke/config/loader.py:418
 msgid ""
 "a spoke rule must have an anchor – anchor_ref: <ref> (component whose "
 "pads are listed in spokes), or anchor_role: <ROLE> (survives "
 "re‑annotation)"
 msgstr ""
 
-#: kicadspoke/config/loader.py:388
+#: kicadspoke/config/loader.py:440
+#, python-brace-format
 msgid ""
 "{count} rules resolve to the same --only identity {name!r} (anchors: "
 "{anchors})"
 msgstr ""
 
-#: kicadspoke/config/loader.py:391
+#: kicadspoke/config/loader.py:443
+#, python-brace-format
 msgid ""
 "give at least one of them an explicit name: to disambiguate (e.g. name: "
 "{name}_a) – --only cannot tell them apart otherwise"
 msgstr ""
 
-#: kicadspoke/config/loader.py:407
+#: kicadspoke/config/loader.py:459
 #, python-brace-format
 msgid "mirror without layer change in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:408
+#: kicadspoke/config/loader.py:460
 #, python-brace-format
 msgid ""
 "template {tpl!r} is on {tpl_layer}, placement layer is {place_layer} – "
@@ -1453,12 +1659,12 @@ msgid ""
 "to {opposite}, or remove mirror"
 msgstr ""
 
-#: kicadspoke/config/loader.py:416
+#: kicadspoke/config/loader.py:468
 #, python-brace-format
 msgid "layer changed without mirror in clone_placement {name!r}"
 msgstr ""
 
-#: kicadspoke/config/loader.py:417
+#: kicadspoke/config/loader.py:469
 #, python-brace-format
 msgid ""
 "template {tpl!r} is on {tpl_layer}, placement layer is {place_layer} – "
@@ -1466,7 +1672,7 @@ msgid ""
 "or remove the layer override"
 msgstr ""
 
-#: kicadspoke/config/loader.py:458
+#: kicadspoke/config/loader.py:511
 #, python-brace-format
 msgid ""
 "Config loaded: layer={layer}, templates={tpl}, rules={rules}, "
@@ -1726,59 +1932,59 @@ msgstr ""
 msgid "full log: {path}"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:57
+#: kicadspoke/diagnostics/diagnostic_charset.py:58
 msgid "NO NAME"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:64
+#: kicadspoke/diagnostics/diagnostic_charset.py:65
 msgid ""
 "Search for non‑ASCII characters (e.g. Cyrillic homoglyphs) in "
 "Role/Cluster fields across the entire board"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:68
+#: kicadspoke/diagnostics/diagnostic_charset.py:69
 #, python-brace-format
 msgid "comma‑separated, no spaces (default: {default})"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:73
+#: kicadspoke/diagnostics/diagnostic_charset.py:74
 msgid "print clean fields as well"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:98
+#: kicadspoke/diagnostics/diagnostic_charset.py:99
 #, python-brace-format
 msgid "{ref}.{field} = {value!r} — clean"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:101
+#: kicadspoke/diagnostics/diagnostic_charset.py:102
 #, python-brace-format
 msgid ""
 "\n"
 "Checked footprints: {count}, fields per component: {fields}"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:105
+#: kicadspoke/diagnostics/diagnostic_charset.py:106
 msgid "No non‑ASCII characters found. All clean."
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:108
+#: kicadspoke/diagnostics/diagnostic_charset.py:109
 #, python-brace-format
 msgid ""
 "\n"
 "=== FOUND {count} field(s) with suspicious characters ===\n"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:111
+#: kicadspoke/diagnostics/diagnostic_charset.py:112
 #, python-brace-format
 msgid "{ref}.{field} = {value!r}"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:113
+#: kicadspoke/diagnostics/diagnostic_charset.py:114
 #, python-brace-format
 msgid "    position {pos}: {ch!r} U+{cp:04X} ({name})"
 msgstr ""
 
-#: kicadspoke/diagnostics/diagnostic_charset.py:116
+#: kicadspoke/diagnostics/diagnostic_charset.py:117
 msgid ""
 "\n"
 "This is not necessarily an error (there may be legitimate Unicode values "
@@ -1894,81 +2100,81 @@ msgstr ""
 msgid "Copper layer of pad {num}: {w:.3f} x {h:.3f} mm"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:35
+#: kicadspoke/diagnostics/get_selected_component.py:36
 msgid "Nothing selected in KiCad (or selected items are not components)."
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:41
+#: kicadspoke/diagnostics/get_selected_component.py:42
 #, python-brace-format
 msgid "Selected components: {count}\n"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:51
+#: kicadspoke/diagnostics/get_selected_component.py:52
 msgid "(not set)"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:56
+#: kicadspoke/diagnostics/get_selected_component.py:57
 #, python-brace-format
 msgid "{w:.3f} x {h:.3f} mm"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:58
+#: kicadspoke/diagnostics/get_selected_component.py:59
 msgid "? (bbox unavailable)"
-msgstr ""
-
-#: kicadspoke/diagnostics/get_selected_component.py:60
-#, python-brace-format
-msgid "[{ref}]"
 msgstr ""
 
 #: kicadspoke/diagnostics/get_selected_component.py:61
 #, python-brace-format
-msgid "  Value:        {val}"
+msgid "[{ref}]"
 msgstr ""
 
 #: kicadspoke/diagnostics/get_selected_component.py:62
 #, python-brace-format
-msgid "  Footprint:    {fp}"
+msgid "  Value:        {val}"
 msgstr ""
 
 #: kicadspoke/diagnostics/get_selected_component.py:63
 #, python-brace-format
-msgid "  Position:     ({x:.3f}, {y:.3f}) mm"
+msgid "  Footprint:    {fp}"
 msgstr ""
 
 #: kicadspoke/diagnostics/get_selected_component.py:64
 #, python-brace-format
-msgid "  Angle:        {angle:.1f}°"
+msgid "  Position:     ({x:.3f}, {y:.3f}) mm"
 msgstr ""
 
 #: kicadspoke/diagnostics/get_selected_component.py:65
 #, python-brace-format
-msgid "  Size:         {size}"
+msgid "  Angle:        {angle:.1f}°"
 msgstr ""
 
 #: kicadspoke/diagnostics/get_selected_component.py:66
 #, python-brace-format
+msgid "  Size:         {size}"
+msgstr ""
+
+#: kicadspoke/diagnostics/get_selected_component.py:67
+#, python-brace-format
 msgid "  Role:         {role}"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:71
+#: kicadspoke/diagnostics/get_selected_component.py:72
 msgid "  Pads:"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:74
+#: kicadspoke/diagnostics/get_selected_component.py:75
 msgid "(none)"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:82
+#: kicadspoke/diagnostics/get_selected_component.py:83
 #, python-brace-format
 msgid "{pw:.2f} x {ph:.2f} mm"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:84
+#: kicadspoke/diagnostics/get_selected_component.py:85
 msgid "?x?"
 msgstr ""
 
-#: kicadspoke/diagnostics/get_selected_component.py:85
+#: kicadspoke/diagnostics/get_selected_component.py:86
 #, python-brace-format
 msgid "    {pnum}: net={net:<15} pos=({px:.3f}, {py:.3f}) mm size={psize}"
 msgstr ""
@@ -2481,110 +2687,110 @@ msgstr ""
 msgid "margin_mm={margin_mm} is too large for a pad {width}x{height} mm"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:21
+#: kicadspoke/kicad/adapter.py:22
 #, python-brace-format
 msgid "Initialising KiCadBoardAdapter with timeout {timeout} ms"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:22
+#: kicadspoke/kicad/adapter.py:23
 msgid "Creating kipy.KiCad instance..."
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:24
+#: kicadspoke/kicad/adapter.py:25
 msgid "kipy.KiCad instance created"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:29
+#: kicadspoke/kicad/adapter.py:66
 msgid "Refreshing board from KiCad"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:32
+#: kicadspoke/kicad/adapter.py:69
 msgid "Failed to obtain board from KiCad"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:33
+#: kicadspoke/kicad/adapter.py:71
 msgid "Board obtained"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:39
+#: kicadspoke/kicad/adapter.py:77
 #, python-brace-format
 msgid "Found footprint {ref}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:41
+#: kicadspoke/kicad/adapter.py:79
 #, python-brace-format
 msgid "Footprint {ref} not found"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:46
+#: kicadspoke/kicad/adapter.py:101
 #, python-brace-format
 msgid "Retrieved {count} footprints"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:51
+#: kicadspoke/kicad/adapter.py:106
 #, python-brace-format
 msgid "Retrieved {count} vias"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:56
+#: kicadspoke/kicad/adapter.py:111
 #, python-brace-format
 msgid "Retrieved {count} tracks"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:83
+#: kicadspoke/kicad/adapter.py:143
 #, python-brace-format
 msgid "Selected items (including groups expanded): {count}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:118
+#: kicadspoke/kicad/adapter.py:178
 #, python-brace-format
 msgid "Found zone {name}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:120
+#: kicadspoke/kicad/adapter.py:180
 #, python-brace-format
 msgid "Zone {name} not found"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:126
+#: kicadspoke/kicad/adapter.py:186
 #, python-brace-format
 msgid "Found net {name}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:128
+#: kicadspoke/kicad/adapter.py:188
 #, python-brace-format
 msgid "Net {name} not found"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:133
+#: kicadspoke/kicad/adapter.py:193
 #, python-brace-format
 msgid "Retrieved {count} nets"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:154
+#: kicadspoke/kicad/adapter.py:214
 msgid "Beginning transaction"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:158
+#: kicadspoke/kicad/adapter.py:218
 #, python-brace-format
 msgid "Committing transaction: {desc}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:160
+#: kicadspoke/kicad/adapter.py:220
 #, python-brace-format
 msgid "Transaction committed: {desc}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:163
+#: kicadspoke/kicad/adapter.py:223
 msgid "Rolling back transaction"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:183
+#: kicadspoke/kicad/adapter.py:243
 #, python-brace-format
 msgid "Checking open schematics failed: {e}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:187
+#: kicadspoke/kicad/adapter.py:247
 msgid ""
 "Schematic editor is open: if there have been no interactive edits in this"
 " KiCad session, the first API write may crash KiCad (issue #24966). "
@@ -2592,14 +2798,14 @@ msgid ""
 " window during the run."
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:208
+#: kicadspoke/kicad/adapter.py:268
 #, python-brace-format
 msgid ""
 "{op}: KiCad not ready to respond (busy/modal dialog?), retrying in "
 "{wait:.1f}s [{attempt}/{retries}]"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:219
+#: kicadspoke/kicad/adapter.py:279
 #, python-brace-format
 msgid ""
 "{op}: connection to KiCad broke during write — KiCad probably crashed "
@@ -2608,56 +2814,56 @@ msgid ""
 " error: {e}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:229
+#: kicadspoke/kicad/adapter.py:289
 #, python-brace-format
 msgid "Updating {count} items"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:234
+#: kicadspoke/kicad/adapter.py:294
 #, python-brace-format
 msgid "Creating {count} items"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:237
+#: kicadspoke/kicad/adapter.py:297
 #, python-brace-format
 msgid "Created {count} items"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:242
+#: kicadspoke/kicad/adapter.py:302
 #, python-brace-format
 msgid "Flipping {count} footprints via GUI action"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:247
+#: kicadspoke/kicad/adapter.py:316 tests/test_i18n.py:82 tests/test_i18n.py:91
 msgid "Flip performed"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:263
+#: kicadspoke/kicad/adapter.py:332
 #, python-brace-format
 msgid "Attempt {attempt}/{total} for {desc}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:275
+#: kicadspoke/kicad/adapter.py:344
 #, python-brace-format
 msgid "Failed to roll back transaction {desc}: {e}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:277
+#: kicadspoke/kicad/adapter.py:346
 #, python-brace-format
 msgid "Error in transaction {desc} (attempt {attempt}): {type}: {e}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:288
+#: kicadspoke/kicad/adapter.py:357
 #, python-brace-format
 msgid "Creating via at ({x:.3f}, {y:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:300
+#: kicadspoke/kicad/adapter.py:369
 #, python-brace-format
 msgid "Creating track ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadspoke/kicad/adapter.py:326
+#: kicadspoke/kicad/adapter.py:395
 #, python-brace-format
 msgid "Failed to delete object {uuid}: {type}: {e}"
 msgstr ""
@@ -2667,35 +2873,51 @@ msgstr ""
 msgid "  {ref}: bounding box unavailable, using fallback radius {radius}mm"
 msgstr ""
 
-#: kicadspoke/placement/planner.py:35
+#: kicadspoke/placement/dependency_order.py:129
+#: kicadspoke/placement/services/clone_position_calculator.py:162
+#, python-brace-format
+msgid "{name}: template {template!r} not found in templates, skipping"
+msgstr ""
+
+#: kicadspoke/placement/dependency_order.py:188
+#, python-brace-format
+msgid "clone_placement {name!r}"
+msgstr ""
+
+#: kicadspoke/placement/dependency_order.py:229
+msgid "dependency cycle among rules/clone_placements"
+msgstr ""
+
+#: kicadspoke/placement/dependency_order.py:230
+#, python-brace-format
+msgid "{count} item(s) form a cycle through their anchors: {items}"
+msgstr ""
+
+#: kicadspoke/placement/dependency_order.py:232
+msgid ""
+"break the cycle: at least one of these must anchor on something outside "
+"this set (a fixed, pre-existing component, or an absolute coordinate)"
+msgstr ""
+
+#: kicadspoke/placement/planner.py:39
 #, python-brace-format
 msgid "Planner initialised: layer={layer}, anchors in rules: {anchors}"
 msgstr ""
 
-#: kicadspoke/placement/planner.py:71
+#: kicadspoke/placement/planner.py:100
 msgid "rules is empty — no ManualSpoke components/vias/tracks planned"
 msgstr ""
 
-#: kicadspoke/placement/planner.py:73
+#: kicadspoke/placement/planner.py:102
 msgid "place_components=False – component moves are not planned"
 msgstr ""
 
-#: kicadspoke/placement/planner.py:80
+#: kicadspoke/placement/planner.py:109
 #, python-brace-format
 msgid "ClonePlacement: {count} components, {vias} vias, {tracks} tracks"
 msgstr ""
 
-#: kicadspoke/placement/planner.py:93
-#, python-brace-format
-msgid "  {ref}: already in place, move skipped (skip_existing_components)"
-msgstr ""
-
-#: kicadspoke/placement/planner.py:103
-#, python-brace-format
-msgid "Skipped {count} components already at target position"
-msgstr ""
-
-#: kicadspoke/placement/planner.py:104
+#: kicadspoke/placement/planner.py:117
 #, python-brace-format
 msgid "plan_moves completed: {count} moves"
 msgstr ""
@@ -2824,97 +3046,78 @@ msgstr ""
 msgid "  via batch {idx} completed ({count} items)"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:73
+#: kicadspoke/placement/services/clone_position_calculator.py:115
 #, python-brace-format
 msgid "{name}: anchor component {ref!r} not found on board"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:75
+#: kicadspoke/placement/services/clone_position_calculator.py:117
 #, python-brace-format
 msgid ""
 "check anchor_ref in clone_placement {name!r} — no such ref on the board "
 "(typo? component not yet in PCB?)"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:85
+#: kicadspoke/placement/services/clone_position_calculator.py:127
 #, python-brace-format
 msgid "  [{name}] anchor: centre of {ref} ({x:.3f}, {y:.3f}) mm"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:92
+#: kicadspoke/placement/services/clone_position_calculator.py:134
 #, python-brace-format
 msgid "{name}: {ref} has no pad {pad!r}"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:95
+#: kicadspoke/placement/services/clone_position_calculator.py:137
 #, python-brace-format
 msgid ""
 "check anchor_pad in clone_placement {name!r} — pad numbers are strings as"
 " in KiCad ('1', '17', 'A3')"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:99
+#: kicadspoke/placement/services/clone_position_calculator.py:141
 #, python-brace-format
 msgid "  [{name}] anchor: pad {ref}.{pad} ({x:.3f}, {y:.3f}) mm"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:120
-#, python-brace-format
-msgid "{name}: template {template!r} not found in templates, skipping"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_position_calculator.py:161
+#: kicadspoke/placement/services/clone_position_calculator.py:209
 #, python-brace-format
 msgid "  [{name}] template {tpl!r} on {layer}{mirror_suffix}"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:163
+#: kicadspoke/placement/services/clone_position_calculator.py:211
 msgid " -> mirrored as a whole"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:163
+#: kicadspoke/placement/services/clone_position_calculator.py:211
 msgid " -> as written"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:172
+#: kicadspoke/placement/services/clone_position_calculator.py:220
 #, python-brace-format
 msgid "  [{name}] spoke‑level via: ({x:.3f}, {y:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:183
+#: kicadspoke/placement/services/clone_position_calculator.py:231
 #, python-brace-format
 msgid ""
 "  [{name}] track: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
 "net={net}, layer={layer}"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_position_calculator.py:202
+#: kicadspoke/placement/services/clone_position_calculator.py:250
 #, python-brace-format
 msgid ""
 "  [{name}] {ref} (role {role}): position ({x:.3f}, {y:.3f}) mm, angle "
 "{angle:.1f}°"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:76
-#, python-brace-format
-msgid ""
-"[{name}] role {role!r}: {count} candidates narrowed to {narrowed} by "
-"anchor_cluster {cluster!r}"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_role_resolver.py:84
-#, python-brace-format
-msgid ""
-"[{name}] role {role!r}: {count} candidates narrowed to {narrowed} by "
-"current selection"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_role_resolver.py:98
+#: kicadspoke/placement/services/clone_role_resolver.py:102
 #, python-brace-format
 msgid " (closest to anchor {name!r}: {ref} at {d:.2f} mm, second — {d2:.2f} mm)"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:102
+#: kicadspoke/placement/services/clone_role_resolver.py:106
 #, python-brace-format
 msgid ""
 "[{name}] role {role!r}: {count} candidates narrowed to 1 by physical "
@@ -2922,41 +3125,62 @@ msgid ""
 "sufficient gap)"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:109
+#: kicadspoke/placement/services/clone_role_resolver.py:113
 #, python-brace-format
 msgid ""
 "[{name}] role {role!r}: cannot narrow by proximity — {d:.2f} mm vs "
 "{d2:.2f} mm, insufficient gap"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:144
+#: kicadspoke/placement/services/clone_role_resolver.py:145
+#, python-brace-format
+msgid ""
+"[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by"
+" anchor_sheet {sheet!r}"
+msgstr ""
+
+#: kicadspoke/placement/services/clone_role_resolver.py:156
+#, python-brace-format
+msgid ""
+"[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by"
+" anchor_cluster {cluster!r}"
+msgstr ""
+
+#: kicadspoke/placement/services/clone_role_resolver.py:164
+#, python-brace-format
+msgid ""
+"[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by"
+" current selection"
+msgstr ""
+
+#: kicadspoke/placement/services/clone_role_resolver.py:202
 #, python-brace-format
 msgid "{ref}: no {field!r} field"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:147
+#: kicadspoke/placement/services/clone_role_resolver.py:205
 #, python-brace-format
 msgid "{ref}: role {role!r} is not in the template (template roles: {roles})"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:152
+#: kicadspoke/placement/services/clone_role_resolver.py:210
 #, python-brace-format
 msgid "role {role!r} appears twice in selection: {ref1!r} and {ref2!r}"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:168
+#: kicadspoke/placement/services/clone_role_resolver.py:226
 #, python-brace-format
 msgid "role {role!r} is in template but not found anywhere on board"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:174
+#: kicadspoke/placement/services/clone_role_resolver.py:232
 #, python-brace-format
 msgid ""
 "[{name}] role {role!r} -> {ref} (unique on whole board, no selection "
 "needed)"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:185
+#: kicadspoke/placement/services/clone_role_resolver.py:243
 #, python-brace-format
 msgid ""
 "role {role!r} is in template, not found in selection, and ambiguous on "
@@ -2964,32 +3188,32 @@ msgid ""
 "the desired instance on the board before running"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:192
+#: kicadspoke/placement/services/clone_role_resolver.py:250
 #, python-brace-format
 msgid "selection does not match template composition ({name!r})"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:196
+#: kicadspoke/placement/services/clone_role_resolver.py:254
 #, python-brace-format
 msgid "[{name}] mapped by selection: {count} roles"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:250
+#: kicadspoke/placement/services/clone_role_resolver.py:320
 #, python-brace-format
 msgid "refs: role {role!r} does not exist in template {template!r}"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:255
+#: kicadspoke/placement/services/clone_role_resolver.py:325
 #, python-brace-format
 msgid "refs: component {ref!r} (role {role!r}) not found on board"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:259
+#: kicadspoke/placement/services/clone_role_resolver.py:329
 #, python-brace-format
 msgid "[{name}] role {role!r} -> {ref} (explicit refs)"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:273
+#: kicadspoke/placement/services/clone_role_resolver.py:343
 #, python-brace-format
 msgid ""
 "role {role!r}: no net for mapping (neither in nets of {name!r}, nor in "
@@ -2997,14 +3221,14 @@ msgid ""
 "role"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:290
+#: kicadspoke/placement/services/clone_role_resolver.py:360
 #, python-brace-format
 msgid ""
 "role {role!r}: NO component with this role on the board at all (check the"
 " Role field in the schematic, and that Update PCB from Schematic was run)"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:297
+#: kicadspoke/placement/services/clone_role_resolver.py:367
 #, python-brace-format
 msgid ""
 "role {role!r}: component(s) {refs} with this role exist on the board, but"
@@ -3012,76 +3236,65 @@ msgid ""
 "params/net name or the schematic connection)"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:316
+#: kicadspoke/placement/services/clone_role_resolver.py:388
 #, python-brace-format
-msgid " (already narrowed by anchor_cluster {cluster!r}, but not enough)"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_role_resolver.py:318
-msgid ""
-" (Cluster not set — if these components are physically different "
-"instances, anchor_cluster would narrow to one)"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_role_resolver.py:321
-#, python-brace-format
-msgid ""
-"role {role!r}: ambiguity — {count} components on net "
-"{net!r}{cluster_hint}{note}: {refs}. Solutions: set anchor_cluster (if "
-"Cluster is assigned in the schematic), OR select the desired instance on "
-"the board before running, OR split roles by net names in the schematic "
-"(e.g. DAC_PI_3V3_C1 vs DAC_PI_AVDD_C1), OR use explicit refs: {{ {role}: "
-"{first_ref} }}"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_role_resolver.py:332
-#, python-brace-format
-msgid "net‑based mapping failed ({name!r})"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_role_resolver.py:336
-#, python-brace-format
-msgid "[{name}] mapped by nets: {count} roles"
+msgid "anchor_sheet {sheet!r}"
 msgstr ""
 
 #: kicadspoke/placement/services/clone_role_resolver.py:389
 #, python-brace-format
-msgid "{label}: anchor_role {role!r} not found on any component on the board"
+msgid "anchor_cluster {cluster!r}"
 msgstr ""
 
 #: kicadspoke/placement/services/clone_role_resolver.py:391
+#, python-brace-format
+msgid " (already narrowed by {narrowed_by}, but not enough)"
+msgstr ""
+
+#: kicadspoke/placement/services/clone_role_resolver.py:393
+msgid ""
+" (neither anchor_sheet nor Cluster set — if these components are "
+"physically different instances, one of them would narrow to one)"
+msgstr ""
+
+#: kicadspoke/placement/services/clone_role_resolver.py:396
+#, python-brace-format
+msgid ""
+"role {role!r}: ambiguity — {count} components on net "
+"{net!r}{cluster_hint}{note}: {refs}. Solutions: set anchor_sheet and/or "
+"anchor_cluster (if assigned in the schematic), OR select the desired "
+"instance on the board before running, OR split roles by net names in the "
+"schematic (e.g. DAC_PI_3V3_C1 vs DAC_PI_AVDD_C1), OR use explicit refs: "
+"{{ {role}: {first_ref} }}"
+msgstr ""
+
+#: kicadspoke/placement/services/clone_role_resolver.py:407
+#, python-brace-format
+msgid "net‑based mapping failed ({name!r})"
+msgstr ""
+
+#: kicadspoke/placement/services/clone_role_resolver.py:411
+#, python-brace-format
+msgid "[{name}] mapped by nets: {count} roles"
+msgstr ""
+
+#: kicadspoke/placement/services/clone_role_resolver.py:463
+#, python-brace-format
+msgid "{label}: anchor_role {role!r} not found on any component on the board"
+msgstr ""
+
+#: kicadspoke/placement/services/clone_role_resolver.py:465
 msgid ""
 "check that the Role field is set in the schematic and propagated to the "
 "PCB (Update PCB from Schematic)"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:400
-#, python-brace-format
-msgid ""
-"[{label}] anchor_role {role!r}: {count} candidates narrowed to {narrowed}"
-" by anchor_sheet {sheet!r}"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_role_resolver.py:413
-#, python-brace-format
-msgid ""
-"[{label}] anchor_role {role!r}: {count} candidates narrowed to {narrowed}"
-" by anchor_cluster {cluster!r}"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_role_resolver.py:427
-#, python-brace-format
-msgid ""
-"[{label}] anchor_role {role!r}: {count} candidates narrowed to {narrowed}"
-" by current selection"
-msgstr ""
-
-#: kicadspoke/placement/services/clone_role_resolver.py:438
+#: kicadspoke/placement/services/clone_role_resolver.py:484
 #, python-brace-format
 msgid "{label}: anchor_role {role!r} is ambiguous"
 msgstr ""
 
-#: kicadspoke/placement/services/clone_role_resolver.py:439
+#: kicadspoke/placement/services/clone_role_resolver.py:485
 #, python-brace-format
 msgid ""
 "candidates: {count} — {refs}. Solutions: refine anchor_sheet and/or "
@@ -3118,101 +3331,116 @@ msgid ""
 "this net."
 msgstr ""
 
-#: kicadspoke/placement/services/manual_position_calculator.py:100
+#: kicadspoke/placement/services/component_resolver.py:53
+#, python-brace-format
+msgid "{label}: anchor {anchor!r} not found on board"
+msgstr ""
+
+#: kicadspoke/placement/services/manual_position_calculator.py:122
 #, python-brace-format
 msgid ""
 "Spoke on pad {pad}: template {template!r} not found in templates, spoke "
 "skipped"
 msgstr ""
 
-#: kicadspoke/placement/services/manual_position_calculator.py:108
+#: kicadspoke/placement/services/manual_position_calculator.py:130
 #, python-brace-format
 msgid "{anchor} has no pad {pad}, spoke skipped"
 msgstr ""
 
-#: kicadspoke/placement/services/manual_position_calculator.py:134
+#: kicadspoke/placement/services/manual_position_calculator.py:156
 #, python-brace-format
 msgid "  spoke‑level via (pad {pad}): ({x:.3f}, {y:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadspoke/placement/services/manual_position_calculator.py:149
+#: kicadspoke/placement/services/manual_position_calculator.py:171
 #, python-brace-format
 msgid ""
 "  spoke‑level track (pad {pad}): ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, "
 "{ey:.3f}) mm, net={net}, layer={layer}"
 msgstr ""
 
-#: kicadspoke/placement/services/manual_position_calculator.py:160
+#: kicadspoke/placement/services/manual_position_calculator.py:194
 #, python-brace-format
 msgid ""
 "  {ref} (role {role}, pad {pad}): position ({x:.3f}, {y:.3f}) mm, angle "
 "{angle:.1f}°"
 msgstr ""
 
-#: kicadspoke/placement/services/manual_position_calculator.py:172
+#: kicadspoke/placement/services/manual_position_calculator.py:206
 #, python-brace-format
 msgid "    via {ref}: ({x:.3f}, {y:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:57
+#: kicadspoke/placement/services/position_tracker.py:65
+#, python-brace-format
+msgid "  {ref}: already in place, move skipped (skip_existing_components)"
+msgstr ""
+
+#: kicadspoke/placement/services/position_tracker.py:77
+#, python-brace-format
+msgid "Skipped {count} components already at target position"
+msgstr ""
+
+#: kicadspoke/placement/services/via_planner.py:63
 #, python-brace-format
 msgid "Thermal pad: component {ref} not found"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:72
+#: kicadspoke/placement/services/via_planner.py:78
 msgid "thermal_via_array: neither anchor_ref nor anchor_role set"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:96
+#: kicadspoke/placement/services/via_planner.py:102
 #, python-brace-format
 msgid "  via for {owner}: already exists, skipped"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:101
+#: kicadspoke/placement/services/via_planner.py:107
 #, python-brace-format
 msgid "Skipped {count} spoke/component vias already present on the board"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:111
+#: kicadspoke/placement/services/via_planner.py:117
 #, python-brace-format
 msgid "Keepout for thermal vias: {count} rectangles"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:114
+#: kicadspoke/placement/services/via_planner.py:120
 msgid "Thermal vias disabled or no anchor set — keepout/thermal planning skipped"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:116
+#: kicadspoke/placement/services/via_planner.py:122
 #, python-brace-format
 msgid "plan_vias completed: {count} vias"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:155
+#: kicadspoke/placement/services/via_planner.py:161
 #, python-brace-format
 msgid "Planning thermal vias for {ref}, pad {pad}"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:160
+#: kicadspoke/placement/services/via_planner.py:166
 #, python-brace-format
 msgid "Thermal pad: {ref} has no pad {pad}"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:173
+#: kicadspoke/placement/services/via_planner.py:179
 #, python-brace-format
 msgid "Thermal pad: {error}"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:192
+#: kicadspoke/placement/services/via_planner.py:207
 #, python-brace-format
 msgid "Thermal via: no free spot found for ({x:.3f}, {y:.3f}) mm, point skipped"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:198
+#: kicadspoke/placement/services/via_planner.py:214
 #, python-brace-format
 msgid "Skipped {count} thermal vias already present on the board"
 msgstr ""
 
-#: kicadspoke/placement/services/via_planner.py:199
+#: kicadspoke/placement/services/via_planner.py:215
 #, python-brace-format
 msgid "Planned {count} thermal vias on {pad}"
 msgstr ""
@@ -3243,5 +3471,164 @@ msgstr ""
 #~ "used in --only for isolated runs; "
 #~ "write name: <any understandable string>, "
 #~ "e.g. name: fpga_3v3_bank"
+#~ msgstr ""
+
+#~ msgid "Planning placement..."
+#~ msgstr ""
+
+#~ msgid "Planned moves: {count}"
+#~ msgstr ""
+
+#~ msgid "Applying moves..."
+#~ msgstr ""
+
+#~ msgid "net {template!r} has a placeholder with no parameter"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "missing parameter {param} — add it "
+#~ "to params of this clone_placement, or"
+#~ " remove the placeholder from the "
+#~ "template"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "  {key}: registry has an entry "
+#~ "(uuid {uuid}), but no such via is"
+#~ " on the board — registry is out"
+#~ " of sync (manually deleted, Undo, PCB"
+#~ " reloaded from git, or previous run"
+#~ " crashed between registry write and "
+#~ "board commit); recreating as if the "
+#~ "entry never existed"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "  {key}: already correctly placed "
+#~ "(checked against live via {uuid}), "
+#~ "skipped"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "  {key}: position/parameters changed, deleting"
+#~ " old via ({uuid}) and creating a "
+#~ "new one"
+#~ msgstr ""
+
+#~ msgid "  prune: {key} no longer appears in config, deleting via ({uuid})"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "  {key}: track registry has an "
+#~ "entry (uuid {uuid}), but no such "
+#~ "track is on the board — registry"
+#~ " is out of sync; recreating as "
+#~ "if the entry never existed"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "  {key}: already correctly placed "
+#~ "(checked against live track {uuid}), "
+#~ "skipped"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "  {key}: geometry/parameters changed, deleting"
+#~ " old track ({uuid}) and creating a"
+#~ " new one"
+#~ msgstr ""
+
+#~ msgid "  prune: {key} no longer appears in config, deleting track ({uuid})"
+#~ msgstr ""
+
+#~ msgid "Failed to get board."
+#~ msgstr ""
+
+#~ msgid "Failed to delete via {uuid}: {e}"
+#~ msgstr ""
+
+#~ msgid "Failed to delete track {uuid}: {e}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "{this!r} and {other!r} both point to "
+#~ "the same anchor (template/role={content!r}, "
+#~ "anchor_ref={ref!r}, anchor_pad={pad!r}) — the "
+#~ "registry would confuse their vias/tracks; "
+#~ "likely a copy‑paste typo"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "{this!r} and {other!r} both point to "
+#~ "the same anchor (template/role={content!r}, "
+#~ "anchor_role={role!r}, anchor_sheet={sheet!r}, "
+#~ "anchor_pad={pad!r}) — the registry would "
+#~ "confuse their vias/tracks; likely a "
+#~ "copy‑paste typo"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "unrecognised keys are silently ignored –"
+#~ " common source of quiet bugs (e.g."
+#~ " 'pad' won't work; use 'anchor_pad'): "
+#~ "{problems}"
+#~ msgstr ""
+
+#~ msgid "templates_file {file!r} not found"
+#~ msgstr ""
+
+#~ msgid "Templates from {file}: {count_ext}, plus inline: {count_inline}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "[{name}] role {role!r}: {count} candidates "
+#~ "narrowed to {narrowed} by anchor_cluster "
+#~ "{cluster!r}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "[{name}] role {role!r}: {count} candidates "
+#~ "narrowed to {narrowed} by current "
+#~ "selection"
+#~ msgstr ""
+
+#~ msgid " (already narrowed by anchor_cluster {cluster!r}, but not enough)"
+#~ msgstr ""
+
+#~ msgid ""
+#~ " (Cluster not set — if these "
+#~ "components are physically different instances,"
+#~ " anchor_cluster would narrow to one)"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "role {role!r}: ambiguity — {count} "
+#~ "components on net {net!r}{cluster_hint}{note}: "
+#~ "{refs}. Solutions: set anchor_cluster (if "
+#~ "Cluster is assigned in the schematic),"
+#~ " OR select the desired instance on"
+#~ " the board before running, OR split"
+#~ " roles by net names in the "
+#~ "schematic (e.g. DAC_PI_3V3_C1 vs "
+#~ "DAC_PI_AVDD_C1), OR use explicit refs: "
+#~ "{{ {role}: {first_ref} }}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "[{label}] anchor_role {role!r}: {count} "
+#~ "candidates narrowed to {narrowed} by "
+#~ "anchor_sheet {sheet!r}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "[{label}] anchor_role {role!r}: {count} "
+#~ "candidates narrowed to {narrowed} by "
+#~ "anchor_cluster {cluster!r}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "[{label}] anchor_role {role!r}: {count} "
+#~ "candidates narrowed to {narrowed} by "
+#~ "current selection"
 #~ msgstr ""
 

@@ -36,7 +36,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from kipy.board_types import FootprintInstance, Via, Track
 from kipy.geometry import Vector2
 
-from .constants import POSITION_TOLERANCE_MM
+from .constants import POSITION_TOLERANCE_MM, ROLE_FIELD_NAME
 from .exceptions import ValidationError, format_fatal_error
 from .kicad.adapter import KiCadBoardAdapter
 from .net_resolution import parametrize_net
@@ -45,7 +45,6 @@ from .i18n import _
 
 logger = logging.getLogger(__name__)
 
-ROLE_FIELD_NAME = "Role"
 
 
 def _points_match(p1: Vector2, p2: Vector2, tol_mm: float = POSITION_TOLERANCE_MM) -> bool:

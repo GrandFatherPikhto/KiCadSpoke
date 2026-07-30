@@ -34,12 +34,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from kicadspoke.constants import CLUSTER_FIELD_NAME, ROLE_FIELD_NAME
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.i18n import _
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_FIELDS = ["Role", "Cluster"]
+DEFAULT_FIELDS = [ROLE_FIELD_NAME, CLUSTER_FIELD_NAME]
 
 
 def find_non_ascii(value: str):

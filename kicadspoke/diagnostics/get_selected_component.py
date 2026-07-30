@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import logging
 from kipy.board_types import FootprintInstance
+from kicadspoke.constants import ROLE_FIELD_NAME
 from kicadspoke.kicad.adapter import KiCadBoardAdapter
 from kicadspoke.utils.units import MM
 from kicadspoke.i18n import _
@@ -48,7 +49,7 @@ def main():
         x = fp.position.x / MM
         y = fp.position.y / MM
         angle = fp.orientation.degrees
-        role = adapter.get_field_value(fp, "Role") or _("(not set)")
+        role = adapter.get_field_value(fp, ROLE_FIELD_NAME) or _("(not set)")
 
         if bbox:
             w = bbox.size.x / MM
