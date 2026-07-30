@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Rename project from KiCadStamp/kicadstamp to KiCadStamp/kicadstamp.
+Rename project from KiCadSpoke/kicadspoke to KiCadStamp/kicadstamp.
 
 Usage: python tools/rename_project.py
 """
@@ -56,10 +56,10 @@ def replace_in_file(filepath: str) -> bool:
     except (UnicodeDecodeError, PermissionError, OSError):
         return False
 
-    # Order matters: do kicadstamp (lowercase) first to avoid double-replacement
-    new_content = content.replace("kicadstamp", "kicadstamp")
-    new_content = new_content.replace("KiCadStamp", "KiCadStamp")
-    new_content = new_content.replace("KICADSTAMP", "KICADSTAMP")
+    # Order matters: replace longer/capitalized forms first to avoid double-replacement
+    new_content = content.replace("KICADSPOKE", "KICADSTAMP")
+    new_content = new_content.replace("KiCadSpoke", "KiCadStamp")
+    new_content = new_content.replace("kicadspoke", "kicadstamp")
 
     if new_content != content:
         with open(filepath, "w", encoding="utf-8") as f:
@@ -94,7 +94,7 @@ def rename_locale_files():
         if not os.path.isdir(lc_messages):
             continue
         for ext in (".po", ".mo"):
-            old_name = f"kicadstamp{ext}"
+            old_name = f"kicadspoke{ext}"
             new_name = f"kicadstamp{ext}"
             old_path = os.path.join(lc_messages, old_name)
             new_path = os.path.join(lc_messages, new_name)
@@ -108,8 +108,8 @@ def rename_root_files():
     """Rename root-level files."""
     renames = []
     pairs = [
-        ("kicadstamp_cli.py", "kicadstamp_cli.py"),
-        ("kicadstamp_templates_example.yaml", "kicadstamp_templates_example.yaml"),
+        ("kicadspoke_cli.py", "kicadstamp_cli.py"),
+        ("kicadspoke_templates_example.yaml", "kicadstamp_templates_example.yaml"),
     ]
     for old, new in pairs:
         old_path = os.path.join(BASE_DIR, old)
@@ -122,7 +122,7 @@ def rename_root_files():
 
 def rename_package_dir():
     """Rename kicadstamp/ -> kicadstamp/ at the base level."""
-    old_dir = os.path.join(BASE_DIR, "kicadstamp")
+    old_dir = os.path.join(BASE_DIR, "kicadspoke")
     new_dir = os.path.join(BASE_DIR, "kicadstamp")
     if os.path.exists(old_dir) and not os.path.exists(new_dir):
         os.rename(old_dir, new_dir)

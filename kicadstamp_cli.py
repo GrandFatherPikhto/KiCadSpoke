@@ -1,10 +1,10 @@
 #!.venv/bin/python
 """
-kicadspoke_cli.py — main entry point for KiCadSpoke.
+kicadstamp_cli.py — main entry point for KiCadStamp.
 
 Usage:
-    python kicadspoke_cli.py apply config.yaml [--dry-run] [--timeout-ms 20000] [--batch-size 10]
-    python kicadspoke_cli.py undo [--verbose]
+    python kicadstamp_cli.py apply config.yaml [--dry-run] [--timeout-ms 20000] [--batch-size 10]
+    python kicadstamp_cli.py undo [--verbose]
 """
 
 import argparse
@@ -28,15 +28,15 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
-from kicadspoke import __version__
-from kicadspoke.config import load_config, RuntimeContext
-from kicadspoke.apply_pipeline import ApplyPipeline, cmd_apply
-from kicadspoke.cli_extract import cmd_extract, load_profile, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
-from kicadspoke.exceptions import PlacerError
-from kicadspoke.logging_setup import setup_logging
-from kicadspoke.undo import undo_last_operation
-from kicadspoke.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
-from kicadspoke.i18n import _
+from kicadstamp import __version__
+from kicadstamp.config import load_config, RuntimeContext
+from kicadstamp.apply_pipeline import ApplyPipeline, cmd_apply
+from kicadstamp.cli_extract import cmd_extract, load_profile, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
+from kicadstamp.exceptions import PlacerError
+from kicadstamp.logging_setup import setup_logging
+from kicadstamp.undo import undo_last_operation
+from kicadstamp.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
+from kicadstamp.i18n import _
 from kipy.errors import ApiError, ApiStatusCode
 
 
@@ -73,10 +73,10 @@ def main():
 
     parser = argparse.ArgumentParser(
         description=_("KiCad Decap Placer – capacitor placement (manual strategy)"),
-        epilog=_("Example: kicadspoke_cli.py config.yaml --dry-run")
+        epilog=_("Example: kicadstamp_cli.py config.yaml --dry-run")
     )
     parser.add_argument("--version", "-V", action="version",
-                        version=f"kicadspoke {__version__}")
+                        version=f"kicadstamp {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True, help=_("Subcommand"))
 
     apply_parser = subparsers.add_parser("apply", help=_("Apply placement"))
@@ -201,7 +201,7 @@ def main():
                 if not (args.net and args.pcb and args.channel and args.output):
                     sys.exit(_("[error] need --net/--pcb/--channel/--output (or --profiles/--profile)"))
                 net_path, pcb_path, channel, output = args.net, args.pcb, args.channel, args.output
-            from kicadspoke.cloner.extract import extract_channel
+            from kicadstamp.cloner.extract import extract_channel
             d = extract_channel(net_path, pcb_path, channel, output)
             s = d['summary']
             print(_("[{channel}] footprints: {fp}, segments: {seg}, vias: {vias} -> {output}")
