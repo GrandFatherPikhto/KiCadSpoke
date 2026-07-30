@@ -76,6 +76,13 @@ Doesn't mutate the board (the write is a no-op), but on a vulnerable session (se
 write attempt itself can **crash the KiCad process entirely**. Save any open files before running the
 full ladder (i.e. without `--until 8`).
 
+The crash needs the **Schematic Editor** to be open at the moment of the session's first write — with
+only the PCB Editor open, the same ladder completes cleanly. It's specifically the *first* write that's
+vulnerable: run the ladder (or a real `apply`) once with only the PCB Editor open first, and opening the
+Schematic Editor afterwards is usually safe. See
+[crash_hunting.md](crash_hunting.md#24966--ipc-api-crash-on-the-first-write-of-a-session) for the full
+writeup of this condition.
+
 ## See also
 
 - [crash_hunting.md](crash_hunting.md) — descriptions of both bugs (#24966/#24970), the other two tools

@@ -336,8 +336,10 @@ no-op one) can crash KiCad (null pointer in `API_HANDLER_EDITOR::checkForBusy`).
 **Symptoms:** KiCad silently closes, client gets `ConnectionError: Error receiving reply from KiCad: Timed out`.
 
 **Workaround:** close the schematic editor before running `apply`. The tool includes a warning and retries,
-but the crash remains a KiCad defect. Full write-up, a related bug (#24970), and the full crash-hunting
-toolkit — see [docs/crash_hunting.md](./docs/crash_hunting.md).
+but the crash remains a KiCad defect. In practice it's specifically the *session's first* write that's
+vulnerable — if the first `apply` run is done with only the PCB Editor open, opening the Schematic Editor
+afterwards is usually safe. Full write-up, a related bug (#24970), and the full crash-hunting toolkit —
+see [docs/crash_hunting.md](./docs/crash_hunting.md).
 
 ### Diagnostic scripts
 `kicadspoke/diagnostics/` includes:

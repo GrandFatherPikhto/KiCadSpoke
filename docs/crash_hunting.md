@@ -31,6 +31,12 @@ not "warm up" the vulnerable state, so a series of flips before the first real t
 one no-op transaction) completes without crashing. This matches the precondition documented in the original
 GitLab report.
 
+**Practical corollary (direct observation):** the vulnerable window is specifically the session's first write,
+not "Schematic Editor open" as a standing condition. If `apply` is first run with only the PCB Editor open (so
+the session's first `begin_commit()`/`push_commit()` succeeds cleanly), opening the Schematic Editor
+*afterwards* is usually safe — KiCad typically does not crash. This gives a practical workflow: do the first
+IPC placement run PCB-Editor-only, then open the Schematic Editor for the rest of the session.
+
 Status: reproduced on KiCad 10.0.4 and 10.0.5, on both Windows and Linux (Flatpak). The findings that "10.0.5
 still crashes" and that the exact trigger is `begin_commit()` (not any write) are queued for a follow-up post
 to the GitLab issue; we're deliberately accumulating more data before posting (see `techdocs/status/`).
