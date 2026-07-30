@@ -19,10 +19,6 @@ def undo_last_operation(json_path: Path) -> bool:
 
     adapter = KiCadBoardAdapter()
     adapter.refresh_board()
-    board = adapter._board
-    if board is None:
-        logger.error(_("Failed to get board."))
-        return False
 
     # 1. Restore moved components
     for item in data.get('moves', []):
@@ -62,27 +58,15 @@ def undo_last_operation(json_path: Path) -> bool:
     for via_data in data.get('created_vias', []):
         uuid_str = via_data.get('uuid')
         if uuid_str:
-            try:
-                from kipy.proto.common.types import base_types_pb2 as common_types_pb2
-                kiid = common_types_pb2.KIID()
-                kiid.value = uuid_str
-                board.remove_items_by_id([kiid])
+            if adapter.remove_by_id(uuid_str):
                 logger.debug(_("Deleted via with UUID {uuid}").format(uuid=uuid_str))
-            except Exception as e:
-                logger.warning(_("Failed to delete via {uuid}: {e}").format(uuid=uuid_str, e=e))
 
     # 2b. Delete created tracks (by UUID) — tracks were not moved, so only deletion is needed
     for track_data in data.get('created_tracks', []):
         uuid_str = track_data.get('uuid')
         if uuid_str:
-            try:
-                from kipy.proto.common.types import base_types_pb2 as common_types_pb2
-                kiid = common_types_pb2.KIID()
-                kiid.value = uuid_str
-                board.remove_items_by_id([kiid])
+            if adapter.remove_by_id(uuid_str):
                 logger.debug(_("Deleted track with UUID {uuid}").format(uuid=uuid_str))
-            except Exception as e:
-                logger.warning(_("Failed to delete track {uuid}: {e}").format(uuid=uuid_str, e=e))
 
     # 3. Delete the operation file (to prevent undoing twice)
     try:
