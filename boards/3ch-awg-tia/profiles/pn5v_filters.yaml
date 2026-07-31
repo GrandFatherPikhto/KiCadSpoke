@@ -6,8 +6,7 @@ clone_placements:
     cell: 5v_pi_filter
     anchor_role: CONN_PM5V
     anchor_pad: '1'
-    origin_x_mm:   7.0
-    origin_y_mm: -12.0
+    xy: [7.0, -12.0]
     anchor_cluster: In_Pi_Filter_Pos
     params:
       PWR_IN: '+5V_DIRTY'
@@ -20,8 +19,7 @@ clone_placements:
     anchor_cluster: In_Pi_Filter_Pos
     anchor_role: C_OUT_BYPASS
     anchor_pad: '1'
-    origin_x_mm: 2.5
-    origin_y_mm: 0.0
+    xy: [2.5, 0.0]
     params:
       PWR_IN: '+5V'
       PWR_OUT: '/Power/+5V_LED'
@@ -32,8 +30,7 @@ clone_placements:
     cell: 5v_pi_filter
     anchor_role: CONN_PM5V
     anchor_pad: '1'
-    origin_x_mm: 7.0
-    origin_y_mm: .0
+    xy: [7.0, .0]
     # anchor_role: C_IN_BULK
     anchor_cluster: In_Pi_Filter_Neg
     params:
@@ -47,8 +44,7 @@ clone_placements:
     anchor_cluster: In_Pi_Filter_Neg
     anchor_role: C_OUT_BYPASS
     anchor_pad: '1'
-    origin_x_mm: 2.5
-    origin_y_mm: 0.0
+    xy: [2.5, 0.0]
     params:
       PWR_IN: '-5V'
       PWR_OUT: '/Power/-5V_LED'

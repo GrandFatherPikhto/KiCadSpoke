@@ -155,8 +155,7 @@ cells: {}
 layer: B.Cu
 clone_placements:
 - role: SOMETHING
-  origin_x_mm: 0.0
-  origin_y_mm: 0.0
+  xy: [0.0, 0.0]
 cells: {}
 """
         config_file = tmp_path / "test.yaml"

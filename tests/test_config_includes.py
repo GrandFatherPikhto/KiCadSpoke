@@ -26,8 +26,7 @@ def test_include_merges_clone_placements_and_rules(tmp_path):
 clone_placements:
   - name: from_sub
     cell: one_role
-    origin_x_mm: 1.0
-    origin_y_mm: 2.0
+    xy: [1.0, 2.0]
 """, encoding="utf-8")
 
     root = tmp_path / "root.yaml"
@@ -37,8 +36,7 @@ include:
 clone_placements:
   - name: from_root
     cell: one_role
-    origin_x_mm: 0.0
-    origin_y_mm: 0.0
+    xy: [0.0, 0.0]
 """, encoding="utf-8")
 
     cfg, _ = load_config(str(root))
@@ -207,8 +205,7 @@ def test_bare_list_at_top_level_is_fatal(tmp_path):
     (tmp_path / "sub.yaml").write_text("""
 - name: stray
   cell: one_role
-  origin_x_mm: 0.0
-  origin_y_mm: 0.0
+  xy: [0.0, 0.0]
 """, encoding="utf-8")
 
     root = tmp_path / "root.yaml"
@@ -223,8 +220,7 @@ def test_nested_include_is_merged(tmp_path):
 clone_placements:
   - name: from_c
     cell: one_role
-    origin_x_mm: 0.0
-    origin_y_mm: 0.0
+    xy: [0.0, 0.0]
 """, encoding="utf-8")
     (tmp_path / "b.yaml").write_text("include:\n  - c.yaml\n", encoding="utf-8")
 

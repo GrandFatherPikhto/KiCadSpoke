@@ -50,7 +50,7 @@ def build() -> list:
             anchor_cluster="DAC_Pi_Filter_Clk_Vdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="11",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_CLKVDD"},
-            origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
+            xy=(dac_pwr[0], dac_pwr[1]), rotation_deg=dac_pwr[2],
         ))
 
     for channel, dac_pwr in enumerate(DAC_PWR_AVDD):
@@ -59,7 +59,7 @@ def build() -> list:
             anchor_cluster="DAC_Pi_Filter_Avdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="18",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_AVDD"},
-            origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
+            xy=(dac_pwr[0], dac_pwr[1]), rotation_deg=dac_pwr[2],
         ))
 
     return clones

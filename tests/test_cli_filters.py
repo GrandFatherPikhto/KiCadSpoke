@@ -125,8 +125,8 @@ class TestDropInactiveItems:
 
     def test_skipped_clone_placement_removed(self):
         cfg = _cfg(clone_placements=[
-            ClonePlacement(name="a", origin_x_mm=0.0, origin_y_mm=0.0, cell="t", skip=True),
-            ClonePlacement(name="b", origin_x_mm=0.0, origin_y_mm=0.0, cell="t", skip=False),
+            ClonePlacement(name="a", xy=(0.0, 0.0), cell="t", skip=True),
+            ClonePlacement(name="b", xy=(0.0, 0.0), cell="t", skip=False),
         ])
         drop_inactive_items(cfg, logger)
         assert [c.name for c in cfg.clone_placements] == ["b"]
@@ -141,7 +141,7 @@ class TestDropInactiveItems:
     def test_skip_false_everywhere_is_noop(self):
         cfg = _cfg(
             rules=[Rule(net="GND", spokes=[ManualSpoke(pad="1", cell="t")], anchor_role="FPGA")],
-            clone_placements=[ClonePlacement(name="a", origin_x_mm=0.0, origin_y_mm=0.0, cell="t")],
+            clone_placements=[ClonePlacement(name="a", xy=(0.0, 0.0), cell="t")],
             thermal_via_array=ThermalViaArrayConfig(retired=False, anchor_role="FPGA", pad="145", name="th"),
         )
         drop_inactive_items(cfg, logger)
@@ -188,8 +188,8 @@ class TestApplyOnlyFilter:
 
     def test_matches_clone_placement_by_name(self):
         cfg = _cfg(clone_placements=[
-            ClonePlacement(name="p5v_pi_filter", origin_x_mm=0.0, origin_y_mm=0.0, cell="t"),
-            ClonePlacement(name="other", origin_x_mm=0.0, origin_y_mm=0.0, cell="t"),
+            ClonePlacement(name="p5v_pi_filter", xy=(0.0, 0.0), cell="t"),
+            ClonePlacement(name="other", xy=(0.0, 0.0), cell="t"),
         ])
         apply_only_filter(cfg, ["p5v_pi_filter"], logger)
         assert [c.name for c in cfg.clone_placements] == ["p5v_pi_filter"]
@@ -224,7 +224,7 @@ class TestApplyClusterFilter:
             rules=[Rule(net="GND", spokes=[
                 ManualSpoke(pad="1", cell="t", cluster="Channel_1"),
             ], anchor_role="FPGA")],
-            clone_placements=[ClonePlacement(name="ch0", origin_x_mm=0.0, origin_y_mm=0.0,
+            clone_placements=[ClonePlacement(name="ch0", xy=(0.0, 0.0),
                                              cell="t", anchor_cluster="Channel_0")],
         )
         apply_cluster_filter(cfg, ["Channel_0"], logger)
@@ -243,9 +243,9 @@ class TestApplyClusterFilter:
 
     def test_clone_placement_narrowed_by_anchor_cluster(self):
         cfg = _cfg(clone_placements=[
-            ClonePlacement(name="ch0", origin_x_mm=0.0, origin_y_mm=0.0, cell="t",
+            ClonePlacement(name="ch0", xy=(0.0, 0.0), cell="t",
                           anchor_cluster="Channel_0"),
-            ClonePlacement(name="ch1", origin_x_mm=0.0, origin_y_mm=0.0, cell="t",
+            ClonePlacement(name="ch1", xy=(0.0, 0.0), cell="t",
                           anchor_cluster="Channel_1"),
         ])
         apply_cluster_filter(cfg, ["Channel_0"], logger)
@@ -255,7 +255,7 @@ class TestApplyClusterFilter:
         # A matching clone_placement keeps the overall filter from fataling
         # on "matched nothing anywhere" — isolates just the thermal behaviour.
         cfg = _cfg(
-            clone_placements=[ClonePlacement(name="ch0", origin_x_mm=0.0, origin_y_mm=0.0,
+            clone_placements=[ClonePlacement(name="ch0", xy=(0.0, 0.0),
                                              cell="t", anchor_cluster="Channel_0")],
             thermal_via_array=ThermalViaArrayConfig(
                 retired=False, anchor_role="FPGA", pad="145", name="fpga_thermal",

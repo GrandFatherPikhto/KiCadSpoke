@@ -1,7 +1,6 @@
 clone_placements:
 - name: Channel_0_DAC_Pi_Filter_Clk_Vdd
-  origin_x_mm: -2.0
-  origin_y_mm: 0.0
+  xy: [-2.0, 0.0]
   cell: dac_pi_filter
   params:
     PWR_IN: +3V3
@@ -11,8 +10,7 @@ clone_placements:
   anchor_sheet: Channel_0
   anchor_cluster: DAC_Pi_Filter_Clk_Vdd
 - name: Channel_1_DAC_Pi_Filter_Clk_Vdd
-  origin_x_mm: 0.0
-  origin_y_mm: 2.0
+  xy: [0.0, 2.0]
   rotation_deg: 90.0
   cell: dac_pi_filter
   params:
@@ -23,8 +21,7 @@ clone_placements:
   anchor_sheet: Channel_1
   anchor_cluster: DAC_Pi_Filter_Clk_Vdd
 - name: Channel_2_DAC_Pi_Filter_Clk_Vdd
-  origin_x_mm: 2.0
-  origin_y_mm: 0.0
+  xy: [2.0, 0.0]
   rotation_deg: 180.0
   cell: dac_pi_filter
   params:

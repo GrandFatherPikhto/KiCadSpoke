@@ -16,23 +16,22 @@ from kicadstamp.author import (_prune_defaults, apply_config, cli_main, dump_clo
 
 class TestPruneDefaults:
     def test_drops_default_valued_fields(self):
-        cp = ClonePlacement(name="c", origin_x_mm=1.0, origin_y_mm=2.0)
+        cp = ClonePlacement(name="c", xy=(1.0, 2.0))
         d = _prune_defaults(cp)
         assert "rotation_deg" not in d      # default 0.0
         assert "retired" not in d           # default False
         assert "nets" not in d              # default_factory dict, empty
 
     def test_keeps_required_fields_regardless_of_value(self):
-        cp = ClonePlacement(name="c", origin_x_mm=0.0, origin_y_mm=0.0)
+        cp = ClonePlacement(name="c", xy=(0.0, 0.0))
         d = _prune_defaults(cp)
-        # origin_x_mm/origin_y_mm have no default at all -> always present,
-        # even though 0.0 also happens to be a "natural" default-looking value.
+        # xy has no default at all -> always present, even though (0.0, 0.0)
+        # also happens to be a "natural" default-looking value.
         assert d["name"] == "c"
-        assert d["origin_x_mm"] == 0.0
-        assert d["origin_y_mm"] == 0.0
+        assert d["xy"] == [0.0, 0.0]
 
     def test_keeps_non_default_fields(self):
-        cp = ClonePlacement(name="c", origin_x_mm=1.0, origin_y_mm=2.0,
+        cp = ClonePlacement(name="c", xy=(1.0, 2.0),
                             rotation_deg=90.0, nets={"X": "NET_A"})
         d = _prune_defaults(cp)
         assert d["rotation_deg"] == 90.0
@@ -51,7 +50,7 @@ class TestDumpRoundTrip:
                            anchor_role="FPGA", anchor_sheet="Channel_{channel}",
                            nets={"AD_DAC": "/Channel_{channel}/DAC/DAC_OUT_P"},
                            params={"channel": 0},
-                           origin_x_mm=0.0, origin_y_mm=25.0, rotation_deg=270.0),
+                           xy=(0.0, 25.0), rotation_deg=270.0),
         ]
         out = tmp_path / "generated.yaml"
         dump_clone_placements(clones, str(out))
@@ -66,8 +65,7 @@ class TestDumpRoundTrip:
         assert loaded.anchor_sheet == original.anchor_sheet
         assert loaded.nets == original.nets
         assert loaded.params == original.params
-        assert loaded.origin_x_mm == original.origin_x_mm
-        assert loaded.origin_y_mm == original.origin_y_mm
+        assert loaded.xy == original.xy
         assert loaded.rotation_deg == original.rotation_deg
 
     def test_rules_round_trip(self, tmp_path):
@@ -92,7 +90,7 @@ class TestDumpRoundTrip:
     def test_minimal_clone_placement_omits_defaults_in_yaml_text(self, tmp_path):
         """Sanity check on the actual written text, not just the round-trip —
         confirms the YAML stays close to hand-written minimal style."""
-        clones = [ClonePlacement(name="c", origin_x_mm=1.0, origin_y_mm=2.0)]
+        clones = [ClonePlacement(name="c", xy=(1.0, 2.0))]
         out = tmp_path / "generated.yaml"
         dump_clone_placements(clones, str(out))
         text = out.read_text(encoding="utf-8")
@@ -163,7 +161,7 @@ class TestCliMain:
 
     @staticmethod
     def _build():
-        return [ClonePlacement(name="c", origin_x_mm=1.0, origin_y_mm=2.0)]
+        return [ClonePlacement(name="c", xy=(1.0, 2.0))]
 
     def test_without_apply_only_writes_output(self, tmp_path):
         out = tmp_path / "generated.yaml"

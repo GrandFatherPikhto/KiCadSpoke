@@ -49,7 +49,7 @@ def _prune_defaults(obj: Any) -> Any:
     default (scalar default or default_factory() instance) — keeps
     generated YAML close to the hand-written minimal style already used in
     profiles/subsystems/*.yaml. Required fields (no default at all, e.g.
-    ClonePlacement.name/origin_x_mm/origin_y_mm, Rule.net/spokes) are always
+    ClonePlacement.name/xy, Rule.net/spokes) are always
     kept regardless of value. Recurses into nested dataclasses and lists of
     them (only nesting that exists in these models: Rule.spokes -> List[ManualSpoke])."""
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
@@ -64,6 +64,12 @@ def _prune_defaults(obj: Any) -> Any:
             elif isinstance(value, list):
                 result[f.name] = [_prune_defaults(v) if dataclasses.is_dataclass(v) else v
                                    for v in value]
+            elif isinstance(value, tuple):
+                # e.g. ClonePlacement.xy — plain yaml.dump (see dump_clone_placements/
+                # dump_rules below) has no clean representer for tuples, it would
+                # emit an unreadable !!python/tuple tag that config/loader.py's
+                # yaml.safe_load can't parse back. A list dumps as plain [x, y].
+                result[f.name] = list(value)
             else:
                 result[f.name] = value
         return result

@@ -191,19 +191,19 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
     Pure config check (does not require live board):
       1. clone_placements[].name must be unique — this is the primary identifier
          for anchor‑less placements (see clone_anchor_id) and good hygiene.
-      2. (content, anchor_ref, anchor_pad, origin_x_mm, origin_y_mm) among
+      2. (content, anchor_ref, anchor_pad, xy) among
          clone_placements with anchor_ref set must be unique — this mirrors
          the identity used by the registry (registry.py, see clone_anchor_id).
          If two different clone_placements accidentally point to the same
          physical anchor AND the same offset, the registry will confuse their
          vias/tracks. This is almost certainly a copy‑paste typo (forgot to
-         change anchor_pad or origin_x_mm/origin_y_mm in the second block),
+         change anchor_pad or xy in the second block),
          not intentional. "Content" is cell OR role — two different roles
          on the same anchor are NOT duplicates (different components at the
          same point is normal), so we use what is actually set, not
          clone.cell (which is None for role‑based placements, and two
          different roles would collapse into one key if we only used
-         cell). origin_x_mm/origin_y_mm is included (found 2026-07-27)
+         cell). xy is included (found 2026-07-27)
          because it's legitimate for two clones to share an anchor and differ
          only by this offset (e.g. a positive/negative filter pair mirrored
          off the same connector pad) — without it in the key, that legitimate
@@ -228,7 +228,7 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
         seen_names[clone.name] = True
 
         content_id = clone.cell if clone.cell is not None else _("role:{role}").format(role=clone.role)
-        origin = (round(clone.origin_x_mm, 4), round(clone.origin_y_mm, 4))
+        origin = (round(clone.xy[0], 4), round(clone.xy[1], 4))
 
         if clone.anchor_ref is not None:
             key = (content_id, clone.anchor_ref, clone.anchor_pad, origin)
@@ -238,7 +238,7 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
                       "(cell/role={content!r}, anchor_ref={ref!r}, anchor_pad={pad!r}, "
                       "origin=({ox}, {oy}) mm) — the registry would confuse their vias/tracks; "
                       "likely a copy‑paste typo (if this is intentional, give them different "
-                      "origin_x_mm/origin_y_mm)")
+                      "xy)")
                     .format(this=clone.name, other=seen_ref_anchors[key], content=content_id,
                             ref=clone.anchor_ref, pad=clone.anchor_pad, ox=origin[0], oy=origin[1])
                 )
@@ -253,7 +253,7 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
                       "(cell/role={content!r}, anchor_role={role!r}, anchor_sheet={sheet!r}, "
                       "anchor_cluster={cluster!r}, anchor_pad={pad!r}, origin=({ox}, {oy}) mm) — "
                       "the registry would confuse their vias/tracks; likely a copy‑paste typo (if "
-                      "this is intentional, give them different origin_x_mm/origin_y_mm)")
+                      "this is intentional, give them different xy)")
                     .format(this=clone.name, other=seen_role_anchors[key], content=content_id,
                             role=clone.anchor_role, sheet=clone.anchor_sheet, cluster=clone.anchor_cluster,
                             pad=clone.anchor_pad, ox=origin[0], oy=origin[1])

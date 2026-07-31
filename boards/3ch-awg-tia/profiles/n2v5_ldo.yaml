@@ -7,8 +7,7 @@ clone_placements:
     # anchor_cluster: In_Pi_Filter_Neg
     anchor_role: CONN_PM5V
     anchor_pad: '1'
-    origin_x_mm: -8.0
-    origin_y_mm: 42.0
+    xy: [-8.0, 42.0]
     params:
       PWR_IN: '-5V'
       PWR_OUT: '-2V5_DIRTY'
@@ -21,8 +20,7 @@ clone_placements:
     anchor_cluster: LDO_Subsystem_N2V5
     anchor_role: D_PROT_BACK
     anchor_pad: '2'
-    origin_x_mm: 7.0
-    origin_y_mm: 0.0
+    xy: [7.0, 0.0]
     params:
       PWR_IN: '-2V5_DIRTY'
       PWR_OUT: '-2V5'
@@ -34,8 +32,7 @@ clone_placements:
     anchor_cluster: LDO_Subsystem_N2V5
     anchor_role: LDO_ADJ
     anchor_pad: '2'
-    origin_x_mm: 6.0
-    origin_y_mm: -3.0
+    xy: [6.0, -3.0]
     params:
       PWR_IN: '-2V5'
       PWR_OUT: '/Power/-2V5_LED'

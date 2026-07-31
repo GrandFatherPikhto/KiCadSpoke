@@ -48,8 +48,7 @@ clone_placements:
     nets:
       FPGA: GND
     anchor_role: CONN_PM5V
-    origin_x_mm: 56.0
-    origin_y_mm: 27.0
+    xy: [56.0, 27.0]
 
 
   - name: p3v3_vccio_pi_filter
@@ -59,8 +58,7 @@ clone_placements:
     anchor_cluster: Pi_Filter_3V3_VCCIO
     anchor_role: FPGA
     anchor_pad: '139'
-    origin_x_mm: -6.0
-    origin_y_mm: -6.0
+    xy: [-6.0, -6.0]
     params:
       PWR_IN: '+3V3'
       PWR_OUT: '+3V3_VCCIO'
@@ -72,8 +70,7 @@ clone_placements:
     anchor_cluster: Pi_Filter_1V2_VCCINT
     anchor_role: FPGA
     anchor_pad: '1'
-    origin_x_mm: -6.0
-    origin_y_mm: -2.0
+    xy: [-6.0, -2.0]
     params:
       PWR_IN: '+1V2'
       PWR_OUT: '+1V2_VCCINT'
@@ -85,8 +82,7 @@ clone_placements:
     anchor_cluster: Pi_Filter_1V2_VCCA_P2V5
     anchor_role: FPGA
     anchor_pad: '34'
-    origin_x_mm: -10.0
-    origin_y_mm:  2.0
+    xy: [-10.0, 2.0]
     params:
       PWR_IN: '+2V5'
       PWR_OUT: '+2V5_VCCA'
@@ -98,8 +94,7 @@ clone_placements:
     anchor_cluster: Pi_Filter_1V2_VCCD_PLL
     anchor_role: FPGA
     anchor_pad: '37'
-    origin_x_mm: -6.0
-    origin_y_mm:  5.0
+    xy: [-6.0, 5.0]
     params:
       PWR_IN: '+1V2'
       PWR_OUT: '+1V2_VCCD_PLL'
@@ -112,8 +107,7 @@ clone_placements:
     anchor_role: FPGA
     anchor_cluster: FPGA
     anchor_pad: '22'
-    origin_x_mm: -2.0
-    origin_y_mm:  0.5
+    xy: [-2.0, 0.5]
     nets:
       FPGA_OSCILL: '+3V3_OSCILL'
     params:
@@ -127,8 +121,7 @@ clone_placements:
     anchor_cluster: Pi_Filter_3V3_Osc
     anchor_role: R_OSC_ON_PU
     anchor_pad: '2'
-    origin_x_mm: -2.5
-    origin_y_mm:  0.0
+    xy: [-2.5, 0.0]
     nets:
       C_IN_BYPASS: '+3V3'
       C_IN_BULK: '+3V3'
@@ -145,8 +138,7 @@ clone_placements:
     cell: fpga_flash
     anchor_cluster: FPGA_FLASH
     anchor_role: FPGA
-    origin_x_mm: -25.0
-    origin_y_mm: -20.0
+    xy: [-25.0, -20.0]
 
   - name: fpga_flash_r_pi_filter
     retired: false
@@ -155,8 +147,7 @@ clone_placements:
     anchor_cluster: Pi_Filter_3V3_Flash
     anchor_role: FPGA_FLASH
     anchor_pad: '8'
-    origin_x_mm:  3.5
-    origin_y_mm: -4.0
+    xy: [3.5, -4.0]
     rotation_deg: 270
     nets:
       C_IN_BYPASS: '+3V3'

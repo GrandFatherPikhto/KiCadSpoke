@@ -16,7 +16,7 @@ between each channel's AD_DAC rotation_deg and Channel_0's, using
 kipy.geometry.Vector2.rotate() — the SAME rotation the placement engine
 itself applies to cell geometry (kicadstamp/geometry/spoke_layout.py's
 rotate_local_offset) — NOT hand-guessed numbers. This is needed because
-origin_x_mm/origin_y_mm is a FLAT shift from the anchor, NOT auto-rotated
+xy is a FLAT shift from the anchor, NOT auto-rotated
 by the engine (see ClonePlacement's docstring in kicadstamp/config/models.py
 and clone_geometry.py:109-113): reusing Channel_0's numbers verbatim on a
 differently-rotated channel would silently misplace the passive.
@@ -45,7 +45,7 @@ from kicadstamp.config import ClonePlacement
 HERE = Path(__file__).resolve().parent
 OUTPUT = HERE.parent / "generated" / "dac_channels.yaml"
 
-# (origin_x_mm, origin_y_mm, rotation_deg) per channel — NOT a formula, each
+# (xy, rotation_deg) per channel — NOT a formula, each
 # DAC sits on a different side of the FPGA.
 AD_DAC_LAYOUT = {
     0: (0.0, 25.0, 270.0),
@@ -53,7 +53,7 @@ AD_DAC_LAYOUT = {
     2: (0.0, -25.0, 90.0),
 }
 
-# (origin_x_mm, origin_y_mm, rotation_deg) per channel, per passive role —
+# (xy, rotation_deg) per channel, per passive role —
 # see module docstring for how Channel_1/2 rows were derived.
 PASSIVE_LAYOUT = {
     "R_TERM_P":     [(0.4, 3.0, 270.0), (3.0, -0.4, 0.0), (-0.4, -3.0, 90.0)],
@@ -62,7 +62,7 @@ PASSIVE_LAYOUT = {
     "R_DAC_FS_ADJ": [(1.5, 3.0, 270.0), (3.0, -1.5, 0.0), (-1.5, -3.0, 90.0)],
 }
 
-# (origin_x_mm, origin_y_mm, rotation_deg) per channel — same
+# (xy, rotation_deg) per channel — same
 # rotation-of-baseline idea as PASSIVE_LAYOUT above.
 OP_AMPS = [
         (0.0, 10.0, 180.0),
@@ -135,7 +135,7 @@ def build() -> list:
             name=f"channel_{channel}_ad9707", role="AD_DAC",
             anchor_role="FPGA", anchor_sheet=f"Channel_{channel}",
             nets={"AD_DAC": f"/Channel_{channel}/DAC/DAC_OUT_P"},
-            origin_x_mm=x, origin_y_mm=y, rotation_deg=rot,
+            xy=(x, y), rotation_deg=rot,
             retired=False, skip=False
         ))
 
@@ -147,7 +147,7 @@ def build() -> list:
                 name=f"channel_{channel}_{role.lower()}", role=role,
                 anchor_role="AD_DAC", anchor_sheet=channel_name, anchor_pad=anchor_pad,
                 nets={role: net_template.format(channel=channel)},
-                origin_x_mm=x, origin_y_mm=y, rotation_deg=rot,
+                xy=(x, y), rotation_deg=rot,
                 retired=False, skip=False
             ))
 
@@ -159,7 +159,7 @@ def build() -> list:
             name=f"channel_{channel}_op_amp", role="OP_AMP",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}",
             nets={"OP_AMP": f"/Channel_{channel}/OpAmp/OA_IN_P"},
-            origin_x_mm=coords[0], origin_y_mm=coords[1], rotation_deg=coords[2],
+            xy=(coords[0], coords[1]), rotation_deg=coords[2],
             retired=False, skip=False
         ))
 
@@ -169,7 +169,7 @@ def build() -> list:
             anchor_cluster="Dac_Pi_Filter_ClkVdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="11",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_CLKVDD"},
-            origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
+            xy=(dac_pwr[0], dac_pwr[1]), rotation_deg=dac_pwr[2],
             retired=False, skip=False
         ))
 
@@ -179,7 +179,7 @@ def build() -> list:
             anchor_cluster="Dac_Pi_Filter_Avdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="18",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_AVDD"},
-            origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
+            xy=(dac_pwr[0], dac_pwr[1]), rotation_deg=dac_pwr[2],
             retired=False, skip=False
         ))
 
@@ -189,7 +189,7 @@ def build() -> list:
             anchor_cluster="Dac_Pi_Filter_Dvdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="3",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_DVDD"},
-            origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
+            xy=(dac_pwr[0], dac_pwr[1]), rotation_deg=dac_pwr[2],
             retired=False, skip=False
         ))
 

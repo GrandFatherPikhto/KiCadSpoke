@@ -16,7 +16,7 @@ between each channel's AD_DAC rotation_deg and Channel_0's, using
 kipy.geometry.Vector2.rotate() — the SAME rotation the placement engine
 itself applies to cell geometry (kicadstamp/geometry/spoke_layout.py's
 rotate_local_offset) — NOT hand-guessed numbers. This is needed because
-origin_x_mm/origin_y_mm is a FLAT shift from the anchor, NOT auto-rotated
+xy is a FLAT shift from the anchor, NOT auto-rotated
 by the engine (see ClonePlacement's docstring in kicadstamp/config/models.py
 and clone_geometry.py:109-113): reusing Channel_0's numbers verbatim on a
 differently-rotated channel would silently misplace the passive.

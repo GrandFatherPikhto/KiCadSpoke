@@ -13,8 +13,7 @@ clone_placements:
     anchor_cluster: In_Pi_Filter_Pos
     # anchor_role: CONN_PM5V
     anchor_pad: '1'
-    origin_x_mm: -50.0
-    origin_y_mm:  35.0
+    xy: [-50.0, 35.0]
 
 
   - name: 3v3_led_spoke
@@ -24,8 +23,7 @@ clone_placements:
     anchor_cluster: Pi_Filter_Out_3V3
     anchor_role: C_OUT_BYPASS
     anchor_pad: '1'
-    origin_x_mm: -2.0
-    origin_y_mm:  5.0
+    xy: [-2.0, 5.0]
     params:
       PWR_IN: '+3V3'
       PWR_OUT: '/Power/+3V3_LED'
@@ -37,8 +35,7 @@ clone_placements:
     anchor_role: LDO_3V3
     anchor_pad: '2'
     anchor_cluster: Pi_Filter_Out_3V3
-    origin_x_mm: 12.0
-    origin_y_mm: 0.0
+    xy: [12.0, 0.0]
     params:
       PWR_IN: '+3V3_DIRTY'
       PWR_OUT: '+3V3'

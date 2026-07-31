@@ -10,7 +10,7 @@ from here and from loader.py, so `from kicadstamp.config import Config, ClonePla
 continues to work exactly as before.
 """
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 
 from ..i18n import _
 from .points import Point
@@ -251,12 +251,12 @@ class ClonePlacement:
     ManualSpoke (anchor = IC pad), the anchor here is just a name, not tied to
     any specific component (anchor_id in registry = f"name:{name}"). Two
     positioning modes:
-      - anchor_ref set: origin = centre of anchor_pad (or footprint centre if
-        anchor_pad omitted), origin_x_mm/origin_y_mm is an optional FLAT shift
+      - an anchor set (anchor_ref/anchor_role/anchor_point): origin = centre
+        of anchor_pad (or footprint centre if anchor_pad omitted, or the
+        point's own position for anchor_point), xy is an optional FLAT shift
         from the anchor (without rotation, like shift in ManualSpoke),
         rotation_deg rotates only the cell contents.
-      - anchor_ref not set: origin_x_mm/origin_y_mm is an ABSOLUTE point on
-        the board (required).
+      - no anchor set: xy is an ABSOLUTE point on the board (required).
 
     Role→ref mapping — EITHER via the current selection on the board (for rare,
     one‑off sections like a single MCU), OR via explicit nets
@@ -286,8 +286,7 @@ class ClonePlacement:
     clone_role_resolver.py).
     """
     name: str
-    origin_x_mm: float
-    origin_y_mm: float
+    xy: Tuple[float, float]
     rotation_deg: float = 0.0
     cell: Optional[str] = None
     role: Optional[str] = None

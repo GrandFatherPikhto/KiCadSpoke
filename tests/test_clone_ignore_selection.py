@@ -61,7 +61,7 @@ def _cfg():
 class TestCloneIgnoreSelectionWiring:
     def test_stray_selection_fatals_without_ignore_selection(self):
         adapter = _adapter_with_stray_selection()
-        clone = ClonePlacement(name="fpga", role="FPGA", origin_x_mm=0.0, origin_y_mm=0.0)
+        clone = ClonePlacement(name="fpga", role="FPGA", xy=(0.0, 0.0))
         calc = ClonePositionCalculator(adapter, _cfg())
 
         with pytest.raises(ValidationError, match="CONN_PM5V"):
@@ -69,7 +69,7 @@ class TestCloneIgnoreSelectionWiring:
 
     def test_ignore_selection_true_resolves_despite_stray_selection(self):
         adapter = _adapter_with_stray_selection()
-        clone = ClonePlacement(name="fpga", role="FPGA", origin_x_mm=0.0, origin_y_mm=0.0,
+        clone = ClonePlacement(name="fpga", role="FPGA", xy=(0.0, 0.0),
                                ignore_selection=True)
         calc = ClonePositionCalculator(adapter, _cfg())
 
@@ -82,7 +82,7 @@ class TestCloneIgnoreSelectionWiring:
         the same apply — confirms temporarily_ignore_selection's restore
         actually fires around compute_raw_positions, not just in isolation."""
         adapter = _adapter_with_stray_selection()
-        clone = ClonePlacement(name="fpga", role="FPGA", origin_x_mm=0.0, origin_y_mm=0.0,
+        clone = ClonePlacement(name="fpga", role="FPGA", xy=(0.0, 0.0),
                                ignore_selection=True)
         calc = ClonePositionCalculator(adapter, _cfg())
 

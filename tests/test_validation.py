@@ -149,9 +149,9 @@ class TestRolePoolSufficiency:
 class TestNoDuplicateCloneAnchors:
     def test_no_duplicates_passes(self):
         clones = [
-            ClonePlacement(name="a", cell="t", origin_x_mm=0, origin_y_mm=0,
+            ClonePlacement(name="a", cell="t", xy=(0, 0),
                            anchor_ref="IC1", anchor_pad="17"),
-            ClonePlacement(name="b", cell="t", origin_x_mm=0, origin_y_mm=0,
+            ClonePlacement(name="b", cell="t", xy=(0, 0),
                            anchor_ref="IC1", anchor_pad="18"),
         ]
         cfg = _cfg(rules=[], clone_placements=clones)
@@ -159,9 +159,9 @@ class TestNoDuplicateCloneAnchors:
 
     def test_duplicate_anchor_raises(self):
         clones = [
-            ClonePlacement(name="a", cell="t", origin_x_mm=0, origin_y_mm=0,
+            ClonePlacement(name="a", cell="t", xy=(0, 0),
                            anchor_ref="IC1", anchor_pad="17"),
-            ClonePlacement(name="b", cell="t", origin_x_mm=0, origin_y_mm=0,
+            ClonePlacement(name="b", cell="t", xy=(0, 0),
                            anchor_ref="IC1", anchor_pad="17"),
         ]
         cfg = _cfg(rules=[], clone_placements=clones)
@@ -170,9 +170,9 @@ class TestNoDuplicateCloneAnchors:
 
     def test_duplicate_role_anchor_raises(self):
         clones = [
-            ClonePlacement(name="a", cell="t", origin_x_mm=0, origin_y_mm=0,
+            ClonePlacement(name="a", cell="t", xy=(0, 0),
                            anchor_role="MASTER", anchor_sheet="Sheet1"),
-            ClonePlacement(name="b", cell="t", origin_x_mm=0, origin_y_mm=0,
+            ClonePlacement(name="b", cell="t", xy=(0, 0),
                            anchor_role="MASTER", anchor_sheet="Sheet1"),
         ]
         cfg = _cfg(rules=[], clone_placements=clones)
@@ -181,8 +181,8 @@ class TestNoDuplicateCloneAnchors:
 
     def test_duplicate_name_raises(self):
         clones = [
-            ClonePlacement(name="a", cell="t", origin_x_mm=0, origin_y_mm=0),
-            ClonePlacement(name="a", cell="t", origin_x_mm=0, origin_y_mm=0),
+            ClonePlacement(name="a", cell="t", xy=(0, 0)),
+            ClonePlacement(name="a", cell="t", xy=(0, 0)),
         ]
         cfg = _cfg(rules=[], clone_placements=clones)
         with pytest.raises(ValidationError, match="a"):
@@ -191,13 +191,13 @@ class TestNoDuplicateCloneAnchors:
     def test_same_anchor_different_origin_is_not_a_duplicate(self):
         """Regression (found 2026-07-27): two clones legitimately sharing one
         physical anchor (e.g. a connector pad) but offset to opposite sides
-        via origin_x_mm/origin_y_mm must NOT be flagged — this must match
+        via xy must NOT be flagged — this must match
         clone_anchor_id's identity exactly, or the registry and this check
         disagree on what counts as a duplicate."""
         clones = [
-            ClonePlacement(name="p5v", cell="t", origin_x_mm=7.0, origin_y_mm=-6.0,
+            ClonePlacement(name="p5v", cell="t", xy=(7.0, -6.0),
                            anchor_role="CONN_PM5V", anchor_pad="1"),
-            ClonePlacement(name="n5v", cell="t", origin_x_mm=7.0, origin_y_mm=6.0,
+            ClonePlacement(name="n5v", cell="t", xy=(7.0, 6.0),
                            anchor_role="CONN_PM5V", anchor_pad="1"),
         ]
         cfg = _cfg(rules=[], clone_placements=clones)
@@ -205,9 +205,9 @@ class TestNoDuplicateCloneAnchors:
 
     def test_same_anchor_same_origin_role_based_raises(self):
         clones = [
-            ClonePlacement(name="a", cell="t", origin_x_mm=1.0, origin_y_mm=2.0,
+            ClonePlacement(name="a", cell="t", xy=(1.0, 2.0),
                            anchor_role="CONN_PM5V", anchor_pad="1"),
-            ClonePlacement(name="b", cell="t", origin_x_mm=1.0, origin_y_mm=2.0,
+            ClonePlacement(name="b", cell="t", xy=(1.0, 2.0),
                            anchor_role="CONN_PM5V", anchor_pad="1"),
         ]
         cfg = _cfg(rules=[], clone_placements=clones)
@@ -221,10 +221,10 @@ class TestNoDuplicateCloneAnchors:
         physical component the anchor resolves to) — must NOT be flagged,
         must match clone_anchor_id's identity exactly."""
         clones = [
-            ClonePlacement(name="p5v_led", cell="t", origin_x_mm=3.0, origin_y_mm=0.0,
+            ClonePlacement(name="p5v_led", cell="t", xy=(3.0, 0.0),
                            anchor_role="C_OUT_BYPASS", anchor_pad="1",
                            anchor_cluster="In_Pi_Filter_Pos"),
-            ClonePlacement(name="n5v_led", cell="t", origin_x_mm=3.0, origin_y_mm=0.0,
+            ClonePlacement(name="n5v_led", cell="t", xy=(3.0, 0.0),
                            anchor_role="C_OUT_BYPASS", anchor_pad="1",
                            anchor_cluster="In_Pi_Filter_Neg"),
         ]
@@ -233,10 +233,10 @@ class TestNoDuplicateCloneAnchors:
 
     def test_same_anchor_same_cluster_role_based_raises(self):
         clones = [
-            ClonePlacement(name="a", cell="t", origin_x_mm=3.0, origin_y_mm=0.0,
+            ClonePlacement(name="a", cell="t", xy=(3.0, 0.0),
                            anchor_role="C_OUT_BYPASS", anchor_pad="1",
                            anchor_cluster="In_Pi_Filter_Pos"),
-            ClonePlacement(name="b", cell="t", origin_x_mm=3.0, origin_y_mm=0.0,
+            ClonePlacement(name="b", cell="t", xy=(3.0, 0.0),
                            anchor_role="C_OUT_BYPASS", anchor_pad="1",
                            anchor_cluster="In_Pi_Filter_Pos"),
         ]
@@ -253,7 +253,7 @@ class TestCloneNetsExistOnBoard:
 
     def test_valid_nets_passes(self):
         tpl = Cell(name="t", vias=[TemplateVia(net="GND")])
-        clone = ClonePlacement(name="c", cell="t", origin_x_mm=0, origin_y_mm=0)
+        clone = ClonePlacement(name="c", cell="t", xy=(0, 0))
         cfg = _cfg(rules=[], cells={"t": tpl}, clone_placements=[clone])
         adapter = MagicMock()
         adapter.get_all_nets.return_value = [self._make_net_mock("GND")]
@@ -261,7 +261,7 @@ class TestCloneNetsExistOnBoard:
 
     def test_missing_net_raises(self):
         tpl = Cell(name="t", vias=[TemplateVia(net="NON_EXISTENT")])
-        clone = ClonePlacement(name="c", cell="t", origin_x_mm=0, origin_y_mm=0)
+        clone = ClonePlacement(name="c", cell="t", xy=(0, 0))
         cfg = _cfg(rules=[], cells={"t": tpl}, clone_placements=[clone])
         adapter = MagicMock()
         adapter.get_all_nets.return_value = [self._make_net_mock("GND")]
@@ -272,7 +272,7 @@ class TestCloneNetsExistOnBoard:
         tpl = Cell(name="t", components=[
             TemplateComponentSlot(role="X", vias=[TemplateVia(net="VCC")])
         ])
-        clone = ClonePlacement(name="c", cell="t", origin_x_mm=0, origin_y_mm=0)
+        clone = ClonePlacement(name="c", cell="t", xy=(0, 0))
         cfg = _cfg(rules=[], cells={"t": tpl}, clone_placements=[clone])
         adapter = MagicMock()
         adapter.get_all_nets.return_value = [self._make_net_mock("GND")]
@@ -283,22 +283,22 @@ class TestCloneNetsExistOnBoard:
 class TestSingleSelectionBasedClone:
     def test_single_selection_passes(self):
         cfg = _cfg(rules=[], clone_placements=[
-            ClonePlacement(name="a", cell="t", origin_x_mm=0, origin_y_mm=0)
+            ClonePlacement(name="a", cell="t", xy=(0, 0))
         ])
         check_single_selection_based_clone(cfg)
 
     def test_two_selection_based_raises(self):
         cfg = _cfg(rules=[], clone_placements=[
-            ClonePlacement(name="a", cell="t", origin_x_mm=0, origin_y_mm=0),
-            ClonePlacement(name="b", cell="t", origin_x_mm=0, origin_y_mm=0),
+            ClonePlacement(name="a", cell="t", xy=(0, 0)),
+            ClonePlacement(name="b", cell="t", xy=(0, 0)),
         ])
         with pytest.raises(ValidationError, match="a.*b"):
             check_single_selection_based_clone(cfg)
 
     def test_mixed_modes_passes(self):
         cfg = _cfg(rules=[], clone_placements=[
-            ClonePlacement(name="a", cell="t", origin_x_mm=0, origin_y_mm=0),
-            ClonePlacement(name="b", cell="t", origin_x_mm=0, origin_y_mm=0,
+            ClonePlacement(name="a", cell="t", xy=(0, 0)),
+            ClonePlacement(name="b", cell="t", xy=(0, 0),
                            nets={"X": "GND"}),
         ])
         check_single_selection_based_clone(cfg)

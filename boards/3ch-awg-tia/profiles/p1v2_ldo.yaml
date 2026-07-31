@@ -14,8 +14,7 @@ clone_placements:
     anchor_cluster: In_Pi_Filter_Pos
     # anchor_role: CONN_PM5V
     anchor_pad: '1'
-    origin_x_mm: -50.0
-    origin_y_mm:  25.0
+    xy: [-50.0, 25.0]
 
   - name: 1v2_ldo_out_pi_filter
     retired: false
@@ -24,8 +23,7 @@ clone_placements:
     anchor_role: LDO_1V2
     anchor_pad: '2'
     anchor_cluster: Pi_Filter_Out_1V2
-    origin_x_mm: 10.0
-    origin_y_mm: 0.0
+    xy: [10.0, 0.0]
     params:
       PWR_IN: '+1V2_DIRTY'
       PWR_OUT: '+1V2'
@@ -37,8 +35,7 @@ clone_placements:
     anchor_cluster: Pi_Filter_Out_1V2
     anchor_role: C_OUT_BYPASS
     anchor_pad: '1'
-    origin_x_mm: -2.0
-    origin_y_mm: -7.0
+    xy: [-2.0, -7.0]
     params:
       PWR_IN: '+1V2'
       PWR_OUT: '/Power/+1V2_LED'

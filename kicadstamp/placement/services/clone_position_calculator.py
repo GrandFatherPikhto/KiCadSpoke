@@ -6,7 +6,7 @@ because they work fundamentally differently (pad‑anchored spokes vs cell‑
 based section cloning), so they have independent signatures.
 
 anchor_id for the registry (see registry.py) is built from PHYSICAL binding
-(anchor_ref/anchor_pad, PLUS the origin_x_mm/origin_y_mm offset — see
+(anchor_ref/anchor_pad, PLUS the xy offset — see
 clone_anchor_id), not from clone.name — for the same reason that refdes is not
 a reliable key: the name is arbitrary and can change (renaming a
 clone_placement should not erase vias/tracks if the physical anchor and offset
@@ -72,7 +72,7 @@ def clone_anchor_id(clone: ClonePlacement) -> str:
       neither (absolute coordinates) -> "name:{clone.name}",
         the only available identifier in this mode.
 
-    origin_x_mm/origin_y_mm are included in the anchor_ref/anchor_role branches
+    xy is included in the anchor_ref/anchor_role branches
     (found 2026-07-27): two clone_placements can legitimately share the same
     physical anchor point and differ only by this flat offset — e.g. a positive
     and a negative power-filter instance both anchored to the same connector
@@ -92,10 +92,10 @@ def clone_anchor_id(clone: ClonePlacement) -> str:
     collapse to one registry identity.
     """
     if clone.anchor_ref is not None:
-        return f"anchor:{clone.anchor_ref}:{clone.anchor_pad or ''}:{clone.origin_x_mm:.4f}:{clone.origin_y_mm:.4f}"
+        return f"anchor:{clone.anchor_ref}:{clone.anchor_pad or ''}:{clone.xy[0]:.4f}:{clone.xy[1]:.4f}"
     if clone.anchor_role is not None:
         return (f"role:{clone.anchor_role}:{clone.anchor_sheet or ''}:{clone.anchor_cluster or ''}"
-                f":{clone.anchor_pad or ''}:{clone.origin_x_mm:.4f}:{clone.origin_y_mm:.4f}")
+                f":{clone.anchor_pad or ''}:{clone.xy[0]:.4f}:{clone.xy[1]:.4f}")
     return f"name:{clone.name}"
 
 

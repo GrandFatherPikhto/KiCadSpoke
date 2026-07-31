@@ -277,11 +277,12 @@ _THERMAL_VIA_ARRAY_KNOWN_KEYS = {
 
 
 _CLONE_PLACEMENT_KNOWN_KEYS = {
-    'name', 'cell', 'role', 'origin_x_mm', 'origin_y_mm', 'rotation_deg',
+    'name', 'cell', 'role', 'xy', 'rotation_deg',
     'nets', 'params', 'net_overrides', 'retired', 'skip', 'ignore_selection',
     'anchor_ref', 'anchor_pad', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
     'anchor_point', 'layer', 'mirror', 'refs', 'by_selection',
     'side',  # deprecated – recognised separately to give a migration message
+    'origin_x_mm', 'origin_y_mm',  # deprecated – recognised to give a migration message
 }
 
 
@@ -359,10 +360,10 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
 
     has_anchor = anchor_ref is not None or anchor_role is not None or anchor_point is not None
 
-    if not has_anchor and ('origin_x_mm' not in data or 'origin_y_mm' not in data):
+    if not has_anchor and 'xy' not in data:
         raise ValidationError(format_fatal_error(
             _("no anchor and no absolute coordinates in clone_placement {name!r}").format(name=name),
-            [_("either set origin_x_mm/origin_y_mm (absolute point on board), "
+            [_("either set xy: [x, y] (absolute point on board), "
                "or anchor_ref/anchor_role (+ optionally anchor_pad), or anchor_point, "
                "for anchor‑based placement")]
         ))
@@ -374,6 +375,24 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
                "+ mirror: true (how we place – operation, only meaningful when the layer changes "
                "relative to the cell)")]
         ))
+    if 'origin_x_mm' in data or 'origin_y_mm' in data:
+        raise ValidationError(format_fatal_error(
+            _("deprecated fields 'origin_x_mm'/'origin_y_mm' in clone_placement {name!r}").format(name=name),
+            [_("renamed to xy: [x, y] — write xy: [{x}, {y}] instead")
+             .format(x=data.get('origin_x_mm', 0.0), y=data.get('origin_y_mm', 0.0))]
+        ))
+
+    xy_raw = data.get('xy')
+    if xy_raw is not None:
+        if not (isinstance(xy_raw, (list, tuple)) and len(xy_raw) == 2):
+            raise ValidationError(format_fatal_error(
+                _("xy must be a 2-element [x, y] list in clone_placement {name!r}").format(name=name),
+                [_("got: {xy!r}").format(xy=xy_raw)]
+            ))
+        xy = (float(xy_raw[0]), float(xy_raw[1]))
+    else:
+        xy = (0.0, 0.0)
+
     by_selection = bool(data.get('by_selection', False))
     nets = data.get('nets', {}) or {}
     if by_selection and nets:
@@ -391,8 +410,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
         name=name,
         cell=cell,
         role=role,
-        origin_x_mm=data.get('origin_x_mm', 0.0),
-        origin_y_mm=data.get('origin_y_mm', 0.0),
+        xy=xy,
         rotation_deg=data.get('rotation_deg', 0.0),
         nets=nets,
         params=data.get('params', {}) or {},

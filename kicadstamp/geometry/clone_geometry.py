@@ -3,7 +3,7 @@
 clone_geometry.py — transforms a cell into absolute board coordinates
 for ClonePlacement (TemplatePlacer), unlike spoke_layout.py:
 
-  - origin = (origin_x_mm, origin_y_mm) DIRECTLY (no pad, no shift — it is an
+  - origin = xy DIRECTLY (no pad, no shift — it is an
     absolute point, not an offset from something).
   - net of each via is resolved via net_resolution.resolve_net()
     (params + net_overrides) — there is NO concept of rule_net (ClonePlacement,
@@ -100,13 +100,13 @@ def apply_clone_geometry(
     mirror=True — placement on the OPPOSITE side: the cell is assumed to be
     taken from front, final positions (after rotation) are X‑mirrored relative
     to the vertical axis through origin, component angles become 180°−φ
-    (B.Cu convention from the decap placer). The anchor shift origin_x/y_mm is
+    (B.Cu convention from the decap placer). The anchor shift xy is
     NOT mirrored — it is in board coordinates, like shift in ManualSpoke.
     Footprints on B.Cu are flipped by FlipManager (the executor sets the absolute
     angle AFTER the flip, so the +180° from the flip does not need to be accounted
     for here).
     """
-    shift = Vector2.from_xy(int(clone.origin_x_mm * MM), int(clone.origin_y_mm * MM))
+    shift = Vector2.from_xy(int(clone.xy[0] * MM), int(clone.xy[1] * MM))
     if anchor_position is not None:
         origin = Vector2.from_xy(anchor_position.x + shift.x, anchor_position.y + shift.y)
     else:

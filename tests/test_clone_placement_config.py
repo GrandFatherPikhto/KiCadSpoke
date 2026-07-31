@@ -23,15 +23,13 @@ cells:
 clone_placements:
   - name: dac_channel_2
     cell: dac_channel
-    origin_x_mm: 80.0
-    origin_y_mm: 40.0
+    xy: [80.0, 40.0]
     rotation_deg: 90.0
     params:
       channel: 2
   - name: mcu_section
     cell: dac_channel
-    origin_x_mm: 0.0
-    origin_y_mm: 0.0
+    xy: [0.0, 0.0]
     net_overrides:
       "/STM32F4xx/BOOT0": "/STM32F4xx_2/BOOT0"
 """
@@ -47,8 +45,7 @@ def test_clone_placements_loaded_with_all_fields(tmp_path):
     cp1 = cfg.clone_placements[0]
     assert cp1.name == "dac_channel_2"
     assert cp1.cell == "dac_channel"
-    assert cp1.origin_x_mm == 80.0
-    assert cp1.origin_y_mm == 40.0
+    assert cp1.xy == (80.0, 40.0)
     assert cp1.rotation_deg == 90.0
     assert cp1.params == {"channel": 2}
     assert cp1.nets == {}
@@ -68,12 +65,10 @@ cells:
 clone_placements:
   - name: default_skip
     cell: t
-    origin_x_mm: 0
-    origin_y_mm: 0
+    xy: [0, 0]
   - name: explicitly_skipped
     cell: t
-    origin_x_mm: 0
-    origin_y_mm: 0
+    xy: [0, 0]
     skip: true
 """
     config_file = tmp_path / "skip.yaml"
@@ -91,12 +86,10 @@ cells:
 clone_placements:
   - name: default_selection
     cell: t
-    origin_x_mm: 0
-    origin_y_mm: 0
+    xy: [0, 0]
   - name: ignores_selection
     cell: t
-    origin_x_mm: 0
-    origin_y_mm: 0
+    xy: [0, 0]
     ignore_selection: true
 """
     config_file = tmp_path / "ignore_selection.yaml"
@@ -125,8 +118,7 @@ clone_placements:
     cell: t
     anchor_ref: IC1
     anchor_pad: 17
-    origin_x_mm: 2.5
-    origin_y_mm: 3.7
+    xy: [2.5, 3.7]
 """
     config_file = tmp_path / "anchor.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
@@ -134,8 +126,7 @@ clone_placements:
     cp = cfg.clone_placements[0]
     assert cp.anchor_ref == "IC1"
     assert cp.anchor_pad == "17"
-    assert cp.origin_x_mm == 2.5
-    assert cp.origin_y_mm == 3.7
+    assert cp.xy == (2.5, 3.7)
 
 
 def test_anchor_ref_without_origin_uses_default_zero(tmp_path):
@@ -152,8 +143,7 @@ clone_placements:
     config_file.write_text(yaml_content, encoding="utf-8")
     cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
-    assert cp.origin_x_mm == 0.0
-    assert cp.origin_y_mm == 0.0
+    assert cp.xy == (0.0, 0.0)
 
 
 def test_anchor_role_with_anchor_sheet(tmp_path):
@@ -176,8 +166,7 @@ clone_placements:
     assert cp.anchor_role == "MCU"
     assert cp.anchor_sheet == "Channel_0"
     assert cp.anchor_pad == "17"
-    assert cp.origin_x_mm == 0.0
-    assert cp.origin_y_mm == 0.0
+    assert cp.xy == (0.0, 0.0)
 
 
 def test_anchor_cluster(tmp_path):
@@ -209,8 +198,7 @@ cells:
 clone_placements:
   - name: mirrored
     cell: t
-    origin_x_mm: 0
-    origin_y_mm: 0
+    xy: [0, 0]
     layer: B.Cu
     mirror: true
 """
@@ -233,8 +221,7 @@ cells:
 clone_placements:
   - name: with_nets
     cell: t
-    origin_x_mm: 0
-    origin_y_mm: 0
+    xy: [0, 0]
     nets:
       A: GND
       B: VCC
@@ -258,8 +245,7 @@ cells:
 clone_placements:
   - name: selection_mode
     cell: t
-    origin_x_mm: 0
-    origin_y_mm: 0
+    xy: [0, 0]
     by_selection: true
 """
     config_file = tmp_path / "by_selection.yaml"
@@ -279,8 +265,7 @@ cells:
 clone_placements:
   - name: conflict
     cell: t
-    origin_x_mm: 0
-    origin_y_mm: 0
+    xy: [0, 0]
     by_selection: true
     nets:
       A: GND
@@ -370,8 +355,7 @@ cells:
 clone_placements:
   - name: single_role
     role: LED
-    origin_x_mm: 10.0
-    origin_y_mm: 20.0
+    xy: [10.0, 20.0]
 """
     config_file = tmp_path / "role_only.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
@@ -379,8 +363,7 @@ clone_placements:
     cp = cfg.clone_placements[0]
     assert cp.role == "LED"
     assert cp.cell is None
-    assert cp.origin_x_mm == 10.0
-    assert cp.origin_y_mm == 20.0
+    assert cp.xy == (10.0, 20.0)
 
 
 def test_cell_and_role_together_raises(tmp_path):
@@ -405,8 +388,7 @@ def test_neither_cell_nor_role_raises(tmp_path):
     yaml_content = """
 clone_placements:
   - name: no_content
-    origin_x_mm: 0
-    origin_y_mm: 0
+    xy: [0, 0]
 """
     config_file = tmp_path / "no_content.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
