@@ -48,8 +48,8 @@ clone_placements:
     nets:
       FPGA: GND
     anchor_role: CONN_PM5V
-    origin_x_mm: 70.0
-    origin_y_mm: 30.0
+    origin_x_mm: 56.0
+    origin_y_mm: 27.0
 
 
   - name: p3v3_vccio_pi_filter
@@ -145,8 +145,8 @@ clone_placements:
     template: fpga_flash
     anchor_cluster: FPGA_FLASH
     anchor_role: FPGA
-    origin_x_mm: -30.0
-    origin_y_mm: -15.0
+    origin_x_mm: -25.0
+    origin_y_mm: -20.0
 
   - name: fpga_flash_r_pi_filter
     enabled: true
@@ -155,8 +155,9 @@ clone_placements:
     anchor_cluster: Pi_Filter_3V3_Flash
     anchor_role: FPGA_FLASH
     anchor_pad: '8'
-    origin_x_mm: -2.5
-    origin_y_mm:  0.0
+    origin_x_mm:  3.5
+    origin_y_mm: -4.0
+    rotation_deg: 270
     nets:
       C_IN_BYPASS: '+3V3'
       C_IN_BULK: '+3V3'

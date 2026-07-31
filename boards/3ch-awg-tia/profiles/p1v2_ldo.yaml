@@ -1,0 +1,45 @@
+clone_placements:
+
+# 1V2 LDO Subsystem
+  - name: 1v2_ldo
+    enabled: true
+    active: true
+    template: p1v2_ldo
+    nets:
+      LDO_1V2: '+1V2_DIRTY'
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '+1V2_DIRTY'
+    anchor_role: C_OUT_BYPASS
+    anchor_cluster: In_Pi_Filter_Pos
+    # anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: -50.0
+    origin_y_mm:  25.0
+
+  - name: 1v2_ldo_out_pi_filter
+    enabled: true
+    active: true
+    template: ldo_out_pi_filter
+    anchor_role: LDO_1V2
+    anchor_pad: '2'
+    anchor_cluster: Pi_Filter_Out_1V2
+    origin_x_mm: 10.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+1V2_DIRTY'
+      PWR_OUT: '+1V2'
+
+  - name: 1v2_led_spoke
+    enabled: true
+    active: true
+    template: led_spoke
+    anchor_cluster: Pi_Filter_Out_1V2
+    anchor_role: C_OUT_BYPASS
+    anchor_pad: '1'
+    origin_x_mm: -2.0
+    origin_y_mm: -7.0
+    params:
+      PWR_IN: '+1V2'
+      PWR_OUT: '/Power/+1V2_LED'
+

@@ -1,0 +1,43 @@
+clone_placements:
+# ±2V5 LDO Subsystems
+#   +2V5 LDO Subsystem
+  - name: p2v5_dirty_ldo
+    enabled: true
+    active: true
+    template: ldo_adj
+    # anchor_cluster: In_Pi_Filter_Pos
+    # anchor_role: C_OUT_BYPASS
+    anchor_role: CONN_PM5V
+    anchor_pad: '1'
+    origin_x_mm: -8.0
+    origin_y_mm:  23.0
+    params:
+      PWR_IN: '+5V'
+      PWR_OUT: '+2V5_DIRTY'
+      PWR_ADJ: '/Power/+2V5_ADJ'
+
+  - name: p2v5_adj_pi_filter
+    enabled: true
+    active: true
+    template: ldo_adj_pi_filter
+    anchor_cluster: LDO_Subsystem_P2V5
+    anchor_role: D_PROT_BACK
+    anchor_pad: '2'
+    origin_x_mm: 7.0
+    origin_y_mm: 0.0
+    params:
+      PWR_IN: '+2V5_DIRTY'
+      PWR_OUT: '+2V5'
+
+  - name: p2v5_led_spoke
+    enabled: true
+    active: true
+    template: led_spoke
+    anchor_cluster: LDO_Subsystem_P2V5
+    anchor_role: LDO_ADJ
+    anchor_pad: '2'
+    origin_x_mm: 6.0
+    origin_y_mm: -3.0
+    params:
+      PWR_IN: '+2V5'
+      PWR_OUT: '/Power/+2V5_LED'

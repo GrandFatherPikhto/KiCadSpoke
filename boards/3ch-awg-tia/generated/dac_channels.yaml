@@ -240,7 +240,6 @@ clone_placements:
 - name: Channel_0_Dac_Pi_Filter_Dvdd
   origin_x_mm: 0.0
   origin_y_mm: -1.3
-  rotation_deg: 180.0
   template: dac_dvdd_pi_filter
   params:
     PWR_IN: +3V3
@@ -252,7 +251,7 @@ clone_placements:
 - name: Channel_1_Dac_Pi_Filter_Dvdd
   origin_x_mm: -1.3
   origin_y_mm: 0.0
-  rotation_deg: 270.0
+  rotation_deg: 90.0
   template: dac_dvdd_pi_filter
   params:
     PWR_IN: +3V3
@@ -264,6 +263,7 @@ clone_placements:
 - name: Channel_2_Dac_Pi_Filter_Dvdd
   origin_x_mm: 0.0
   origin_y_mm: 1.3
+  rotation_deg: 180.0
   template: dac_dvdd_pi_filter
   params:
     PWR_IN: +3V3

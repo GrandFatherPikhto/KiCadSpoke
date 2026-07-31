@@ -91,9 +91,9 @@ DAC_ADVDD_PI_FILTERS = [
 ]
 
 DAC_DDVDD_PI_FILTERS = [
-    (0.0, -1.3, 180.0),
-    (-1.3, 0.0, 270.0),
-    (0.0,  1.3, 0.0)
+    (0.0, -1.3, 0.0),
+    (-1.3, 0.0, 90.0),
+    (0.0,  1.3, 180.0)
 ]
 
 def generate_rotated_placements(
