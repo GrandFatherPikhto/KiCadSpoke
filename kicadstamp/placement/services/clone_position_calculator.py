@@ -30,7 +30,11 @@ from .clone_role_resolver import (
     clone_uses_selection_mode,
     resolve_anchor_by_role,
 )
-from .component_resolver import resolve_footprint_by_ref
+from .component_resolver import (
+    resolve_anchor_identity,
+    resolve_anchor_pad_position,
+    resolve_footprint_by_ref,
+)
 from ...i18n import _
 
 logger = logging.getLogger(__name__)
@@ -47,16 +51,11 @@ def resolve_clone_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, clone: Clo
     plan time, same as before (a deliberate read-twice trade-off — this module
     is explicitly not performance sensitive, see dependency_order.py).
     """
-    if clone.anchor_ref is not None:
-        return clone.anchor_ref
-    if clone.anchor_role is not None:
-        _sn = sheet_names or {}
-        fp = resolve_anchor_by_role(adapter, clone, _sn)
-        return fp.reference_field.text.value
-    if clone.anchor_point is not None:
-        # Namespaced token — see dependency_order.py's Item.produces for points.
-        return f"point:{clone.anchor_point}"
-    return None
+    _sn = sheet_names or {}
+    return resolve_anchor_identity(
+        clone.anchor_ref, clone.anchor_role, clone.anchor_point,
+        lambda: resolve_anchor_by_role(adapter, clone, _sn),
+    )
 
 
 def clone_anchor_id(clone: ClonePlacement) -> str:
@@ -137,21 +136,12 @@ class ClonePositionCalculator:
                          .format(name=clone.name, ref=fp.reference_field.text.value,
                                  x=fp.position.x/1e6, y=fp.position.y/1e6))
             return fp.position
-        pad = self.adapter.get_pad_by_number(fp, clone.anchor_pad)
-        if pad is None:
-            raise ValidationError(format_fatal_error(
-                _("{name}: {ref} has no pad {pad!r}").format(name=clone.name,
-                                                             ref=fp.reference_field.text.value,
-                                                             pad=clone.anchor_pad),
-                [_("check anchor_pad in clone_placement {name!r} — "
-                   "pad numbers are strings as in KiCad ('1', '17', 'A3')")
-                 .format(name=clone.name)]
-            ))
+        position = resolve_anchor_pad_position(self.adapter, fp, clone.anchor_pad, clone.name)
         logger.debug(_("  [{name}] anchor: pad {ref}.{pad} ({x:.3f}, {y:.3f}) mm")
                      .format(name=clone.name, ref=fp.reference_field.text.value,
                              pad=clone.anchor_pad,
-                             x=pad.position.x/1e6, y=pad.position.y/1e6))
-        return pad.position
+                             x=position.x/1e6, y=position.y/1e6))
+        return position
 
     def _resolve_cell_or_role(self, cell_ref: Optional[str], role_ref: Optional[str],
                               label: str) -> Tuple[Optional[Cell], str]:

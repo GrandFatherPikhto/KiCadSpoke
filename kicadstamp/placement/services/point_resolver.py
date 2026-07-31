@@ -23,7 +23,11 @@ from ...config import Point
 from ...kicad.adapter import KiCadBoardAdapter
 from ...utils.units import MM
 from ...exceptions import ValidationError, format_fatal_error
-from .component_resolver import resolve_footprint_by_ref
+from .component_resolver import (
+    resolve_anchor_identity,
+    resolve_anchor_pad_position,
+    resolve_footprint_by_ref,
+)
 from .clone_role_resolver import resolve_footprint_by_role
 from ...i18n import _
 
@@ -53,21 +57,16 @@ def resolve_point_anchor_ref(adapter: KiCadBoardAdapter, point: Point, sheet_nam
     resolve_clone_anchor_ref (clone_position_calculator.py). Used ONLY to
     build dependency_order.py's dependency graph, not to compute a real
     position — see resolve_point below for that."""
-    if point.anchor_ref is not None:
-        return point.anchor_ref
-    if point.anchor_role is not None:
-        _sn = sheet_names or {}
-        fp = resolve_footprint_by_role(
+    # xy-literal (no anchor at all) correctly falls through
+    # resolve_anchor_identity to None too — no dependency, goes to level 0.
+    _sn = sheet_names or {}
+    return resolve_anchor_identity(
+        point.anchor_ref, point.anchor_role, point.anchor_point,
+        lambda: resolve_footprint_by_role(
             adapter, point.anchor_role, point.anchor_sheet, point.anchor_cluster,
             _sn, label=_("point {name!r}").format(name=point.name),
-        )
-        return fp.reference_field.text.value
-    if point.anchor_point is not None:
-        # Namespaced token — see dependency_order.py's Item.produces for
-        # points: a bare ref could otherwise collide with a point of the
-        # same name.
-        return f"point:{point.anchor_point}"
-    return None  # xy-literal — no dependency, goes to level 0
+        ),
+    )
 
 
 def resolve_point(adapter: KiCadBoardAdapter, point: Point,
@@ -101,14 +100,8 @@ def resolve_point(adapter: KiCadBoardAdapter, point: Point,
                 _sn, label=_("point {name!r}").format(name=point.name),
             )
         if point.anchor_pad is not None:
-            pad = adapter.get_pad_by_number(fp, point.anchor_pad)
-            if pad is None:
-                raise ValidationError(format_fatal_error(
-                    _("point {name!r}: {ref} has no pad {pad!r}").format(
-                        name=point.name, ref=fp.reference_field.text.value, pad=point.anchor_pad),
-                    [_("check anchor_pad — pad numbers are strings as in KiCad ('1', '17', 'A3')")]
-                ))
-            base_position = pad.position
+            base_position = resolve_anchor_pad_position(
+                adapter, fp, point.anchor_pad, _("point {name!r}").format(name=point.name))
             base_footprint = None  # pad-level anchor: no longer "the whole footprint"
         else:
             base_position = fp.position
