@@ -41,6 +41,7 @@ from PyQt6.QtWidgets import QCheckBox, QLabel, QMainWindow, QPushButton
 
 from kicadstamp.i18n import _
 
+from . import settings
 from .connection import BoardConnection
 from .docks.bulk_field_editor import BulkFieldEditorDock
 from .docks.file_picker import FilePickerDock
@@ -65,9 +66,9 @@ class MainWindow(QMainWindow):
         self.action_button.clicked.connect(lambda: self._poll(manual=True))
         self.statusBar().addWidget(self.status_label, 1)
 
-        always_on_top = QCheckBox(_("Always on top"))
-        always_on_top.toggled.connect(self._set_always_on_top)
-        self.statusBar().addPermanentWidget(always_on_top)
+        self.always_on_top_checkbox = QCheckBox(_("Always on top"))
+        self.always_on_top_checkbox.toggled.connect(self._set_always_on_top)
+        self.statusBar().addPermanentWidget(self.always_on_top_checkbox)
         self.statusBar().addPermanentWidget(self.action_button)
 
         self.tree_dock = RoleClusterTreeDock(self)
@@ -88,7 +89,32 @@ class MainWindow(QMainWindow):
         self._selection_timer.timeout.connect(self._poll_board_selection)
         self._selection_timer.start(SELECTION_POLL_INTERVAL_MS)
 
+        self._restore_window_state()
+
         self._poll(manual=True)  # don't wait a full interval for the first attempt
+
+    def _restore_window_state(self) -> None:
+        """Plain x/y/width/height ints in gui_state.json, not Qt's own
+        saveGeometry()/restoreGeometry() (a QByteArray blob — would need
+        base64 to fit in JSON at all) or QSettings — same reason the rest of
+        this GUI's persistence is plain JSON: staying human-readable/
+        inspectable in one place beats using the platform-native mechanism
+        for just this one thing."""
+        data = settings.load()
+        geometry = data.get("window_geometry")
+        if geometry and all(k in geometry for k in ("x", "y", "width", "height")):
+            self.setGeometry(geometry["x"], geometry["y"], geometry["width"], geometry["height"])
+        if data.get("always_on_top"):
+            self.always_on_top_checkbox.setChecked(True)  # triggers _set_always_on_top via its signal
+
+    def closeEvent(self, event) -> None:
+        rect = self.geometry()
+        data = settings.load()
+        data["window_geometry"] = {"x": rect.x(), "y": rect.y(),
+                                    "width": rect.width(), "height": rect.height()}
+        data["always_on_top"] = self.always_on_top_checkbox.isChecked()
+        settings.save(data)
+        super().closeEvent(event)
 
     def _set_always_on_top(self, checked: bool) -> None:
         """setWindowFlag() only takes effect on the next show() — the window
