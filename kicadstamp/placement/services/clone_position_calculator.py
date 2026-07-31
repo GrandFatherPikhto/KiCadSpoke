@@ -30,6 +30,7 @@ from .clone_role_resolver import (
     clone_uses_selection_mode,
     resolve_anchor_by_role,
 )
+from .component_resolver import resolve_footprint_by_ref
 from ...i18n import _
 
 logger = logging.getLogger(__name__)
@@ -109,15 +110,7 @@ class ClonePositionCalculator:
         placing the section "somewhere" or silently skipping it is worse than failing.
         """
         if clone.anchor_ref is not None:
-            fp = self.adapter.get_footprint(clone.anchor_ref)
-            if fp is None:
-                raise ValidationError(format_fatal_error(
-                    _("{name}: anchor component {ref!r} not found on board")
-                    .format(name=clone.name, ref=clone.anchor_ref),
-                    [_("check anchor_ref in clone_placement {name!r} — "
-                       "no such ref on the board (typo? component not yet in PCB?)")
-                     .format(name=clone.name)]
-                ))
+            fp = resolve_footprint_by_ref(self.adapter, clone.anchor_ref, clone.name)
         elif clone.anchor_role is not None:
             fp = resolve_anchor_by_role(self.adapter, clone, self.sheet_names)
         else:

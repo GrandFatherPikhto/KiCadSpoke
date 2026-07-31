@@ -13,6 +13,7 @@ from ...utils.units import MM
 from ...exceptions import GeometryError, ComponentNotFoundError, ValidationError
 from ..commands import ViaCommand, PlacedComponentInfo, make_registry_key
 from .clone_role_resolver import resolve_footprint_by_role
+from .component_resolver import resolve_footprint_by_ref
 from ...i18n import _
 
 logger = logging.getLogger(__name__)
@@ -57,12 +58,7 @@ class ViaPlanner:
             return None
 
         if tva.anchor_ref is not None:
-            fp = self.adapter.get_footprint(tva.anchor_ref)
-            if fp is None:
-                raise ComponentNotFoundError(
-                    _("Thermal pad: component {ref} not found").format(ref=tva.anchor_ref)
-                )
-            return fp
+            return resolve_footprint_by_ref(self.adapter, tva.anchor_ref, _("thermal_via_array"))
 
         if tva.anchor_role is not None:
             return resolve_footprint_by_role(
