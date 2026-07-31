@@ -15,7 +15,8 @@ from kicadstamp.apply_pipeline import (
     _split_comma_values, _matches_any_cluster,
     drop_disabled_rules, drop_inactive_items, apply_only_filter, apply_cluster_filter,
 )
-from kicadstamp.cli_extract import load_profile
+from kicadstamp.cli_extract import load_profile, _EXTRACT_PROFILE_KNOWN_KEYS, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
+from kicadstamp.exceptions import ValidationError
 
 logger = logging.getLogger("test_cli_filters")
 
@@ -346,3 +347,84 @@ class TestLoadProfileIncludes:
 
         prof = load_profile(str(path), "extract_profiles", "b")
         assert prof["name"] == "b"
+
+
+class TestLoadProfileKnownKeys:
+    """known_keys param on load_profile() — regression coverage for the exact
+    bug that motivated it (see check_unknown_keys/_EXTRACT_PROFILE_KNOWN_KEYS
+    docstrings): a dash instead of underscore ('origin-by-via-net' instead of
+    'origin_by_via_net') was previously silently ignored — dict.get() just
+    returns None, origin quietly fell back to the selection bbox instead of
+    the intended via, no error at all. The fix (check_unknown_keys wired into
+    load_profile) had no direct test until now."""
+
+    def _write(self, tmp_path, data):
+        p = tmp_path / "profiles.yaml"
+        p.write_text(yaml.safe_dump(data), encoding="utf-8")
+        return str(p)
+
+    def test_dash_typo_in_extract_profile_is_fatal(self, tmp_path):
+        path = self._write(tmp_path, {
+            "extract_profiles": {
+                "a": {"name": "a", "output": "out.yaml", "origin-by-via-net": "GND"},
+            },
+        })
+        with pytest.raises(ValidationError, match="origin-by-via-net"):
+            load_profile(path, "extract_profiles", "a", known_keys=_EXTRACT_PROFILE_KNOWN_KEYS)
+
+    def test_suggests_close_match_for_extract_profile(self, tmp_path):
+        path = self._write(tmp_path, {
+            "extract_profiles": {
+                "a": {"name": "a", "output": "out.yaml", "origin-by-via-net": "GND"},
+            },
+        })
+        with pytest.raises(ValidationError, match="origin_by_via_net"):
+            load_profile(path, "extract_profiles", "a", known_keys=_EXTRACT_PROFILE_KNOWN_KEYS)
+
+    def test_all_known_extract_profile_fields_load_fine(self, tmp_path):
+        path = self._write(tmp_path, {
+            "extract_profiles": {
+                "a": {
+                    "name": "a", "output": "out.yaml", "params": {"channel": 1},
+                    "net_template": {"DAC1_DB1": "DAC{channel}_DB1"},
+                    "net_template_role": {"PI_FILTER_FB": "+5V_DIRTY"},
+                    "origin_by_via_net": "GND",
+                    "origin_by_component_role": "FPGA",
+                    "origin_by_component_pad": "3",
+                },
+            },
+        })
+        prof = load_profile(path, "extract_profiles", "a", known_keys=_EXTRACT_PROFILE_KNOWN_KEYS)
+        assert prof["origin_by_via_net"] == "GND"
+
+    def test_without_known_keys_typo_is_silently_ignored(self, tmp_path):
+        """Documents the OLD (still-reachable if a caller omits known_keys)
+        behaviour, for contrast with the fatal above — not a recommendation."""
+        path = self._write(tmp_path, {
+            "extract_profiles": {
+                "a": {"name": "a", "output": "out.yaml", "origin-by-via-net": "GND"},
+            },
+        })
+        prof = load_profile(path, "extract_profiles", "a")
+        assert "origin_by_via_net" not in prof
+        assert "origin-by-via-net" in prof
+
+    def test_dash_typo_in_clone_profile_is_fatal(self, tmp_path):
+        path = self._write(tmp_path, {
+            "clone_profiles": {
+                "a": {"net": "n.net", "pcb": "b.kicad_pcb", "channel": "Channel_0",
+                      "out-put": "out.yaml"},
+            },
+        })
+        with pytest.raises(ValidationError, match="out-put"):
+            load_profile(path, "clone_profiles", "a", known_keys=_CLONE_EXTRACT_PROFILE_KNOWN_KEYS)
+
+    def test_all_known_clone_profile_fields_load_fine(self, tmp_path):
+        path = self._write(tmp_path, {
+            "clone_profiles": {
+                "a": {"net": "n.net", "pcb": "b.kicad_pcb", "channel": "Channel_0",
+                      "output": "out.yaml"},
+            },
+        })
+        prof = load_profile(path, "clone_profiles", "a", known_keys=_CLONE_EXTRACT_PROFILE_KNOWN_KEYS)
+        assert prof["output"] == "out.yaml"
