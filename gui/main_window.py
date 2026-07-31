@@ -89,13 +89,18 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
         self.tabifyDockWidget(self.file_picker_dock, self.extract_dock)
 
-        # Files -> Extract wiring: the target file follows whatever's picked
-        # in the Files dock. _restore_last_pick() (inside FilePickerDock's
-        # own __init__, already ran) may have already set picked_path before
-        # this callback existed to hear about it — push the current value
-        # once explicitly so a restored pick isn't silently missed.
-        self.file_picker_dock.on_pick_changed = self.extract_dock.set_target_file
-        self.extract_dock.set_target_file(self.file_picker_dock.picked_path)
+        # Files -> Extract wiring: ExtractDock's cell-output file follows
+        # the Cells role, its extract_profiles file follows the Extractor
+        # role (both assigned via "Use selected" in the Files dock).
+        # _restore_roles() (inside FilePickerDock's own __init__, already
+        # ran) may have already restored a role from a previous session
+        # before these callbacks existed to hear about it — push the
+        # current values once explicitly so a restored assignment isn't
+        # silently missed.
+        self.file_picker_dock.on_cells_file_changed = self.extract_dock.set_target_file
+        self.file_picker_dock.on_extractor_file_changed = self.extract_dock.set_profile_file
+        self.extract_dock.set_target_file(self.file_picker_dock.assigned["cells"])
+        self.extract_dock.set_profile_file(self.file_picker_dock.assigned["extractor"])
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)

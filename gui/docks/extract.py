@@ -37,25 +37,47 @@ round-trip-checks pattern.format(**params) against the literal, and with
 params=={} that check fails for every single alias (found live 2026-08-01,
 "net '{X}' has a placeholder with no parameter" on every extract attempt
 that used an alias).
+
+Both the cell-output file and the extract_profiles file are chosen in the
+Files dock now (its Cells/Extractor role slots — see file_picker.py),
+pushed here via set_target_file()/set_profile_file(). This dock used to
+have its own separate "Change profile file..." QFileDialog button for the
+profile file alone, which meant two different ways to pick a file for two
+closely related purposes — reported as confusing live 2026-08-01.
+
+The "Existing cells:"/"Existing profiles:" lists read straight from
+whatever those two files currently contain (top-level keys / the
+extract_profiles: section's keys) and let a click reuse an existing name
+outright. They also drive a quiet auto-fill: when the current selection is
+a single Cluster and a slugified form of it matches an existing key, that
+key is filled into the Cell name / Profile key fields (only if the field
+is still empty — never stomps something the user already typed) and
+highlighted in its list. Matching is a plain slug comparison (e.g. Cluster
+'PWR/DAC0' -> 'pwr_dac0'), not a stored Cluster->name mapping — nothing in
+the file formats records that association today, so this is a heuristic
+that helps when it hits and is silently a no-op when it doesn't ("если
+нашли — выводим": only surface it when there's an actual match, never
+invent/guess a name).
 """
 import json
 import logging
+import re
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import yaml
 from kipy.board_types import Via
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QFileDialog,
-                              QFormLayout, QGridLayout, QHBoxLayout, QLabel,
-                              QLineEdit, QPushButton, QScrollArea, QVBoxLayout,
-                              QWidget)
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QFormLayout,
+                              QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+                              QListWidget, QPushButton, QScrollArea,
+                              QVBoxLayout, QWidget)
 
 from kicadstamp.exceptions import PlacerError
 from kicadstamp.explore import Selected
 from kicadstamp.i18n import _
 from kicadstamp.template_extraction import extract_template_from_selection
 
-from .. import settings
 from ..docks.file_picker import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
@@ -72,8 +94,9 @@ class ExtractDock(QDockWidget):
         self._raw_items: List[Any] = []
         self._selected_footprints: List[Selected] = []
         self._target_path: Optional[Path] = None
+        self._profile_path: Optional[Path] = None
         self._net_alias_edits: Dict[str, QLineEdit] = {}
-        self._profile_path: Optional[Path] = self._load_last_profile_path()
+        self._last_autofill_key: Optional[Tuple[frozenset, Optional[Path], Optional[Path]]] = None
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -139,6 +162,25 @@ class ExtractDock(QDockWidget):
         scroll.setWidget(self._nets_container)
         layout.addWidget(scroll, 1)
 
+        layout.addWidget(QLabel(_("Existing (click to reuse a name):")))
+        existing_row = QHBoxLayout()
+        cells_col = QVBoxLayout()
+        cells_col.addWidget(QLabel(_("Cells:")))
+        self.cells_list = QListWidget()
+        self.cells_list.setMaximumHeight(80)
+        self.cells_list.itemClicked.connect(lambda item: self.name_edit.setText(item.text()))
+        cells_col.addWidget(self.cells_list)
+        existing_row.addLayout(cells_col)
+
+        profiles_col = QVBoxLayout()
+        profiles_col.addWidget(QLabel(_("Profiles:")))
+        self.profiles_list = QListWidget()
+        self.profiles_list.setMaximumHeight(80)
+        self.profiles_list.itemClicked.connect(lambda item: self.profile_key_edit.setText(item.text()))
+        profiles_col.addWidget(self.profiles_list)
+        existing_row.addLayout(profiles_col)
+        layout.addLayout(existing_row)
+
         self.save_profile_checkbox = QCheckBox(_("Also save as extract_profile"))
         layout.addWidget(self.save_profile_checkbox)
 
@@ -148,15 +190,9 @@ class ExtractDock(QDockWidget):
         profile_form.addRow(_("Profile key:"), self.profile_key_edit)
         layout.addLayout(profile_form)
 
-        profile_file_row = QHBoxLayout()
-        self.profile_target_label = QLabel(self._display_path(self._profile_path)
-                                            if self._profile_path else _("No profile file picked"))
+        self.profile_target_label = QLabel(_("No profile file picked (pick one in Files)"))
         self.profile_target_label.setWordWrap(True)
-        profile_file_row.addWidget(self.profile_target_label, 1)
-        change_profile_button = QPushButton(_("Change profile file..."))
-        change_profile_button.clicked.connect(self._on_change_profile_file)
-        profile_file_row.addWidget(change_profile_button)
-        layout.addLayout(profile_file_row)
+        layout.addWidget(self.profile_target_label)
 
         self.extract_button = QPushButton(_("Extract to file"))
         self.extract_button.setEnabled(False)
@@ -179,6 +215,7 @@ class ExtractDock(QDockWidget):
         self._update_cluster_warning()
         self._rebuild_net_aliases()
         self._update_origin_choices()
+        self._autofill_from_cluster()
         self._update_button_state()
 
     def _on_origin_mode_changed(self) -> None:
@@ -209,20 +246,26 @@ class ExtractDock(QDockWidget):
         combo.blockSignals(False)
 
     def set_target_file(self, path: Optional[Path]) -> None:
-        """Called by MainWindow whenever the Files dock's picked file
-        changes (wired via FilePickerDock.on_pick_changed)."""
+        """Called by MainWindow whenever the Files dock's Cells-role file
+        changes (wired via FilePickerDock.on_cells_file_changed)."""
         self._target_path = path
         self.target_label.setText(
             _("Target: {path}").format(path=path) if path is not None
             else _("No target file picked (pick one in Files)"))
+        self._refresh_existing_lists()
         self._update_button_state()
 
-    @staticmethod
-    def _load_last_profile_path() -> Optional[Path]:
-        last = settings.load().get("last_profile_path")
-        if last and Path(last).is_file():
-            return Path(last)
-        return None
+    def set_profile_file(self, path: Optional[Path]) -> None:
+        """Called by MainWindow whenever the Files dock's Extractor-role
+        file changes (wired via FilePickerDock.on_extractor_file_changed) —
+        replaces this dock's former standalone file-dialog button, so all
+        three file roles (Cells/Extractor/Placer) are picked from one
+        place (see file_picker.py)."""
+        self._profile_path = path
+        self.profile_target_label.setText(
+            _("Profile file: {path}").format(path=path) if path is not None
+            else _("No profile file picked (pick one in Files)"))
+        self._refresh_existing_lists()
 
     @staticmethod
     def _display_path(path: Path) -> str:
@@ -231,19 +274,73 @@ class ExtractDock(QDockWidget):
         except ValueError:
             return str(path)
 
-    def _on_change_profile_file(self) -> None:
-        start_dir = str(self._profile_path.parent) if self._profile_path else str(PROJECT_ROOT / "boards")
-        chosen, _filter = QFileDialog.getSaveFileName(
-            self, _("Pick extract_profiles target file"), start_dir,
-            _("YAML/JSON files (*.yaml *.yml *.json)"),
-            options=QFileDialog.Option.DontConfirmOverwrite)
-        if not chosen:
+    @staticmethod
+    def _slugify(text: str) -> str:
+        return re.sub(r"[^0-9a-zA-Z]+", "_", text.strip().lower()).strip("_")
+
+    @staticmethod
+    def _existing_keys(path: Optional[Path], section: Optional[str] = None) -> Set[str]:
+        if path is None or not path.exists():
+            return set()
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = (json.load(f) if path.suffix.lower() == ".json" else yaml.safe_load(f)) or {}
+        except (OSError, yaml.YAMLError, json.JSONDecodeError) as e:
+            logger.warning("Failed to read %s for existing-keys list: %s", path, e)
+            return set()
+        if section is not None:
+            data = data.get(section) or {}
+        return set(data.keys())
+
+    def _refresh_existing_lists(self) -> None:
+        self.cells_list.clear()
+        self.cells_list.addItems(sorted(self._existing_keys(self._target_path)))
+        self.profiles_list.clear()
+        self.profiles_list.addItems(sorted(self._existing_keys(self._profile_path, section="extract_profiles")))
+        self._last_autofill_key = None  # force _autofill_from_cluster to re-check against the new content
+
+    @staticmethod
+    def _select_list_item(list_widget: QListWidget, text: Optional[str]) -> None:
+        list_widget.clearSelection()
+        if text is None:
             return
-        self._profile_path = Path(chosen)
-        self.profile_target_label.setText(self._display_path(self._profile_path))
-        data = settings.load()
-        data["last_profile_path"] = chosen
-        settings.save(data)
+        items = list_widget.findItems(text, Qt.MatchFlag.MatchExactly)
+        if items:
+            list_widget.setCurrentItem(items[0])
+
+    def _autofill_from_cluster(self) -> None:
+        """If the selection is a single Cluster and a slugified form of it
+        (or its last '/'-segment) matches an existing Cells/Extractor key,
+        fill that key into Cell name / Profile key — but only into a field
+        that's still empty, so this never overwrites something already
+        typed. Also highlights the match in its list either way, so a hit
+        is visible even when the field was left untouched. No match ->
+        silently does nothing (see module docstring)."""
+        clusters = frozenset(s.cluster for s in self._selected_footprints if s.cluster)
+        key = (clusters, self._target_path, self._profile_path)
+        if key == self._last_autofill_key:
+            return
+        self._last_autofill_key = key
+
+        matched_cell = matched_profile = None
+        if len(clusters) == 1:
+            cluster = next(iter(clusters))
+            candidates = [self._slugify(cluster)]
+            if "/" in cluster:
+                candidates.append(self._slugify(cluster.rsplit("/", 1)[-1]))
+
+            cell_keys = self._existing_keys(self._target_path)
+            matched_cell = next((c for c in candidates if c in cell_keys), None)
+            if matched_cell and not self.name_edit.text().strip():
+                self.name_edit.setText(matched_cell)
+
+            profile_keys = self._existing_keys(self._profile_path, section="extract_profiles")
+            matched_profile = next((c for c in candidates if c in profile_keys), None)
+            if matched_profile and not self.profile_key_edit.text().strip():
+                self.profile_key_edit.setText(matched_profile)
+
+        self._select_list_item(self.cells_list, matched_cell)
+        self._select_list_item(self.profiles_list, matched_profile)
 
     def _update_selection_label(self) -> None:
         if not self._raw_items:
@@ -395,6 +492,7 @@ class ExtractDock(QDockWidget):
 
         self.message_label.setStyleSheet(_SUCCESS_STYLE)
         self.message_label.setText("; ".join(messages))
+        self._refresh_existing_lists()
 
     @staticmethod
     def _write_merged(path: Path, new_data: dict, section: Optional[str] = None) -> bool:

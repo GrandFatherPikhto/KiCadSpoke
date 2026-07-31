@@ -1,10 +1,16 @@
 # gui/docks/file_picker.py
 """
 FilePickerDock — a read-only file tree for picking a YAML/JSON config file
-by clicking instead of typing a path by hand. Standalone for now: nothing
-in the GUI consumes the picked path yet (the extract-to-file dock that
-would use it is postponed) — deliberately scoped to just browse, click,
-remember the last pick.
+by clicking instead of typing a path by hand, plus three named "role"
+slots (Cells / Extractor / Placer) that other docks read their target file
+from. Before this, ExtractDock had its OWN separate file-dialog button for
+the extract_profiles file, alongside this dock's tree — two different ways
+to pick a file for closely related purposes, reported as confusing live
+2026-08-01 ("получается каша с выбором"). Now there's exactly one place to
+pick any file this GUI writes to: click a file in the tree, then "Use
+selected" on whichever role it belongs to. Placer has no consumer yet (no
+placer dock exists), but the slot exists so its assignment isn't lost once
+one does.
 
 Default root is boards/ (this project's own config tree), NOT derived from
 the live board connection. Checked live before assuming that would work:
@@ -19,7 +25,7 @@ restarts, same mechanism as the last-picked-file memory below.
 """
 import logging
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional
 
 from PyQt6.QtGui import QFileSystemModel
 from PyQt6.QtWidgets import (QDockWidget, QFileDialog, QHBoxLayout, QLabel,
@@ -33,18 +39,24 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ROOT = PROJECT_ROOT / "boards"
+ROLE_KEYS = ("cells", "extractor", "placer")
 
 
 class FilePickerDock(QDockWidget):
     def __init__(self, main_window):
         super().__init__(_("Files"), main_window)
         self._main_window = main_window
-        self.picked_path: Optional[Path] = None
-        # Set by MainWindow once both docks exist — ExtractDock's target
-        # file follows whatever's picked here. Plain callback, not a
-        # pyqtSignal: only ever one listener, and this codebase doesn't use
-        # custom signals anywhere else yet.
-        self.on_pick_changed: Optional[Callable[[Optional[Path]], None]] = None
+        self.picked_path: Optional[Path] = None  # last file clicked in the tree, not yet assigned to a role
+        self.assigned: Dict[str, Optional[Path]] = {key: None for key in ROLE_KEYS}
+        self._role_titles = {"cells": _("Cells:"), "extractor": _("Extractor:"), "placer": _("Placer:")}
+        # Set by MainWindow once the relevant dock exists — ExtractDock's
+        # cell-output file follows the Cells role, its extract_profiles
+        # file follows the Extractor role. Plain callbacks, not
+        # pyqtSignals: at most one listener each, and this codebase doesn't
+        # use custom signals anywhere else yet.
+        self.on_cells_file_changed: Optional[Callable[[Optional[Path]], None]] = None
+        self.on_extractor_file_changed: Optional[Callable[[Optional[Path]], None]] = None
+        self.on_placer_file_changed: Optional[Callable[[Optional[Path]], None]] = None
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -70,14 +82,27 @@ class FilePickerDock(QDockWidget):
         self.tree.clicked.connect(self._on_clicked)
         layout.addWidget(self.tree)
 
-        self.picked_label = QLabel(_("No file picked"))
+        self.picked_label = QLabel(_("No file selected"))
         self.picked_label.setWordWrap(True)
         layout.addWidget(self.picked_label)
+
+        self._role_labels: Dict[str, QLabel] = {}
+        for role_key in ROLE_KEYS:
+            row = QHBoxLayout()
+            label = QLabel("")
+            label.setWordWrap(True)
+            self._role_labels[role_key] = label
+            row.addWidget(label, 1)
+            button = QPushButton(_("Use selected"))
+            button.clicked.connect(lambda checked=False, k=role_key: self._assign_role(k))
+            row.addWidget(button)
+            layout.addLayout(row)
 
         self.setWidget(container)
 
         self.set_root(self._load_root())
         self._restore_last_pick()
+        self._restore_roles()
 
     @staticmethod
     def _load_root() -> Path:
@@ -109,12 +134,37 @@ class FilePickerDock(QDockWidget):
         if path.is_dir():
             return
         self.picked_path = path
-        self.picked_label.setText(self._display_path(path))
+        self.picked_label.setText(_("Selected: {path}").format(path=self._display_path(path)))
         data = settings.load()
         data["last_picked_path"] = str(path)
         settings.save(data)
-        if self.on_pick_changed:
-            self.on_pick_changed(path)
+
+    def _assign_role(self, role_key: str) -> None:
+        """"Use selected" button for one of the three role rows — assigns
+        whatever's currently clicked in the tree to that role, persists it,
+        and notifies whichever dock is listening (see on_*_file_changed)."""
+        if self.picked_path is None:
+            return
+        self.assigned[role_key] = self.picked_path
+        self._role_labels[role_key].setText(self._role_text(role_key, self.picked_path))
+        data = settings.load()
+        data[f"{role_key}_file"] = str(self.picked_path)
+        settings.save(data)
+        callback = getattr(self, f"on_{role_key}_file_changed")
+        if callback:
+            callback(self.picked_path)
+
+    def _role_text(self, role_key: str, path: Optional[Path]) -> str:
+        value = self._display_path(path) if path is not None else _("not set")
+        return f"{self._role_titles[role_key]} {value}"
+
+    def _restore_roles(self) -> None:
+        data = settings.load()
+        for role_key in ROLE_KEYS:
+            saved = data.get(f"{role_key}_file")
+            path = Path(saved) if saved and Path(saved).is_file() else None
+            self.assigned[role_key] = path
+            self._role_labels[role_key].setText(self._role_text(role_key, path))
 
     @staticmethod
     def _display_path(path: Path) -> str:
@@ -135,7 +185,7 @@ class FilePickerDock(QDockWidget):
         if not path.is_file():
             return
         self.picked_path = path
-        self.picked_label.setText(self._display_path(path))
+        self.picked_label.setText(_("Selected: {path}").format(path=self._display_path(path)))
         index = self.model.index(str(path))
         self.tree.setCurrentIndex(index)
         self.tree.scrollTo(index)
