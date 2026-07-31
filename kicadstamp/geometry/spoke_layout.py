@@ -1,16 +1,16 @@
 # kicadstamp/geometry/spoke_layout.py
 """
-spoke_layout.py — expands a spoke template into absolute board coordinates.
+spoke_layout.py — expands a spoke cell into absolute board coordinates.
 
 Order of application (established in discussion with the user):
   1. Shift (shift_x_mm, shift_y_mm) from the FPGA pad centre to the spoke origin —
      a plain translation, WITHOUT rotation.
-  2. Rotation of the resulting origin (and all template contents) by rotation_deg —
+  2. Rotation of the resulting origin (and all cell contents) by rotation_deg —
      as a single rigid body.
 
-Both steps are in ordinary KiCad coordinates. The internal template contents
+Both steps are in ordinary KiCad coordinates. The internal cell contents
 (along/across) are described once at rotation_deg=0 (the reference board) and
-are the same for any spoke using this template — the rotation at the specific
+are the same for any spoke using this cell — the rotation at the specific
 spoke completely eliminates the need to manually adjust sign offsets for a
 particular package.
 
@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from kipy.geometry import Vector2, Angle
 
-from ..config import ManualSpoke, SpokeTemplate, TemplateVia, TemplateTrack
+from ..config import ManualSpoke, Cell, TemplateVia, TemplateTrack
 from ..utils.units import MM
 
 _ORIGIN = Vector2.from_xy(0, 0)
@@ -75,14 +75,14 @@ class ResolvedTrack:
     end: Vector2
     width_mm: float
     net: str
-    layer: str  # 'F.Cu' | 'B.Cu', absolute — already resolved (own or template layer, with mirror considered)
+    layer: str  # 'F.Cu' | 'B.Cu', absolute — already resolved (own or cell layer, with mirror considered)
 
 
 def _resolve_track(origin: Vector2, track: TemplateTrack, rotation_deg: float,
                     rule_net: str, template_layer: str) -> ResolvedTrack:
     """net=None inherits rule_net — same convention as _resolve_via (see its docstring).
     ManualSpoke does not support mirror (unlike ClonePlacement), so the layer is
-    simply its own or the template layer, without inversion."""
+    simply its own or the cell layer, without inversion."""
     return ResolvedTrack(
         start=local_to_absolute(origin, track.start_along_mm, track.start_across_mm, rotation_deg),
         end=local_to_absolute(origin, track.end_along_mm, track.end_across_mm, rotation_deg),
@@ -99,7 +99,7 @@ class ComponentLayout:
     position: Vector2
     angle_deg: float
     vias: List[ResolvedVia] = field(default_factory=list)
-    slot_layer: str = None     # absolute slot layer ('F.Cu'/'B.Cu'), None = template layer
+    slot_layer: str = None     # absolute slot layer ('F.Cu'/'B.Cu'), None = cell layer
 
 
 @dataclass
@@ -113,12 +113,12 @@ class SpokeLayout:
 def apply_spoke_geometry(
     pad_position: Vector2,
     spoke: ManualSpoke,
-    template: SpokeTemplate,
+    cell: Cell,
     rule_net: str,
     role_to_ref: Dict[str, str],
 ) -> SpokeLayout:
     """
-    Computes absolute positions of EVERYTHING in the template for this spoke,
+    Computes absolute positions of EVERYTHING in the cell for this spoke,
     including vias at both levels — pure geometry, no access to the live board.
     role_to_ref is already resolved EXTERNALLY (see component_pool.py) — this
     function does not decide which ref to assign to which role, only geometry.
@@ -130,11 +130,11 @@ def apply_spoke_geometry(
 
     layout = SpokeLayout(origin=origin)
 
-    layout.vias = [_resolve_via(origin, v, spoke.rotation_deg, rule_net) for v in template.vias]
-    layout.tracks = [_resolve_track(origin, t, spoke.rotation_deg, rule_net, template.layer)
-                      for t in template.tracks]
+    layout.vias = [_resolve_via(origin, v, spoke.rotation_deg, rule_net) for v in cell.vias]
+    layout.tracks = [_resolve_track(origin, t, spoke.rotation_deg, rule_net, cell.layer)
+                      for t in cell.tracks]
 
-    for slot in template.components:
+    for slot in cell.components:
         ref = role_to_ref.get(slot.role)
         if ref is None:
             continue

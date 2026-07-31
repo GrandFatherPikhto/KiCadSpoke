@@ -36,7 +36,7 @@ def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule,
 
 def rule_anchor_ids(rule: Rule) -> Set[str]:
     """
-    Registry identity/identities of a rule — one 'pad:{pad}' per ENABLED
+    Registry identity/identities of a rule — one 'pad:{pad}' per non-retired
     spoke (see compute_raw_positions below: anchor_id = f"pad:{spoke.pad}",
     passed to make_registry_key). Unlike ClonePlacement (one clone_anchor_id
     per placement), a Rule is a GROUP of per-pad spokes, each with its own
@@ -44,21 +44,21 @@ def rule_anchor_ids(rule: Rule) -> Set[str]:
 
     Used for known_anchor_ids (kicadstamp_cli.py's cmd_apply, see
     clone_anchor_id/thermal_anchor_id for the same idea). Without this, a
-    rule excluded from a run (enabled: false, --only, --cluster) has its
+    rule excluded from a run (retired: true, --only, --cluster) has its
     via/track registry entries pruned unconditionally —
     registry.reconcile()'s known_anchor_ids protection only recognises the
     'anchor:'/'role:'/'name:'/'thermal:' prefixes (ClonePlacement/
     thermal_via_array), never 'pad:', so rule-based geometry was never
     actually protected by --only/--cluster at all (found 2026-07-29: "hiding
     part of fpga.yaml's rules deletes its routing", true even without
-    touching enabled at all — just being excluded by --only was enough).
+    touching retired at all — just being excluded by --only was enough).
     """
-    return {f"pad:{spoke.pad}" for spoke in rule.spokes if spoke.enabled}
+    return {f"pad:{spoke.pad}" for spoke in rule.spokes if not spoke.retired}
 
 
 class ManualPositionCalculator:
     """
-    Manual positioning of components and vias via spoke templates.
+    Manual positioning of components and vias via spoke cells.
     Supports clusters: for each unique cluster in the rule, a separate
     ComponentPool is built, and spokes take components from their own cluster.
     """
@@ -89,14 +89,14 @@ class ManualPositionCalculator:
             # --- Collect all roles needed for this rule ---
             roles_needed = set()
             for spoke in rule.spokes:
-                if not spoke.enabled:
+                if spoke.retired:
                     continue
-                template = self.cfg.templates.get(spoke.template)
-                if template is not None:
-                    roles_needed.update(slot.role for slot in template.components)
+                cell = self.cfg.cells.get(spoke.cell)
+                if cell is not None:
+                    roles_needed.update(slot.role for slot in cell.components)
 
             # Important: do not skip the rule entirely if roles_needed is empty —
-            # this only means "no component‑bearing slots in any spoke template",
+            # this only means "no component‑bearing slots in any spoke cell",
             # not "the rule has no spokes at all". Spokes can carry spoke‑level
             # vias without any sub‑components (e.g. cap_pair_standard without
             # components in old configs) — they don't need a pool at all, but we
@@ -104,7 +104,7 @@ class ManualPositionCalculator:
             # gives empty pools below — cheap, no special branch needed.
 
             # --- Collect clusters used in spokes (including None) ---
-            clusters_needed = {spoke.cluster for spoke in rule.spokes if spoke.enabled}
+            clusters_needed = {spoke.cluster for spoke in rule.spokes if not spoke.retired}
 
             # --- Build pools for each cluster ---
             pools_by_cluster = ComponentResolver.build_pools(
@@ -113,14 +113,14 @@ class ManualPositionCalculator:
 
             # --- Process each spoke ---
             for spoke in rule.spokes:
-                if not spoke.enabled:
+                if spoke.retired:
                     continue
 
-                template = self.cfg.templates.get(spoke.template)
-                if template is None:
+                cell = self.cfg.cells.get(spoke.cell)
+                if cell is None:
                     logger.warning(
-                        _("Spoke on pad {pad}: template {template!r} not found in templates, spoke skipped")
-                        .format(pad=spoke.pad, template=spoke.template)
+                        _("Spoke on pad {pad}: cell {cell!r} not found in cells, spoke skipped")
+                        .format(pad=spoke.pad, cell=spoke.cell)
                     )
                     continue
 
@@ -134,15 +134,15 @@ class ManualPositionCalculator:
 
                 # Select pool by spoke cluster — by construction pools_by_cluster
                 # already contains the key spoke.cluster (see clusters_needed above)
-                # for any enabled spoke; if it ever stops being true, let it fail
+                # for any non-retired spoke; if it ever stops being true, let it fail
                 # loudly (KeyError) rather than silently substituting a freshly
                 # created pool that bypasses shared consumption accounting.
                 pool = pools_by_cluster[spoke.cluster]
 
                 # Consume pool by roles
-                role_to_ref = {slot.role: pool.pop(slot.role, spoke.pad) for slot in template.components}
+                role_to_ref = {slot.role: pool.pop(slot.role, spoke.pad) for slot in cell.components}
 
-                layout = apply_spoke_geometry(pad.position, spoke, template, rule.net, role_to_ref)
+                layout = apply_spoke_geometry(pad.position, spoke, cell, rule.net, role_to_ref)
                 anchor_id = f"pad:{spoke.pad}"
 
                 # Spoke‑level vias
@@ -150,14 +150,14 @@ class ManualPositionCalculator:
                     vias_result.append(ViaCommand(
                         position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
                         net_name=via.net, owner_ref=anchor_ref_resolved,
-                        registry_key=make_registry_key(anchor_id, spoke.template, None, via_index),
+                        registry_key=make_registry_key(anchor_id, spoke.cell, None, via_index),
                     ))
                     logger.debug(
                         _("  spoke‑level via (pad {pad}): ({x:.3f}, {y:.3f}) mm, net={net}")
                         .format(pad=spoke.pad, x=via.position.x/1e6, y=via.position.y/1e6, net=via.net)
                     )
 
-                # Spoke‑level tracks (net=None in template inherits rule.net —
+                # Spoke‑level tracks (net=None in cell inherits rule.net —
                 # see spoke_layout._resolve_track). Only spoke‑level: TemplateComponentSlot
                 # carries vias, not tracks.
                 for track_index, track in enumerate(layout.tracks):
@@ -165,7 +165,7 @@ class ManualPositionCalculator:
                     tracks_result.append(TrackCommand(
                         start=track.start, end=track.end, width_mm=track.width_mm,
                         net_name=track.net, layer=track_layer, owner_ref=anchor_ref_resolved,
-                        registry_key=make_registry_key(anchor_id, spoke.template, None, track_index),
+                        registry_key=make_registry_key(anchor_id, spoke.cell, None, track_index),
                     ))
                     logger.debug(
                         _("  spoke‑level track (pad {pad}): ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, net={net}, layer={layer}")
@@ -174,17 +174,17 @@ class ManualPositionCalculator:
                     )
 
                 # Component‑level slots. Slot layer: its own absolute or
-                # inherited from the template — same convention as
+                # inherited from the cell — same convention as
                 # ClonePlacement (clone_position_calculator.py), minus
                 # mirror (ManualSpoke does not support it, see
                 # spoke_layout._resolve_track's docstring). Previously
                 # never set here at all — components silently inherited
                 # PlacementPlanner's single global target_layer regardless
-                # of what the template itself declared (found live:
-                # templates/fpga_cap_pair_spoke.yaml's layer: B.Cu was
+                # of what the cell itself declared (found live:
+                # fpga_cap_pair_spoke.yaml's layer: B.Cu was
                 # honoured for its tracks but not its components).
                 for comp_layout in layout.components:
-                    slot_layer = comp_layout.slot_layer or template.layer
+                    slot_layer = comp_layout.slot_layer or cell.layer
                     comp_layer = BoardLayer.BL_B_Cu if slot_layer == 'B.Cu' else BoardLayer.BL_F_Cu
                     components_result.append(PlacedComponentInfo(
                         ref=comp_layout.ref, dest=comp_layout.position, angle_deg=comp_layout.angle_deg,
@@ -200,7 +200,7 @@ class ManualPositionCalculator:
                         vias_result.append(ViaCommand(
                             position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
                             net_name=via.net, owner_ref=comp_layout.ref,
-                            registry_key=make_registry_key(anchor_id, spoke.template, comp_layout.role, via_index),
+                            registry_key=make_registry_key(anchor_id, spoke.cell, comp_layout.role, via_index),
                         ))
                         logger.debug(
                             _("    via {ref}: ({x:.3f}, {y:.3f}) mm, net={net}")

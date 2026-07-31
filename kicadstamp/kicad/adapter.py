@@ -29,7 +29,7 @@ class KiCadBoardAdapter(IBoardAdapter):
         # Settable by the caller (see kicadstamp_cli.py's --no-selection) —
         # makes get_selected_items() always report "nothing selected",
         # regardless of what's actually highlighted in the PCB editor GUI.
-        # ClonePlacement's "by selection" mode (role:/template: without nets/
+        # ClonePlacement's "by selection" mode (role:/cell: without nets/
         # params) and the selection-narrowing step in _narrow_ambiguous_
         # candidates/resolve_footprint_by_role both read the selection as
         # part of a normal resolution cascade — a stray leftover mouse

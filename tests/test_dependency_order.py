@@ -15,7 +15,7 @@ from kipy.geometry import Vector2
 from kipy.board_types import Pad, FootprintInstance
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ClonePlacement, SpokeTemplate, TemplateComponentSlot,
+    Config, ThermalViaArrayConfig, ClonePlacement, Cell, TemplateComponentSlot,
 )
 from kicadstamp.exceptions import ValidationError
 from kicadstamp.placement.dependency_order import resolve_execution_order
@@ -50,26 +50,26 @@ def _adapter_for(fps):
     return adapter
 
 
-def _clone(name, anchor_ref, template, nets):
-    return ClonePlacement(name=name, template=template, origin_x_mm=0.0, origin_y_mm=0.0,
+def _clone(name, anchor_ref, cell, nets):
+    return ClonePlacement(name=name, cell=cell, origin_x_mm=0.0, origin_y_mm=0.0,
                           anchor_ref=anchor_ref, nets=nets)
 
 
 def _cfg(clones):
-    producer_tpl = SpokeTemplate(
+    producer_tpl = Cell(
         name="producer_tpl",
         components=[TemplateComponentSlot(role="PRODUCED_ROLE", offset_along_mm=0.0,
                                           offset_across_mm=0.0, angle_deg=0.0)],
     )
-    consumer_tpl = SpokeTemplate(
+    consumer_tpl = Cell(
         name="consumer_tpl",
         components=[TemplateComponentSlot(role="OTHER_ROLE", offset_along_mm=0.0,
                                           offset_across_mm=0.0, angle_deg=0.0)],
     )
     return Config(
         layer='F.Cu',
-        templates={"producer_tpl": producer_tpl, "consumer_tpl": consumer_tpl},
-        thermal_via_array=ThermalViaArrayConfig(enabled=False),
+        cells={"producer_tpl": producer_tpl, "consumer_tpl": consumer_tpl},
+        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[],
         clone_placements=clones,
     )
@@ -87,8 +87,8 @@ def test_disabled_clone_is_skipped_entirely():
 
     clone_enabled = _clone("clone_a", "ANCHOR1", "producer_tpl", {"PRODUCED_ROLE": "NET_A"})
     clone_disabled = ClonePlacement(
-        name="clone_disabled", template="consumer_tpl", origin_x_mm=0.0, origin_y_mm=0.0,
-        anchor_role="NONEXISTENT_ROLE", enabled=False,
+        name="clone_disabled", cell="consumer_tpl", origin_x_mm=0.0, origin_y_mm=0.0,
+        anchor_role="NONEXISTENT_ROLE", retired=True,
     )
     cfg = _cfg([clone_enabled, clone_disabled])
 
@@ -141,7 +141,7 @@ def test_producer_ordered_before_consumer_regardless_of_yaml_order():
 
 def test_self_anchored_item_is_not_a_cycle():
     """Found live (p5v_led_spoke): a clone anchored on its OWN role/pad — the
-    anchor component is ALSO one of the template's own role slots (extracted
+    anchor component is ALSO one of the cell's own role slots (extracted
     with itself as origin). That's a benign self-reference, not a real
     cross-item dependency, and must not be flagged as a cycle."""
     anchor_and_role = _make_fp("R1", role="PRODUCED_ROLE", nets=["NET_A"])

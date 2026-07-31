@@ -13,7 +13,7 @@ from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, FootprintInstance, Net
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ClonePlacement, SpokeTemplate,
+    Config, ThermalViaArrayConfig, ClonePlacement, Cell,
     TemplateVia, TemplateComponentSlot, ManualSpoke, Rule
 )
 from kicadstamp.placement.planner import PlacementPlanner
@@ -42,7 +42,7 @@ def test_clone_placements_only_via_selection():
     """Конфиг вообще без rules — только clone_placements, сопоставление по выделению."""
     ic1 = _make_fp("IC1")  # нужен только для target_ref в конструкторе PlacementPlanner
 
-    tpl = SpokeTemplate(
+    tpl = Cell(
         name="crystal",
         vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=-1.0, net="GND")],
         components=[
@@ -50,12 +50,12 @@ def test_clone_placements_only_via_selection():
             TemplateComponentSlot(role="LOAD_CAP", offset_along_mm=1.0, offset_across_mm=0.0, angle_deg=90.0),
         ],
     )
-    clone = ClonePlacement(name="crystal2", template="crystal", origin_x_mm=100.0, origin_y_mm=50.0,
+    clone = ClonePlacement(name="crystal2", cell="crystal", origin_x_mm=100.0, origin_y_mm=50.0,
                           rotation_deg=0.0)
     cfg = Config(
         layer='B.Cu',
-        templates={"crystal": tpl},
-        thermal_via_array=ThermalViaArrayConfig(enabled=False),
+        cells={"crystal": tpl},
+        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[],  # НЕТ rules вовсе
         clone_placements=[clone],
     )
@@ -98,21 +98,21 @@ def test_rules_and_clone_placements_together():
     ic1 = _make_fp("IC1")
     ic1.definition.items = ic1_pads
 
-    spoke_tpl = SpokeTemplate(
+    spoke_tpl = Cell(
         name="cap_single",
         components=[TemplateComponentSlot(role="SOLO", offset_along_mm=1.0, offset_across_mm=0.0)],
     )
-    clone_tpl = SpokeTemplate(
+    clone_tpl = Cell(
         name="crystal",
         components=[TemplateComponentSlot(role="XTAL", offset_along_mm=0.0, offset_across_mm=0.0)],
     )
 
     cfg = Config(
         layer='B.Cu',
-        templates={"cap_single": spoke_tpl, "crystal": clone_tpl},
-        thermal_via_array=ThermalViaArrayConfig(enabled=False),
-        rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="17", template="cap_single")])],
-        clone_placements=[ClonePlacement(name="xtal1", template="crystal", origin_x_mm=200.0, origin_y_mm=0.0)],
+        cells={"cap_single": spoke_tpl, "crystal": clone_tpl},
+        thermal_via_array=ThermalViaArrayConfig(retired=True),
+        rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="17", cell="cap_single")])],
+        clone_placements=[ClonePlacement(name="xtal1", cell="crystal", origin_x_mm=200.0, origin_y_mm=0.0)],
     )
 
     c5 = _make_fp("C5", role="SOLO", nets=["+3V3"])

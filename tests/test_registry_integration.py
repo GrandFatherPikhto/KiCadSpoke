@@ -24,7 +24,7 @@ from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
+    Config, ThermalViaArrayConfig, ManualSpoke, Cell,
     TemplateVia, TemplateComponentSlot, Rule
 )
 from kicadstamp.placement.services.manual_position_calculator import ManualPositionCalculator
@@ -54,16 +54,16 @@ def _make_live_via(uuid_str, x_mm, y_mm, net_name, drill_mm, diameter_mm):
 
 
 def _build_cfg(power_via_offset_across=-1.5):
-    template = SpokeTemplate(
+    cell = Cell(
         name="t",
         vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=power_via_offset_across,
                           drill_mm=0.3, diameter_mm=0.6)],
     )
-    spoke = ManualSpoke(pad="17", template="t", rotation_deg=0.0)
+    spoke = ManualSpoke(pad="17", cell="t", rotation_deg=0.0)
     return Config(
         layer='B.Cu',
-        templates={"t": template},
-        thermal_via_array=ThermalViaArrayConfig(enabled=False),
+        cells={"t": cell},
+        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[spoke])],
     )
 
@@ -132,8 +132,8 @@ def test_registry_full_cycle_across_two_runs():
     # --- Run 4: spoke removed from config entirely -- prune must delete the via ---
     adapter.reset_mock()  # resets call counts, keeps side_effect and return_value
     cfg4 = Config(
-        layer='B.Cu', templates={},
-        thermal_via_array=ThermalViaArrayConfig(enabled=False), rules=[],
+        layer='B.Cu', cells={},
+        thermal_via_array=ThermalViaArrayConfig(retired=True), rules=[],
     )
     calc4 = ManualPositionCalculator(adapter, cfg4)
     _, vias4, _ = calc4.compute_raw_positions(cfg4.rules)

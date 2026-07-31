@@ -196,7 +196,7 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
         if e.code == ApiStatusCode.AS_BUSY:
             logging.error(
                 "KiCad is busy and cannot respond right now. Usually this means an unfinished "
-                "tool is active in the GUI (dimensioning, interactive routing, move tool, etc.) — "
+                "tool is running in the GUI (dimensioning, interactive routing, move tool, etc.) — "
                 "finish it (Esc or right-click -> Cancel) and run the command again. "
                 "The board was not modified."
             )

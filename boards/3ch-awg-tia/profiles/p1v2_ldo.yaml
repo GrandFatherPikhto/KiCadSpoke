@@ -2,9 +2,9 @@ clone_placements:
 
 # 1V2 LDO Subsystem
   - name: 1v2_ldo
-    enabled: true
-    active: true
-    template: p1v2_ldo
+    retired: false
+    skip: false
+    cell: p1v2_ldo
     nets:
       LDO_1V2: '+1V2_DIRTY'
     params:
@@ -18,9 +18,9 @@ clone_placements:
     origin_y_mm:  25.0
 
   - name: 1v2_ldo_out_pi_filter
-    enabled: true
-    active: true
-    template: ldo_out_pi_filter
+    retired: false
+    skip: false
+    cell: ldo_out_pi_filter
     anchor_role: LDO_1V2
     anchor_pad: '2'
     anchor_cluster: Pi_Filter_Out_1V2
@@ -31,9 +31,9 @@ clone_placements:
       PWR_OUT: '+1V2'
 
   - name: 1v2_led_spoke
-    enabled: true
-    active: true
-    template: led_spoke
+    retired: false
+    skip: false
+    cell: led_spoke
     anchor_cluster: Pi_Filter_Out_1V2
     anchor_role: C_OUT_BYPASS
     anchor_pad: '1'

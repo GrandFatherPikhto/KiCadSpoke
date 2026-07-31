@@ -7,7 +7,7 @@ from CLI argument parsing.  The pipeline is:
 
     load config
       -> compute known_anchor_ids (for registry protection)
-      -> filter (disabled, active, --only, --cluster)
+      -> filter (retired, skip, --only, --cluster)
       -> connect KiCad adapter
       -> validate
       -> resolve dependency order
@@ -64,58 +64,58 @@ def _matches_any_cluster(candidate: Optional[str], wanted: List[str]) -> bool:
 
 
 def drop_disabled_rules(cfg, _logger=None) -> None:
-    """enabled: false always wins, dropped before --only/--cluster ever see
-    it — enabled means "does not exist on the board right now", not
+    """retired: true always wins, dropped before --only/--cluster ever see
+    it — retired means "does not exist on the board right now", not
     "excluded from this particular run" (see Rule docstring in config/models.py).
     Pure cfg mutation, no adapter — kept separate so it's unit‑testable without
     a live KiCad connection."""
     l = _logger or logger
-    disabled_rules = [r for r in cfg.rules if not r.enabled]
-    cfg.rules = [r for r in cfg.rules if r.enabled]
+    disabled_rules = [r for r in cfg.rules if r.retired]
+    cfg.rules = [r for r in cfg.rules if not r.retired]
     for r in disabled_rules:
-        l.info(_("Rule {name!r} (net {net!r}): enabled=false, skipped entirely")
+        l.info(_("Rule {name!r} (net {net!r}): retired=true, skipped entirely")
                .format(name=rule_effective_name(r), net=r.net))
 
 
 def drop_inactive_items(cfg, _logger=None) -> None:
-    """active: false — the inline, per-item counterpart of --only/--cluster
-    (see Rule/ClonePlacement/ThermalViaArrayConfig.active docstrings in
-    config/models.py). Unlike enabled: false (drop_disabled_rules above),
-    this must run AFTER known_anchor_ids is computed — an inactive item's
+    """skip: true — the inline, per-item counterpart of --only/--cluster
+    (see Rule/ClonePlacement/ThermalViaArrayConfig.skip docstrings in
+    config/models.py). Unlike retired: true (drop_disabled_rules above),
+    this must run AFTER known_anchor_ids is computed — a skipped item's
     via/tracks must still count as "known" so reconcile() protects them from
     pruning, it's just not (re)planned this run. Composes with --only/--cluster
     as a further AND-narrowing. Pure cfg mutation, no adapter."""
     l = _logger or logger
-    active_clones = [c for c in cfg.clone_placements if c.active]
-    dropped_clones = [c for c in cfg.clone_placements if not c.active]
-    cfg.clone_placements = active_clones
+    kept_clones = [c for c in cfg.clone_placements if not c.skip]
+    dropped_clones = [c for c in cfg.clone_placements if c.skip]
+    cfg.clone_placements = kept_clones
     for c in dropped_clones:
-        l.info(_("ClonePlacement {name!r}: active=false, skipped this run "
+        l.info(_("ClonePlacement {name!r}: skip=true, skipped this run "
                   "(existing via/tracks stay protected)").format(name=c.name))
 
     narrowed_rules = []
     for r in cfg.rules:
-        if not r.active:
-            l.info(_("Rule {name!r}: active=false, skipped this run "
+        if r.skip:
+            l.info(_("Rule {name!r}: skip=true, skipped this run "
                       "(existing via/tracks stay protected)").format(name=rule_effective_name(r)))
             continue
-        kept_spokes = [s for s in r.spokes if s.active]
+        kept_spokes = [s for s in r.spokes if not s.skip]
         for s in r.spokes:
-            if not s.active:
-                l.debug(_("Rule {name!r}: spoke on pad {pad} active=false, skipped this run")
+            if s.skip:
+                l.debug(_("Rule {name!r}: spoke on pad {pad} skip=true, skipped this run")
                          .format(name=rule_effective_name(r), pad=s.pad))
         if kept_spokes:
             narrowed_rules.append(dataclasses.replace(r, spokes=kept_spokes))
         else:
-            l.info(_("Rule {name!r}: no active spokes left, skipped this run "
+            l.info(_("Rule {name!r}: no non-skipped spokes left, skipped this run "
                       "(existing via/tracks stay protected)").format(name=rule_effective_name(r)))
     cfg.rules = narrowed_rules
 
-    if cfg.thermal_via_array.enabled and not cfg.thermal_via_array.active:
-        l.info(_("thermal_via_array {name!r}: active=false, skipped this run "
+    if not cfg.thermal_via_array.retired and cfg.thermal_via_array.skip:
+        l.info(_("thermal_via_array {name!r}: skip=true, skipped this run "
                   "(existing vias stay protected)")
                .format(name=thermal_via_array_effective_name(cfg.thermal_via_array)))
-        cfg.thermal_via_array.enabled = False
+        cfg.thermal_via_array.retired = True
 
 
 def apply_only_filter(cfg, only_names: List[str], _logger=None) -> None:
@@ -127,7 +127,7 @@ def apply_only_filter(cfg, only_names: List[str], _logger=None) -> None:
     requested = set(only_names)
     matched_rules = [r for r in cfg.rules if rule_effective_name(r) in requested]
     matched_clones = [c for c in cfg.clone_placements if c.name in requested]
-    thermal_matches = (cfg.thermal_via_array.enabled and
+    thermal_matches = (not cfg.thermal_via_array.retired and
                        thermal_via_array_effective_name(cfg.thermal_via_array) in requested)
 
     found_names = ({rule_effective_name(r) for r in matched_rules}
@@ -136,11 +136,12 @@ def apply_only_filter(cfg, only_names: List[str], _logger=None) -> None:
                       if thermal_matches else set()))
     missing = requested - found_names
     if missing:
+        tva_name = (thermal_via_array_effective_name(cfg.thermal_via_array)
+                    if not cfg.thermal_via_array.retired else None)
         all_names = sorted(
             {rule_effective_name(r) for r in cfg.rules}
             | {c.name for c in cfg.clone_placements}
-            | ({thermal_via_array_effective_name(cfg.thermal_via_array)}
-               if cfg.thermal_via_array.enabled else set())
+            | ({tva_name} if tva_name is not None else set())
         )
         lines = []
         for name in sorted(missing):
@@ -156,7 +157,7 @@ def apply_only_filter(cfg, only_names: List[str], _logger=None) -> None:
     cfg.rules = matched_rules
     cfg.clone_placements = matched_clones
     if not thermal_matches:
-        cfg.thermal_via_array.enabled = False
+        cfg.thermal_via_array.retired = True
     l.info(_("--only {requested}: rules={rules}, clone_placements={clones}, "
               "thermal_via_array={thermal} (everything else is ignored in this run)")
             .format(requested=sorted(requested),
@@ -174,7 +175,7 @@ def apply_cluster_filter(cfg, cluster_paths: List[str], _logger=None) -> None:
         return
     matched_clones = [c for c in cfg.clone_placements
                       if _matches_any_cluster(c.anchor_cluster, cluster_paths)]
-    thermal_matches = (cfg.thermal_via_array.enabled and
+    thermal_matches = (not cfg.thermal_via_array.retired and
                        _matches_any_cluster(cfg.thermal_via_array.anchor_cluster, cluster_paths))
 
     narrowed_rules = []
@@ -193,7 +194,7 @@ def apply_cluster_filter(cfg, cluster_paths: List[str], _logger=None) -> None:
     cfg.rules = narrowed_rules
     cfg.clone_placements = matched_clones
     if not thermal_matches:
-        cfg.thermal_via_array.enabled = False
+        cfg.thermal_via_array.retired = True
     l.info(_("--cluster {paths}: rules={rules} (spokes narrowed), "
               "clone_placements={clones}, thermal_via_array={thermal}")
             .format(paths=cluster_paths,
@@ -207,10 +208,10 @@ def apply_cluster_filter(cfg, cluster_paths: List[str], _logger=None) -> None:
 def _compute_all_anchor_ids(cfg) -> Set[str]:
     """Build the FULL set of anchor IDs (before --only/--cluster narrow)
     for registry.reconcile()'s known_anchor_ids protection."""
-    ids = {clone_anchor_id(c) for c in cfg.clone_placements if c.enabled}
+    ids = {clone_anchor_id(c) for c in cfg.clone_placements if not c.retired}
     for r in cfg.rules:
         ids |= rule_anchor_ids(r)
-    if cfg.thermal_via_array.enabled:
+    if not cfg.thermal_via_array.retired:
         ids.add(thermal_anchor_id(cfg.thermal_via_array))
     return ids
 

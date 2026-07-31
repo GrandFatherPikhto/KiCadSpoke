@@ -53,7 +53,7 @@ class ViaPlanner:
         None if thermal vias are disabled.
         """
         tva = self.cfg.thermal_via_array
-        if not tva.enabled:
+        if tva.retired:
             return None
 
         if tva.anchor_ref is not None:
@@ -113,9 +113,10 @@ class ViaPlanner:
             target_fp = self._resolve_thermal_anchor()
 
         if target_fp is not None:
-            keepout = self._build_keepout(target_fp, planned_components)
+            keepout = self._build_keepout(target_fp, planned_components, planned_vias=vias)
             logger.debug(_("Keepout for thermal vias: {count} rectangles").format(count=len(keepout)))
-            vias.extend(self._plan_thermal_vias(planned_components, target_fp, keepout, existing_vias))
+            vias.extend(self._plan_thermal_vias(
+                planned_components, target_fp, keepout, existing_vias, planned_vias=vias))
         else:
             logger.debug(_("Thermal vias disabled or no anchor set — keepout/thermal planning skipped"))
 
@@ -126,7 +127,8 @@ class ViaPlanner:
         self,
         target_fp: FootprintInstance,
         planned: List[PlacedComponentInfo],
-        exclude: Optional[Set[Tuple[str, str]]] = None
+        exclude: Optional[Set[Tuple[str, str]]] = None,
+        planned_vias: Optional[List[ViaCommand]] = None,
     ) -> List[Rect]:
         pad_items = []
         target_ref_name = target_fp.reference_field.text.value
@@ -143,18 +145,28 @@ class ViaPlanner:
                     continue
                 pad_items.append(pad)
         bboxes = self.adapter.get_bounding_boxes(pad_items)
-        return build_keepout(bboxes, self.cfg.via_keepout_clearance_mm, mm_per_unit=MM)
+        keepout = build_keepout(bboxes, self.cfg.via_keepout_clearance_mm, mm_per_unit=MM)
+        # Vias planned earlier in the same run must be treated as obstacles too,
+        # otherwise a thermal via can land on top of a sibling regular via
+        # (found 2026-07-31). Same clearance convention as pad keepout.
+        for via in planned_vias or []:
+            keepout.append(Rect.from_circle(
+                via.position,
+                via.diameter_mm / 2.0 * MM + int(self.cfg.via_keepout_clearance_mm * MM),
+            ))
+        return keepout
 
     def _plan_thermal_vias(
         self,
         planned: List[PlacedComponentInfo],
         target_fp: FootprintInstance,
         keepout: List[Rect],
-        existing_vias: Optional[List] = None
+        existing_vias: Optional[List] = None,
+        planned_vias: Optional[List[ViaCommand]] = None,
     ) -> List[ViaCommand]:
         existing_vias = existing_vias or []
         tva = self.cfg.thermal_via_array
-        if not tva.enabled:
+        if tva.retired:
             return []
 
         # target_fp should already be resolved (passed from plan_vias)
@@ -179,7 +191,7 @@ class ViaPlanner:
             raise GeometryError(_("Thermal pad: {error}").format(error=e))
 
         exclude = {(target_fp.reference_field.text.value, tva.pad)}
-        keepout_excl = self._build_keepout(target_fp, planned, exclude=exclude)
+        keepout_excl = self._build_keepout(target_fp, planned, exclude=exclude, planned_vias=planned_vias)
         via_radius = tva.diameter_mm / 2.0 * MM
         # anchor_id/index give thermal vias a real registry_key (found 2026-07-28:
         # they never had one, so PlacementRegistry.reconcile() always treated them

@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from kipy.geometry import Vector2
 
 from kicadstamp.config import (
-    ManualSpoke, SpokeTemplate, TemplateVia, TemplateComponentSlot, TemplateTrack
+    ManualSpoke, Cell, TemplateVia, TemplateComponentSlot, TemplateTrack
 )
 from kicadstamp.geometry.spoke_layout import apply_spoke_geometry, rotate_local_offset
 
@@ -47,7 +47,7 @@ class TestRotateLocalOffset:
 
 class TestApplySpokeGeometry:
     def _template(self):
-        return SpokeTemplate(
+        return Cell(
             name="t",
             vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=-1.5)],  # была power_via
             components=[
@@ -64,7 +64,7 @@ class TestApplySpokeGeometry:
 
     def test_zero_rotation_local_equals_absolute_offset(self):
         pad_pos = Vector2.from_xy(50 * MM, 50 * MM)
-        spoke = ManualSpoke(pad="1", template="t", rotation_deg=0.0)
+        spoke = ManualSpoke(pad="1", cell="t", rotation_deg=0.0)
         role_to_ref = {"HEAVY": "C5", "LIGHT": "C30"}
         layout = apply_spoke_geometry(pad_pos, spoke, self._template(), rule_net="GND", role_to_ref=role_to_ref)
 
@@ -77,7 +77,7 @@ class TestApplySpokeGeometry:
     def test_spoke_level_via_present(self):
         """Via уровня спицы (была power_via) -- одна на весь список layout.vias."""
         pad_pos = Vector2.from_xy(50 * MM, 50 * MM)
-        spoke = ManualSpoke(pad="1", template="t", rotation_deg=0.0)
+        spoke = ManualSpoke(pad="1", cell="t", rotation_deg=0.0)
         layout = apply_spoke_geometry(pad_pos, spoke, self._template(), rule_net="+3V3",
                                       role_to_ref={"HEAVY": "C5", "LIGHT": "C30"})
         assert len(layout.vias) == 1
@@ -93,7 +93,7 @@ class TestApplySpokeGeometry:
         отсчёта, хоть числа и заданы в шаблоне "около" компонента.
         """
         pad_pos = Vector2.from_xy(50 * MM, 50 * MM)
-        spoke = ManualSpoke(pad="1", template="t", rotation_deg=0.0)
+        spoke = ManualSpoke(pad="1", cell="t", rotation_deg=0.0)
         layout = apply_spoke_geometry(pad_pos, spoke, self._template(), rule_net="GND",
                                       role_to_ref={"HEAVY": "C5", "LIGHT": "C30"})
         heavy = next(c for c in layout.components if c.role == "HEAVY")
@@ -117,7 +117,7 @@ class TestApplySpokeGeometry:
         role_to_ref = {"HEAVY": "C5", "LIGHT": "C30"}
 
         for rotation_deg, shift_x, shift_y in [(90.0, 0.0, 0.0), (270.0, 0.4, 0.0)]:
-            spoke = ManualSpoke(pad="1", template="t", rotation_deg=rotation_deg,
+            spoke = ManualSpoke(pad="1", cell="t", rotation_deg=rotation_deg,
                                shift_x_mm=shift_x, shift_y_mm=shift_y)
             layout = apply_spoke_geometry(pad_pos, spoke, tpl, rule_net="GND", role_to_ref=role_to_ref)
 
@@ -135,10 +135,10 @@ class TestApplySpokeGeometry:
 
     def test_missing_vias_gives_empty_list(self):
         pad_pos = Vector2.from_xy(0, 0)
-        tpl = SpokeTemplate(name="minimal", components=[
+        tpl = Cell(name="minimal", components=[
             TemplateComponentSlot(role="SOLO", offset_along_mm=1.0)
         ])
-        spoke = ManualSpoke(pad="1", template="minimal")
+        spoke = ManualSpoke(pad="1", cell="minimal")
         layout = apply_spoke_geometry(pad_pos, spoke, tpl, rule_net="GND", role_to_ref={"SOLO": "C1"})
 
         assert layout.vias == []
@@ -148,22 +148,22 @@ class TestApplySpokeGeometry:
     def test_role_without_resolved_ref_is_skipped(self):
         pad_pos = Vector2.from_xy(0, 0)
         tpl = self._template()
-        layout = apply_spoke_geometry(pad_pos, spoke=ManualSpoke(pad="1", template="t"),
-                                      template=tpl, rule_net="GND", role_to_ref={"HEAVY": "C5"})
+        layout = apply_spoke_geometry(pad_pos, spoke=ManualSpoke(pad="1", cell="t"),
+                                      cell=tpl, rule_net="GND", role_to_ref={"HEAVY": "C5"})
         assert len(layout.components) == 1
         assert layout.components[0].role == "HEAVY"
 
     def test_multiple_vias_per_component_slot(self):
         """Генерализация: несколько via на одном компоненте -- не ограничено одной GND via."""
         pad_pos = Vector2.from_xy(0, 0)
-        tpl = SpokeTemplate(name="t2", components=[
+        tpl = Cell(name="t2", components=[
             TemplateComponentSlot(role="SOLO", offset_along_mm=1.0, vias=[
                 TemplateVia(offset_along_mm=0.0, offset_across_mm=-1.0, net="GND"),
                 TemplateVia(offset_along_mm=0.0, offset_across_mm=1.0, net="GND"),
                 TemplateVia(offset_along_mm=0.5, offset_across_mm=0.0, net="+3V3"),
             ]),
         ])
-        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", template="t2"),
+        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", cell="t2"),
                                       tpl, rule_net="GND", role_to_ref={"SOLO": "C1"})
         assert len(layout.components[0].vias) == 3
         nets = [v.net for v in layout.components[0].vias]
@@ -172,13 +172,13 @@ class TestApplySpokeGeometry:
     def test_arbitrary_number_of_roles_not_limited_to_two(self):
         """Шаблон на 3 роли (имитация кристалла: XTAL + 2 конденсатора нагрузки)."""
         pad_pos = Vector2.from_xy(0, 0)
-        tpl = SpokeTemplate(name="crystal", components=[
+        tpl = Cell(name="crystal", components=[
             TemplateComponentSlot(role="XTAL", offset_along_mm=0.0, offset_across_mm=0.0),
             TemplateComponentSlot(role="LOAD_CAP_1", offset_along_mm=-1.0, offset_across_mm=1.0),
             TemplateComponentSlot(role="LOAD_CAP_2", offset_along_mm=1.0, offset_across_mm=1.0),
         ])
         role_to_ref = {"XTAL": "Y1", "LOAD_CAP_1": "C15", "LOAD_CAP_2": "C16"}
-        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", template="crystal"),
+        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", cell="crystal"),
                                       tpl, rule_net="GND", role_to_ref=role_to_ref)
         assert len(layout.components) == 3
         refs = {c.ref for c in layout.components}
@@ -193,7 +193,7 @@ class TestSpokeLevelTracks:
     несколькими Rule с РАЗНЫМ net -- литерал сломал бы 3 из 4 правил."""
 
     def _template_with_tracks(self):
-        return SpokeTemplate(
+        return Cell(
             name="t",
             layer="B.Cu",
             tracks=[
@@ -208,7 +208,7 @@ class TestSpokeLevelTracks:
 
     def test_track_net_none_inherits_rule_net(self):
         pad_pos = Vector2.from_xy(50 * MM, 50 * MM)
-        spoke = ManualSpoke(pad="1", template="t", rotation_deg=0.0)
+        spoke = ManualSpoke(pad="1", cell="t", rotation_deg=0.0)
         layout = apply_spoke_geometry(pad_pos, spoke, self._template_with_tracks(),
                                       rule_net="+1V2_VCCINT", role_to_ref={})
         assert len(layout.tracks) == 2
@@ -222,14 +222,14 @@ class TestSpokeLevelTracks:
         pad_pos = Vector2.from_xy(0, 0)
         tpl = self._template_with_tracks()
         for net in ("+3V3_VCCIO", "+2V5_VCCA"):
-            layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", template="t"),
+            layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", cell="t"),
                                           tpl, rule_net=net, role_to_ref={})
             power_track = next(t for t in layout.tracks if t.net != "GND")
             assert power_track.net == net
 
     def test_track_geometry_matches_local_to_absolute(self):
         pad_pos = Vector2.from_xy(50 * MM, 50 * MM)
-        spoke = ManualSpoke(pad="1", template="t", rotation_deg=90.0)
+        spoke = ManualSpoke(pad="1", cell="t", rotation_deg=90.0)
         layout = apply_spoke_geometry(pad_pos, spoke, self._template_with_tracks(),
                                       rule_net="GND", role_to_ref={})
         gnd_track = next(t for t in layout.tracks if t.net == "GND")
@@ -242,14 +242,14 @@ class TestSpokeLevelTracks:
 
     def test_track_layer_inherits_template_layer_when_unset(self):
         pad_pos = Vector2.from_xy(0, 0)
-        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", template="t"),
+        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", cell="t"),
                                       self._template_with_tracks(), rule_net="GND", role_to_ref={})
         assert all(t.layer == "B.Cu" for t in layout.tracks)
 
     def test_missing_tracks_gives_empty_list(self):
         """Шаблон без tracks: вообще -- не должен падать, просто пустой список."""
         pad_pos = Vector2.from_xy(0, 0)
-        tpl = SpokeTemplate(name="no_tracks", vias=[TemplateVia(offset_along_mm=0.0)])
-        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", template="no_tracks"),
+        tpl = Cell(name="no_tracks", vias=[TemplateVia(offset_along_mm=0.0)])
+        layout = apply_spoke_geometry(pad_pos, ManualSpoke(pad="1", cell="no_tracks"),
                                       tpl, rule_net="GND", role_to_ref={})
         assert layout.tracks == []

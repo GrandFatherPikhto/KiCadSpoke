@@ -126,8 +126,8 @@ def main():
                                       "(cannot combine with explicit flags)"))
     clone_extract.add_argument("-v", "--verbose", action="store_true", help=_("Verbose output"))
 
-    extract_parser = subparsers.add_parser("extract", help=_("Extract spoke template from current selection"))
-    extract_parser.add_argument("--name", help=_("Template name (key in templates:)"))
+    extract_parser = subparsers.add_parser("extract", help=_("Extract spoke cell from current selection"))
+    extract_parser.add_argument("--name", help=_("Cell name (key in cells:)"))
     extract_parser.add_argument("--output", help=_("Output YAML/JSON file"))
     extract_parser.add_argument("--profiles", metavar="FILE",
                                 help=_("YAML file with named profiles for extract"))
@@ -139,7 +139,7 @@ def main():
     extract_parser.add_argument("--log-file", help=_("File to save logs"))
     extract_parser.add_argument("--param", action="append", metavar="KEY=VALUE",
                                 help=_("Parameter for --net-template verification (e.g. channel=1); "
-                                       "can be repeated; not written to template, only round-trip check"))
+                                       "can be repeated; not written to the cell, only round-trip check"))
     extract_parser.add_argument("--net-template", action="append", metavar="LITERAL=PATTERN",
                                 help=_("Mapping real net -> pattern with {placeholder} "
                                        "(e.g. 'DAC1_DB1=DAC{channel}_DB1'); can be repeated; "
@@ -219,7 +219,7 @@ def main():
         if e.code == ApiStatusCode.AS_BUSY:
             logging.error(
                 _("KiCad is busy and cannot respond right now. Usually this means an unfinished "
-                  "tool is active in the GUI (dimensioning, interactive routing, move tool, etc.) — "
+                  "tool is running in the GUI (dimensioning, interactive routing, move tool, etc.) — "
                   "finish it (Esc or right-click -> Cancel) and run the command again. "
                   "The board was not modified.")
             )

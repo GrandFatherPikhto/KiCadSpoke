@@ -2,13 +2,13 @@
 """
 includes.py — generic `include:` for splitting one profile YAML into several
 files (e.g. by subsystem: ldo.yaml, pi_filters.yaml, dac_channels.yaml — each
-carrying whatever mix of extract_profiles/clone_placements/rules/templates
+carrying whatever mix of extract_profiles/clone_placements/rules/cells
 that subsystem needs).
 
 Independent of templates_file (kicadstamp/config/loader.py) — that mechanism
-stays as-is (single-purpose, templates only, inline-overrides-external).
+stays as-is (single-purpose, cells only, inline-overrides-external).
 include: is general-purpose and used by BOTH load_config() (rules/
-clone_placements/templates) and load_profile() in kicadstamp_cli.py
+clone_placements/cells) and load_profile() in kicadstamp_cli.py
 (extract_profiles/clone_profiles) — the two existing, otherwise-independent
 YAML-reading entry points — since a subsystem file is meant to carry
 extract_profiles AND clone_placements together, not just one section.
@@ -38,7 +38,7 @@ _LIST_SECTIONS = ('rules', 'clone_placements')
 # files (unlike templates_file's silent inline-overrides-external — these are
 # meant to be genuinely separate subsystem files, so a repeated key is far
 # more likely a mistake than an intentional override).
-_DICT_SECTIONS = ('templates', 'extract_profiles', 'clone_profiles')
+_DICT_SECTIONS = ('cells', 'extract_profiles', 'clone_profiles')
 
 
 def _parse_include_entry(entry: Any, source_path: str) -> Tuple[str, bool]:
@@ -89,7 +89,7 @@ def _resolve(path: str, data: Dict[str, Any], seen: Set[Path], is_root: bool = T
     # they used to be silently computed here and then dropped by the caller
     # (only _LIST_SECTIONS/_DICT_SECTIONS get pulled up, see below), a real,
     # repeatedly-hit class of bug (layer:, thermal_via_array:, an un-wrapped
-    # templates: shape — all found live on boards/3ch-awg-tia). Fatal instead
+    # cells: shape — all found live on boards/3ch-awg-tia). Fatal instead
     # of guessing a merge rule for an arbitrary scalar/mapping key.
     if not is_root:
         unsupported = sorted(k for k in data.keys()
@@ -165,7 +165,7 @@ def _resolve(path: str, data: Dict[str, Any], seen: Set[Path], is_root: bool = T
 def resolve_includes(path: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Recursively resolves data['include'] (if present), merging list sections
-    (rules/clone_placements — concatenated) and dict sections (templates/
+    (rules/clone_placements — concatenated) and dict sections (cells/
     extract_profiles/clone_profiles — merged, fatal on key collision) from
     every included file into data. Returns a new dict; does not mutate data.
 

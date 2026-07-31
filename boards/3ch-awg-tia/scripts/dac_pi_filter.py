@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
 boards/3ch-awg-tia/scripts/dac_pi_filter.py — places the dac_pi_filter
-template (extracted via `extract --name dac_pi_filter`, see
+cell (extracted via `extract --name dac_pi_filter`, see
 boards/3ch-awg-tia/templates/templates.yaml) anchored on AD_DAC's pad 11,
 Channel_0 only for now.
 
-The template has two net_template placeholders, '{PWR_IN}' and '{PWR_OUT}'
+The cell has two net_template placeholders, '{PWR_IN}' and '{PWR_OUT}'
 (the extractor's own --net-template matching missed both originally, since
 it needs an EXACT string match and the real net has a hierarchical prefix,
 /Channel_0/DAC/+3V3_CLKVDD, not the bare +3V3_CLKVDD passed to
 --net-template — templates.yaml was hand-fixed afterwards to use the
 placeholders directly). Both need params={"PWR_IN": ..., "PWR_OUT": ...}
-at clone time to resolve — this template is Channel_0-only as extracted
+at clone time to resolve — this cell is Channel_0-only as extracted
 either way (the params below are literal for Channel_0); reusing it on
 other channels needs a params={"channel": N}-driven net_template, not done
 here.
@@ -46,7 +46,7 @@ def build() -> list:
 
     for channel, dac_pwr in enumerate(DAC_PWR_CLK_VDD):
         clones.append(ClonePlacement(
-            name=f"Channel_{channel}_DAC_Pi_Filter_Clk_Vdd", template="dac_pi_filter",
+            name=f"Channel_{channel}_DAC_Pi_Filter_Clk_Vdd", cell="dac_pi_filter",
             anchor_cluster="DAC_Pi_Filter_Clk_Vdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="11",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_CLKVDD"},
@@ -55,7 +55,7 @@ def build() -> list:
 
     for channel, dac_pwr in enumerate(DAC_PWR_AVDD):
         clones.append(ClonePlacement(
-            name=f"Channel_{channel}_DAC_Pi_Filter_Add", template="dac_pi_filter",
+            name=f"Channel_{channel}_DAC_Pi_Filter_Add", cell="dac_pi_filter",
             anchor_cluster="DAC_Pi_Filter_Avdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="18",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_AVDD"},

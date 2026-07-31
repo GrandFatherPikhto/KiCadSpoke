@@ -19,7 +19,7 @@ class TestPruneDefaults:
         cp = ClonePlacement(name="c", origin_x_mm=1.0, origin_y_mm=2.0)
         d = _prune_defaults(cp)
         assert "rotation_deg" not in d      # default 0.0
-        assert "enabled" not in d           # default True
+        assert "retired" not in d           # default False
         assert "nets" not in d              # default_factory dict, empty
 
     def test_keeps_required_fields_regardless_of_value(self):
@@ -39,9 +39,9 @@ class TestPruneDefaults:
         assert d["nets"] == {"X": "NET_A"}
 
     def test_recurses_into_rule_spokes(self):
-        rule = Rule(net="GND", spokes=[ManualSpoke(pad="1", template="t", shift_x_mm=2.0)])
+        rule = Rule(net="GND", spokes=[ManualSpoke(pad="1", cell="t", shift_x_mm=2.0)])
         d = _prune_defaults(rule)
-        assert d["spokes"] == [{"pad": "1", "template": "t", "shift_x_mm": 2.0}]
+        assert d["spokes"] == [{"pad": "1", "cell": "t", "shift_x_mm": 2.0}]
 
 
 class TestDumpRoundTrip:
@@ -73,7 +73,7 @@ class TestDumpRoundTrip:
     def test_rules_round_trip(self, tmp_path):
         rules = [
             Rule(net="+3V3_VCCIO", name="+3V3_VCCIO", anchor_role="FPGA",
-                spokes=[ManualSpoke(pad="17", template="cap_pair_standard",
+                spokes=[ManualSpoke(pad="17", cell="cap_pair_standard",
                                     shift_y_mm=-0.5, rotation_deg=90.0, cluster="FPGA_PWR_BANK")]),
         ]
         out = tmp_path / "generated_rules.yaml"
@@ -97,7 +97,7 @@ class TestDumpRoundTrip:
         dump_clone_placements(clones, str(out))
         text = out.read_text(encoding="utf-8")
         assert "rotation_deg" not in text
-        assert "enabled" not in text
+        assert "retired" not in text
 
 
 class TestApplyConfig:
@@ -213,7 +213,7 @@ class TestDumpTemplate:
         template_dict = {"cap_pair_standard": {"components": [
             {"role": "C_IN_BULK", "offset_along_mm": 0.0, "offset_across_mm": 0.0, "angle_deg": 0.0},
         ]}}
-        out = tmp_path / "template.yaml"
+        out = tmp_path / "cell.yaml"
         dump_template(template_dict, str(out))
 
         loaded = yaml.safe_load(out.read_text(encoding="utf-8"))
@@ -223,7 +223,7 @@ class TestDumpTemplate:
         """Unlike cmd_extract's merge-into-existing behaviour, dump_template
         always overwrites — a script regenerating its own dedicated file
         should get a clean result, not accumulate stale entries."""
-        out = tmp_path / "template.yaml"
+        out = tmp_path / "cell.yaml"
         dump_template({"old_name": {"components": []}}, str(out))
         dump_template({"new_name": {"components": []}}, str(out))
 

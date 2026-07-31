@@ -5,7 +5,7 @@ registry.reconcile()'s known_anchor_ids protection only recognised the
 'anchor:'/'role:'/'name:'/'thermal:' prefixes (ClonePlacement/thermal_via_array)
 — never 'pad:' (Rule/ManualSpoke's own registry_key prefix, see
 manual_position_calculator.compute_raw_positions: anchor_id = f"pad:{spoke.pad}").
-A rule excluded from a run (enabled: false, --only, --cluster) had its via/
+A rule excluded from a run (retired: true, --only, --cluster) had its via/
 track registry entries pruned unconditionally — --only/--cluster protection
 never actually worked for rule-based geometry, only for clone_placements.
 """
@@ -68,7 +68,7 @@ def test_pad_prefixed_anchor_not_processed_this_run_stays_protected():
 
 def test_pad_prefixed_anchor_pruned_without_protection():
     """Same as above but known_anchor_ids does NOT include pad:17 (e.g. the
-    rule itself was disabled: enabled: false) — must still be pruned, so the
+    rule itself was retired: retired: true) — must still be pruned, so the
     fix doesn't accidentally protect everything unconditionally."""
     anchor_id = "pad:17"
     live_via = _make_live_via("uuid-pad17", 20.0, 20.0)
@@ -93,15 +93,15 @@ def test_pad_prefixed_anchor_pruned_without_protection():
     assert f"{anchor_id}|fpga_cap_pair_spoke|__spoke__|0" not in registry.entries
 
 
-def test_rule_anchor_ids_one_per_enabled_spoke():
+def test_rule_anchor_ids_one_per_non_retired_spoke():
     rule = Rule(net="+3V3_VCCIO", anchor_role="FPGA", spokes=[
-        ManualSpoke(pad="17", template="fpga_cap_pair_spoke"),
-        ManualSpoke(pad="26", template="fpga_cap_pair_spoke"),
-        ManualSpoke(pad="40", template="fpga_cap_pair_spoke", enabled=False),
+        ManualSpoke(pad="17", cell="fpga_cap_pair_spoke"),
+        ManualSpoke(pad="26", cell="fpga_cap_pair_spoke"),
+        ManualSpoke(pad="40", cell="fpga_cap_pair_spoke", retired=True),
     ])
     assert rule_anchor_ids(rule) == {"pad:17", "pad:26"}
 
 
-def test_rule_anchor_ids_empty_for_no_enabled_spokes():
+def test_rule_anchor_ids_empty_for_all_retired_spokes():
     rule = Rule(net="+3V3_VCCIO", anchor_role="FPGA", spokes=[])
     assert rule_anchor_ids(rule) == set()

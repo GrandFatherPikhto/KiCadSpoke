@@ -1,9 +1,9 @@
 clone_placements:
 # ±5V Input Filters
   - name: p5v_pi_filter
-    enabled: true
-    active: true
-    template: 5v_pi_filter
+    retired: false
+    skip: false
+    cell: 5v_pi_filter
     anchor_role: CONN_PM5V
     anchor_pad: '1'
     origin_x_mm:   7.0
@@ -14,9 +14,9 @@ clone_placements:
       PWR_OUT: '+5V'
 
   - name: p5v_led_spoke
-    enabled: true
-    active: true
-    template: led_spoke
+    retired: false
+    skip: false
+    cell: led_spoke
     anchor_cluster: In_Pi_Filter_Pos
     anchor_role: C_OUT_BYPASS
     anchor_pad: '1'
@@ -27,9 +27,9 @@ clone_placements:
       PWR_OUT: '/Power/+5V_LED'
 
   - name: n5v_pi_filter
-    enabled: true
-    active: true
-    template: 5v_pi_filter
+    retired: false
+    skip: false
+    cell: 5v_pi_filter
     anchor_role: CONN_PM5V
     anchor_pad: '1'
     origin_x_mm: 7.0
@@ -41,9 +41,9 @@ clone_placements:
       PWR_OUT: '-5V'
 
   - name: n5v_led_spoke
-    enabled: true
-    active: true
-    template: led_spoke
+    retired: false
+    skip: false
+    cell: led_spoke
     anchor_cluster: In_Pi_Filter_Neg
     anchor_role: C_OUT_BYPASS
     anchor_pad: '1'

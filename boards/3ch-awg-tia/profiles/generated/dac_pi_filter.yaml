@@ -2,7 +2,7 @@ clone_placements:
 - name: Channel_0_DAC_Pi_Filter_Clk_Vdd
   origin_x_mm: -2.0
   origin_y_mm: 0.0
-  template: dac_pi_filter
+  cell: dac_pi_filter
   params:
     PWR_IN: +3V3
     PWR_OUT: /Channel_0/DAC/+3V3_CLKVDD
@@ -14,7 +14,7 @@ clone_placements:
   origin_x_mm: 0.0
   origin_y_mm: 2.0
   rotation_deg: 90.0
-  template: dac_pi_filter
+  cell: dac_pi_filter
   params:
     PWR_IN: +3V3
     PWR_OUT: /Channel_1/DAC/+3V3_CLKVDD
@@ -26,7 +26,7 @@ clone_placements:
   origin_x_mm: 2.0
   origin_y_mm: 0.0
   rotation_deg: 180.0
-  template: dac_pi_filter
+  cell: dac_pi_filter
   params:
     PWR_IN: +3V3
     PWR_OUT: /Channel_2/DAC/+3V3_CLKVDD

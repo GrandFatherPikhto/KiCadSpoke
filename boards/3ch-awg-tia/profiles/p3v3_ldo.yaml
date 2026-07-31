@@ -1,9 +1,9 @@
 clone_placements:
 # 3V3 LDO System
   - name: 3v3_ldo
-    enabled: true
-    active: true
-    template: p3v3_ldo
+    retired: false
+    skip: false
+    cell: p3v3_ldo
     nets:
       LDO_1V2: '+3V3_DIRTY'
     params:
@@ -18,9 +18,9 @@ clone_placements:
 
 
   - name: 3v3_led_spoke
-    enabled: true
-    active: true
-    template: led_spoke
+    retired: false
+    skip: false
+    cell: led_spoke
     anchor_cluster: Pi_Filter_Out_3V3
     anchor_role: C_OUT_BYPASS
     anchor_pad: '1'
@@ -31,9 +31,9 @@ clone_placements:
       PWR_OUT: '/Power/+3V3_LED'
 
   - name: 3v3_ldo_out_pi_filter
-    enabled: true
-    active: true
-    template: ldo_out_pi_filter
+    retired: false
+    skip: false
+    cell: ldo_out_pi_filter
     anchor_role: LDO_3V3
     anchor_pad: '2'
     anchor_cluster: Pi_Filter_Out_3V3

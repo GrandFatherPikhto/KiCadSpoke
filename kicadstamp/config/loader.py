@@ -17,7 +17,7 @@ from ..runtime_context import RuntimeContext
 from .includes import resolve_includes
 from .models import (
     ThermalViaArrayConfig, TemplateVia, TemplateComponentSlot, TemplateTrack,
-    SpokeTemplate, ManualSpoke, Rule, ClonePlacement, Config, rule_effective_name,
+    Cell, ManualSpoke, Rule, ClonePlacement, Config, rule_effective_name,
 )
 from ..i18n import _
 
@@ -32,7 +32,7 @@ def _load_template_via(data: Dict[str, Any]) -> TemplateVia:
                 net=net, along=data.get('offset_along_mm'), across=data.get('offset_across_mm')),
              _("looks like broken YAML – e.g. net_overrides accidentally nested under "
                "this via's net instead of being a top-level field of clone_placement "
-               "(net_overrides is a sibling of template/params, not under via)")]
+               "(net_overrides is a sibling of cell/params, not under via)")]
         ))
     return TemplateVia(
         offset_along_mm=data.get('offset_along_mm', 0.0),
@@ -80,7 +80,7 @@ def _load_template_component_slot(data: Dict[str, Any]) -> TemplateComponentSlot
             _("deprecated field 'side' in slot {role!r}").format(role=data.get('role')),
             [_("relative 'side' is deprecated (see discussion v116): layer is now "
                "absolute – write layer: F.Cu or layer: B.Cu, or remove the field "
-               "to inherit the template layer")]
+               "to inherit the cell layer")]
         ))
     layer = data.get('layer')
     _check_layer_value(layer, _("on slot {role!r}").format(role=data.get('role')))
@@ -95,30 +95,30 @@ def _load_template_component_slot(data: Dict[str, Any]) -> TemplateComponentSlot
     )
 
 
-def _load_spoke_template(name: str, data: Dict[str, Any]) -> SpokeTemplate:
+def _load_cell(name: str, data: Dict[str, Any]) -> Cell:
     components = [_load_template_component_slot(c) for c in data.get('components', [])]
 
     roles = [c.role for c in components]
     duplicates = {r for r in roles if roles.count(r) > 1}
     if duplicates:
         raise ValidationError(format_fatal_error(
-            _("role appears twice in template {name!r}").format(name=name),
-            [_("role {role!r} appears {count} times in components of this template – "
-               "roles inside a template must be unique (see anchor_id/template_name/role "
+            _("role appears twice in cell {name!r}").format(name=name),
+            [_("role {role!r} appears {count} times in components of this cell – "
+               "roles inside a cell must be unique (see anchor_id/cell_name/role "
                "in the placement registry)").format(role=r, count=roles.count(r))
              for r in sorted(duplicates)]
         ))
 
     if 'reference_side' in data:
         raise ValidationError(format_fatal_error(
-            _("deprecated field 'reference_side' in template {name!r}").format(name=name),
+            _("deprecated field 'reference_side' in cell {name!r}").format(name=name),
             [_("renamed (see discussion v116): use layer: F.Cu or layer: B.Cu – "
-               "absolute template layer, as extracted")]
+               "absolute cell layer, as extracted")]
         ))
     layer = data.get('layer', 'F.Cu')
-    _check_layer_value(layer, _("in template {name!r}").format(name=name))
+    _check_layer_value(layer, _("in cell {name!r}").format(name=name))
 
-    return SpokeTemplate(
+    return Cell(
         name=name,
         vias=[_load_template_via(v) for v in data.get('vias', [])],
         components=components,
@@ -128,8 +128,8 @@ def _load_spoke_template(name: str, data: Dict[str, Any]) -> SpokeTemplate:
 
 
 _MANUAL_SPOKE_KNOWN_KEYS = {
-    'pad', 'template', 'shift_x_mm', 'shift_y_mm', 'rotation_deg',
-    'enabled', 'cluster', 'active',
+    'pad', 'cell', 'shift_x_mm', 'shift_y_mm', 'rotation_deg',
+    'retired', 'cluster', 'skip',
 }
 
 
@@ -139,32 +139,32 @@ def _load_manual_spoke(data: Dict[str, Any], rule_label: str) -> ManualSpoke:
                        .format(pad=data.get('pad', '?'), net=rule_label))
     return ManualSpoke(
         pad=data['pad'],
-        template=data['template'],
+        cell=data['cell'],
         shift_x_mm=data.get('shift_x_mm', 0.0),
         shift_y_mm=data.get('shift_y_mm', 0.0),
         rotation_deg=data.get('rotation_deg', 0.0),
-        enabled=data.get('enabled', True),
+        retired=data.get('retired', False),
         cluster=data.get('cluster'),
-        active=data.get('active', True),
+        skip=data.get('skip', False),
     )
 
 
 _RULE_KNOWN_KEYS = {
     'net', 'spokes', 'anchor_ref', 'anchor_role', 'anchor_sheet',
-    'anchor_cluster', 'name', 'enabled', 'active',
+    'anchor_cluster', 'name', 'retired', 'skip',
 }
 
 
 _THERMAL_VIA_ARRAY_KNOWN_KEYS = {
-    'enabled', 'anchor_ref', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
+    'retired', 'anchor_ref', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
     'pad', 'net', 'rows', 'cols', 'margin_mm', 'pattern', 'drill_mm',
-    'diameter_mm', 'name', 'active',
+    'diameter_mm', 'name', 'skip',
 }
 
 
 _CLONE_PLACEMENT_KNOWN_KEYS = {
-    'name', 'template', 'role', 'origin_x_mm', 'origin_y_mm', 'rotation_deg',
-    'nets', 'params', 'net_overrides', 'enabled', 'active', 'ignore_selection',
+    'name', 'cell', 'role', 'origin_x_mm', 'origin_y_mm', 'rotation_deg',
+    'nets', 'params', 'net_overrides', 'retired', 'skip', 'ignore_selection',
     'anchor_ref', 'anchor_pad', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
     'layer', 'mirror', 'refs', 'by_selection',
     'side',  # deprecated – recognised separately to give a migration message
@@ -190,20 +190,20 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
     anchor_sheet = data.get('anchor_sheet')
     anchor_cluster = data.get('anchor_cluster')
 
-    template = data.get('template')
+    cell = data.get('cell')
     role = data.get('role')
-    if template is not None and role is not None:
+    if cell is not None and role is not None:
         raise ValidationError(format_fatal_error(
-            _("template and role together in clone_placement {name!r}").format(name=name),
+            _("cell and role together in clone_placement {name!r}").format(name=name),
             [_("these are mutually exclusive ways to define the content: "
-               "either a ready-made template (template), or a single-component placement "
+               "either a ready-made cell (cell), or a single-component placement "
                "by role (role), not both")]
         ))
-    if template is None and role is None:
+    if cell is None and role is None:
         raise ValidationError(format_fatal_error(
-            _("neither template nor role set in clone_placement {name!r}").format(name=name),
-            [_("need either template: <name from templates:>, or role: <ROLE> for "
-               "a single-component placement without a separate template file")]
+            _("neither cell nor role set in clone_placement {name!r}").format(name=name),
+            [_("need either cell: <name from cells:>, or role: <ROLE> for "
+               "a single-component placement without a separate cell file")]
         ))
 
     if anchor_ref is not None and anchor_role is not None:
@@ -242,7 +242,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
             _("deprecated field 'side' in clone_placement {name!r}").format(name=name),
             [_("side is now set by an explicit pair: layer: F.Cu|B.Cu (where we place – fact) "
                "+ mirror: true (how we place – operation, only meaningful when the layer changes "
-               "relative to the template)")]
+               "relative to the cell)")]
         ))
     by_selection = bool(data.get('by_selection', False))
     nets = data.get('nets', {}) or {}
@@ -259,7 +259,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
 
     return ClonePlacement(
         name=name,
-        template=template,
+        cell=cell,
         role=role,
         origin_x_mm=data.get('origin_x_mm', 0.0),
         origin_y_mm=data.get('origin_y_mm', 0.0),
@@ -267,8 +267,8 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
         nets=nets,
         params=data.get('params', {}) or {},
         net_overrides=data.get('net_overrides', {}) or {},
-        enabled=data.get('enabled', True),
-        active=data.get('active', True),
+        retired=data.get('retired', False),
+        skip=data.get('skip', False),
         ignore_selection=data.get('ignore_selection', False),
         anchor_ref=anchor_ref,
         anchor_pad=str(anchor_pad) if anchor_pad is not None else None,
@@ -320,7 +320,7 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
     check_unknown_keys(tva_data, _THERMAL_VIA_ARRAY_KNOWN_KEYS,
                        _("unknown fields in thermal_via_array"))
     thermal_via = ThermalViaArrayConfig(
-        enabled=tva_data.get('enabled', False),
+        retired=tva_data.get('retired', False),
         anchor_ref=tva_data.get('anchor_ref'),
         anchor_role=tva_data.get('anchor_role'),
         anchor_sheet=tva_data.get('anchor_sheet'),
@@ -334,10 +334,10 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
         drill_mm=tva_data.get('drill_mm', 0.3),
         diameter_mm=tva_data.get('diameter_mm', 0.5),
         name=tva_data.get('name'),
-        active=tva_data.get('active', True),
+        skip=tva_data.get('skip', False),
     )
 
-    templates_data = dict(data.get('templates', {}) or {})
+    cells_data = dict(data.get('cells', {}) or {})
 
     templates_file = data.get('templates_file')
     template_files = data.get('template_files') or []
@@ -350,46 +350,46 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
     external_files = ([templates_file] if templates_file else []) + list(template_files)
 
     # Each external file is the RAW extract() shape ({name: {...}}, no
-    # 'templates:' wrapper — unlike include:, which expects one). Merged
+    # 'cells:' wrapper — unlike include:, which expects one). Merged
     # among THEMSELVES with fatal on a repeated name (independent files —
     # a collision is far more likely a copy-paste mistake than an
     # intentional override, same philosophy as include:'s _DICT_SECTIONS).
-    # Inline templates: in this config file still overrides silently on top
+    # Inline cells: in this config file still overrides silently on top
     # of all of them, unchanged from templates_file's original behaviour.
-    external_templates: Dict[str, Any] = {}
+    external_cells: Dict[str, Any] = {}
     for ext_file in external_files:
-        templates_path = Path(path).parent / ext_file
-        if not templates_path.exists():
+        cells_path = Path(path).parent / ext_file
+        if not cells_path.exists():
             raise ValidationError(format_fatal_error(
                 _("templates file {file!r} not found").format(file=ext_file),
                 [_("expected at {path} (relative to the config file itself, "
-                   "not the current working directory)").format(path=templates_path)]
+                   "not the current working directory)").format(path=cells_path)]
             ))
-        with open(templates_path, 'r', encoding='utf-8') as f:
-            if templates_path.suffix.lower() == '.json':
-                file_templates = json.load(f)
+        with open(cells_path, 'r', encoding='utf-8') as f:
+            if cells_path.suffix.lower() == '.json':
+                file_cells = json.load(f)
             else:
-                file_templates = yaml.safe_load(f) or {}
-        for name, tdata in (file_templates or {}).items():
-            if name in external_templates:
+                file_cells = yaml.safe_load(f) or {}
+        for name, cdata in (file_cells or {}).items():
+            if name in external_cells:
                 raise ValidationError(format_fatal_error(
-                    _("duplicate template {name!r} across templates_file/template_files").format(name=name),
+                    _("duplicate cell {name!r} across templates_file/template_files").format(name=name),
                     [_("defined in more than one external templates file (templates_file "
                        "and/or an entry of template_files) — external files are meant to "
                        "be independent, a repeated name is far more likely a mistake than "
-                       "an intentional override; inline templates: in the config itself "
+                       "an intentional override; inline cells: in the config itself "
                        "CAN still override an external one, that is unaffected")]
                 ))
-            external_templates[name] = tdata
+            external_cells[name] = cdata
 
-    merged = dict(external_templates)
-    merged.update(templates_data)
-    templates_data = merged
+    merged = dict(external_cells)
+    merged.update(cells_data)
+    cells_data = merged
     if external_files:
-        logger.info(_("Templates from {files}: {count_ext}, plus inline: {count_inline}")
-                    .format(files=external_files, count_ext=len(external_templates),
-                            count_inline=len(data.get('templates', {}) or {})))
-    templates = {name: _load_spoke_template(name, tdata) for name, tdata in templates_data.items()}
+        logger.info(_("Cells from {files}: {count_ext}, plus inline: {count_inline}")
+                    .format(files=external_files, count_ext=len(external_cells),
+                            count_inline=len(data.get('cells', {}) or {})))
+    cells = {name: _load_cell(name, cdata) for name, cdata in cells_data.items()}
 
     rules = []
     for rule_data in data.get('rules', []):
@@ -422,8 +422,8 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
         rules.append(Rule(net=rule_net, spokes=spokes, anchor_ref=anchor_ref,
                           anchor_role=anchor_role, anchor_sheet=anchor_sheet,
                           anchor_cluster=anchor_cluster, name=rule_data.get('name'),
-                          enabled=rule_data.get('enabled', True),
-                          active=rule_data.get('active', True)))
+                          retired=rule_data.get('retired', False),
+                          skip=rule_data.get('skip', False)))
 
     # Fatal on collision: two rules resolving to the same --only identity
     # (same net, neither disambiguated with an explicit name) would silently
@@ -449,27 +449,27 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
 
     # Cross‑validation of layer/mirror
     for cp in clone_placements:
-        tpl = templates.get(cp.template)
-        if tpl is None:
+        cell = cells.get(cp.cell)
+        if cell is None:
             continue
-        placement_layer = cp.layer if cp.layer is not None else tpl.layer
-        layer_changed = placement_layer != tpl.layer
+        placement_layer = cp.layer if cp.layer is not None else cell.layer
+        layer_changed = placement_layer != cell.layer
         if cp.mirror and not layer_changed:
             raise ValidationError(format_fatal_error(
                 _("mirror without layer change in clone_placement {name!r}").format(name=cp.name),
-                [_("template {tpl!r} is on {tpl_layer}, placement layer is {place_layer} – "
+                [_("cell {cell!r} is on {cell_layer}, placement layer is {place_layer} – "
                    "mirror without changing side is physically meaningless: either set layer to "
                    "{opposite}, or remove mirror").format(
-                       tpl=cp.template, tpl_layer=tpl.layer, place_layer=placement_layer,
-                       opposite='B.Cu' if tpl.layer == 'F.Cu' else 'F.Cu')]
+                       cell=cp.cell, cell_layer=cell.layer, place_layer=placement_layer,
+                       opposite='B.Cu' if cell.layer == 'F.Cu' else 'F.Cu')]
             ))
         if layer_changed and not cp.mirror:
             raise ValidationError(format_fatal_error(
                 _("layer changed without mirror in clone_placement {name!r}").format(name=cp.name),
-                [_("template {tpl!r} is on {tpl_layer}, placement layer is {place_layer} – "
+                [_("cell {cell!r} is on {cell_layer}, placement layer is {place_layer} – "
                    "flipped footprints on non‑flipped sites are nonsense; add mirror: true, "
                    "or remove the layer override").format(
-                       tpl=cp.template, tpl_layer=tpl.layer, place_layer=placement_layer)]
+                       cell=cp.cell, cell_layer=cell.layer, place_layer=placement_layer)]
             ))
 
     schematic_dir = data.get('schematic_dir')
@@ -491,7 +491,7 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
 
     cfg = Config(
         layer=root_layer,
-        templates=templates,
+        cells=cells,
         thermal_via_array=thermal_via,
         rules=rules,
         clone_placements=clone_placements,
@@ -508,8 +508,8 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
         log_file=log_file,
     )
     total_spokes = sum(len(r.spokes) for r in cfg.rules)
-    logger.debug(_("Config loaded: layer={layer}, templates={tpl}, rules={rules}, spokes={spokes}, "
+    logger.debug(_("Config loaded: layer={layer}, cells={cells}, rules={rules}, spokes={spokes}, "
                    "clone_placements={clones}").format(
-                       layer=cfg.layer, tpl=len(cfg.templates), rules=len(cfg.rules),
+                       layer=cfg.layer, cells=len(cfg.cells), rules=len(cfg.rules),
                        spokes=total_spokes, clones=len(cfg.clone_placements)))
     return cfg, ctx

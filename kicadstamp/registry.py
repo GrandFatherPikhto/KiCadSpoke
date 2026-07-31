@@ -11,10 +11,10 @@ removed from YAML entirely).
 Composite key — anchor_id/template_name/role/index:
   anchor_id: f"pad:{spoke_pad}" for KiCadStamp (anchor = IC pad number).
              Future extension: f"ref:{anchor_ref}" for section cloning.
-  role: component role (unique within template, see config.py) for component‑level
+  role: component role (unique within a cell, see config.py) for component‑level
         vias/tracks, or None for spoke‑level vias/tracks.
   index: 0‑based index within the specific list (vias or tracks) — since roles
-         within a template are unique and the order of lists is stable between
+         within a cell are unique and the order of lists is stable between
          runs, this is sufficient without additional discrimination.
 
 CHANGED (after reports of "glitches mercilessly"): registry.json is now ONLY
@@ -203,13 +203,13 @@ class BaseRegistry(ABC, Generic[TEntry]):
         to an anchor_id that was NOT SEEN AT ALL this run (--only/--cluster
         excluded the whole item). If the item WAS processed this run (its
         anchor_id appears among seen_keys) but a SPECIFIC key under it is
-        missing from planned_cmds — e.g. its template's via/track list shrank
+        missing from planned_cmds — e.g. its cell's via/track list shrank
         or got reordered — that key is genuinely stale and must be pruned, not
         protected just because the item as a whole is still "known". Before
-        this distinction existed, editing a template's via/track list left the
+        this distinction existed, editing a cell's via/track list left the
         orphaned old entries stuck on the board forever (real case: 3 tracks
         from an earlier ldo_adj_subsystem revision, at indices no longer used
-        by the current template, never got cleaned up run after run).
+        by the current cell, never got cleaned up run after run).
         """
         to_create: list = []
         seen_keys = set()
@@ -258,7 +258,7 @@ class BaseRegistry(ABC, Generic[TEntry]):
             anchor_id = key.split('|', 1)[0]
             # anchor_id WAS seen this run -> the item itself was processed,
             # this specific key just isn't part of its current plan anymore
-            # (template edited) -> genuinely stale, prune below, known_anchor_ids
+            # (cell edited) -> genuinely stale, prune below, known_anchor_ids
             # does not apply here (see IMPORTANT note above).
             if (anchor_id not in seen_anchor_ids
                     and known_anchor_ids is not None

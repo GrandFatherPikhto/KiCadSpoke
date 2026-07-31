@@ -9,7 +9,7 @@ from kicadstamp.placement.services.clone_position_calculator import clone_anchor
 
 
 def _clone(**kwargs):
-    defaults = dict(name="c", template="t", origin_x_mm=0.0, origin_y_mm=0.0)
+    defaults = dict(name="c", cell="t", origin_x_mm=0.0, origin_y_mm=0.0)
     defaults.update(kwargs)
     return ClonePlacement(**defaults)
 

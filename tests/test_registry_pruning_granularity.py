@@ -2,11 +2,11 @@
 """
 Regression tests for the registry prune-granularity bug (found 2026-07-28):
 known_anchor_ids protected an entry from pruning whenever its anchor_id was
-still "known" (item still enabled in config) — even if the item WAS processed
+still "known" (item still not retired in config) — even if the item WAS processed
 this run and the specific key just wasn't part of its CURRENT plan any more
-(e.g. a template's via/track list shrank or got reordered after editing).
+(e.g. a cell's via/track list shrank or got reordered after editing).
 Real case: 3 stale tracks from an earlier ldo_adj_subsystem revision, at
-indices the current template no longer uses, stuck on the board forever.
+indices the current cell no longer uses, stuck on the board forever.
 
 Fix: known_anchor_ids only protects an anchor_id that was NOT seen at all this
 run (genuinely excluded by --only/--cluster) — not a stale key belonging to an
@@ -42,9 +42,9 @@ def _make_live_via(uuid_str, x_mm, y_mm, net_name="GND", drill_mm=0.3, diameter_
 
 def test_orphaned_key_within_a_processed_anchor_is_pruned():
     """anchor A is processed this run (produces key ...|0), but an OLD key
-    ...|5 under the SAME anchor_id is no longer part of its plan (template
+    ...|5 under the SAME anchor_id is no longer part of its plan (cell
     shrank) — must be pruned even though anchor A's anchor_id is in
-    known_anchor_ids (still enabled)."""
+    known_anchor_ids (still not retired)."""
     anchor_id = "role:C_OUT_BYPASS::In_Pi_Filter_Pos:1:9.0000:-3.0000"
     live_current = _make_live_via("uuid-current", 10.0, 10.0)
     live_orphan = _make_live_via("uuid-orphan", 99.0, 99.0)
@@ -69,7 +69,7 @@ def test_orphaned_key_within_a_processed_anchor_is_pruned():
         position=Vector2.from_xy(10 * MM, 10 * MM), drill_mm=0.3, diameter_mm=0.6,
         net_name="GND", owner_ref="C1", registry_key=f"{anchor_id}|tpl|__spoke__|0",
     )]
-    known_anchor_ids = {anchor_id}  # this clone is still enabled
+    known_anchor_ids = {anchor_id}  # this clone is still not retired
 
     to_create = registry.reconcile(planned, known_anchor_ids=known_anchor_ids)
 

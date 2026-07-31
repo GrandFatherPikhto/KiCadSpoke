@@ -1,6 +1,6 @@
 # kicadstamp/template_extraction.py
 """
-template_extraction.py — extracts a spoke template from the current selection
+template_extraction.py — extracts a spoke cell from the current selection
 on the board (not from sheet_path/schematic hierarchy — we decided that
 selection is more reliable and independent of hierarchical sheets).
 
@@ -28,7 +28,7 @@ Algorithm:
      to copy.
 
 Roles (Role field) MUST be unique within the selection — fatal error at
-extraction time, not only during later template loading.
+extraction time, not only during later cell loading.
 """
 import logging
 import re
@@ -208,7 +208,7 @@ def extract_template_from_selection(
 ) -> Dict[str, Any]:
     """
     Builds a dict {name: {vias: [...], components: [...], tracks: [...]}}
-    ready to be written to YAML under the 'templates' key. Fatal (ValidationError)
+    ready to be written to YAML under the 'cells' key. Fatal (ValidationError)
     if: nothing suitable is selected, a selected component has no Role field,
     or a role appears twice in the selection.
 
@@ -220,7 +220,7 @@ def extract_template_from_selection(
     explicit parameter, not inferred from whether anything is currently
     selected — same principle as ClonePlacement.by_selection (see
     config/models.py): an implicit mode switch here would risk silently
-    extracting the wrong thing if a stale selection happens to be active.
+    extracting the wrong thing if a stale selection happens to be present.
 
     params/net_template_map — both optional and only work as a pair
     (see --param/--net-template in kicadstamp_cli.py): net_template_map is an
@@ -274,12 +274,12 @@ def extract_template_from_selection(
 
     if ignored:
         logger.warning(_("{count} selected objects — not footprint, via, or track, "
-                         "ignored (template only supports these)").format(count=len(ignored)))
+                         "ignored (cell only supports these)").format(count=len(ignored)))
 
     tracks = _filter_tracks_within_selection(tracks_selected, footprints, vias, adapter) \
         if tracks_selected else []
     if len(tracks) < len(tracks_selected):
-        logger.info(_("Tracks in selection: {total}, taken into template: {kept} "
+        logger.info(_("Tracks in selection: {total}, taken into cell: {kept} "
                       "(the rest extend beyond the selection, see warning above)")
                     .format(total=len(tracks_selected), kept=len(tracks)))
 
@@ -319,7 +319,7 @@ def extract_template_from_selection(
     logger.info(_("Origin ({desc}): ({x:.3f}, {y:.3f}) mm")
                 .format(desc=origin_desc, x=origin.x/MM, y=origin.y/MM))
 
-    # Layers — FACT, absolute: template layer = majority layer of selection,
+    # Layers — FACT, absolute: cell layer = majority layer of selection,
     # components on it inherit without a field, deviating ones get an explicit
     # layer. No relative sides.
     from kipy.board_types import BoardLayer
@@ -328,10 +328,10 @@ def extract_template_from_selection(
     tpl_layer_str = 'B.Cu' if tpl_is_back else 'F.Cu'
     tpl_layer = BoardLayer.BL_B_Cu if tpl_is_back else BoardLayer.BL_F_Cu
     if 0 < back_count < len(footprints):
-        logger.info(_("Mixed selection: {back} on B.Cu, {front} on F.Cu; template layer = {layer}, "
+        logger.info(_("Mixed selection: {back} on B.Cu, {front} on F.Cu; cell layer = {layer}, "
                       "deviating components will have explicit layer")
                     .format(back=back_count, front=len(footprints)-back_count, layer=tpl_layer_str))
-    logger.info(_("Template layer: {layer}").format(layer=tpl_layer_str))
+    logger.info(_("Cell layer: {layer}").format(layer=tpl_layer_str))
 
     components = []
     for fp in footprints:
@@ -434,7 +434,7 @@ def extract_template_from_selection(
                              ex=end_along_mm, ey=end_across_mm, net=track_net,
                              layer=_(", layer={layer}").format(layer=entry['layer']) if 'layer' in entry else ""))
 
-    logger.info(_("Extracted template {name!r}: {comp} components, {vias} spoke‑level vias, {tracks} tracks")
+    logger.info(_("Extracted cell {name!r}: {comp} components, {vias} spoke‑level vias, {tracks} tracks")
                 .format(name=name, comp=len(components), vias=len(spoke_vias), tracks=len(spoke_tracks)))
     result = {"vias": spoke_vias, "components": components, "tracks": spoke_tracks, "layer": tpl_layer_str}
     return {name: result}
@@ -448,9 +448,9 @@ def render_uncertain_comments(yaml_text: str, name: str,
     line ("# field: hint") right after the component block for that role,
     scoped to the section under the top-level `name:` key only —
     cmd_extract's `existing` dict may hold OTHER, previously extracted
-    templates in the same output file, and a role from THIS extraction must
+    cells in the same output file, and a role from THIS extraction must
     never accidentally match a same-named role belonging to a different
-    template.
+    cell.
 
     Text-based, not a YAML-aware round-trip: the only producer of this text
     is our own yaml.dump(sort_keys=False, default_flow_style=False) call in

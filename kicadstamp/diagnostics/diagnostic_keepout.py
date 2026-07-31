@@ -55,9 +55,9 @@ def main():
 
     # Build keepout from IC pads and components (for diagnostics)
     tva = cfg.thermal_via_array
-    target_fp = adapter.get_footprint(tva.anchor_ref) if tva.enabled else None
+    target_fp = adapter.get_footprint(tva.anchor_ref) if not tva.retired else None
     if target_fp is None:
-        logger.info(_("Thermal vias disabled — keepout diagnostics skipped"))
+        logger.info(_("Thermal vias retired — keepout diagnostics skipped"))
         return
     keepout_rects = planner.via_planner._build_keepout(target_fp, planned_components)
     # Could also add existing vias to keepout? But for pad diagnostics it's enough.
@@ -99,7 +99,7 @@ def main():
         print(_("  via for {owner:6} ({x:7.3f}, {y:7.3f}) mm  -> {status}")
               .format(owner=via_cmd.owner_ref, x=pos.x/MM, y=pos.y/MM, status=status))
 
-    # Additionally: thermal vias (if enabled) – they are not yet in planned_vias, need separate handling
+    # Additionally: thermal vias (if not retired) – they are not yet in planned_vias, need separate handling
     # But for completeness we could call planner.plan_vias() and show thermal vias, but they might be
     # shifted due to keepout; leave as is for now.
 

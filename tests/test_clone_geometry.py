@@ -6,15 +6,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 from kipy.geometry import Vector2
-from kicadstamp.config import ClonePlacement, SpokeTemplate, TemplateVia, TemplateComponentSlot
+from kicadstamp.config import ClonePlacement, Cell, TemplateVia, TemplateComponentSlot
 from kicadstamp.geometry.clone_geometry import apply_clone_geometry
 from kicadstamp.exceptions import ValidationError
 
 MM = 1_000_000
 
 
-def _pi_filter_template() -> SpokeTemplate:
-    return SpokeTemplate(
+def _pi_filter_template() -> Cell:
+    return Cell(
         name="pi_filter",
         vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=-1.0, net="GND")],
         components=[
@@ -29,13 +29,13 @@ def _pi_filter_template() -> SpokeTemplate:
 
 class TestApplyCloneGeometry:
     def test_origin_is_direct_no_shift(self):
-        clone = ClonePlacement(name="filter1", template="pi_filter", origin_x_mm=50.0, origin_y_mm=50.0)
+        clone = ClonePlacement(name="filter1", cell="pi_filter", origin_x_mm=50.0, origin_y_mm=50.0)
         layout = apply_clone_geometry(clone, _pi_filter_template(), {"CAP_IN": "C10", "CAP_OUT": "C11"})
         assert layout.origin.x == int(50.0 * MM)
         assert layout.origin.y == int(50.0 * MM)
 
     def test_roles_mapped_and_angle_includes_rotation(self):
-        clone = ClonePlacement(name="filter1", template="pi_filter", origin_x_mm=50.0, origin_y_mm=50.0,
+        clone = ClonePlacement(name="filter1", cell="pi_filter", origin_x_mm=50.0, origin_y_mm=50.0,
                               rotation_deg=90.0)
         layout = apply_clone_geometry(clone, _pi_filter_template(), {"CAP_IN": "C10", "CAP_OUT": "C11"})
         cap_in = next(c for c in layout.components if c.role == "CAP_IN")
@@ -46,7 +46,7 @@ class TestApplyCloneGeometry:
         assert cap_out.angle_deg == 180.0 + 90.0
 
     def test_spoke_and_component_level_vias_both_resolved(self):
-        clone = ClonePlacement(name="filter1", template="pi_filter", origin_x_mm=0.0, origin_y_mm=0.0)
+        clone = ClonePlacement(name="filter1", cell="pi_filter", origin_x_mm=0.0, origin_y_mm=0.0)
         layout = apply_clone_geometry(clone, _pi_filter_template(), {"CAP_IN": "C10", "CAP_OUT": "C11"})
         assert len(layout.vias) == 1
         assert layout.vias[0].net == "GND"
@@ -55,32 +55,32 @@ class TestApplyCloneGeometry:
         assert cap_out.vias[0].net == "GND"
 
     def test_net_placeholder_resolved_via_params(self):
-        tpl = SpokeTemplate(name="dac", vias=[
+        tpl = Cell(name="dac", vias=[
             TemplateVia(offset_along_mm=0.0, offset_across_mm=0.0, net="DAC{channel}_DB1")
         ])
-        clone = ClonePlacement(name="dac2", template="dac", origin_x_mm=0.0, origin_y_mm=0.0,
+        clone = ClonePlacement(name="dac2", cell="dac", origin_x_mm=0.0, origin_y_mm=0.0,
                               params={"channel": 2})
         layout = apply_clone_geometry(clone, tpl, {})
         assert layout.vias[0].net == "DAC2_DB1"
 
     def test_net_overrides_applied(self):
-        tpl = SpokeTemplate(name="mcu", vias=[
+        tpl = Cell(name="mcu", vias=[
             TemplateVia(offset_along_mm=0.0, offset_across_mm=0.0, net="/STM32F4xx/BOOT0")
         ])
-        clone = ClonePlacement(name="mcu2", template="mcu", origin_x_mm=0.0, origin_y_mm=0.0,
+        clone = ClonePlacement(name="mcu2", cell="mcu", origin_x_mm=0.0, origin_y_mm=0.0,
                               net_overrides={"/STM32F4xx/BOOT0": "/STM32F4xx_2/BOOT0"})
         layout = apply_clone_geometry(clone, tpl, {})
         assert layout.vias[0].net == "/STM32F4xx_2/BOOT0"
 
     def test_via_without_net_raises_fatal(self):
         """Нет rule_net, на который можно упасть, в отличие от ManualSpoke — via без net фатальна."""
-        tpl = SpokeTemplate(name="bad", vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=0.0, net=None)])
-        clone = ClonePlacement(name="x", template="bad", origin_x_mm=0.0, origin_y_mm=0.0)
+        tpl = Cell(name="bad", vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=0.0, net=None)])
+        clone = ClonePlacement(name="x", cell="bad", origin_x_mm=0.0, origin_y_mm=0.0)
         with pytest.raises(ValidationError):
             apply_clone_geometry(clone, tpl, {})
 
     def test_role_without_resolved_ref_is_skipped(self):
-        clone = ClonePlacement(name="filter1", template="pi_filter", origin_x_mm=0.0, origin_y_mm=0.0)
+        clone = ClonePlacement(name="filter1", cell="pi_filter", origin_x_mm=0.0, origin_y_mm=0.0)
         layout = apply_clone_geometry(clone, _pi_filter_template(), {"CAP_IN": "C10"})  # CAP_OUT не разрешена
         assert len(layout.components) == 1
         assert layout.components[0].role == "CAP_IN"
@@ -88,13 +88,13 @@ class TestApplyCloneGeometry:
     # ---------- Новые тесты для mirror и anchor_position ----------
     def test_mirror_flips_geometry_and_angle(self):
         """Проверяем, что mirror=True зеркалирует X-координаты и меняет угол по формуле 180−φ."""
-        tpl = SpokeTemplate(
+        tpl = Cell(
             name="simple",
             components=[
                 TemplateComponentSlot(role="A", offset_along_mm=1.0, offset_across_mm=0.0, angle_deg=45.0)
             ]
         )
-        clone = ClonePlacement(name="mirror_test", template="simple", origin_x_mm=10.0, origin_y_mm=20.0,
+        clone = ClonePlacement(name="mirror_test", cell="simple", origin_x_mm=10.0, origin_y_mm=20.0,
                                rotation_deg=30.0)
         role_to_ref = {"A": "C1"}
 
@@ -117,8 +117,8 @@ class TestApplyCloneGeometry:
 
     def test_anchor_position_shifts_origin(self):
         """Если задан anchor_position, origin = anchor_position + (origin_x, origin_y) (плоский сдвиг)."""
-        tpl = SpokeTemplate(name="single", components=[TemplateComponentSlot(role="A")])
-        clone = ClonePlacement(name="anchor_test", template="single",
+        tpl = Cell(name="single", components=[TemplateComponentSlot(role="A")])
+        clone = ClonePlacement(name="anchor_test", cell="single",
                                origin_x_mm=5.0, origin_y_mm=7.0)
         anchor = Vector2.from_xy(int(100.0 * MM), int(200.0 * MM))
         layout = apply_clone_geometry(clone, tpl, {"A": "C1"}, anchor_position=anchor)

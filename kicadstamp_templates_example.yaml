@@ -1,7 +1,7 @@
 layer: B.Cu
 
 thermal_via_array:
-  enabled: true
+  retired: false
   name: ic1_thermal
   anchor_ref: IC1
   pad: '145'
@@ -27,7 +27,7 @@ thermal_via_array:
 # (спица и компонент). Координаты ВСЕГДА от нуля спицы (along/across),
 # даже для via внутри components -- не от пада самого компонента. net:
 # не указан (или null) -- берётся цепь правила (rule.net).
-templates:
+cells:
   cap_pair_standard:
     vias:                             # была единственная power_via
       - offset_along_mm: 0.0
@@ -65,7 +65,7 @@ rules:
   # Пад 109 -- поставьте в Eeschema поле Role=LIGHT/HEAVY на нужных
   # конденсаторах +1V2_VCCINT, дальше pool сам разберёт, кому какой борт.
   - pad: '109'
-    template: cap_pair_standard
+    cell: cap_pair_standard
     shift_x_mm: 0.0
     shift_y_mm: 0.0
     rotation_deg: 90.0
@@ -73,7 +73,7 @@ rules:
   # руками. Теперь -- просто другой rotation_deg, шаблон не меняется, и
   # никакого ref подбирать вручную не нужно -- пул сделает это сам.
   - pad: '62'
-    template: cap_pair_standard
+    cell: cap_pair_standard
     shift_x_mm: 0.4
     shift_y_mm: 0.0
     rotation_deg: 270.0

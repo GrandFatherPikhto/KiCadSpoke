@@ -5,10 +5,10 @@ clone_role_resolver.py — role‑to‑ref mapping for ClonePlacement, two indep
   1. By selection (resolve_roles_by_selection) — for rare, one‑off sections
      (e.g. a single MCU on the board). The user selects the components of a
      specific, not‑yet‑placed instance with the mouse. Symmetric check: every
-     role in the template must be found in the selection exactly once, and
-     conversely, no role in the selection may be absent from the template.
+     role in the cell must be found in the selection exactly once, and
+     conversely, no role in the selection may be absent from the cell.
 
-  2. By nets (resolve_roles_by_nets) — for repeated templates (PI‑filters, DAC
+  2. By nets (resolve_roles_by_nets) — for repeated cells (PI‑filters, DAC
      channels) where selection risks mixing up identical‑looking instances.
      The net for each role is: priority — explicit ClonePlacement.nets[role]
      (literal), otherwise TemplateComponentSlot.net_template (with placeholders,
@@ -25,7 +25,7 @@ from typing import Dict, List, Optional
 from kipy.board_types import FootprintInstance
 from kipy.geometry import Vector2
 
-from ...config import SpokeTemplate, ClonePlacement
+from ...config import Cell, ClonePlacement
 from ...exceptions import ValidationError, format_fatal_error
 from ...net_resolution import resolve_net, resolve_placeholder
 from ...utils.units import MM
@@ -169,7 +169,7 @@ def _narrow_by_sheet_cluster_selection(
     return narrowed
 
 
-def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePlacement,
+def resolve_roles_by_selection(adapter, cell: Cell, clone: ClonePlacement,
                                anchor_position: Optional[Vector2] = None,
                                sheet_names: Optional[Dict[str, str]] = None) -> Dict[str, str]:
     """
@@ -190,7 +190,7 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePla
     selected_refs = {fp.reference_field.text.value for fp in footprints}
     clone_name = clone.name
 
-    template_roles = {slot.role for slot in template.components}
+    cell_roles = {slot.role for slot in cell.components}
 
     role_to_ref: Dict[str, str] = {}
     problems: List[str] = []
@@ -201,10 +201,10 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePla
         if role is None:
             problems.append(_("{ref}: no {field!r} field").format(ref=ref, field=ROLE_FIELD_NAME))
             continue
-        if role not in template_roles:
-            problems.append(_("{ref}: role {role!r} is not in the template "
-                              "(template roles: {roles})")
-                            .format(ref=ref, role=role, roles=sorted(template_roles)))
+        if role not in cell_roles:
+            problems.append(_("{ref}: role {role!r} is not in the cell "
+                              "(cell roles: {roles})")
+                            .format(ref=ref, role=role, roles=sorted(cell_roles)))
             continue
         if role in role_to_ref:
             problems.append(_("role {role!r} appears twice in selection: {ref1!r} and {ref2!r}")
@@ -212,7 +212,7 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePla
             continue
         role_to_ref[role] = ref
 
-    missing = template_roles - set(role_to_ref.keys())
+    missing = cell_roles - set(role_to_ref.keys())
     if missing:
         all_fps_by_role: Dict[str, list] = {}
         for fp in adapter.get_footprints():
@@ -223,7 +223,7 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePla
         for role in sorted(missing):
             candidates = all_fps_by_role.get(role, [])
             if not candidates:
-                problems.append(_("role {role!r} is in template but not found anywhere on board")
+                problems.append(_("role {role!r} is in cell but not found anywhere on board")
                                 .format(role=role))
                 continue
             if len(candidates) == 1:
@@ -240,14 +240,14 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePla
                 role_to_ref[role] = narrowed[0].reference_field.text.value
             else:
                 refs = sorted(fp.reference_field.text.value for fp in narrowed)
-                problems.append(_("role {role!r} is in template, not found in selection, and ambiguous on board "
+                problems.append(_("role {role!r} is in cell, not found in selection, and ambiguous on board "
                                   "({count} candidates: {refs}){note} — set anchor_cluster, OR select the "
                                   "desired instance on the board before running")
                                 .format(role=role, count=len(narrowed), refs=refs, note=note))
 
     if problems:
         raise ValidationError(format_fatal_error(
-            _("selection does not match template composition ({name!r})").format(name=clone_name),
+            _("selection does not match cell composition ({name!r})").format(name=clone_name),
             problems
         ))
 
@@ -255,7 +255,7 @@ def resolve_roles_by_selection(adapter, template: SpokeTemplate, clone: ClonePla
     return role_to_ref
 
 
-def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacement,
+def resolve_roles_by_nets(adapter, cell: Cell, clone: ClonePlacement,
                           anchor_position: Optional[Vector2] = None,
                           sheet_names: Optional[Dict[str, str]] = None) -> Dict[str, str]:
     """
@@ -316,9 +316,9 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
 
     # --- step 0: explicit refs ---
     for role, ref in clone.refs.items():
-        if role not in {s.role for s in template.components}:
-            problems.append(_("refs: role {role!r} does not exist in template {template!r}")
-                            .format(role=role, template=template.name))
+        if role not in {s.role for s in cell.components}:
+            problems.append(_("refs: role {role!r} does not exist in cell {cell!r}")
+                            .format(role=role, cell=cell.name))
             continue
         fp = fps_by_ref.get(ref)
         if fp is None:
@@ -330,7 +330,7 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
                     .format(name=clone.name, role=role, ref=ref))
 
     # --- first pass: unambiguous by Role+net ---
-    for slot in template.components:
+    for slot in cell.components:
         role = slot.role
         if role in role_to_ref:
             continue
@@ -341,7 +341,7 @@ def resolve_roles_by_nets(adapter, template: SpokeTemplate, clone: ClonePlacemen
             net_template = slot.net_template
         else:
             problems.append(_("role {role!r}: no net for mapping (neither in nets "
-                              "of {name!r}, nor in template net_template) — in 'by nets' "
+                              "of {name!r}, nor in cell net_template) — in 'by nets' "
                               "mode, a net is required for every role")
                             .format(role=role, name=clone.name))
             continue
@@ -431,8 +431,8 @@ def resolve_footprint_by_role(adapter, anchor_role: str, anchor_sheet: Optional[
                               label: str) -> FootprintInstance:
     """
     Resolves ANY anchor component by anchor_role (Role field on the board,
-    NOT a template role — this is different: here we search for the anchor itself
-    among ALL footprints on the board, not roles inside the cloned template).
+    NOT a cell role — this is different: here we search for the anchor itself
+    among ALL footprints on the board, not roles inside the cloned cell).
     Not tied to ClonePlacement — used both by it (resolve_anchor_by_role below,
     thin wrapper) and by Rule (see manual_position_calculator.py) for anchor_role
     in spoke paths. The same ambiguity narrowing cascade:

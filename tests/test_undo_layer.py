@@ -59,8 +59,8 @@ class TestOriginalLayerCapture:
 
         cfg = Config(
             layer='B.Cu',
-            templates={},
-            thermal_via_array=ThermalViaArrayConfig(enabled=False),
+            cells={},
+            thermal_via_array=ThermalViaArrayConfig(retired=True),
             rules=[],
             clone_placements=[],
         )

@@ -43,7 +43,7 @@ def load_profile(profiles_path: str, top_key: str, profile_name: str,
     to top_key, e.g. output: next to extract_profiles:) and not already set
     on the selected profile itself, are merged in as a fallback.  For fields
     that are almost always the same across every profile in the file (e.g.
-    every extract_profiles entry for one board writes into the same template
+    every extract_profiles entry for one board writes into the same cells
     file) — set it once at the root instead of repeating it per profile; a
     profile that genuinely needs a different value still overrides it as
     before, just by setting the field directly.  Empty/None (default) — no
@@ -79,7 +79,7 @@ def load_profile(profiles_path: str, top_key: str, profile_name: str,
 
 
 def cmd_extract(args) -> None:
-    """Extract a spoke template from the current selection on the board."""
+    """Extract a spoke cell from the current selection on the board."""
     logger = logging.getLogger(__name__)
     logger.info(_("Connecting to KiCad (timeout {timeout} ms)").format(timeout=args.timeout_ms))
     adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
@@ -103,8 +103,8 @@ def cmd_extract(args) -> None:
             sys.exit(_("[error] profile {profile!r} missing required field {field!r}")
                      .format(profile=args.profile, field="output"))
         # name: defaults to the profile's own key — only set it explicitly when
-        # the template name must differ from the profile name (e.g. several
-        # profiles feeding the same shared template, like cap_pair_standard).
+        # the cell name must differ from the profile name (e.g. several
+        # profiles feeding the same shared cell, like cap_pair_standard).
         name = prof.get("name", args.profile)
         output = prof["output"]
         params = dict(prof.get("params", {}) or {})
@@ -120,7 +120,7 @@ def cmd_extract(args) -> None:
         output = args.output
         if not name:
             try:
-                name = input(_("Template name (key under templates:): ")).strip()
+                name = input(_("Cell name (key under cells:): ")).strip()
             except EOFError:
                 name = ""
         if not name or not output:

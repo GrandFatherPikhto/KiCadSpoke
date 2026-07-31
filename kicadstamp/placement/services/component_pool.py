@@ -1,6 +1,6 @@
 # kicadstamp/placement/services/component_pool.py
 """
-component_pool.py — selects concrete components for template roles by
+component_pool.py — selects concrete components for cell roles by
 (real net, custom Role field), not by explicit ref in config.
 
 The pool is built once per rule net and shared among ALL spokes of that rule —
@@ -88,7 +88,7 @@ class ComponentPool:
         candidates = self._pools.get(role)
         if candidates is None:
             raise ValidationError(
-                _("\nSpoke template (pad {pad}) requires role {role!r}, "
+                _("\nCell (pad {pad}) requires role {role!r}, "
                   "but the pool for net {net!r} does not know this role at all "
                   "(check the list of roles passed when building the pool).")
                 .format(pad=spoke_pad, role=role, net=self.net_name)

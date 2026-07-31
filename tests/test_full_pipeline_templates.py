@@ -17,7 +17,7 @@ from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
+    Config, ThermalViaArrayConfig, ManualSpoke, Cell,
     TemplateVia, TemplateComponentSlot, Rule
 )
 from kicadstamp.placement.planner import PlacementPlanner
@@ -54,7 +54,7 @@ def _make_cap_fp(ref, net_name, role):
 
 
 def _build_config():
-    template = SpokeTemplate(
+    cell = Cell(
         name="cap_pair_standard",
         vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=-1.5, drill_mm=0.3, diameter_mm=0.6)],
         components=[
@@ -72,14 +72,14 @@ def _build_config():
             ),
         ],
     )
-    spoke_109 = ManualSpoke(pad="109", template="cap_pair_standard",
+    spoke_109 = ManualSpoke(pad="109", cell="cap_pair_standard",
                            shift_x_mm=0.0, shift_y_mm=0.0, rotation_deg=90.0)
-    spoke_62 = ManualSpoke(pad="62", template="cap_pair_standard",
+    spoke_62 = ManualSpoke(pad="62", cell="cap_pair_standard",
                           shift_x_mm=0.4, shift_y_mm=0.0, rotation_deg=270.0)
     cfg = Config(
         layer='B.Cu',
-        templates={"cap_pair_standard": template},
-        thermal_via_array=ThermalViaArrayConfig(enabled=False),
+        cells={"cap_pair_standard": cell},
+        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[Rule(net="+1V2_VCCINT", anchor_ref='IC1', spokes=[spoke_109, spoke_62])],
         via_keepout_clearance_mm=0.2, via_search_step_mm=0.1,
         via_search_max_radius_mm=3.0, via_search_n_directions=8,
@@ -175,7 +175,7 @@ class TestFullPipelineWithTemplates:
         assert len(component_level) == 4  # one per component
 
         for v in spoke_level:
-            assert v.net_name == "+1V2_VCCINT"  # net=None in template → rule.net
+            assert v.net_name == "+1V2_VCCINT"  # net=None in cell → rule.net
         for v in component_level:
             assert v.net_name == "GND"
 
@@ -187,5 +187,5 @@ class TestFullPipelineWithTemplates:
                 assert SPOKE_LEVEL_ROLE_PLACEHOLDER in v.registry_key
             else:
                 # component‑level vias should contain the role name (HEAVY/LIGHT)
-                # In this test the role is hard‑coded in the template; we check that the key contains "HEAVY" or "LIGHT"
+                # In this test the role is hard‑coded in the cell; we check that the key contains "HEAVY" or "LIGHT"
                 assert any(role in v.registry_key for role in ("HEAVY", "LIGHT"))

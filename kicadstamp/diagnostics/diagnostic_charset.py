@@ -11,7 +11,7 @@ switched to Russian while editing the field value in Eeschema. Visually
 indistinguishable in almost any font, but breaks exact role matching
 (component_pool.py/clone_role_resolver.py compare Role strictly byte‑wise) —
 a component with such a typo is not found by any rule that expects the
-"correct" (Latin) role, and conversely, if you rename it in the template to
+"correct" (Latin) role, and conversely, if you rename it in the cell to
 Cyrillic — the typo is almost impossible to reproduce manually; it is only
 detected by diffing character codes.
 

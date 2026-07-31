@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Tests for templates_file/template_files (kicadstamp/config/loader.py) —
-external raw-shaped ({name: {...}}, no 'templates:' wrapper) template files,
+external raw-shaped ({name: {...}}, no 'cells:' wrapper) cell files,
 independent of include: (see test_config_includes.py for that mechanism)."""
 import sys
 from pathlib import Path
@@ -26,7 +26,7 @@ def test_single_templates_file_still_works(tmp_path):
     root.write_text("templates_file: ext.yaml\n", encoding="utf-8")
 
     cfg, _ = load_config(str(root))
-    assert set(cfg.templates.keys()) == {"tpl_a"}
+    assert set(cfg.cells.keys()) == {"tpl_a"}
 
 
 def test_multiple_template_files_merge(tmp_path):
@@ -40,7 +40,7 @@ template_files:
 """, encoding="utf-8")
 
     cfg, _ = load_config(str(root))
-    assert set(cfg.templates.keys()) == {"tpl_a", "tpl_b"}
+    assert set(cfg.cells.keys()) == {"tpl_a", "tpl_b"}
 
 
 def test_templates_file_and_template_files_combined(tmp_path):
@@ -54,7 +54,7 @@ template_files:
 """, encoding="utf-8")
 
     cfg, _ = load_config(str(root))
-    assert set(cfg.templates.keys()) == {"tpl_single", "tpl_a"}
+    assert set(cfg.cells.keys()) == {"tpl_single", "tpl_a"}
 
 
 def test_duplicate_name_across_template_files_is_fatal(tmp_path):
@@ -67,7 +67,7 @@ template_files:
   - b.yaml
 """, encoding="utf-8")
 
-    with pytest.raises(ValidationError, match="duplicate template 'dup'"):
+    with pytest.raises(ValidationError, match="duplicate cell 'dup'"):
         load_config(str(root))
 
 
@@ -81,17 +81,17 @@ template_files:
   - a.yaml
 """, encoding="utf-8")
 
-    with pytest.raises(ValidationError, match="duplicate template 'dup'"):
+    with pytest.raises(ValidationError, match="duplicate cell 'dup'"):
         load_config(str(root))
 
 
-def test_inline_templates_overrides_external(tmp_path):
+def test_inline_cells_override_external(tmp_path):
     (tmp_path / "a.yaml").write_text(ONE_ROLE.format(name="tpl_a", role="EXTERNAL_ROLE"), encoding="utf-8")
     root = tmp_path / "root.yaml"
     root.write_text("""
 template_files:
   - a.yaml
-templates:
+cells:
   tpl_a:
     components:
       - role: INLINE_ROLE
@@ -101,7 +101,7 @@ templates:
 """, encoding="utf-8")
 
     cfg, _ = load_config(str(root))
-    assert cfg.templates["tpl_a"].components[0].role == "INLINE_ROLE"
+    assert cfg.cells["tpl_a"].components[0].role == "INLINE_ROLE"
 
 
 def test_template_files_not_a_list_is_fatal(tmp_path):

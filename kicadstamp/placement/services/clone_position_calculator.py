@@ -2,7 +2,7 @@
 """
 clone_position_calculator.py — counterpart to manual_position_calculator.py, but
 for ClonePlacement (TemplatePlacer). The two calculators share no base class
-because they work fundamentally differently (pad‑anchored spokes vs template‑
+because they work fundamentally differently (pad‑anchored spokes vs cell‑
 based section cloning), so they have independent signatures.
 
 anchor_id for the registry (see registry.py) is built from PHYSICAL binding
@@ -19,7 +19,7 @@ from typing import List, Tuple, Optional
 from kipy.geometry import Vector2
 from kipy.board_types import BoardLayer
 
-from ...config import Config, ClonePlacement, SpokeTemplate, TemplateComponentSlot
+from ...config import Config, ClonePlacement, Cell, TemplateComponentSlot
 from ...exceptions import ValidationError, format_fatal_error
 from ...kicad.adapter import KiCadBoardAdapter
 from ...geometry.clone_geometry import apply_clone_geometry
@@ -73,7 +73,7 @@ def clone_anchor_id(clone: ClonePlacement) -> str:
     physical anchor point and differ only by this flat offset — e.g. a positive
     and a negative power-filter instance both anchored to the same connector
     pad, mirrored to opposite sides. Without the offset in the key, both
-    resolved to the identical registry identity, so enabling the second one
+    resolved to the identical registry identity, so placing the second one
     made the registry think its vias/tracks had merely "moved" and dragged the
     first instance's already-placed items onto itself instead of creating
     independent ones. check_no_duplicate_clone_anchors (validation.py) uses
@@ -153,29 +153,29 @@ class ClonePositionCalculator:
         tracks_result: List[TrackCommand] = []
 
         for clone in clone_placements:
-            if not clone.enabled:
+            if clone.retired:
                 continue
 
-            if clone.template is not None:
-                template = self.cfg.templates.get(clone.template)
-                if template is None:
-                    logger.warning(_("{name}: template {template!r} not found in templates, skipping")
-                                   .format(name=clone.name, template=clone.template))
+            if clone.cell is not None:
+                cell = self.cfg.cells.get(clone.cell)
+                if cell is None:
+                    logger.warning(_("{name}: cell {cell!r} not found in cells, skipping")
+                                   .format(name=clone.name, cell=clone.cell))
                     continue
-                template_name = clone.template
+                cell_name = clone.cell
             else:
-                # role: instead of template — single‑component placement without
-                # a separate template file (see discussion: creating a template
+                # role: instead of cell — single‑component placement without
+                # a separate cell file (see discussion: creating a cell
                 # entry just for one role with no via/track is cumbersome).
-                # Synthesise a temporary SpokeTemplate on the fly (cheap — one
+                # Synthesise a temporary Cell on the fly (cheap — one
                 # component, no caching needed).
-                template = SpokeTemplate(
+                cell = Cell(
                     name=f"__role__{clone.role}",
                     components=[TemplateComponentSlot(
                         role=clone.role, offset_along_mm=0.0, offset_across_mm=0.0, angle_deg=0.0,
                     )],
                 )
-                template_name = template.name
+                cell_name = cell.name
 
             # Resolve anchor BEFORE role resolution — needed for physical
             # proximity narrowing (resolve_roles_by_nets), and the same anchor
@@ -190,11 +190,11 @@ class ClonePositionCalculator:
                 # Explicit decision outside, not automatic inside the resolver
                 # (see clone_role_resolver.py).
                 if clone_uses_selection_mode(clone):
-                    role_to_ref = resolve_roles_by_selection(self.adapter, template, clone,
+                    role_to_ref = resolve_roles_by_selection(self.adapter, cell, clone,
                                                               anchor_position=anchor_position,
                                                               sheet_names=self.sheet_names)
                 else:
-                    role_to_ref = resolve_roles_by_nets(self.adapter, template, clone,
+                    role_to_ref = resolve_roles_by_nets(self.adapter, cell, clone,
                                                          anchor_position=anchor_position,
                                                          sheet_names=self.sheet_names)
 
@@ -202,12 +202,12 @@ class ClonePositionCalculator:
             # mirror — explicit manual operation; correctness of layer/mirror pair
             # is already fatal‑checked in load_config.
             mirror = clone.mirror
-            # Template is assumed to be front; back = mirror (see apply_clone_geometry)
-            layout = apply_clone_geometry(clone, template, role_to_ref,
+            # Cell is assumed to be front; back = mirror (see apply_clone_geometry)
+            layout = apply_clone_geometry(clone, cell, role_to_ref,
                                           anchor_position=anchor_position,
                                           mirror=mirror)
-            logger.info(_("  [{name}] template {tpl!r} on {layer}{mirror_suffix}")
-                        .format(name=clone.name, tpl=template.name, layer=template.layer,
+            logger.info(_("  [{name}] cell {tpl!r} on {layer}{mirror_suffix}")
+                        .format(name=clone.name, tpl=cell.name, layer=cell.layer,
                                 mirror_suffix=_(" -> mirrored as a whole") if mirror else _(" -> as written")))
             anchor_id = clone_anchor_id(clone)
 
@@ -215,7 +215,7 @@ class ClonePositionCalculator:
                 vias_result.append(ViaCommand(
                     position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
                     net_name=via.net, owner_ref=clone.name,
-                    registry_key=make_registry_key(anchor_id, template_name, None, via_index),
+                    registry_key=make_registry_key(anchor_id, cell_name, None, via_index),
                 ))
                 logger.debug(_("  [{name}] spoke‑level via: ({x:.3f}, {y:.3f}) mm, net={net}")
                              .format(name=clone.name, x=via.position.x/1e6,
@@ -226,7 +226,7 @@ class ClonePositionCalculator:
                 tracks_result.append(TrackCommand(
                     start=track.start, end=track.end, width_mm=track.width_mm,
                     net_name=track.net, layer=track_layer, owner_ref=clone.name,
-                    registry_key=make_registry_key(anchor_id, template_name, None, track_index),
+                    registry_key=make_registry_key(anchor_id, cell_name, None, track_index),
                 ))
                 logger.debug(_("  [{name}] track: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
                                "net={net}, layer={layer}")
@@ -235,10 +235,10 @@ class ClonePositionCalculator:
                                      net=track.net, layer=track.layer))
 
             for comp_layout in layout.components:
-                # Slot layer: its own absolute or inherited from template;
+                # Slot layer: its own absolute or inherited from the cell;
                 # mirror inverts ALL layers — the construction is flipped as a
                 # physical object.
-                slot_layer = comp_layout.slot_layer or template.layer
+                slot_layer = comp_layout.slot_layer or cell.layer
                 if mirror:
                     slot_layer = 'F.Cu' if slot_layer == 'B.Cu' else 'B.Cu'
                 comp_layer = BoardLayer.BL_B_Cu if slot_layer == 'B.Cu' else BoardLayer.BL_F_Cu
@@ -256,7 +256,7 @@ class ClonePositionCalculator:
                     vias_result.append(ViaCommand(
                         position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
                         net_name=via.net, owner_ref=comp_layout.ref,
-                        registry_key=make_registry_key(anchor_id, template_name, comp_layout.role, via_index),
+                        registry_key=make_registry_key(anchor_id, cell_name, comp_layout.role, via_index),
                     ))
 
         return components_result, vias_result, tracks_result

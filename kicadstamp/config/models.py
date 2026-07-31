@@ -1,6 +1,6 @@
 # kicadstamp/config/models.py
 """
-config/models.py — all configuration dataclasses (templates, ClonePlacement,
+config/models.py — all configuration dataclasses (cells, ClonePlacement,
 Rule, Config, etc.) WITHOUT any YAML loading/validation logic — this is purely
 a description of the data shape. Loading is in config/loader.py.
 
@@ -26,15 +26,15 @@ class ThermalViaArrayConfig:
     Python (bypassing the YAML loader) don't need a name — the requirement
     applies ONLY to human input via YAML, not to the data structure itself.
 
-    active — orthogonal to enabled (default True). enabled: false means "does
+    skip — orthogonal to retired (default False). retired: true means "does
     not exist on the board" (registry pruned, see drop_disabled_rules/
-    known_anchor_ids in kicadstamp_cli.py). active: false means "skip this
-    run only" — same effect as being excluded by --only/--cluster, but
+    known_anchor_ids in kicadstamp/apply_pipeline.py). skip: true means "skip
+    this run only" — same effect as being excluded by --only/--cluster, but
     written inline instead of on the command line: existing via/tracks stay
     protected in the registry (still counted in known_anchor_ids), just not
-    (re)planned this run. See drop_inactive_items in kicadstamp_cli.py.
+    (re)planned this run. See drop_inactive_items in kicadstamp/apply_pipeline.py.
     """
-    enabled: bool = False
+    retired: bool = False
     anchor_ref: Optional[str] = None
     anchor_role: Optional[str] = None
     anchor_sheet: Optional[str] = None
@@ -48,7 +48,7 @@ class ThermalViaArrayConfig:
     drill_mm: float = 0.3
     diameter_mm: float = 0.5
     name: Optional[str] = None
-    active: bool = True
+    skip: bool = False
 
 
 def thermal_via_array_effective_name(tva: "ThermalViaArrayConfig") -> Optional[str]:
@@ -61,7 +61,7 @@ def thermal_via_array_effective_name(tva: "ThermalViaArrayConfig") -> Optional[s
 @dataclass
 class TemplateVia:
     """
-    Via slot in a template — coordinates are ALWAYS along/across from the SPOKE
+    Via slot in a cell — coordinates are ALWAYS along/across from the SPOKE
     origin (not from the component pad, even if the slot belongs to a specific
     component role) — same formula (local_to_absolute) as for the component
     position. net=None means "use the rule net" (rule.net).
@@ -69,7 +69,7 @@ class TemplateVia:
     CHANGED (KiCadStamp): previously power_via was the only field at the spoke
     level, while the GND via of a component was computed from the REAL pad of
     the already‑placed component (required reading the live board after commit).
-    Now both concepts are the same slot — pure template geometry, independent
+    Now both concepts are the same slot — pure cell geometry, independent
     of the live board. There can be any number of lists at both levels
     (spoke.vias and component.vias).
     """
@@ -83,9 +83,9 @@ class TemplateVia:
 @dataclass
 class TemplateComponentSlot:
     """
-    One component slot in a template — a role ('HEAVY'/'LIGHT'/'XTAL'/
+    One component slot in a cell — a role ('HEAVY'/'LIGHT'/'XTAL'/
     'LOAD_CAP_1', etc.), not a specific ref. Roles MUST be unique within a
-    single template (checked fatally during loading, see _load_spoke_template).
+    single cell (checked fatally during loading, see _load_cell).
     The actual ref is selected during placement from the component pool:
     all footprints whose REAL pad sits on the rule net (rule.net) and whose
     custom Role field matches this role (see placement/services/component_pool.py).
@@ -105,18 +105,18 @@ class TemplateComponentSlot:
     vias: List[TemplateVia] = field(default_factory=list)
     net_template: Optional[str] = None
     # Layer of the slot — FACT, absolute: 'F.Cu' | 'B.Cu'. None = inherit from
-    # template layer. Written by extract only for components that deviate from
-    # the template layer.
+    # cell layer. Written by extract only for components that deviate from
+    # the cell layer.
     layer: Optional[str] = None
 
 
 @dataclass
 class TemplateTrack:
     """
-    Straight copper track segment in the template — same local coordinate
+    Straight copper track segment in the cell — same local coordinate
     system (along/across from spoke origin) as TemplateVia. No association with
     roles/pads: like a via, a track has no user fields, so we trust geometry
-    (all template elements are moved/rotated/mirrored by the same formula,
+    (all cell elements are moved/rotated/mirrored by the same formula,
     see geometry/clone_geometry.py).
 
     A polyline is simply MULTIPLE TemplateTrack segments in sequence, joined
@@ -136,25 +136,25 @@ class TemplateTrack:
     width_mm: float = 0.25
     net: Optional[str] = None
     # Layer — same pattern as TemplateComponentSlot.layer: None = inherit from
-    # template layer, when mirroring it is inverted by the same rule.
+    # cell layer, when mirroring it is inverted by the same rule.
     layer: Optional[str] = None
 
 
 @dataclass
-class SpokeTemplate:
+class Cell:
     """
-    Spoke template — all geometry is local and rotation‑invariant: described
-    once at rotation_deg=0 (the reference board orientation), then each actual
-    spoke rotates it as a whole. Any list may be empty — e.g. a spoke with no
-    vias, or a template with just one component.
+    Cell — all geometry is local and rotation‑invariant:
+    described once at rotation_deg=0 (the reference board orientation), then
+    each actual spoke rotates it as a whole. Any list may be empty — e.g. a
+    spoke with no vias, or a cell with just one component.
     """
     name: str
     vias: List[TemplateVia] = field(default_factory=list)
     components: List[TemplateComponentSlot] = field(default_factory=list)
     tracks: List[TemplateTrack] = field(default_factory=list)
-    # Template layer — FACT, absolute: 'F.Cu' | 'B.Cu', as extracted
+    # Cell layer — FACT, absolute: 'F.Cu' | 'B.Cu', as extracted
     # (written automatically). Components without their own layer inherit it.
-    # No automatic guesswork: the template is placed verbatim; to flip the whole
+    # No automatic guesswork: the cell is placed verbatim; to flip the whole
     # thing, use explicit mirror on the placement.
     layer: str = 'F.Cu'
 
@@ -166,25 +166,25 @@ class ManualSpoke:
     rotation_deg are ALWAYS in KiCad board coordinates (not local), tuned
     visually for the specific board. Order: first shift (shift_x, shift_y) from
     the pad centre to the spoke origin, then rotation of the resulting origin
-    (and all template contents) by rotation_deg.
+    (and all cell contents) by rotation_deg.
 
     IMPORTANT: no component refs here anymore — concrete components are
     automatically selected from the pool (see placement/services/component_pool.py)
     by matching the actual rule net (rule.net) and the custom Role field on the
     component, in the order of spokes in this list.
 
-    active — see ThermalViaArrayConfig.active for the enabled-vs-active
-    distinction; here it lets you narrow work down to a single spoke within a
-    rule without touching enabled (which would prune its registry entries).
+    skip — see ThermalViaArrayConfig.skip for the retired-vs-skip distinction;
+    here it lets you narrow work down to a single spoke within a rule without
+    touching retired (which would prune its registry entries).
     """
     pad: str
-    template: str
+    cell: str
     shift_x_mm: float = 0.0
     shift_y_mm: float = 0.0
     rotation_deg: float = 0.0
-    enabled: bool = True
+    retired: bool = False
     cluster: Optional[str] = None
-    active: bool = True
+    skip: bool = False
 
 
 @dataclass
@@ -202,18 +202,18 @@ class Rule:
     loader fatals if two rules resolve to the same effective name (see
     config/loader.py) — add a distinguishing name: to one of them.
 
-    enabled — whole‑rule switch (default True), same convention as
-    ManualSpoke.enabled/ClonePlacement.enabled/ThermalViaArrayConfig.enabled.
-    Always wins over --only/--cluster: a disabled rule is dropped before any
+    retired — whole‑rule switch (default False), same convention as
+    ManualSpoke.retired/ClonePlacement.retired/ThermalViaArrayConfig.retired.
+    Always wins over --only/--cluster: a retired rule is dropped before any
     CLI selection is applied, it cannot be resurrected by naming it explicitly
-    on the command line — enabled: false means "does not exist on the board
+    on the command line — retired: true means "does not exist on the board
     right now", not "excluded from this particular run".
 
-    active — see ThermalViaArrayConfig.active. Unlike enabled, active: false
-    does NOT prune this rule's via/tracks from the registry, it only skips
+    skip — see ThermalViaArrayConfig.skip. Unlike retired, skip: true does
+    NOT prune this rule's via/tracks from the registry, it only skips
     (re)planning them this run — the inline, per-item equivalent of --only/
     --cluster, for narrowing work without retyping CLI flags each time (see
-    drop_inactive_items in kicadstamp_cli.py, added 2026-07-29).
+    drop_inactive_items in kicadstamp/apply_pipeline.py, added 2026-07-29).
     """
     net: str
     spokes: List[ManualSpoke]
@@ -222,8 +222,8 @@ class Rule:
     anchor_sheet: Optional[str] = None
     anchor_cluster: Optional[str] = None
     name: Optional[str] = None
-    enabled: bool = True
-    active: bool = True
+    retired: bool = False
+    skip: bool = False
 
 
 def rule_effective_name(rule: "Rule") -> str:
@@ -235,14 +235,14 @@ def rule_effective_name(rule: "Rule") -> str:
 @dataclass
 class ClonePlacement:
     """
-    Applying a template at a new location (TemplatePlacer/Cloner) — unlike
+    Applying a cell at a new location (TemplatePlacer/Cloner) — unlike
     ManualSpoke (anchor = IC pad), the anchor here is just a name, not tied to
     any specific component (anchor_id in registry = f"name:{name}"). Two
     positioning modes:
       - anchor_ref set: origin = centre of anchor_pad (or footprint centre if
         anchor_pad omitted), origin_x_mm/origin_y_mm is an optional FLAT shift
         from the anchor (without rotation, like shift in ManualSpoke),
-        rotation_deg rotates only the template contents.
+        rotation_deg rotates only the cell contents.
       - anchor_ref not set: origin_x_mm/origin_y_mm is an ABSOLUTE point on
         the board (required).
 
@@ -252,16 +252,15 @@ class ClonePlacement:
     channels). Presence of params OR nets means "by nets" mode; absence means
     "by selection".
 
-    template OR role (mutually exclusive, exactly one required):
-      - template: as before, reference to a SpokeTemplate from cfg.templates.
+    cell OR role (mutually exclusive, exactly one required):
+      - cell: reference to a Cell from cfg.cells.
       - role: for a ONE‑COMPONENT placement without a single via/track —
-        creating a separate template file just for one role is cumbersome.
-        ClonePositionCalculator synthesises a temporary SpokeTemplate "on the fly"
-        (one component with that role at (0,0), angle 0) — templates: in YAML
+        creating a separate cell file just for one role is cumbersome.
+        ClonePositionCalculator synthesises a temporary Cell "on the fly"
+        (one component with that role at (0,0), angle 0) — cells: in YAML
         is not touched.
 
-    active — see ThermalViaArrayConfig.active for the enabled-vs-active
-    distinction.
+    skip — see ThermalViaArrayConfig.skip for the retired-vs-skip distinction.
 
     ignore_selection — per-item counterpart of the CLI's --no-selection
     (kicadstamp_cli.py), default False. When True, this clone_placement's own
@@ -278,13 +277,13 @@ class ClonePlacement:
     origin_x_mm: float
     origin_y_mm: float
     rotation_deg: float = 0.0
-    template: Optional[str] = None
+    cell: Optional[str] = None
     role: Optional[str] = None
     nets: Dict[str, str] = field(default_factory=dict)      # role -> net (literal)
-    params: Dict[str, Any] = field(default_factory=dict)    # for {placeholder} in net templates
+    params: Dict[str, Any] = field(default_factory=dict)    # for {placeholder} in net cells
     net_overrides: Dict[str, str] = field(default_factory=dict)  # final override of resolved name
-    enabled: bool = True
-    active: bool = True
+    retired: bool = False
+    skip: bool = False
     ignore_selection: bool = False
     anchor_ref: Optional[str] = None
     anchor_pad: Optional[str] = None
@@ -301,13 +300,13 @@ class ClonePlacement:
     # physical instance/cluster, independent of anchor_ref/anchor_role.
     # Used in TWO places: (1) narrowing search for anchor_role (like anchor_sheet,
     # but via a different field), (2) narrowing ambiguous roles INSIDE the
-    # template in resolve_roles_by_nets (replacing the dead _sheet_key step —
+    # cell in resolve_roles_by_nets (replacing the dead _sheet_key step —
     # typical case: 4 identical C_IN_BULK on one sheet, but no sheet separator
     # because they share a common power rail). Comparison is by PREFIX segments
     # ('Channel_1' matches both 'Channel_1' and 'Channel_1/1V2_PLL_PI_FILTER'),
     # not by exact equality — hierarchy and flat names work with the same code.
     anchor_cluster: Optional[str] = None
-    # Placement layer — FACT: None = template layer (place verbatim).
+    # Placement layer — FACT: None = cell layer (place verbatim).
     # mirror — OPERATION, always manual: flip the whole construction
     # (geometry mirrored, angles 180°−φ, all layers inverted).
     # Contradiction between the two is fatal at load: mirror without layer change
@@ -336,7 +335,7 @@ class Config:
     # Spoke layer (ManualSpoke path): 'F.Cu' | 'B.Cu'. clone_placements have
     # their own layer/mirror per placement; this field does not affect them.
     layer: str = 'F.Cu'
-    templates: Dict[str, SpokeTemplate] = field(default_factory=dict)
+    cells: Dict[str, Cell] = field(default_factory=dict)
     thermal_via_array: ThermalViaArrayConfig = field(default_factory=ThermalViaArrayConfig)
     rules: List[Rule] = field(default_factory=list)
     clone_placements: List[ClonePlacement] = field(default_factory=list)
@@ -372,6 +371,6 @@ class Config:
     def anchor_refs(self) -> set:
         """All anchor refs in the config: spoke rules + thermal via array."""
         out = {r.anchor_ref for r in self.rules if r.anchor_ref}
-        if self.thermal_via_array.enabled and self.thermal_via_array.anchor_ref:
+        if not self.thermal_via_array.retired and self.thermal_via_array.anchor_ref:
             out.add(self.thermal_via_array.anchor_ref)
         return out

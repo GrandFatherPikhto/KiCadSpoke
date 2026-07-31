@@ -1,11 +1,11 @@
 # kicadstamp/net_resolution.py
 """
-net_resolution.py — three‑layer net name resolution for cloned templates
+net_resolution.py — three‑layer net name resolution for cloned cells
 (TemplatePlacer), in order of increasing specificity:
 
   1. Literal ("GND") — as‑is, no placeholders.
   2. Placeholder ("DAC{channel}_DB1") — substituted from params
-     (str.format), written manually into the template at extraction/
+     (str.format), written manually into the cell at extraction/
      editing time — NOT automatically derived from any pattern.
   3. net_overrides — applied ON TOP of the result of steps 1‑2, by the
      resolved (already substituted) name — for point exceptions like
@@ -44,7 +44,7 @@ def resolve_placeholder(template: str, params: Dict[str, Any], what: str = "valu
 
 def resolve_net(net_template: str, params: Dict[str, Any], net_overrides: Dict[str, str]) -> str:
     """
-    net_template — net name as written in the template (TemplateVia.net),
+    net_template — net name as written in the cell (TemplateVia.net),
     possibly with {placeholder}. params — substitution values (from
     ClonePlacement.params). net_overrides — point override of the final name
     (from ClonePlacement.net_overrides).
@@ -63,7 +63,7 @@ def parametrize_net(literal_net: str, net_template_map: Dict[str, str],
     (e.g. {"DAC1_DB1": "DAC{channel}_DB1"}), set once at extract time via
     --net-template. params — the same params that will later resolve the pattern
     at apply time (passed to extract via --param only for verification, NOT
-    written to the template).
+    written to the cell).
 
     NO guessing of placeholder position by substring — the pattern is fully
     written by the user. The only thing this function does is check that the

@@ -14,7 +14,7 @@ row per role is the hand-verified baseline (see profiles/3ch-awg-tia.yaml);
 Channel_1/2 rows were derived by rotating that flat offset by the delta
 between each channel's AD_DAC rotation_deg and Channel_0's, using
 kipy.geometry.Vector2.rotate() — the SAME rotation the placement engine
-itself applies to template geometry (kicadstamp/geometry/spoke_layout.py's
+itself applies to cell geometry (kicadstamp/geometry/spoke_layout.py's
 rotate_local_offset) — NOT hand-guessed numbers. This is needed because
 origin_x_mm/origin_y_mm is a FLAT shift from the anchor, NOT auto-rotated
 by the engine (see ClonePlacement's docstring in kicadstamp/config/models.py

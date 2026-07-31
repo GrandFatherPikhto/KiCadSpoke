@@ -9,7 +9,7 @@ from kicadstamp.config import load_config
 from kicadstamp.exceptions import ValidationError
 
 YAML_TEXT = """
-templates:
+cells:
   dac_channel:
     components:
       - role: DAC_IC
@@ -22,14 +22,14 @@ templates:
         net: "DAC{channel}_DB1"
 clone_placements:
   - name: dac_channel_2
-    template: dac_channel
+    cell: dac_channel
     origin_x_mm: 80.0
     origin_y_mm: 40.0
     rotation_deg: 90.0
     params:
       channel: 2
   - name: mcu_section
-    template: dac_channel
+    cell: dac_channel
     origin_x_mm: 0.0
     origin_y_mm: 0.0
     net_overrides:
@@ -46,55 +46,55 @@ def test_clone_placements_loaded_with_all_fields(tmp_path):
 
     cp1 = cfg.clone_placements[0]
     assert cp1.name == "dac_channel_2"
-    assert cp1.template == "dac_channel"
+    assert cp1.cell == "dac_channel"
     assert cp1.origin_x_mm == 80.0
     assert cp1.origin_y_mm == 40.0
     assert cp1.rotation_deg == 90.0
     assert cp1.params == {"channel": 2}
     assert cp1.nets == {}
     assert cp1.net_overrides == {}
-    assert cp1.enabled is True
+    assert cp1.retired is False
 
     cp2 = cfg.clone_placements[1]
     assert cp2.rotation_deg == 0.0
     assert cp2.net_overrides == {"/STM32F4xx/BOOT0": "/STM32F4xx_2/BOOT0"}
 
 
-def test_active_defaults_true_and_can_be_set_false(tmp_path):
+def test_skip_defaults_false_and_can_be_set_true(tmp_path):
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
-  - name: default_active
-    template: t
+  - name: default_skip
+    cell: t
     origin_x_mm: 0
     origin_y_mm: 0
-  - name: explicitly_inactive
-    template: t
+  - name: explicitly_skipped
+    cell: t
     origin_x_mm: 0
     origin_y_mm: 0
-    active: false
+    skip: true
 """
-    config_file = tmp_path / "active.yaml"
+    config_file = tmp_path / "skip.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
     cfg, _ = load_config(str(config_file))
-    assert cfg.clone_placements[0].active is True
-    assert cfg.clone_placements[1].active is False
+    assert cfg.clone_placements[0].skip is False
+    assert cfg.clone_placements[1].skip is True
 
 
 def test_ignore_selection_defaults_false_and_can_be_set_true(tmp_path):
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: default_selection
-    template: t
+    cell: t
     origin_x_mm: 0
     origin_y_mm: 0
   - name: ignores_selection
-    template: t
+    cell: t
     origin_x_mm: 0
     origin_y_mm: 0
     ignore_selection: true
@@ -117,12 +117,12 @@ def test_no_clone_placements_gives_empty_list(tmp_path):
 def test_anchor_ref_without_origin(tmp_path):
     """Anchor mode: anchor_ref set, origin_x/y become optional shift."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: anchored
-    template: t
+    cell: t
     anchor_ref: IC1
     anchor_pad: 17
     origin_x_mm: 2.5
@@ -140,12 +140,12 @@ clone_placements:
 
 def test_anchor_ref_without_origin_uses_default_zero(tmp_path):
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: anchored
-    template: t
+    cell: t
     anchor_ref: IC1
 """
     config_file = tmp_path / "anchor_no_origin.yaml"
@@ -159,12 +159,12 @@ clone_placements:
 def test_anchor_role_with_anchor_sheet(tmp_path):
     """Anchor by role + sheet narrowing."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: by_role
-    template: t
+    cell: t
     anchor_role: MCU
     anchor_sheet: Channel_0
     anchor_pad: 17
@@ -183,12 +183,12 @@ clone_placements:
 def test_anchor_cluster(tmp_path):
     """Anchor cluster field."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: with_cluster
-    template: t
+    cell: t
     anchor_role: MCU
     anchor_cluster: FPGA_PWR_BANK
 """
@@ -202,13 +202,13 @@ clone_placements:
 def test_layer_and_mirror(tmp_path):
     """Layer and mirror."""
     yaml_content = """
-templates:
+cells:
   t:
     layer: F.Cu
     components: []
 clone_placements:
   - name: mirrored
-    template: t
+    cell: t
     origin_x_mm: 0
     origin_y_mm: 0
     layer: B.Cu
@@ -225,14 +225,14 @@ clone_placements:
 def test_nets_and_refs(tmp_path):
     """Explicit nets and refs."""
     yaml_content = """
-templates:
+cells:
   t:
     components:
       - role: A
       - role: B
 clone_placements:
   - name: with_nets
-    template: t
+    cell: t
     origin_x_mm: 0
     origin_y_mm: 0
     nets:
@@ -252,12 +252,12 @@ clone_placements:
 def test_by_selection_flag(tmp_path):
     """Explicit 'by selection' mode."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: selection_mode
-    template: t
+    cell: t
     origin_x_mm: 0
     origin_y_mm: 0
     by_selection: true
@@ -272,13 +272,13 @@ clone_placements:
 def test_by_selection_and_nets_conflict_raises(tmp_path):
     """by_selection: true + nets should raise ValidationError (message in English)."""
     yaml_content = """
-templates:
+cells:
   t:
     components:
       - role: A
 clone_placements:
   - name: conflict
-    template: t
+    cell: t
     origin_x_mm: 0
     origin_y_mm: 0
     by_selection: true
@@ -294,12 +294,12 @@ clone_placements:
 def test_anchor_ref_and_anchor_role_together_raises(tmp_path):
     """Mutually exclusive anchor_ref and anchor_role."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: both_anchors
-    template: t
+    cell: t
     anchor_ref: IC1
     anchor_role: MCU
 """
@@ -312,12 +312,12 @@ clone_placements:
 def test_anchor_sheet_without_anchor_role_raises(tmp_path):
     """anchor_sheet without anchor_role is invalid."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: sheet_without_role
-    template: t
+    cell: t
     anchor_sheet: Channel_0
 """
     config_file = tmp_path / "sheet_no_role.yaml"
@@ -329,12 +329,12 @@ clone_placements:
 def test_anchor_pad_without_anchor_ref_or_role_raises(tmp_path):
     """anchor_pad requires anchor_ref or anchor_role."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: pad_without_anchor
-    template: t
+    cell: t
     anchor_pad: 17
 """
     config_file = tmp_path / "pad_no_anchor.yaml"
@@ -346,12 +346,12 @@ clone_placements:
 def test_no_anchor_and_no_origin_raises(tmp_path):
     """If no anchor, origin_x/y must be provided."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: no_anchor_no_origin
-    template: t
+    cell: t
 """
     config_file = tmp_path / "no_anchor_no_origin.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
@@ -361,10 +361,10 @@ clone_placements:
         load_config(str(config_file))
 
 
-def test_role_without_template(tmp_path):
-    """Single-component placement using 'role' field instead of template."""
+def test_role_without_cell(tmp_path):
+    """Single-component placement using 'role' field instead of cell."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
@@ -378,30 +378,30 @@ clone_placements:
     cfg, _ = load_config(str(config_file))
     cp = cfg.clone_placements[0]
     assert cp.role == "LED"
-    assert cp.template is None
+    assert cp.cell is None
     assert cp.origin_x_mm == 10.0
     assert cp.origin_y_mm == 20.0
 
 
-def test_template_and_role_together_raises(tmp_path):
-    """template and role are mutually exclusive."""
+def test_cell_and_role_together_raises(tmp_path):
+    """cell and role are mutually exclusive."""
     yaml_content = """
-templates:
+cells:
   t:
     components: []
 clone_placements:
   - name: both_content
-    template: t
+    cell: t
     role: LED
 """
     config_file = tmp_path / "both_content.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    with pytest.raises(ValidationError, match="template.*role"):
+    with pytest.raises(ValidationError, match="cell.*role"):
         load_config(str(config_file))
 
 
-def test_neither_template_nor_role_raises(tmp_path):
-    """At least one of template or role is required."""
+def test_neither_cell_nor_role_raises(tmp_path):
+    """At least one of cell or role is required."""
     yaml_content = """
 clone_placements:
   - name: no_content
@@ -410,5 +410,5 @@ clone_placements:
 """
     config_file = tmp_path / "no_content.yaml"
     config_file.write_text(yaml_content, encoding="utf-8")
-    with pytest.raises(ValidationError, match="neither template nor role|ни template, ни role"):
+    with pytest.raises(ValidationError, match="neither cell nor role|ни cell, ни role"):
         load_config(str(config_file))

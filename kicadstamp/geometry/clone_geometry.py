@@ -1,6 +1,6 @@
 # kicadstamp/geometry/clone_geometry.py
 """
-clone_geometry.py — transforms a template into absolute board coordinates
+clone_geometry.py — transforms a cell into absolute board coordinates
 for ClonePlacement (TemplatePlacer), unlike spoke_layout.py:
 
   - origin = (origin_x_mm, origin_y_mm) DIRECTLY (no pad, no shift — it is an
@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 from kipy.geometry import Vector2, Angle
 
-from ..config import ClonePlacement, SpokeTemplate, TemplateVia, TemplateTrack
+from ..config import ClonePlacement, Cell, TemplateVia, TemplateTrack
 from ..exceptions import ValidationError, format_fatal_error
 from ..net_resolution import resolve_net
 from ..utils.units import MM
@@ -27,11 +27,11 @@ def _resolve_clone_via(origin: Vector2, via: TemplateVia, rotation_deg: float,
                        clone: ClonePlacement, mirror: bool = False) -> ResolvedVia:
     if via.net is None:
         raise ValidationError(format_fatal_error(
-            _("via without net in template {template!r} ({name!r})").format(
-                template=clone.template, name=clone.name),
+            _("via without net in cell {cell!r} ({name!r})").format(
+                cell=clone.cell, name=clone.name),
             [_("via at (along={along}, across={across}) has no net — "
                "ClonePlacement has no default rule net (unlike ManualSpoke), "
-               "so every via in a cloned template must have a net explicitly set")
+               "so every via in a cloned cell must have a net explicitly set")
              .format(along=via.offset_along_mm, across=via.offset_across_mm)]
         ))
     pos = local_to_absolute(origin, via.offset_along_mm, via.offset_across_mm, rotation_deg)
@@ -50,10 +50,10 @@ def _resolve_clone_track(origin: Vector2, track: TemplateTrack, rotation_deg: fl
                          mirror: bool = False) -> ResolvedTrack:
     if track.net is None:
         raise ValidationError(format_fatal_error(
-            _("track without net in template {template!r} ({name!r})").format(
-                template=clone.template, name=clone.name),
+            _("track without net in cell {cell!r} ({name!r})").format(
+                cell=clone.cell, name=clone.name),
             [_("track (along={s_along},{s_across} -> {e_along},{e_across}) has no net — "
-               "every track in a cloned template must have a net, just like vias")
+               "every track in a cloned cell must have a net, just like vias")
              .format(s_along=track.start_along_mm, s_across=track.start_across_mm,
                      e_along=track.end_along_mm, e_across=track.end_across_mm)]
         ))
@@ -80,13 +80,13 @@ def _mirror_x(origin: Vector2, p: Vector2) -> Vector2:
 
 def apply_clone_geometry(
     clone: ClonePlacement,
-    template: SpokeTemplate,
+    cell: Cell,
     role_to_ref: Dict[str, str],
     anchor_position: Optional[Vector2] = None,
     mirror: bool = False,
 ) -> SpokeLayout:
     """
-    Computes absolute positions of everything in the template for a specific
+    Computes absolute positions of everything in the cell for a specific
     ClonePlacement. role_to_ref is already resolved EXTERNALLY (see
     clone_role_resolver.py).
 
@@ -94,10 +94,10 @@ def apply_clone_geometry(
     anchor_ref/anchor_pad), resolved EXTERNALLY (the calculator goes to the
     adapter, geometry does not touch the live board). If set — origin_x/y_mm
     act as a FLAT shift from it (without rotation, exactly like shift in
-    ManualSpoke); rotation_deg rotates only the template contents. If None —
+    ManualSpoke); rotation_deg rotates only the cell contents. If None —
     origin_x/y_mm remain absolute board coordinates, as before.
 
-    mirror=True — placement on the OPPOSITE side: the template is assumed to be
+    mirror=True — placement on the OPPOSITE side: the cell is assumed to be
     taken from front, final positions (after rotation) are X‑mirrored relative
     to the vertical axis through origin, component angles become 180°−φ
     (B.Cu convention from the decap placer). The anchor shift origin_x/y_mm is
@@ -122,11 +122,11 @@ def apply_clone_geometry(
         return (180.0 - phi) % 360.0 if mirror else phi
 
     layout = SpokeLayout(origin=origin)
-    layout.vias = [_resolve_clone_via(origin, v, rotation_deg, clone, mirror) for v in template.vias]
-    layout.tracks = [_resolve_clone_track(origin, t, rotation_deg, clone, template.layer, mirror)
-                     for t in template.tracks]
+    layout.vias = [_resolve_clone_via(origin, v, rotation_deg, clone, mirror) for v in cell.vias]
+    layout.tracks = [_resolve_clone_track(origin, t, rotation_deg, clone, cell.layer, mirror)
+                     for t in cell.tracks]
 
-    for slot in template.components:
+    for slot in cell.components:
         ref = role_to_ref.get(slot.role)
         if ref is None:
             continue

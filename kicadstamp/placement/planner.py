@@ -110,7 +110,7 @@ class PlacementPlanner:
                         .format(count=len(clone_placed), vias=len(clone_vias), tracks=len(clone_tracks)))
 
         # info.layer — per‑component (ClonePositionCalculator already accounted for
-        # template.layer/slot.layer/mirror); None — only for ManualSpoke path
+        # cell.layer/slot.layer/mirror); None — only for ManualSpoke path
         # (manual_position_calculator.py does not set it), then inherit the global
         # target_layer from config.
         moves = self._tracker.moves_from_placed(self._planned)

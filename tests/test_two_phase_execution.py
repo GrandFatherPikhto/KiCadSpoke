@@ -25,7 +25,7 @@ from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ManualSpoke, SpokeTemplate,
+    Config, ThermalViaArrayConfig, ManualSpoke, Cell,
     TemplateVia, TemplateComponentSlot, Rule
 )
 from kicadstamp.placement.planner import PlacementPlanner
@@ -45,7 +45,7 @@ def _make_pad(number, x_mm, y_mm, net_name):
 
 
 def test_two_phase_flow_completes_and_via_geometry_is_correct():
-    template = SpokeTemplate(
+    cell = Cell(
         name="t",
         components=[TemplateComponentSlot(
             role="LIGHT",
@@ -53,11 +53,11 @@ def test_two_phase_flow_completes_and_via_geometry_is_correct():
             vias=[TemplateVia(offset_along_mm=0.0, offset_across_mm=0.5, net="GND")],
         )],
     )
-    spoke = ManualSpoke(pad="17", template="t", rotation_deg=0.0)
+    spoke = ManualSpoke(pad="17", cell="t", rotation_deg=0.0)
     cfg = Config(
         layer='B.Cu',
-        templates={"t": template},
-        thermal_via_array=ThermalViaArrayConfig(enabled=False),
+        cells={"t": cell},
+        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[spoke])],
     )
 

@@ -23,13 +23,13 @@ rules:
   anchor_role: FPGA
   spokes:
   - pad: '17'
-    template: t
-    enalbed: false
-templates: {}
+    cell: t
+    retierd: false
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        with pytest.raises(ValidationError, match="enalbed"):
+        with pytest.raises(ValidationError, match="retierd"):
             load_config(str(config_file))
 
     def test_suggests_close_match(self, tmp_path):
@@ -40,13 +40,13 @@ rules:
   anchor_role: FPGA
   spokes:
   - pad: '17'
-    template: t
-    enalbed: false
-templates: {}
+    cell: t
+    retierd: false
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
-        with pytest.raises(ValidationError, match="enabled"):
+        with pytest.raises(ValidationError, match="retired"):
             load_config(str(config_file))
 
     def test_all_known_spoke_fields_load_fine(self, tmp_path):
@@ -57,21 +57,22 @@ rules:
   anchor_role: FPGA
   spokes:
   - pad: '17'
-    template: t
+    cell: t
     shift_x_mm: 1.0
     shift_y_mm: -1.0
     rotation_deg: 90.0
-    enabled: true
+    retired: false
     cluster: Channel_0
-    active: false
-templates: {}
+    skip: true
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
         spoke = cfg.rules[0].spokes[0]
         assert spoke.cluster == "Channel_0"
-        assert spoke.active is False
+        assert spoke.retired is False
+        assert spoke.skip is True
 
 
 class TestThermalViaArrayUnknownKeys:
@@ -79,12 +80,12 @@ class TestThermalViaArrayUnknownKeys:
         text = """
 layer: B.Cu
 thermal_via_array:
-  enabled: true
+  retired: false
   anchor_role: FPGA
   pad: '145'
   name: fpga_thermal
   rowss: 4
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
@@ -95,7 +96,7 @@ templates: {}
         text = """
 layer: B.Cu
 thermal_via_array:
-  enabled: true
+  retired: false
   anchor_role: FPGA
   anchor_sheet: Channel_0
   anchor_cluster: FPGA_BANK
@@ -108,20 +109,21 @@ thermal_via_array:
   drill_mm: 0.3
   diameter_mm: 0.5
   name: fpga_thermal
-  active: false
-templates: {}
+  skip: true
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.thermal_via_array.active is False
+        assert cfg.thermal_via_array.retired is False
+        assert cfg.thermal_via_array.skip is True
 
     def test_absent_thermal_via_array_is_fine(self, tmp_path):
         text = """
 layer: B.Cu
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.thermal_via_array.enabled is False
+        assert cfg.thermal_via_array.retired is False

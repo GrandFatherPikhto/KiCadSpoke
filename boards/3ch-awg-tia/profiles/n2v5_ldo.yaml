@@ -1,9 +1,9 @@
 clone_placements:
 #   -2V5 LDO Subsystem
   - name: n2v5_dirty_ldo
-    enabled: true
-    active: true
-    template: ldo_adj
+    retired: false
+    skip: false
+    cell: ldo_adj
     # anchor_cluster: In_Pi_Filter_Neg
     anchor_role: CONN_PM5V
     anchor_pad: '1'
@@ -15,9 +15,9 @@ clone_placements:
       PWR_ADJ: '/Power/-2V5_ADJ'
 
   - name: n2v5_adj_pi_filter
-    enabled: true
-    active: true
-    template: ldo_adj_pi_filter
+    retired: false
+    skip: false
+    cell: ldo_adj_pi_filter
     anchor_cluster: LDO_Subsystem_N2V5
     anchor_role: D_PROT_BACK
     anchor_pad: '2'
@@ -28,9 +28,9 @@ clone_placements:
       PWR_OUT: '-2V5'
 
   - name: n2v5_led_spoke
-    enabled: true
-    active: true
-    template: led_spoke
+    retired: false
+    skip: false
+    cell: led_spoke
     anchor_cluster: LDO_Subsystem_N2V5
     anchor_role: LDO_ADJ
     anchor_pad: '2'

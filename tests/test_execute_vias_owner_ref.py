@@ -62,8 +62,8 @@ def test_owner_ref_matches_actual_command_not_first_in_batch():
     # Minimal config (needed only to pass to child executors)
     cfg = Config(
         layer='F.Cu',
-        templates={},
-        thermal_via_array=ThermalViaArrayConfig(enabled=False),
+        cells={},
+        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[],
     )
 
@@ -114,8 +114,8 @@ def test_registry_record_created_called_with_correct_uuid_per_via():
 
     cfg = Config(
         layer='F.Cu',
-        templates={},
-        thermal_via_array=ThermalViaArrayConfig(enabled=False),
+        cells={},
+        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[],
     )
 

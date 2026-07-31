@@ -7,7 +7,7 @@ component's real, post-move position — not a stale snapshot from before the
 run started.
 
 Found 2026-07-27: p5v_led_spoke was anchored on C9, a role slot inside
-p5v_pi_filter's own template — it landed wherever C9 last happened to sit
+p5v_pi_filter's own cell — it landed wherever C9 last happened to sit
 manually, not where p5v_pi_filter was about to move it to, because the whole
 run used to plan from a single board snapshot taken before any moves happened.
 
@@ -19,7 +19,7 @@ anchored on level 0/1 output; etc. cmd_apply plans+executes+commits one whole
 level before moving to the next, so by the time a later level's anchor is
 resolved, the board already reflects the earlier levels' real moves.
 
-Known limitation: template-role resolution (which refs get PRODUCED) can, as a
+Known limitation: cell-role resolution (which refs get PRODUCED) can, as a
 last resort, use physical proximity to the anchor to break ties between
 otherwise-identical candidates (see
 clone_role_resolver._narrow_ambiguous_candidates). Since this dependency pass
@@ -33,7 +33,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Union
 
-from ..config import Config, Rule, ClonePlacement, SpokeTemplate, TemplateComponentSlot
+from ..config import Config, Rule, ClonePlacement, Cell, TemplateComponentSlot
 from ..kicad.adapter import KiCadBoardAdapter
 from ..exceptions import ValidationError, format_fatal_error
 from .services.manual_position_calculator import resolve_rule_anchor_ref
@@ -70,17 +70,17 @@ def _resolve_rule_produces(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) 
     """
     produces: Set[str] = set()
 
-    # --- Collect all roles needed across enabled spokes ---
+    # --- Collect all roles needed across non-retired spokes ---
     roles_needed: Set[str] = set()
     for spoke in rule.spokes:
-        if not spoke.enabled:
+        if spoke.retired:
             continue
-        template = cfg.templates.get(spoke.template)
-        if template is not None:
-            roles_needed.update(slot.role for slot in template.components)
+        cell = cfg.cells.get(spoke.cell)
+        if cell is not None:
+            roles_needed.update(slot.role for slot in cell.components)
 
-    # --- Collect unique clusters used in enabled spokes ---
-    clusters_needed: Set[Optional[str]] = {spoke.cluster for spoke in rule.spokes if spoke.enabled}
+    # --- Collect unique clusters used in non-retired spokes ---
+    clusters_needed: Set[Optional[str]] = {spoke.cluster for spoke in rule.spokes if not spoke.retired}
 
     # --- Build ComponentPools per cluster (same as ManualPositionCalculator) ---
     pools_by_cluster: Dict[Optional[str], ComponentPool] = {}
@@ -94,14 +94,14 @@ def _resolve_rule_produces(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) 
 
     # --- Consume pools in spoke order (same as ManualPositionCalculator) ---
     for spoke in rule.spokes:
-        if not spoke.enabled:
+        if spoke.retired:
             continue
-        template = cfg.templates.get(spoke.template)
-        if template is None:
+        cell = cfg.cells.get(spoke.cell)
+        if cell is None:
             continue
 
         pool = pools_by_cluster[spoke.cluster]
-        role_to_ref = {slot.role: pool.pop(slot.role, spoke.pad) for slot in template.components}
+        role_to_ref = {slot.role: pool.pop(slot.role, spoke.pad) for slot in cell.components}
         produces.update(role_to_ref.values())
 
     return produces
@@ -121,19 +121,19 @@ def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: Clon
     omitted here; the known limitation documented in this module's docstring
     covers that case.
     """
-    # Synthesise or look up template (same logic as ClonePositionCalculator)
-    if clone.template is not None:
-        template = cfg.templates.get(clone.template)
-        if template is None:
+    # Synthesise or look up cell (same logic as ClonePositionCalculator)
+    if clone.cell is not None:
+        cell = cfg.cells.get(clone.cell)
+        if cell is None:
             logger.warning(
-                _("{name}: template {template!r} not found in templates, skipping")
-                .format(name=clone.name, template=clone.template)
+                _("{name}: cell {cell!r} not found in cells, skipping")
+                .format(name=clone.name, cell=clone.cell)
             )
             return set()
     else:
-        # role: instead of template — single-component placement without
-        # a separate template file.
-        template = SpokeTemplate(
+        # role: instead of cell — single-component placement without
+        # a separate cell file.
+        cell = Cell(
             name=f"__role__{clone.role}",
             components=[TemplateComponentSlot(
                 role=clone.role, offset_along_mm=0.0, offset_across_mm=0.0, angle_deg=0.0,
@@ -144,13 +144,13 @@ def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: Clon
     with adapter.temporarily_ignore_selection(clone.ignore_selection):
         if clone_uses_selection_mode(clone):
             role_to_ref = resolve_roles_by_selection(
-                adapter, template, clone,
+                adapter, cell, clone,
                 anchor_position=None,
                 sheet_names=sheet_names or {},
             )
         else:
             role_to_ref = resolve_roles_by_nets(
-                adapter, template, clone,
+                adapter, cell, clone,
                 anchor_position=None,
                 sheet_names=sheet_names or {},
             )
@@ -159,7 +159,7 @@ def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: Clon
 
 
 def _build_items(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> List[Item]:
-    """Read-only: resolves every enabled rule/clone_placement's anchor ref and
+    """Read-only: resolves every non-retired rule/clone_placement's anchor ref and
     produced refs against the board as it is RIGHT NOW. No board mutation —
     lightweight ref-resolution only, no geometry computation (see
     _resolve_rule_produces / _resolve_clone_produces for what is skipped)."""
@@ -175,7 +175,7 @@ def _build_items(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> L
         ))
 
     for clone in cfg.clone_placements:
-        if not clone.enabled:
+        if clone.retired:
             continue
         # clone.ignore_selection must apply here too — this pass resolves
         # the same anchor/roles as compute_raw_positions does again later
@@ -216,10 +216,10 @@ def resolve_execution_order(adapter: KiCadBoardAdapter, cfg: Config, sheet_names
             it for it in remaining
             if it.anchor_ref is None
             or producer_of.get(it.anchor_ref) is None
-            # An item anchored on its OWN pad (e.g. a template whose origin
+            # An item anchored on its OWN pad (e.g. a cell whose origin
             # component is also one of its own role slots — seen live with
             # p5v_led_spoke: anchored on R1.pad2, and R1/R_LED is also a role
-            # in its own template) is not a real cross-item dependency — there
+            # in its own cell) is not a real cross-item dependency — there
             # is no other item to sequence against, so treat it as satisfied.
             or producer_of[it.anchor_ref] is it
             or id(producer_of[it.anchor_ref]) in placed_ids

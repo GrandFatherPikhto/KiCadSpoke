@@ -60,8 +60,9 @@ def make_registry_key(anchor_id: str, template_name: str, role: Optional[str], i
     """Build a composite registry key for vias/tracks.
 
     ``anchor_id`` — e.g. ``"pad:{pad}"`` or ``"thermal:{name}"``.
-    ``template_name`` — the spoke/clone template name.
-    ``role`` — component role (unique within template) or ``None`` for
+    ``template_name`` — the spoke/clone cell name (param kept as
+    ``template_name`` for registry backward compatibility).
+    ``role`` — component role (unique within a cell) or ``None`` for
     spoke‑level vias/tracks (substituted by :data:`SPOKE_LEVEL_ROLE_PLACEHOLDER`).
     ``index`` — 0‑based index within the specific list (vias or tracks).
     """

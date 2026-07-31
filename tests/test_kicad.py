@@ -178,7 +178,7 @@ class TestIgnoreSelection:
     narrowing (_narrow_ambiguous_candidates/resolve_footprint_by_role) as
     real input — found live: an unrelated component (J1) selected from
     earlier browsing made an otherwise-unique-by-role clone_placement fatal
-    with "role X is not in the template". ignore_selection makes
+    with "role X is not in the cell". ignore_selection makes
     get_selected_items() always report nothing selected, regardless of the
     live board's actual selection."""
 

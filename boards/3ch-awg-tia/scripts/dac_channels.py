@@ -14,7 +14,7 @@ row per role is the hand-verified baseline (see profiles/3ch-awg-tia.yaml);
 Channel_1/2 rows were derived by rotating that flat offset by the delta
 between each channel's AD_DAC rotation_deg and Channel_0's, using
 kipy.geometry.Vector2.rotate() — the SAME rotation the placement engine
-itself applies to template geometry (kicadstamp/geometry/spoke_layout.py's
+itself applies to cell geometry (kicadstamp/geometry/spoke_layout.py's
 rotate_local_offset) — NOT hand-guessed numbers. This is needed because
 origin_x_mm/origin_y_mm is a FLAT shift from the anchor, NOT auto-rotated
 by the engine (see ClonePlacement's docstring in kicadstamp/config/models.py
@@ -136,7 +136,7 @@ def build() -> list:
             anchor_role="FPGA", anchor_sheet=f"Channel_{channel}",
             nets={"AD_DAC": f"/Channel_{channel}/DAC/DAC_OUT_P"},
             origin_x_mm=x, origin_y_mm=y, rotation_deg=rot,
-            enabled=True, active=True
+            retired=False, skip=False
         ))
 
     for role, offsets in PASSIVE_LAYOUT.items():
@@ -148,7 +148,7 @@ def build() -> list:
                 anchor_role="AD_DAC", anchor_sheet=channel_name, anchor_pad=anchor_pad,
                 nets={role: net_template.format(channel=channel)},
                 origin_x_mm=x, origin_y_mm=y, rotation_deg=rot,
-                enabled=True, active=True
+                retired=False, skip=False
             ))
 
     # OP_AMP: anchored on AD_DAC, not on R_TERM_P — R_TERM_P repeats twice per
@@ -160,37 +160,37 @@ def build() -> list:
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}",
             nets={"OP_AMP": f"/Channel_{channel}/OpAmp/OA_IN_P"},
             origin_x_mm=coords[0], origin_y_mm=coords[1], rotation_deg=coords[2],
-            enabled=True, active=True
+            retired=False, skip=False
         ))
 
     for channel, dac_pwr in enumerate(DAC_CLKDVDD_PI_FILTERS):
         clones.append(ClonePlacement(
-            name=f"Channel_{channel}_Dac_Pi_Filter_ClkVdd", template="dac_clkvdd_pi_filter",
+            name=f"Channel_{channel}_Dac_Pi_Filter_ClkVdd", cell="dac_clkvdd_pi_filter",
             anchor_cluster="Dac_Pi_Filter_ClkVdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="11",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_CLKVDD"},
             origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
-            enabled=True, active=True
+            retired=False, skip=False
         ))
 
     for channel, dac_pwr in enumerate(DAC_ADVDD_PI_FILTERS):
         clones.append(ClonePlacement(
-            name=f"Channel_{channel}_Dac_Pi_Filter_Avdd", template="dac_avdd_pi_filter",
+            name=f"Channel_{channel}_Dac_Pi_Filter_Avdd", cell="dac_avdd_pi_filter",
             anchor_cluster="Dac_Pi_Filter_Avdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="18",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_AVDD"},
             origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
-            enabled=True, active=True
+            retired=False, skip=False
         ))
 
     for channel, dac_pwr in enumerate(DAC_DDVDD_PI_FILTERS):
         clones.append(ClonePlacement(
-            name=f"Channel_{channel}_Dac_Pi_Filter_Dvdd", template="dac_dvdd_pi_filter",
+            name=f"Channel_{channel}_Dac_Pi_Filter_Dvdd", cell="dac_dvdd_pi_filter",
             anchor_cluster="Dac_Pi_Filter_Dvdd",
             anchor_role="AD_DAC", anchor_sheet=f"Channel_{channel}", anchor_pad="3",
             params={"PWR_IN": "+3V3", "PWR_OUT": f"/Channel_{channel}/DAC/+3V3_DVDD"},
             origin_x_mm=dac_pwr[0], origin_y_mm=dac_pwr[1], rotation_deg=dac_pwr[2],
-            enabled=True, active=True
+            retired=False, skip=False
         ))
 
     return clones

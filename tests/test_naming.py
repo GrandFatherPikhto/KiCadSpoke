@@ -38,14 +38,20 @@ class TestEffectiveNameAccessors:
         assert rule_effective_name(rule) == "+3V3_VCCIO"
 
     def test_thermal_effective_name_is_plain_name(self):
-        tva = ThermalViaArrayConfig(enabled=True, anchor_role="FPGA", pad="145", name="fpga_thermal")
+        tva = ThermalViaArrayConfig(retired=False, anchor_role="FPGA", pad="145", name="fpga_thermal")
         assert thermal_via_array_effective_name(tva) == "fpga_thermal"
+
+
+def test_thermal_via_array_retired_defaults_false():
+    """Regression for Task A.1: the thermal via array's 'retired' field defaults
+    to False (the field is opt-out, so an absent section stays live)."""
+    assert ThermalViaArrayConfig().retired is False
 
 
 YAML_TEXT = """
 layer: B.Cu
 thermal_via_array:
-  enabled: true
+  retired: false
   anchor_role: FPGA
   pad: '145'
   name: fpga_thermal
@@ -56,9 +62,9 @@ rules:
   name: fpga_3v3_bank
   spokes:
   - pad: '17'
-    template: cap_pair_standard
+    cell: cap_pair_standard
 
-templates:
+cells:
   cap_pair_standard:
     components: []
     vias: []
@@ -97,10 +103,10 @@ class TestNameRequired:
         text = """
 layer: B.Cu
 thermal_via_array:
-  enabled: true
+  retired: false
   anchor_role: FPGA
   pad: '145'
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
@@ -110,15 +116,15 @@ templates: {}
     def test_absent_thermal_via_array_section_is_not_fatal(self, tmp_path):
         """Section absent from YAML entirely — not the same as "present but
         without name" — nothing is being named here, just the default
-        (disabled), no error."""
+        (not retired), no error."""
         text = """
 layer: B.Cu
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.thermal_via_array.enabled is False
+        assert cfg.thermal_via_array.retired is False
         assert cfg.thermal_via_array.name is None
 
     def test_clone_placement_without_name_is_fatal(self, tmp_path):
@@ -128,7 +134,7 @@ clone_placements:
 - role: SOMETHING
   origin_x_mm: 0.0
   origin_y_mm: 0.0
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
@@ -148,7 +154,7 @@ rules:
 - net: +3V3_VCCIO
   anchor_role: FPGA
   spokes: []
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
@@ -170,7 +176,7 @@ rules:
 - net: GND
   anchor_role: GD32F470
   spokes: []
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
@@ -188,7 +194,7 @@ rules:
 - net: GND
   anchor_role: GD32F470
   spokes: []
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
@@ -197,46 +203,46 @@ templates: {}
         assert rule_effective_name(cfg.rules[1]) == "GND"
 
 
-class TestRuleEnabled:
-    """Rule.enabled — symmetric with ManualSpoke.enabled/ClonePlacement.enabled/
-    ThermalViaArrayConfig.enabled, default True."""
+class TestRuleRetired:
+    """Rule.retired — symmetric with ManualSpoke.retired/ClonePlacement.retired/
+    ThermalViaArrayConfig.retired, default False."""
 
-    def test_default_is_enabled(self, tmp_path):
+    def test_default_is_not_retired(self, tmp_path):
         text = """
 layer: B.Cu
 rules:
 - net: +3V3_VCCIO
   anchor_role: FPGA
   spokes: []
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.rules[0].enabled is True
+        assert cfg.rules[0].retired is False
 
-    def test_enabled_false_loaded_from_yaml(self, tmp_path):
+    def test_retired_true_loaded_from_yaml(self, tmp_path):
         text = """
 layer: B.Cu
 rules:
 - net: +3V3_VCCIO
   anchor_role: FPGA
-  enabled: false
+  retired: true
   spokes: []
-templates: {}
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.rules[0].enabled is False
+        assert cfg.rules[0].retired is True
 
 
-class TestRuleActive:
-    """Rule.active / ManualSpoke.active — orthogonal to enabled (default True),
+class TestRuleSkip:
+    """Rule.skip / ManualSpoke.skip — orthogonal to retired (default False),
     the inline per-item counterpart of --only/--cluster (see
     drop_inactive_items in kicadstamp_cli.py, added 2026-07-29)."""
 
-    def test_default_is_active(self, tmp_path):
+    def test_default_is_not_skip(self, tmp_path):
         text = """
 layer: B.Cu
 rules:
@@ -244,46 +250,46 @@ rules:
   anchor_role: FPGA
   spokes:
   - pad: '17'
-    template: t
-templates: {}
+    cell: t
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.rules[0].active is True
-        assert cfg.rules[0].spokes[0].active is True
+        assert cfg.rules[0].skip is False
+        assert cfg.rules[0].spokes[0].skip is False
 
-    def test_active_false_loaded_from_yaml_on_rule_and_spoke(self, tmp_path):
+    def test_skip_true_loaded_from_yaml_on_rule_and_spoke(self, tmp_path):
         text = """
 layer: B.Cu
 rules:
 - net: +3V3_VCCIO
   anchor_role: FPGA
-  active: false
+  skip: true
   spokes:
   - pad: '17'
-    template: t
-    active: false
-templates: {}
+    cell: t
+    skip: true
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.rules[0].active is False
-        assert cfg.rules[0].spokes[0].active is False
+        assert cfg.rules[0].skip is True
+        assert cfg.rules[0].spokes[0].skip is True
 
-    def test_thermal_via_array_active_false_loaded_from_yaml(self, tmp_path):
+    def test_thermal_via_array_skip_true_loaded_from_yaml(self, tmp_path):
         text = """
 layer: B.Cu
 thermal_via_array:
-  enabled: true
+  retired: false
   anchor_role: FPGA
   pad: '145'
   name: fpga_thermal
-  active: false
-templates: {}
+  skip: true
+cells: {}
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.thermal_via_array.active is False
+        assert cfg.thermal_via_array.skip is True

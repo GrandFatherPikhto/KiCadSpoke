@@ -29,11 +29,11 @@ from .i18n import _
 logger = logging.getLogger(__name__)
 
 
-def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> None:
+def check_cells_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> None:
     """
-    Every spoke must reference an existing template and an existing pad of the
+    Every spoke must reference an existing cell and an existing pad of the
     target component — otherwise the spoke is simply skipped silently (which
-    would make it easy to miss a typo in the template name/pad number).
+    would make it easy to miss a typo in the cell name/pad number).
     """
     problems = []
     anchors = {}
@@ -67,25 +67,25 @@ def check_templates_and_pads_exist(adapter: KiCadBoardAdapter, cfg: Config, shee
         if target_fp is None:
             continue
         for spoke in rule.spokes:
-            if not spoke.enabled:
+            if spoke.retired:
                 continue
-            if spoke.template not in cfg.templates:
-                problems.append(_("spoke (pad {pad}, net {net!r}): template {template!r} not found in templates")
-                                .format(pad=spoke.pad, net=rule.net, template=spoke.template))
+            if spoke.cell not in cfg.cells:
+                problems.append(_("spoke (pad {pad}, net {net!r}): cell {cell!r} not found in cells")
+                                .format(pad=spoke.pad, net=rule.net, cell=spoke.cell))
                 continue
             pad = adapter.get_pad_by_number(target_fp, spoke.pad) if target_fp else None
             if target_fp is not None and pad is None:
                 anchor_name = rule.anchor_ref if rule.anchor_ref is not None else rule.anchor_role
-                problems.append(_("spoke (template {template!r}, net {net!r}): {anchor!r} has no pad {pad!r}")
-                                .format(template=spoke.template, net=rule.net,
+                problems.append(_("spoke (cell {cell!r}, net {net!r}): {anchor!r} has no pad {pad!r}")
+                                .format(cell=spoke.cell, net=rule.net,
                                         anchor=anchor_name, pad=spoke.pad))
 
     if problems:
         raise ValidationError(format_fatal_error(
-            _("spoke references a non‑existent template or pad"),
+            _("spoke references a non‑existent cell or pad"),
             problems
         ))
-    logger.debug(_("Template/pad checks for spokes: all references valid"))
+    logger.debug(_("Cell/pad checks for spokes: all references valid"))
 
 
 def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None:
@@ -101,12 +101,12 @@ def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None
         # Collect all roles needed for this rule
         roles_needed = set()
         for spoke in rule.spokes:
-            if not spoke.enabled:
+            if spoke.retired:
                 continue
-            template = cfg.templates.get(spoke.template)
-            if template is None:
+            cell = cfg.cells.get(spoke.cell)
+            if cell is None:
                 continue
-            for slot in template.components:
+            for slot in cell.components:
                 roles_needed.add(slot.role)
 
         if not roles_needed:
@@ -115,7 +115,7 @@ def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None
         # Collect all clusters used in spokes (including None)
         clusters_needed = set()
         for spoke in rule.spokes:
-            if not spoke.enabled:
+            if spoke.retired:
                 continue
             clusters_needed.add(spoke.cluster)  # None is allowed
 
@@ -127,13 +127,13 @@ def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None
 
         # Fill requirements
         for spoke in rule.spokes:
-            if not spoke.enabled:
+            if spoke.retired:
                 continue
-            template = cfg.templates.get(spoke.template)
-            if template is None:
+            cell = cfg.cells.get(spoke.cell)
+            if cell is None:
                 continue
             cluster = spoke.cluster
-            for slot in template.components:
+            for slot in cell.components:
                 needed_by_cluster[cluster][slot.role] += 1
 
         # For each cluster, check sufficiency
@@ -157,33 +157,33 @@ def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None
 
     if problems:
         raise ValidationError(format_fatal_error(
-            _("not enough components for template roles"),
+            _("not enough components for cell roles"),
             problems
         ))
     logger.debug(_("Role pool sufficiency checks passed"))
 
 
-def check_clone_templates_exist(cfg: Config) -> None:
+def check_clone_cells_exist(cfg: Config) -> None:
     """
-    Every ClonePlacement with template (not role) must reference an existing
-    template — pure config check, does not require the live board. role‑based
-    placements are skipped: their template is intentionally None, and
-    ClonePositionCalculator synthesises a single‑component template on the fly,
-    so there is nothing to check in cfg.templates.
+    Every ClonePlacement with cell (not role) must reference an existing
+    cell — pure config check, does not require the live board. role‑based
+    placements are skipped: their cell is intentionally None, and
+    ClonePositionCalculator synthesises a single‑component cell on the fly,
+    so there is nothing to check in cfg.cells.
     """
     problems = []
     for clone in cfg.clone_placements:
-        if not clone.enabled or clone.template is None:
+        if clone.retired or clone.cell is None:
             continue
-        if clone.template not in cfg.templates:
-            problems.append(_("clone_placement {name!r}: template {template!r} not found in templates")
-                            .format(name=clone.name, template=clone.template))
+        if clone.cell not in cfg.cells:
+            problems.append(_("clone_placement {name!r}: cell {cell!r} not found in cells")
+                            .format(name=clone.name, cell=clone.cell))
     if problems:
         raise ValidationError(format_fatal_error(
-            _("clone_placement references a non‑existent template"),
+            _("clone_placement references a non‑existent cell"),
             problems
         ))
-    logger.debug(_("Clone template existence checks passed"))
+    logger.debug(_("Clone cell existence checks passed"))
 
 
 def check_no_duplicate_clone_anchors(cfg: Config) -> None:
@@ -198,12 +198,12 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
          physical anchor AND the same offset, the registry will confuse their
          vias/tracks. This is almost certainly a copy‑paste typo (forgot to
          change anchor_pad or origin_x_mm/origin_y_mm in the second block),
-         not intentional. "Content" is template OR role — two different roles
+         not intentional. "Content" is cell OR role — two different roles
          on the same anchor are NOT duplicates (different components at the
          same point is normal), so we use what is actually set, not
-         clone.template (which is None for role‑based placements, and two
+         clone.cell (which is None for role‑based placements, and two
          different roles would collapse into one key if we only used
-         template). origin_x_mm/origin_y_mm is included (found 2026-07-27)
+         cell). origin_x_mm/origin_y_mm is included (found 2026-07-27)
          because it's legitimate for two clones to share an anchor and differ
          only by this offset (e.g. a positive/negative filter pair mirrored
          off the same connector pad) — without it in the key, that legitimate
@@ -220,14 +220,14 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
     seen_ref_anchors = {}
     seen_role_anchors = {}
     for clone in cfg.clone_placements:
-        if not clone.enabled:
+        if clone.retired:
             continue
         if clone.name in seen_names:
             problems.append(_("name {name!r} appears twice in clone_placements — names must be unique")
                             .format(name=clone.name))
         seen_names[clone.name] = True
 
-        content_id = clone.template if clone.template is not None else _("role:{role}").format(role=clone.role)
+        content_id = clone.cell if clone.cell is not None else _("role:{role}").format(role=clone.role)
         origin = (round(clone.origin_x_mm, 4), round(clone.origin_y_mm, 4))
 
         if clone.anchor_ref is not None:
@@ -235,7 +235,7 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
             if key in seen_ref_anchors:
                 problems.append(
                     _("{this!r} and {other!r} both point to the same anchor with the same offset "
-                      "(template/role={content!r}, anchor_ref={ref!r}, anchor_pad={pad!r}, "
+                      "(cell/role={content!r}, anchor_ref={ref!r}, anchor_pad={pad!r}, "
                       "origin=({ox}, {oy}) mm) — the registry would confuse their vias/tracks; "
                       "likely a copy‑paste typo (if this is intentional, give them different "
                       "origin_x_mm/origin_y_mm)")
@@ -250,7 +250,7 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
             if key in seen_role_anchors:
                 problems.append(
                     _("{this!r} and {other!r} both point to the same anchor with the same offset "
-                      "(template/role={content!r}, anchor_role={role!r}, anchor_sheet={sheet!r}, "
+                      "(cell/role={content!r}, anchor_role={role!r}, anchor_sheet={sheet!r}, "
                       "anchor_cluster={cluster!r}, anchor_pad={pad!r}, origin=({ox}, {oy}) mm) — "
                       "the registry would confuse their vias/tracks; likely a copy‑paste typo (if "
                       "this is intentional, give them different origin_x_mm/origin_y_mm)")
@@ -277,7 +277,7 @@ def check_anchor_sheet_configured(cfg: Config, sheet_names=None) -> None:
     of anchor_role will fail with a less helpful fatal. Better to say it upfront.
     """
     _sn = sheet_names or {}
-    users = [c.name for c in cfg.clone_placements if c.enabled and c.anchor_sheet]
+    users = [c.name for c in cfg.clone_placements if not c.retired and c.anchor_sheet]
     if users and not _sn:
         raise ValidationError(format_fatal_error(
             _("anchor_sheet is used but sheet name dictionary is empty"),
@@ -319,21 +319,21 @@ def check_clone_nets_exist_on_board(adapter: KiCadBoardAdapter, cfg: Config) -> 
             hint = difflib.get_close_matches(resolved, real_nets, n=1)
             suggestion = _(" — did you mean {suggestion!r}?").format(suggestion=hint[0]) if hint else ""
             problems.append(
-                _("{name!r}, {where}: via.net {template!r} resolves to {resolved!r}, "
+                _("{name!r}, {where}: via.net {net_name!r} resolves to {resolved!r}, "
                   "but that net does not exist on the board{suggestion}")
-                .format(name=clone.name, where=where, template=via.net,
+                .format(name=clone.name, where=where, net_name=via.net,
                         resolved=resolved, suggestion=suggestion)
             )
 
     for clone in cfg.clone_placements:
-        if not clone.enabled:
+        if clone.retired:
             continue
-        template = cfg.templates.get(clone.template)
-        if template is None:
-            continue  # already caught by check_clone_templates_exist
-        for via in template.vias:
+        cell = cfg.cells.get(clone.cell)
+        if cell is None:
+            continue  # already caught by check_clone_cells_exist
+        for via in cell.vias:
             _check_via(via, clone, _("spoke‑level via"))
-        for slot in template.components:
+        for slot in cell.components:
             for via in slot.vias:
                 _check_via(via, clone, _("via of role {role!r}").format(role=slot.role))
 
@@ -347,19 +347,19 @@ def check_clone_nets_exist_on_board(adapter: KiCadBoardAdapter, cfg: Config) -> 
 
 def check_single_selection_based_clone(cfg: Config) -> None:
     """
-    In KiCad only ONE selection is active at any moment — therefore you cannot
+    In KiCad only ONE selection is present at any moment — therefore you cannot
     process more than one ClonePlacement in "by selection" mode (no nets, no params)
-    in a single run. If more than one, fatal with a hint to either disable the
-    extras (enabled: false) or run apply separately for each with --only NAME.
+    in a single run. If more than one, fatal with a hint to either retire the
+    extras (retired: true) or run apply separately for each with --only NAME.
     """
-    selection_based = [c.name for c in cfg.clone_placements if c.enabled and clone_uses_selection_mode(c)]
+    selection_based = [c.name for c in cfg.clone_placements if not c.retired and clone_uses_selection_mode(c)]
     if len(selection_based) > 1:
         raise ValidationError(format_fatal_error(
             _("multiple clone_placements in 'by selection' mode in one run"),
             [_("found {count}: {names} — KiCad has only one selection at a time, "
                "so processing all at once is impossible").format(
                    count=len(selection_based), names=selection_based),
-             _("solution: either set enabled: false on all but one, or run apply "
+             _("solution: either set retired: true on all but one, or run apply "
                "separately for each using --only NAME")]
         ))
     logger.debug(_("Single selection‑based clone check passed"))
@@ -369,11 +369,11 @@ def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) ->
     """Runs all checks in order — from cheap to more comprehensive."""
     _sn = sheet_names or {}
     logger.info(_("Running pre‑validation checks..."))
-    check_clone_templates_exist(cfg)
+    check_clone_cells_exist(cfg)
     check_no_duplicate_clone_anchors(cfg)
     check_anchor_sheet_configured(cfg, sheet_names=_sn)
     check_single_selection_based_clone(cfg)
-    check_templates_and_pads_exist(adapter, cfg, sheet_names=_sn)
+    check_cells_and_pads_exist(adapter, cfg, sheet_names=_sn)
     check_role_pool_sufficiency(adapter, cfg)
     check_clone_nets_exist_on_board(adapter, cfg)
     logger.info(_("All pre‑validation checks passed"))

@@ -55,7 +55,7 @@ def _adapter_with_stray_selection():
 
 
 def _cfg():
-    return Config(templates={})
+    return Config(cells={})
 
 
 class TestCloneIgnoreSelectionWiring:

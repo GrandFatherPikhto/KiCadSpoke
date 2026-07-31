@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for kicadstamp/config/includes.py — generic `include:` for splitting
 a profile YAML into subsystem files (extract_profiles + clone_placements +
-rules + templates together, unlike per-section *_file keys)."""
+rules + cells together, unlike per-section *_file keys)."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -11,7 +11,7 @@ from kicadstamp.config import load_config
 from kicadstamp.exceptions import ValidationError
 
 MINIMAL_TEMPLATE = """
-templates:
+cells:
   one_role:
     components:
       - role: THE_ROLE
@@ -25,7 +25,7 @@ def test_include_merges_clone_placements_and_rules(tmp_path):
     (tmp_path / "sub.yaml").write_text(MINIMAL_TEMPLATE + """
 clone_placements:
   - name: from_sub
-    template: one_role
+    cell: one_role
     origin_x_mm: 1.0
     origin_y_mm: 2.0
 """, encoding="utf-8")
@@ -36,7 +36,7 @@ include:
   - sub.yaml
 clone_placements:
   - name: from_root
-    template: one_role
+    cell: one_role
     origin_x_mm: 0.0
     origin_y_mm: 0.0
 """, encoding="utf-8")
@@ -44,12 +44,12 @@ clone_placements:
     cfg, _ = load_config(str(root))
     names = {cp.name for cp in cfg.clone_placements}
     assert names == {"from_root", "from_sub"}
-    assert "one_role" in cfg.templates
+    assert "one_role" in cfg.cells
 
 
 def test_include_templates_merge_alongside_templates_file(tmp_path):
     (tmp_path / "sub.yaml").write_text("""
-templates:
+cells:
   from_include:
     components:
       - role: R1
@@ -74,12 +74,12 @@ include:
 """, encoding="utf-8")
 
     cfg, _ = load_config(str(root))
-    assert set(cfg.templates.keys()) == {"from_include", "from_templates_file"}
+    assert set(cfg.cells.keys()) == {"from_include", "from_templates_file"}
 
 
 def test_duplicate_template_key_across_includes_is_fatal(tmp_path):
     (tmp_path / "a.yaml").write_text("""
-templates:
+cells:
   dup:
     components:
       - role: R1
@@ -88,7 +88,7 @@ templates:
         angle_deg: 0.0
 """, encoding="utf-8")
     (tmp_path / "b.yaml").write_text("""
-templates:
+cells:
   dup:
     components:
       - role: R2
@@ -206,7 +206,7 @@ def test_bare_list_at_top_level_is_fatal(tmp_path):
     'clone_placements:' key — file's top level is a bare YAML list."""
     (tmp_path / "sub.yaml").write_text("""
 - name: stray
-  template: one_role
+  cell: one_role
   origin_x_mm: 0.0
   origin_y_mm: 0.0
 """, encoding="utf-8")
@@ -222,7 +222,7 @@ def test_nested_include_is_merged(tmp_path):
     (tmp_path / "c.yaml").write_text(MINIMAL_TEMPLATE + """
 clone_placements:
   - name: from_c
-    template: one_role
+    cell: one_role
     origin_x_mm: 0.0
     origin_y_mm: 0.0
 """, encoding="utf-8")
