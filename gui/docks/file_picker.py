@@ -24,6 +24,8 @@ from PyQt6.QtWidgets import QDockWidget, QLabel, QTreeView, QVBoxLayout, QWidget
 
 from kicadstamp.i18n import _
 
+from .. import settings
+
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -58,6 +60,7 @@ class FilePickerDock(QDockWidget):
         self.setWidget(container)
 
         self.set_root(DEFAULT_ROOT if DEFAULT_ROOT.is_dir() else PROJECT_ROOT)
+        self._restore_last_pick()
 
     def set_root(self, root: Path) -> None:
         self.model.setRootPath(str(root))
@@ -68,8 +71,35 @@ class FilePickerDock(QDockWidget):
         if path.is_dir():
             return
         self.picked_path = path
+        self._update_picked_label()
+        data = settings.load()
+        data["last_picked_path"] = str(path)
+        settings.save(data)
+
+    def _update_picked_label(self) -> None:
         try:
-            shown = str(path.relative_to(PROJECT_ROOT))
+            shown = str(self.picked_path.relative_to(PROJECT_ROOT))
         except ValueError:
-            shown = str(path)
+            shown = str(self.picked_path)
         self.picked_label.setText(shown)
+
+    def _restore_last_pick(self) -> None:
+        """Restores the last file picked in a previous session — skipped
+        (not an error) if it's gone since then (deleted/renamed/moved
+        outside boards/), since a stale remembered path is just not useful
+        anymore, not a problem to report."""
+        last = settings.load().get("last_picked_path")
+        if not last:
+            return
+        path = Path(last)
+        if not path.is_file():
+            return
+        self.picked_path = path
+        self._update_picked_label()
+        index = self.model.index(str(path))
+        self.tree.setCurrentIndex(index)
+        self.tree.scrollTo(index)
+        parent = index.parent()
+        while parent.isValid():
+            self.tree.expand(parent)
+            parent = parent.parent()
