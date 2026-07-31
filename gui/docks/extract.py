@@ -44,9 +44,11 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import yaml
-from PyQt6.QtWidgets import (QCheckBox, QDockWidget, QFileDialog, QFormLayout,
-                              QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-                              QPushButton, QScrollArea, QVBoxLayout, QWidget)
+from kipy.board_types import Via
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QFileDialog,
+                              QFormLayout, QGridLayout, QHBoxLayout, QLabel,
+                              QLineEdit, QPushButton, QScrollArea, QVBoxLayout,
+                              QWidget)
 
 from kicadstamp.exceptions import PlacerError
 from kicadstamp.explore import Selected
@@ -96,6 +98,38 @@ class ExtractDock(QDockWidget):
         self.target_label.setWordWrap(True)
         layout.addWidget(self.target_label)
 
+        origin_form = QFormLayout()
+        self.origin_mode_combo = QComboBox()
+        self.origin_mode_combo.addItems(
+            [_("Bounding box (default)"), _("Component role"), _("Via net")])
+        self.origin_mode_combo.currentIndexChanged.connect(self._on_origin_mode_changed)
+        origin_form.addRow(_("Origin:"), self.origin_mode_combo)
+        layout.addLayout(origin_form)
+
+        self._origin_role_row = QWidget()
+        role_row = QHBoxLayout(self._origin_role_row)
+        role_row.setContentsMargins(0, 0, 0, 0)
+        self.origin_role_combo = QComboBox()
+        self.origin_role_combo.setEditable(True)
+        role_row.addWidget(QLabel(_("Role:")))
+        role_row.addWidget(self.origin_role_combo, 1)
+        self.origin_pad_edit = QLineEdit()
+        self.origin_pad_edit.setPlaceholderText(_("pad (optional)"))
+        role_row.addWidget(QLabel(_("Pad:")))
+        role_row.addWidget(self.origin_pad_edit)
+        layout.addWidget(self._origin_role_row)
+        self._origin_role_row.setVisible(False)
+
+        self._origin_via_row = QWidget()
+        via_row = QHBoxLayout(self._origin_via_row)
+        via_row.setContentsMargins(0, 0, 0, 0)
+        self.origin_via_net_combo = QComboBox()
+        self.origin_via_net_combo.setEditable(True)
+        via_row.addWidget(QLabel(_("Net:")))
+        via_row.addWidget(self.origin_via_net_combo, 1)
+        layout.addWidget(self._origin_via_row)
+        self._origin_via_row.setVisible(False)
+
         layout.addWidget(QLabel(_("Net aliases (blank = keep literal):")))
         self._nets_container = QWidget()
         self._nets_layout = QGridLayout(self._nets_container)
@@ -144,7 +178,35 @@ class ExtractDock(QDockWidget):
         self._update_selection_label()
         self._update_cluster_warning()
         self._rebuild_net_aliases()
+        self._update_origin_choices()
         self._update_button_state()
+
+    def _on_origin_mode_changed(self) -> None:
+        mode = self.origin_mode_combo.currentIndex()
+        self._origin_role_row.setVisible(mode == 1)
+        self._origin_via_row.setVisible(mode == 2)
+
+    def _update_origin_choices(self) -> None:
+        """Populates the Role/Via-net combos from what's actually in the
+        current selection — picking an origin from outside the selection
+        makes no sense (extract_template_from_selection fatals on it
+        anyway: 'role not found in selection' / 'no such via in selection'),
+        so there's no point offering it."""
+        roles = sorted({s.role for s in self._selected_footprints if s.role})
+        self._set_combo_items(self.origin_role_combo, roles)
+
+        via_nets = sorted({item.net.name for item in self._raw_items
+                            if isinstance(item, Via) and item.net and item.net.name})
+        self._set_combo_items(self.origin_via_net_combo, via_nets)
+
+    @staticmethod
+    def _set_combo_items(combo: QComboBox, items: List[str]) -> None:
+        current_text = combo.currentText()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItems(items)
+        combo.setCurrentText(current_text)
+        combo.blockSignals(False)
 
     def set_target_file(self, path: Optional[Path]) -> None:
         """Called by MainWindow whenever the Files dock's picked file
@@ -270,9 +332,29 @@ class ExtractDock(QDockWidget):
                 return
             params[alias] = net_literal
 
+        origin_kwargs: Dict[str, str] = {}
+        origin_mode = self.origin_mode_combo.currentIndex()
+        if origin_mode == 1:  # component role (+ optional pad)
+            role = self.origin_role_combo.currentText().strip()
+            if not role:
+                self.message_label.setStyleSheet(_ERROR_STYLE)
+                self.message_label.setText(_("Origin: pick a component role."))
+                return
+            origin_kwargs["origin_component_role"] = role
+            pad = self.origin_pad_edit.text().strip()
+            if pad:
+                origin_kwargs["origin_component_pad"] = pad
+        elif origin_mode == 2:  # via net
+            net = self.origin_via_net_combo.currentText().strip()
+            if not net:
+                self.message_label.setStyleSheet(_ERROR_STYLE)
+                self.message_label.setText(_("Origin: pick a via net."))
+                return
+            origin_kwargs["origin_via_net"] = net
+
         try:
             template_dict = extract_template_from_selection(
-                board.adapter, name, params=params, items=self._raw_items)
+                board.adapter, name, params=params, items=self._raw_items, **origin_kwargs)
         except PlacerError as e:
             self.message_label.setStyleSheet(_ERROR_STYLE)
             self.message_label.setText(str(e))
@@ -295,6 +377,11 @@ class ExtractDock(QDockWidget):
                 entry["name"] = name
             if params:
                 entry["params"] = params
+            for key, value in origin_kwargs.items():
+                # Function kwargs (origin_component_role) vs. profile YAML
+                # keys (origin_by_component_role) differ by "by_" — see
+                # kicadstamp_cli.py's cmd_extract profile branch.
+                entry[f"origin_by_{key[len('origin_'):]}"] = value
             try:
                 profile_overwritten = self._write_merged(
                     self._profile_path, {"extract_profiles": {profile_key: entry}}, section="extract_profiles")
