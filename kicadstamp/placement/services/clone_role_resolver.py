@@ -79,13 +79,19 @@ def _narrow_ambiguous_candidates(candidates, clone: ClonePlacement, adapter, sel
     membership is the more structural signal here (survives even when
     Cluster isn't set at all on these particular components).
     """
+    # getattr, not direct attribute access: this function also serves
+    # CellPlacement (nested, closed-boundary references inside a composite
+    # Cell — see config/models.py), which has no anchor_sheet/anchor_cluster
+    # concept at all — always None for it, real values for ClonePlacement.
+    anchor_sheet = getattr(clone, "anchor_sheet", None)
+    anchor_cluster = getattr(clone, "anchor_cluster", None)
     resolved_anchor_sheet = None
-    if clone.anchor_sheet:
-        resolved_anchor_sheet = resolve_placeholder(clone.anchor_sheet, clone.params, what="anchor_sheet")
+    if anchor_sheet:
+        resolved_anchor_sheet = resolve_placeholder(anchor_sheet, clone.params, what="anchor_sheet")
 
     narrowed = _narrow_by_sheet_cluster_selection(
         candidates, adapter, selected_refs,
-        resolved_anchor_sheet, clone.anchor_cluster,
+        resolved_anchor_sheet, anchor_cluster,
         sheet_names, clone_name, role,
     )
 
@@ -383,10 +389,12 @@ def resolve_roles_by_nets(adapter, cell: Cell, clone: ClonePlacement,
             role_to_ref[role] = narrowed[0].reference_field.text.value
         else:
             refs = sorted(fp.reference_field.text.value for fp in narrowed)
-            if clone.anchor_sheet or clone.anchor_cluster:
+            anchor_sheet = getattr(clone, "anchor_sheet", None)
+            anchor_cluster = getattr(clone, "anchor_cluster", None)
+            if anchor_sheet or anchor_cluster:
                 narrowed_by = ", ".join(
-                    (_("anchor_sheet {sheet!r}").format(sheet=clone.anchor_sheet) if clone.anchor_sheet else "",
-                     _("anchor_cluster {cluster!r}").format(cluster=clone.anchor_cluster) if clone.anchor_cluster else "")
+                    (_("anchor_sheet {sheet!r}").format(sheet=anchor_sheet) if anchor_sheet else "",
+                     _("anchor_cluster {cluster!r}").format(cluster=anchor_cluster) if anchor_cluster else "")
                 ).strip(", ")
                 cluster_hint = _(" (already narrowed by {narrowed_by}, but not enough)").format(narrowed_by=narrowed_by)
             else:

@@ -154,6 +154,31 @@ class TestResolveRolesByNets:
         result = resolve_roles_by_nets(adapter, tpl, clone)
         assert result == {"X": "A"}
 
+    def test_works_with_a_cell_placement_lacking_anchor_sheet_and_cluster(self):
+        """Phase 4 regression: resolve_roles_by_nets/_narrow_ambiguous_candidates
+        also serve CellPlacement (nested, closed-boundary references inside a
+        composite cell — see config/models.py) — that type has NO
+        anchor_sheet/anchor_cluster attribute at all (not just None), unlike
+        ClonePlacement. Must not raise AttributeError; getattr(..., None)
+        makes this a no-op narrowing step, same as ClonePlacement with both
+        explicitly unset."""
+        from kicadstamp.config import CellPlacement
+
+        tpl = Cell(name="t", components=[TemplateComponentSlot(role="X")])
+        fps = [_make_fp("A", "X", ["REAL_NET"])]
+        adapter = MagicMock()
+        adapter.get_footprints.return_value = fps
+        adapter.get_field_value.side_effect = lambda fp, name: fp._role
+        adapter.get_footprint_pads.side_effect = _get_pads
+        adapter.get_selected_items.return_value = []
+
+        nested = CellPlacement(name="inner", cell="t", xy=(0, 0), nets={"X": "REAL_NET"})
+        assert not hasattr(nested, "anchor_sheet")
+        assert not hasattr(nested, "anchor_cluster")
+
+        result = resolve_roles_by_nets(adapter, tpl, nested)
+        assert result == {"X": "A"}
+
     def test_role_without_any_net_source_raises(self):
         tpl = Cell(name="t2", components=[TemplateComponentSlot(role="NO_NET_ROLE")])
         clone = ClonePlacement(name="x", cell="t2", xy=(0, 0))

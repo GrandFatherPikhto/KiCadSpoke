@@ -19,7 +19,9 @@ from ..config import ClonePlacement, Cell, TemplateVia, TemplateTrack
 from ..exceptions import ValidationError, format_fatal_error
 from ..net_resolution import resolve_net
 from ..utils.units import MM
-from .spoke_layout import local_to_absolute, ResolvedVia, ResolvedTrack, ComponentLayout, SpokeLayout
+from .spoke_layout import (
+    local_to_absolute, rotate_local_offset, ResolvedVia, ResolvedTrack, ComponentLayout, SpokeLayout,
+)
 from ..i18n import _
 
 
@@ -84,6 +86,7 @@ def apply_clone_geometry(
     role_to_ref: Dict[str, str],
     anchor_position: Optional[Vector2] = None,
     mirror: bool = False,
+    parent_rotation_deg: float = 0.0,
 ) -> SpokeLayout:
     """
     Computes absolute positions of everything in the cell for a specific
@@ -97,21 +100,24 @@ def apply_clone_geometry(
     ManualSpoke); rotation_deg rotates only the cell contents. If None —
     origin_x/y_mm remain absolute board coordinates, as before.
 
-    mirror=True — placement on the OPPOSITE side: the cell is assumed to be
-    taken from front, final positions (after rotation) are X‑mirrored relative
-    to the vertical axis through origin, component angles become 180°−φ
-    (B.Cu convention from the decap placer). The anchor shift xy is
-    NOT mirrored — it is in board coordinates, like shift in ManualSpoke.
-    Footprints on B.Cu are flipped by FlipManager (the executor sets the absolute
-    angle AFTER the flip, so the +180° from the flip does not need to be accounted
-    for here).
+    parent_rotation_deg (Phase 4, recursive Cell, default 0.0 — every
+    existing top-level call site is unaffected) — the ALREADY-ACCUMULATED
+    rotation of the parent frame this clone is nested inside (0.0 for a
+    top-level ClonePlacement, which has no parent). When nonzero: clone.xy
+    is a shift EXPRESSED IN THE PARENT'S OWN (rotated) frame — "5mm to my
+    right" means something different if the parent itself is rotated — so
+    the shift itself must be rotated by parent_rotation_deg before being
+    added to anchor_position (which the caller has already resolved to the
+    parent's own world-space origin), and the cell's own contents rotate by
+    the SUM of parent_rotation_deg + clone.rotation_deg, not clone.rotation_deg
+    alone. See ClonePositionCalculator's recursive resolver for the caller.
     """
-    shift = Vector2.from_xy(int(clone.xy[0] * MM), int(clone.xy[1] * MM))
+    shift = rotate_local_offset(clone.xy[0], clone.xy[1], parent_rotation_deg)
     if anchor_position is not None:
         origin = Vector2.from_xy(anchor_position.x + shift.x, anchor_position.y + shift.y)
     else:
         origin = shift
-    rotation_deg = clone.rotation_deg
+    rotation_deg = parent_rotation_deg + clone.rotation_deg
 
     def place(along_mm: float, across_mm: float) -> Vector2:
         p = local_to_absolute(origin, along_mm, across_mm, rotation_deg)

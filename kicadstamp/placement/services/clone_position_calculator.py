@@ -15,11 +15,11 @@ mode, a rare case) — we have no choice but to use clone.name, the only
 available identifier.
 """
 import logging
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 from kipy.geometry import Vector2
 from kipy.board_types import BoardLayer
 
-from ...config import Config, ClonePlacement, Cell, TemplateComponentSlot
+from ...config import Config, ClonePlacement, CellPlacement, Cell, TemplateComponentSlot
 from ...exceptions import ValidationError, format_fatal_error
 from ...kicad.adapter import KiCadBoardAdapter
 from ...geometry.clone_geometry import apply_clone_geometry
@@ -153,6 +153,172 @@ class ClonePositionCalculator:
                              x=pad.position.x/1e6, y=pad.position.y/1e6))
         return pad.position
 
+    def _resolve_cell_or_role(self, cell_ref: Optional[str], role_ref: Optional[str],
+                              label: str) -> Tuple[Optional[Cell], str]:
+        """Shared by top-level ClonePlacement and nested CellPlacement: cell:
+        looks up cfg.cells, role: synthesises a temporary one-component Cell
+        on the fly (cheap, no caching needed — see discussion: a separate
+        cell file just for one role with no via/track is cumbersome).
+        Returns (None, label) if a cell: reference doesn't exist (caller logs
+        and skips — same behaviour as before this was factored out)."""
+        if cell_ref is not None:
+            cell = self.cfg.cells.get(cell_ref)
+            if cell is None:
+                logger.warning(_("{name}: cell {cell!r} not found in cells, skipping")
+                               .format(name=label, cell=cell_ref))
+                return None, cell_ref
+            return cell, cell_ref
+        cell = Cell(
+            name=f"__role__{role_ref}",
+            components=[TemplateComponentSlot(
+                role=role_ref, offset_along_mm=0.0, offset_across_mm=0.0, angle_deg=0.0,
+            )],
+        )
+        return cell, cell.name
+
+    def _resolve_one_level(
+        self,
+        placement: Union[ClonePlacement, CellPlacement],
+        cell: Cell,
+        cell_name: str,
+        anchor_position: Optional[Vector2],
+        parent_rotation_deg: float,
+        anchor_id: str,
+    ) -> Tuple[List[PlacedComponentInfo], List[ViaCommand], List[TrackCommand]]:
+        """
+        Resolves ONE placement (top-level ClonePlacement or a nested
+        CellPlacement — same shape of work either way, see CellPlacement's
+        docstring for why it duck-types against the same role-resolution
+        code) against its cell: that cell's own direct leaf content, PLUS
+        (recursively) every nested CellPlacement inside cell.clone_placements
+        — Phase 4, recursive Cell (2026-07-31).
+
+        anchor_position is this placement's PARENT frame's own world-space
+        origin (None only for a top-level, anchor-less, absolute-coordinate
+        ClonePlacement — never None for a nested CellPlacement, which is
+        always relative to its parent's origin). parent_rotation_deg is the
+        parent's ALREADY-ACCUMULATED world rotation (0.0 at the top level).
+        anchor_id is THIS placement's own registry identity — path-composed
+        one level deeper for each nested recursive call (see the recursive
+        call below), so nested content gets a unique, rename-stable key.
+        """
+        mirror = placement.mirror
+        if mirror and cell.clone_placements:
+            # Composing an outer mirror with an already-resolved nested
+            # subtree is a real reflection-composition problem (see
+            # techdocs/handoff — deferred, not "no new theory" like rotation
+            # composition is) — reject explicitly rather than silently
+            # producing wrong geometry.
+            raise ValidationError(format_fatal_error(
+                _("mirror of a composite cell {cell!r} is not supported yet").format(cell=cell_name),
+                [_("cell {cell!r} has its own nested clone_placements — mirroring a composite "
+                   "cell as a whole isn't implemented yet, only leaf cells can be mirrored; "
+                   "remove mirror: true on whatever placement resolves to this cell")
+                 .format(cell=cell_name)]
+            ))
+
+        # clone.ignore_selection — per-item counterpart of --no-selection,
+        # scoped to just this placement's own resolution (see
+        # temporarily_ignore_selection's docstring). CellPlacement has no
+        # such field at all (closed boundary, no selection mode either —
+        # see below) — always False for it, a plain no-op here.
+        with self.adapter.temporarily_ignore_selection(getattr(placement, "ignore_selection", False)):
+            # Selection mode only exists for a top-level ClonePlacement — a
+            # nested CellPlacement is a reusable, closed-boundary recipe with
+            # no live GUI interaction concept, always resolved by nets.
+            if isinstance(placement, ClonePlacement) and clone_uses_selection_mode(placement):
+                role_to_ref = resolve_roles_by_selection(self.adapter, cell, placement,
+                                                          anchor_position=anchor_position,
+                                                          sheet_names=self.sheet_names)
+            else:
+                role_to_ref = resolve_roles_by_nets(self.adapter, cell, placement,
+                                                     anchor_position=anchor_position,
+                                                     sheet_names=self.sheet_names)
+
+        # Cell is assumed to be front; back = mirror (see apply_clone_geometry).
+        layout = apply_clone_geometry(placement, cell, role_to_ref,
+                                      anchor_position=anchor_position,
+                                      mirror=mirror,
+                                      parent_rotation_deg=parent_rotation_deg)
+        logger.info(_("  [{name}] cell {tpl!r} on {layer}{mirror_suffix}")
+                    .format(name=placement.name, tpl=cell.name, layer=cell.layer,
+                            mirror_suffix=_(" -> mirrored as a whole") if mirror else _(" -> as written")))
+
+        components_result: List[PlacedComponentInfo] = []
+        vias_result: List[ViaCommand] = []
+        tracks_result: List[TrackCommand] = []
+
+        for via_index, via in enumerate(layout.vias):
+            vias_result.append(ViaCommand(
+                position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
+                net_name=via.net, owner_ref=placement.name,
+                registry_key=make_registry_key(anchor_id, cell_name, None, via_index),
+            ))
+            logger.debug(_("  [{name}] spoke‑level via: ({x:.3f}, {y:.3f}) mm, net={net}")
+                         .format(name=placement.name, x=via.position.x/1e6,
+                                 y=via.position.y/1e6, net=via.net))
+
+        for track_index, track in enumerate(layout.tracks):
+            track_layer = BoardLayer.BL_B_Cu if track.layer == 'B.Cu' else BoardLayer.BL_F_Cu
+            tracks_result.append(TrackCommand(
+                start=track.start, end=track.end, width_mm=track.width_mm,
+                net_name=track.net, layer=track_layer, owner_ref=placement.name,
+                registry_key=make_registry_key(anchor_id, cell_name, None, track_index),
+            ))
+            logger.debug(_("  [{name}] track: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
+                           "net={net}, layer={layer}")
+                         .format(name=placement.name, sx=track.start.x/1e6, sy=track.start.y/1e6,
+                                 ex=track.end.x/1e6, ey=track.end.y/1e6,
+                                 net=track.net, layer=track.layer))
+
+        for comp_layout in layout.components:
+            # Slot layer: its own absolute or inherited from the cell;
+            # mirror inverts ALL layers — the construction is flipped as a
+            # physical object.
+            slot_layer = comp_layout.slot_layer or cell.layer
+            if mirror:
+                slot_layer = 'F.Cu' if slot_layer == 'B.Cu' else 'B.Cu'
+            comp_layer = BoardLayer.BL_B_Cu if slot_layer == 'B.Cu' else BoardLayer.BL_F_Cu
+            components_result.append(PlacedComponentInfo(
+                ref=comp_layout.ref, dest=comp_layout.position, angle_deg=comp_layout.angle_deg,
+                layer=comp_layer,
+            ))
+            logger.debug(
+                _("  [{name}] {ref} (role {role}): position ({x:.3f}, {y:.3f}) mm, angle {angle:.1f}°")
+                .format(name=placement.name, ref=comp_layout.ref, role=comp_layout.role,
+                        x=comp_layout.position.x/1e6, y=comp_layout.position.y/1e6,
+                        angle=comp_layout.angle_deg)
+            )
+            for via_index, via in enumerate(comp_layout.vias):
+                vias_result.append(ViaCommand(
+                    position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
+                    net_name=via.net, owner_ref=comp_layout.ref,
+                    registry_key=make_registry_key(anchor_id, cell_name, comp_layout.role, via_index),
+                ))
+
+        # Recurse into nested clone_placements, if any — composing this
+        # level's own resolved world-space origin/rotation as the parent
+        # frame for each of them, and a path-composed anchor_id
+        # ("<this>/<nested.name>") so nested content is uniquely and
+        # rename-stably keyed in the registry.
+        world_rotation_deg = parent_rotation_deg + placement.rotation_deg
+        for nested in cell.clone_placements:
+            nested_cell, nested_cell_name = self._resolve_cell_or_role(
+                nested.cell, nested.role, f"{placement.name}/{nested.name}")
+            if nested_cell is None:
+                continue
+            nc, nv, nt = self._resolve_one_level(
+                nested, nested_cell, nested_cell_name,
+                anchor_position=layout.origin,
+                parent_rotation_deg=world_rotation_deg,
+                anchor_id=f"{anchor_id}/{nested.name}",
+            )
+            components_result.extend(nc)
+            vias_result.extend(nv)
+            tracks_result.extend(nt)
+
+        return components_result, vias_result, tracks_result
+
     def compute_raw_positions(
         self,
         clone_placements: List[ClonePlacement],
@@ -165,26 +331,9 @@ class ClonePositionCalculator:
             if clone.retired:
                 continue
 
-            if clone.cell is not None:
-                cell = self.cfg.cells.get(clone.cell)
-                if cell is None:
-                    logger.warning(_("{name}: cell {cell!r} not found in cells, skipping")
-                                   .format(name=clone.name, cell=clone.cell))
-                    continue
-                cell_name = clone.cell
-            else:
-                # role: instead of cell — single‑component placement without
-                # a separate cell file (see discussion: creating a cell
-                # entry just for one role with no via/track is cumbersome).
-                # Synthesise a temporary Cell on the fly (cheap — one
-                # component, no caching needed).
-                cell = Cell(
-                    name=f"__role__{clone.role}",
-                    components=[TemplateComponentSlot(
-                        role=clone.role, offset_along_mm=0.0, offset_across_mm=0.0, angle_deg=0.0,
-                    )],
-                )
-                cell_name = cell.name
+            cell, cell_name = self._resolve_cell_or_role(clone.cell, clone.role, clone.name)
+            if cell is None:
+                continue
 
             # Resolve anchor BEFORE role resolution — needed for physical
             # proximity narrowing (resolve_roles_by_nets), and the same anchor
@@ -195,77 +344,11 @@ class ClonePositionCalculator:
             with self.adapter.temporarily_ignore_selection(clone.ignore_selection):
                 anchor_position = self._resolve_anchor(clone)
 
-                # Mode: "by nets" if nets OR params are set — otherwise "by selection".
-                # Explicit decision outside, not automatic inside the resolver
-                # (see clone_role_resolver.py).
-                if clone_uses_selection_mode(clone):
-                    role_to_ref = resolve_roles_by_selection(self.adapter, cell, clone,
-                                                              anchor_position=anchor_position,
-                                                              sheet_names=self.sheet_names)
-                else:
-                    role_to_ref = resolve_roles_by_nets(self.adapter, cell, clone,
-                                                         anchor_position=anchor_position,
-                                                         sheet_names=self.sheet_names)
-
-            # Placement side: own layer of the clone or global from config.
-            # mirror — explicit manual operation; correctness of layer/mirror pair
-            # is already fatal‑checked in load_config.
-            mirror = clone.mirror
-            # Cell is assumed to be front; back = mirror (see apply_clone_geometry)
-            layout = apply_clone_geometry(clone, cell, role_to_ref,
-                                          anchor_position=anchor_position,
-                                          mirror=mirror)
-            logger.info(_("  [{name}] cell {tpl!r} on {layer}{mirror_suffix}")
-                        .format(name=clone.name, tpl=cell.name, layer=cell.layer,
-                                mirror_suffix=_(" -> mirrored as a whole") if mirror else _(" -> as written")))
             anchor_id = clone_anchor_id(clone)
-
-            for via_index, via in enumerate(layout.vias):
-                vias_result.append(ViaCommand(
-                    position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
-                    net_name=via.net, owner_ref=clone.name,
-                    registry_key=make_registry_key(anchor_id, cell_name, None, via_index),
-                ))
-                logger.debug(_("  [{name}] spoke‑level via: ({x:.3f}, {y:.3f}) mm, net={net}")
-                             .format(name=clone.name, x=via.position.x/1e6,
-                                     y=via.position.y/1e6, net=via.net))
-
-            for track_index, track in enumerate(layout.tracks):
-                track_layer = BoardLayer.BL_B_Cu if track.layer == 'B.Cu' else BoardLayer.BL_F_Cu
-                tracks_result.append(TrackCommand(
-                    start=track.start, end=track.end, width_mm=track.width_mm,
-                    net_name=track.net, layer=track_layer, owner_ref=clone.name,
-                    registry_key=make_registry_key(anchor_id, cell_name, None, track_index),
-                ))
-                logger.debug(_("  [{name}] track: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
-                               "net={net}, layer={layer}")
-                             .format(name=clone.name, sx=track.start.x/1e6, sy=track.start.y/1e6,
-                                     ex=track.end.x/1e6, ey=track.end.y/1e6,
-                                     net=track.net, layer=track.layer))
-
-            for comp_layout in layout.components:
-                # Slot layer: its own absolute or inherited from the cell;
-                # mirror inverts ALL layers — the construction is flipped as a
-                # physical object.
-                slot_layer = comp_layout.slot_layer or cell.layer
-                if mirror:
-                    slot_layer = 'F.Cu' if slot_layer == 'B.Cu' else 'B.Cu'
-                comp_layer = BoardLayer.BL_B_Cu if slot_layer == 'B.Cu' else BoardLayer.BL_F_Cu
-                components_result.append(PlacedComponentInfo(
-                    ref=comp_layout.ref, dest=comp_layout.position, angle_deg=comp_layout.angle_deg,
-                    layer=comp_layer,
-                ))
-                logger.debug(
-                    _("  [{name}] {ref} (role {role}): position ({x:.3f}, {y:.3f}) mm, angle {angle:.1f}°")
-                    .format(name=clone.name, ref=comp_layout.ref, role=comp_layout.role,
-                            x=comp_layout.position.x/1e6, y=comp_layout.position.y/1e6,
-                            angle=comp_layout.angle_deg)
-                )
-                for via_index, via in enumerate(comp_layout.vias):
-                    vias_result.append(ViaCommand(
-                        position=via.position, drill_mm=via.drill_mm, diameter_mm=via.diameter_mm,
-                        net_name=via.net, owner_ref=comp_layout.ref,
-                        registry_key=make_registry_key(anchor_id, cell_name, comp_layout.role, via_index),
-                    ))
+            c, v, t = self._resolve_one_level(clone, cell, cell_name, anchor_position,
+                                              parent_rotation_deg=0.0, anchor_id=anchor_id)
+            components_result.extend(c)
+            vias_result.extend(v)
+            tracks_result.extend(t)
 
         return components_result, vias_result, tracks_result
