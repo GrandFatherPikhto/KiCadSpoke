@@ -143,6 +143,22 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug(_("Selected items (including groups expanded): {count}").format(count=len(direct_items)))
         return direct_items
 
+    def select_items(self, items: List[Any]):
+        """
+        Sets the PCB editor's GUI selection to exactly `items` (replacing
+        whatever was selected before) — the write counterpart of
+        get_selected_items(). Same clear_selection()+add_to_selection() pair
+        flip_selected() already uses, pulled out as its own method for
+        callers (the GUI's Role/Cluster tree, "click a node -> highlight on
+        board") that just want the highlight, not a GUI action run afterwards.
+        Not a mutating/undo-able board edit — selection is editor UI state,
+        not board data — so no begin_commit()/push_commit() around it.
+        """
+        logger.debug(_("Setting GUI selection to {count} items").format(count=len(items)))
+        self._board.clear_selection()
+        if items:
+            self._board.add_to_selection(items)
+
     def get_field_value(self, footprint: FootprintInstance, field_name: str) -> Optional[str]:
         """
         Value of a custom component field (e.g., Role for KiCadStamp 4.0).
