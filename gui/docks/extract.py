@@ -17,14 +17,26 @@ alongside the Selected-wrapped footprint list the other docks use.
 
 Optionally also writes an extract_profiles: entry (the --profile mechanism
 in kicadstamp_cli.py's extract command) — a replayable recipe (name/output/
-net_template/params) so the same extraction can be re-run from the CLI
-later without retyping the alias mapping by hand. This CANNOT go in the
-same file as the cell output: cell_files/cells_file content is parsed as a
-flat {cell_name: {...}} dict with no wrapper (see config/loader.py — every
+params) so the same extraction can be re-run from the CLI later without
+retyping the alias mapping by hand. This CANNOT go in the same file as the
+cell output: cell_files/cells_file content is parsed as a flat
+{cell_name: {...}} dict with no wrapper (see config/loader.py — every
 top-level key is treated as a cell name), so an extract_profiles: sibling
 key in that file would be misread as another cell. extract_profiles: lives
 in a root/included profile config instead (alongside clone_placements:/
 include:/cells_file: etc.) — a second, independent file target.
+
+Net aliases feed params, NOT net_template_map, directly — the alias field
+next to a net IS its params key (e.g. net '+2V5' aliased 'PWR_IN' becomes
+params={'PWR_IN': '+2V5'}). extract_template_from_selection()'s own
+auto-inference then derives net_template_map from params on its own
+(net_resolution.py: any literal net equal to a param VALUE gets mapped to
+that param's {key} automatically) — passing net_template_map directly
+without matching params was an earlier bug here: parametrize_net() always
+round-trip-checks pattern.format(**params) against the literal, and with
+params=={} that check fails for every single alias (found live 2026-08-01,
+"net '{X}' has a placeholder with no parameter" on every extract attempt
+that used an alias).
 """
 import json
 import logging
@@ -245,12 +257,22 @@ class ExtractDock(QDockWidget):
             self.message_label.setText(_("Not connected."))
             return
 
-        net_template_map = {net: f"{{{edit.text().strip()}}}"
-                             for net, edit in self._net_alias_edits.items() if edit.text().strip()}
+        params: Dict[str, str] = {}
+        for net_literal, edit in self._net_alias_edits.items():
+            alias = edit.text().strip()
+            if not alias:
+                continue
+            if alias in params:
+                self.message_label.setStyleSheet(_ERROR_STYLE)
+                self.message_label.setText(
+                    _("Alias {alias!r} used for both {a!r} and {b!r} — each alias needs a "
+                      "distinct net.").format(alias=alias, a=params[alias], b=net_literal))
+                return
+            params[alias] = net_literal
 
         try:
             template_dict = extract_template_from_selection(
-                board.adapter, name, net_template_map=net_template_map, items=self._raw_items)
+                board.adapter, name, params=params, items=self._raw_items)
         except PlacerError as e:
             self.message_label.setStyleSheet(_ERROR_STYLE)
             self.message_label.setText(str(e))
@@ -271,8 +293,8 @@ class ExtractDock(QDockWidget):
             entry: Dict[str, Any] = {"output": self._display_path(self._target_path)}
             if profile_key != name:
                 entry["name"] = name
-            if net_template_map:
-                entry["net_template"] = net_template_map
+            if params:
+                entry["params"] = params
             try:
                 profile_overwritten = self._write_merged(
                     self._profile_path, {"extract_profiles": {profile_key: entry}}, section="extract_profiles")
