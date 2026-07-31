@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 
 from ..i18n import _
+from .points import Point
 
 
 @dataclass
@@ -39,6 +40,13 @@ class ThermalViaArrayConfig:
     anchor_role: Optional[str] = None
     anchor_sheet: Optional[str] = None
     anchor_cluster: Optional[str] = None
+    # Alternative to anchor_ref/anchor_role — name of a points: entry (see
+    # config/points.py). Mutually exclusive with anchor_ref/anchor_role
+    # (fatal if combined — see config/loader.py). MUST resolve to a
+    # footprint (the referenced Point may not have a shift or be xy-literal
+    # — thermal_via_array needs a live component to look up `pad` from, a
+    # bare coordinate is not enough; checked at load time, see loader.py).
+    anchor_point: Optional[str] = None
     pad: str = ""
     net: str = "GND"
     rows: int = 4
@@ -221,6 +229,10 @@ class Rule:
     anchor_role: Optional[str] = None
     anchor_sheet: Optional[str] = None
     anchor_cluster: Optional[str] = None
+    # Alternative to anchor_ref/anchor_role — see ThermalViaArrayConfig.anchor_point
+    # for the mutual-exclusion/footprint-required rules, same here (Rule looks
+    # up spoke.pad on the resolved component, a bare coordinate isn't enough).
+    anchor_point: Optional[str] = None
     name: Optional[str] = None
     retired: bool = False
     skip: bool = False
@@ -306,6 +318,12 @@ class ClonePlacement:
     # ('Channel_1' matches both 'Channel_1' and 'Channel_1/1V2_PLL_PI_FILTER'),
     # not by exact equality — hierarchy and flat names work with the same code.
     anchor_cluster: Optional[str] = None
+    # Alternative to anchor_ref/anchor_role — name of a points: entry (see
+    # config/points.py). Mutually exclusive with anchor_ref/anchor_role
+    # (fatal if combined — see config/loader.py). Unlike Rule/
+    # ThermalViaArrayConfig, ClonePlacement only ever needs a coordinate
+    # (not a footprint) — a shifted or xy-literal Point works fine here.
+    anchor_point: Optional[str] = None
     # Placement layer — FACT: None = cell layer (place verbatim).
     # mirror — OPERATION, always manual: flip the whole construction
     # (geometry mirrored, angles 180°−φ, all layers inverted).
@@ -336,6 +354,7 @@ class Config:
     # their own layer/mirror per placement; this field does not affect them.
     layer: str = 'F.Cu'
     cells: Dict[str, Cell] = field(default_factory=dict)
+    points: Dict[str, Point] = field(default_factory=dict)
     thermal_via_array: ThermalViaArrayConfig = field(default_factory=ThermalViaArrayConfig)
     rules: List[Rule] = field(default_factory=list)
     clone_placements: List[ClonePlacement] = field(default_factory=list)

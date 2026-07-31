@@ -38,7 +38,7 @@ _LIST_SECTIONS = ('rules', 'clone_placements')
 # files (unlike templates_file's silent inline-overrides-external — these are
 # meant to be genuinely separate subsystem files, so a repeated key is far
 # more likely a mistake than an intentional override).
-_DICT_SECTIONS = ('cells', 'extract_profiles', 'clone_profiles')
+_DICT_SECTIONS = ('cells', 'points', 'extract_profiles', 'clone_profiles')
 
 
 def _parse_include_entry(entry: Any, source_path: str) -> Tuple[str, bool]:

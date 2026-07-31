@@ -20,6 +20,7 @@ from .models import (
     rule_effective_name,
     thermal_via_array_effective_name,
 )
+from .points import Point
 from ..runtime_context import RuntimeContext
 from .loader import (
     load_config,
@@ -27,6 +28,7 @@ from .loader import (
     _load_template_track,
     _load_template_component_slot,
     _load_cell,
+    _load_point,
     _load_manual_spoke,
     _load_clone_placement,
     _check_layer_value,
@@ -38,6 +40,7 @@ __all__ = [
     "TemplateComponentSlot",
     "TemplateTrack",
     "Cell",
+    "Point",
     "ManualSpoke",
     "Rule",
     "ClonePlacement",
