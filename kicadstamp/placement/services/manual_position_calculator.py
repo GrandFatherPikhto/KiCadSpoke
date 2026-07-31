@@ -31,6 +31,9 @@ def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule,
             _sn, label=_("rule (net {net!r})").format(net=rule.net),
         )
         return fp.reference_field.text.value
+    if rule.anchor_point is not None:
+        # Namespaced token — see dependency_order.py's Item.produces for points.
+        return f"point:{rule.anchor_point}"
     return None
 
 
@@ -63,10 +66,14 @@ class ManualPositionCalculator:
     ComponentPool is built, and spokes take components from their own cluster.
     """
 
-    def __init__(self, adapter: KiCadBoardAdapter, config: Config, sheet_names=None):
+    def __init__(self, adapter: KiCadBoardAdapter, config: Config, sheet_names=None,
+                 resolved_points=None):
         self.adapter = adapter
         self.cfg = config
         self.sheet_names = sheet_names or {}
+        # name -> ResolvedPoint, for anchor_point: — see planner.py's
+        # PlacementPlanner.resolved_points (owns/shares this dict).
+        self.resolved_points = resolved_points if resolved_points is not None else {}
         self._resolver = ComponentResolver(adapter, config, self.sheet_names)
 
     def compute_raw_positions(

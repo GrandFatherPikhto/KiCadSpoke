@@ -33,11 +33,12 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Union
 
-from ..config import Config, Rule, ClonePlacement, Cell, TemplateComponentSlot
+from ..config import Config, Rule, ClonePlacement, Cell, TemplateComponentSlot, Point
 from ..kicad.adapter import KiCadBoardAdapter
 from ..exceptions import ValidationError, format_fatal_error
 from .services.manual_position_calculator import resolve_rule_anchor_ref
 from .services.clone_position_calculator import resolve_clone_anchor_ref
+from .services.point_resolver import resolve_point_anchor_ref
 from .services.clone_role_resolver import resolve_roles_by_selection, resolve_roles_by_nets, clone_uses_selection_mode
 from .services.component_pool import ComponentPool
 from ..i18n import _
@@ -47,9 +48,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Item:
-    kind: str  # 'rule' | 'clone'
-    obj: Union[Rule, ClonePlacement]
+    kind: str  # 'rule' | 'clone' | 'point'
+    obj: Union[Rule, ClonePlacement, Point]
     label: str
+    # For 'point' items this is possibly a "point:<name>" token, not a bare
+    # ref — see resolve_point_anchor_ref. producer_of/the Kahn loop below are
+    # fully generic over the token string, no special-casing needed.
     anchor_ref: Optional[str]
     produces: Set[str]
 
@@ -165,6 +169,14 @@ def _build_items(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> L
     _resolve_rule_produces / _resolve_clone_produces for what is skipped)."""
     _sn = sheet_names or {}
     items: List[Item] = []
+
+    for point in cfg.points.values():
+        anchor_ref = resolve_point_anchor_ref(adapter, point, sheet_names=_sn)
+        items.append(Item(
+            kind='point', obj=point, label=_("point {name!r}").format(name=point.name),
+            # Namespaced token — see resolve_point_anchor_ref/Item.anchor_ref.
+            anchor_ref=anchor_ref, produces={f"point:{point.name}"},
+        ))
 
     for rule in cfg.rules:
         anchor_ref = resolve_rule_anchor_ref(adapter, cfg, rule, sheet_names=_sn)

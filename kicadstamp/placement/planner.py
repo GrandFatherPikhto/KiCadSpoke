@@ -1,7 +1,7 @@
 # kicadstamp/placement/planner.py
 
 import logging
-from typing import List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
 from kipy.board_types import BoardLayer
 from kipy.geometry import Angle, Vector2
@@ -12,6 +12,7 @@ from ..utils.units import MM
 from .services.via_planner import ViaPlanner
 from .services.manual_position_calculator import ManualPositionCalculator
 from .services.clone_position_calculator import ClonePositionCalculator
+from .services.point_resolver import resolve_point, ResolvedPoint
 from .services.position_tracker import PositionTracker
 from ..exceptions import ComponentNotFoundError, ValidationError
 from .commands import MoveCommand, ViaCommand, TrackCommand, PlacedComponentInfo
@@ -25,8 +26,17 @@ class PlacementPlanner:
         _sn = sheet_names or {}
         self.adapter = adapter
         self.cfg = config
-        self.position_calc = ManualPositionCalculator(adapter, config, sheet_names=_sn)
-        self.clone_calc = ClonePositionCalculator(adapter, config, sheet_names=_sn)
+        self.sheet_names = _sn
+        # Populated as Point items are planned (see plan_item's kind == 'point'
+        # branch) — a name -> ResolvedPoint cache, consulted by anchor_point:
+        # on Rule/ClonePlacement/ThermalViaArrayConfig. Passed BY REFERENCE
+        # into the calculators below so they see it live-updated as the run
+        # progresses, same freshness discipline as everything else here.
+        self.resolved_points: Dict[str, ResolvedPoint] = {}
+        self.position_calc = ManualPositionCalculator(adapter, config, sheet_names=_sn,
+                                                       resolved_points=self.resolved_points)
+        self.clone_calc = ClonePositionCalculator(adapter, config, sheet_names=_sn,
+                                                   resolved_points=self.resolved_points)
         # No global target_fp any more: anchors are per‑rule (Rule.anchor_ref / anchor_role)
         # and per‑tva; resolved on the spot.
         self._target_layer = BoardLayer.BL_B_Cu if config.layer == 'B.Cu' else BoardLayer.BL_F_Cu
@@ -35,7 +45,8 @@ class PlacementPlanner:
         self._planned = None
         self._planned_vias = None
         self._planned_tracks = None
-        self.via_planner = ViaPlanner(adapter, config, sheet_names=_sn)
+        self.via_planner = ViaPlanner(adapter, config, sheet_names=_sn,
+                                      resolved_points=self.resolved_points)
         logger.info(_("Planner initialised: layer={layer}, anchors in rules: {anchors}")
                     .format(layer=config.layer,
                             anchors=len({r.anchor_ref or r.anchor_role for r in config.rules})))
@@ -61,6 +72,15 @@ class PlacementPlanner:
         only moves do (vias/tracks are pure geometry already anchored to
         positions resolved at this point).
         """
+        if item.kind == 'point':
+            # No board mutation — just resolve the point and cache it for
+            # whoever references it via anchor_point. plan_items()/execute's
+            # per-item loop already treats an empty move list as a no-op, so
+            # nothing else in ApplyPipeline needs to know this Item.kind exists.
+            resolved = resolve_point(self.adapter, item.obj, self.resolved_points,
+                                     sheet_names=self.sheet_names)
+            self.resolved_points[item.obj.name] = resolved
+            return []
         if item.kind == 'rule':
             placed, vias, tracks = self.position_calc.compute_raw_positions([item.obj])
         else:

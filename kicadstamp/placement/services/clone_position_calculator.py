@@ -53,6 +53,9 @@ def resolve_clone_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, clone: Clo
         _sn = sheet_names or {}
         fp = resolve_anchor_by_role(adapter, clone, _sn)
         return fp.reference_field.text.value
+    if clone.anchor_point is not None:
+        # Namespaced token — see dependency_order.py's Item.produces for points.
+        return f"point:{clone.anchor_point}"
     return None
 
 
@@ -97,10 +100,14 @@ def clone_anchor_id(clone: ClonePlacement) -> str:
 
 
 class ClonePositionCalculator:
-    def __init__(self, adapter: KiCadBoardAdapter, config: Config, sheet_names=None):
+    def __init__(self, adapter: KiCadBoardAdapter, config: Config, sheet_names=None,
+                 resolved_points=None):
         self.adapter = adapter
         self.cfg = config
         self.sheet_names = sheet_names or {}
+        # name -> ResolvedPoint, for anchor_point: — see planner.py's
+        # PlacementPlanner.resolved_points (owns/shares this dict).
+        self.resolved_points = resolved_points if resolved_points is not None else {}
 
     def _resolve_anchor(self, clone: ClonePlacement) -> Optional[Vector2]:
         """

@@ -15,10 +15,10 @@ from kipy.geometry import Vector2
 from kipy.board_types import Pad, FootprintInstance
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ClonePlacement, Cell, TemplateComponentSlot,
+    Config, ThermalViaArrayConfig, ClonePlacement, Cell, TemplateComponentSlot, Point,
 )
 from kicadstamp.exceptions import ValidationError
-from kicadstamp.placement.dependency_order import resolve_execution_order
+from kicadstamp.placement.dependency_order import resolve_execution_order, _build_items
 
 MM = 1_000_000
 
@@ -55,7 +55,7 @@ def _clone(name, anchor_ref, cell, nets):
                           anchor_ref=anchor_ref, nets=nets)
 
 
-def _cfg(clones):
+def _cfg(clones=None, points=None):
     producer_tpl = Cell(
         name="producer_tpl",
         components=[TemplateComponentSlot(role="PRODUCED_ROLE", offset_along_mm=0.0,
@@ -69,9 +69,10 @@ def _cfg(clones):
     return Config(
         layer='F.Cu',
         cells={"producer_tpl": producer_tpl, "consumer_tpl": consumer_tpl},
+        points=points or {},
         thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[],
-        clone_placements=clones,
+        clone_placements=clones or [],
     )
 
 
@@ -170,3 +171,97 @@ def test_cycle_raises_validation_error():
 
     with pytest.raises(ValidationError, match="dependency cycle"):
         resolve_execution_order(adapter, cfg)
+
+
+class TestPointItems:
+    """Phase 3: Point as a real dependency-graph node (see
+    handoff_2026_07_31_consolidated.md) — a point produces a NAMESPACED
+    token ("point:<name>", not a bare ref) so it can never collide with a
+    real refdes of the same name; anchor_point: on a consumer resolves to
+    that same namespaced token as its dependency."""
+
+    def test_point_item_appears_with_correct_label_and_kind(self):
+        anchor1 = _make_fp("ANCHOR1")
+        pt = Point(name="my_point", anchor_ref="ANCHOR1")
+        cfg = _cfg(points={"my_point": pt})
+        adapter = _adapter_for([anchor1])
+
+        items = resolve_execution_order(adapter, cfg)
+
+        assert [it.label for it in items] == ["point 'my_point'"]
+        assert items[0].kind == 'point'
+        assert items[0].obj is pt
+
+    def test_point_produces_namespaced_token_not_bare_name(self):
+        anchor1 = _make_fp("ANCHOR1")
+        pt = Point(name="P1", anchor_ref="ANCHOR1")
+        cfg = _cfg(points={"P1": pt})
+        adapter = _adapter_for([anchor1])
+
+        items = _build_items(adapter, cfg)
+
+        point_item = next(it for it in items if it.kind == 'point')
+        assert point_item.produces == {"point:P1"}
+
+    def test_clone_anchor_point_resolves_to_namespaced_dependency_token(self):
+        anchor1 = _make_fp("ANCHOR1")
+        p1 = _make_fp("P1", role="PRODUCED_ROLE", nets=["NET_A"])
+        pt = Point(name="my_point", anchor_ref="ANCHOR1")
+        clone_consumer = ClonePlacement(
+            name="consumer", cell="producer_tpl", origin_x_mm=0.0, origin_y_mm=0.0,
+            anchor_point="my_point", nets={"PRODUCED_ROLE": "NET_A"},
+        )
+        cfg = _cfg(clones=[clone_consumer], points={"my_point": pt})
+        adapter = _adapter_for([anchor1, p1])
+
+        items = _build_items(adapter, cfg)
+
+        clone_item = next(it for it in items if it.kind == 'clone')
+        assert clone_item.anchor_ref == "point:my_point"
+
+    def test_three_level_chain_producer_then_point_then_consumer(self):
+        """Point's own anchor (P1) is produced by another clone_placement in
+        this run — the point must be ordered after that producer, and the
+        point's own consumer must be ordered after the point. Declared out
+        of order on purpose; this is airtight against a broken/missing
+        anchor_point namespacing — without it, `consumer` would incorrectly
+        land in level 0 alongside `producer` instead of level 2."""
+        anchor1 = _make_fp("ANCHOR1")
+        p1 = _make_fp("P1", role="PRODUCED_ROLE", nets=["NET_A"])
+        c1 = _make_fp("C1", role="OTHER_ROLE", nets=["NET_B"])
+
+        clone_producer = _clone("producer", "ANCHOR1", "producer_tpl", {"PRODUCED_ROLE": "NET_A"})
+        pt = Point(name="my_point", anchor_ref="P1")  # P1 is produced by clone_producer
+        clone_consumer = ClonePlacement(
+            name="consumer", cell="consumer_tpl", origin_x_mm=0.0, origin_y_mm=0.0,
+            anchor_point="my_point", nets={"OTHER_ROLE": "NET_B"},
+        )
+        cfg = _cfg(clones=[clone_consumer, clone_producer], points={"my_point": pt})
+        adapter = _adapter_for([anchor1, p1, c1])
+
+        items = resolve_execution_order(adapter, cfg)
+
+        assert [it.label for it in items] == [
+            "clone_placement 'producer'", "point 'my_point'", "clone_placement 'consumer'"
+        ]
+
+    def test_point_chain_orders_correctly_regardless_of_yaml_order(self):
+        anchor1 = _make_fp("ANCHOR1")
+        point_a = Point(name="a", anchor_ref="ANCHOR1")
+        point_b = Point(name="b", anchor_point="a", shift_x_mm=1.0)
+        # dict insertion order deliberately wrong: b before a
+        cfg = _cfg(points={"b": point_b, "a": point_a})
+        adapter = _adapter_for([anchor1])
+
+        items = resolve_execution_order(adapter, cfg)
+
+        assert [it.label for it in items] == ["point 'a'", "point 'b'"]
+
+    def test_point_to_point_cycle_raises_validation_error(self):
+        point_a = Point(name="a", anchor_point="b")
+        point_b = Point(name="b", anchor_point="a")
+        cfg = _cfg(points={"a": point_a, "b": point_b})
+        adapter = _adapter_for([])
+
+        with pytest.raises(ValidationError, match="dependency cycle"):
+            resolve_execution_order(adapter, cfg)
