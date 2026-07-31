@@ -43,6 +43,7 @@ from kicadstamp.i18n import _
 
 from .connection import BoardConnection
 from .docks.bulk_field_editor import BulkFieldEditorDock
+from .docks.file_picker import FilePickerDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,10 @@ class MainWindow(QMainWindow):
 
         self.bulk_edit_dock = BulkFieldEditorDock(self)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.bulk_edit_dock)
+
+        self.file_picker_dock = FilePickerDock(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.file_picker_dock)
+        self.tabifyDockWidget(self.bulk_edit_dock, self.file_picker_dock)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
