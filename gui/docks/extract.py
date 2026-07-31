@@ -210,7 +210,7 @@ class ExtractDock(QDockWidget):
         cells_col.addWidget(QLabel(_("Cells:")))
         self.cells_list = QListWidget()
         self.cells_list.setMaximumHeight(80)
-        self.cells_list.itemClicked.connect(lambda item: self.name_edit.setText(item.text()))
+        self.cells_list.itemClicked.connect(self._on_cell_item_clicked)
         cells_col.addWidget(self.cells_list)
         existing_row.addLayout(cells_col)
 
@@ -218,7 +218,7 @@ class ExtractDock(QDockWidget):
         profiles_col.addWidget(QLabel(_("Profiles:")))
         self.profiles_list = QListWidget()
         self.profiles_list.setMaximumHeight(80)
-        self.profiles_list.itemClicked.connect(lambda item: self.profile_key_edit.setText(item.text()))
+        self.profiles_list.itemClicked.connect(self._on_profile_item_clicked)
         profiles_col.addWidget(self.profiles_list)
         existing_row.addLayout(profiles_col)
         layout.addLayout(existing_row)
@@ -416,41 +416,100 @@ class ExtractDock(QDockWidget):
             if matched_profile:
                 if not self.profile_key_edit.text().strip():
                     self.profile_key_edit.setText(matched_profile)
-                profile_entry = self._load_data(self._profile_path).get(
-                    "extract_profiles", {}).get(matched_profile, {})
-                unmatched_aliases = []
-                for alias, net_literal in (profile_entry.get("params") or {}).items():
-                    edit = self._net_alias_edits.get(net_literal)
-                    if edit is None:
-                        unmatched_aliases.append(alias)
-                    elif not edit.text().strip():
-                        edit.setText(alias)
-                if unmatched_aliases:
-                    empty_edits = [e for e in self._net_alias_edits.values() if not e.text().strip()]
-                    for alias, edit in zip(unmatched_aliases, empty_edits):
-                        edit.setText(alias)
-
-                # net_template_role is role -> literal, and role IS stable
-                # across a rail swap (unlike the literal itself) — so
-                # rather than reusing the old literal directly, look up
-                # which ALIAS it had back then and find today's candidate
-                # net carrying that same alias (by now filled in above).
-                old_params = profile_entry.get("params") or {}
-                alias_for_old_literal = {v: k for k, v in old_params.items()}
-                for role, old_literal in (profile_entry.get("net_template_role") or {}).items():
-                    combo = self._net_template_role_edits.get(role)
-                    wanted_alias = alias_for_old_literal.get(old_literal)
-                    if combo is None or combo.currentText().strip() or not wanted_alias:
-                        continue
-                    for i in range(combo.count()):
-                        candidate_net = combo.itemText(i)
-                        edit = self._net_alias_edits.get(candidate_net)
-                        if edit is not None and edit.text().strip() == wanted_alias:
-                            combo.setCurrentText(candidate_net)
-                            break
+                self._apply_profile_entry(matched_profile)
 
         self._select_list_item(self.cells_list, matched_cell)
         self._select_list_item(self.profiles_list, matched_profile)
+
+    def _apply_profile_entry(self, profile_key: str) -> None:
+        """Pulls one extract_profiles entry's params/net_template_role/
+        origin_by_* into the alias/role/Origin fields — shared by the
+        cluster auto-match above and by explicitly clicking a profile in
+        the "Existing" list (see __init__): a manual pick deserves exactly
+        the same pull an automatic match gets, not just the name (reported
+        live 2026-08-01: names were "picked up" — via clicking, since this
+        board's real Cluster names don't slugify to match its cell/profile
+        keys at all, so the auto-match path above never actually fires here
+        — but the alias fields, and then the Origin combo too, stayed
+        untouched, because back then this pull only lived inside the
+        auto-match branch and didn't cover Origin at all)."""
+        profile_entry = self._load_data(self._profile_path).get("extract_profiles", {}).get(profile_key, {})
+        if not profile_entry:
+            return
+
+        unmatched_aliases = []
+        for alias, net_literal in (profile_entry.get("params") or {}).items():
+            edit = self._net_alias_edits.get(net_literal)
+            if edit is None:
+                unmatched_aliases.append(alias)
+            elif not edit.text().strip():
+                edit.setText(alias)
+        if unmatched_aliases:
+            empty_edits = [e for e in self._net_alias_edits.values() if not e.text().strip()]
+            for alias, edit in zip(unmatched_aliases, empty_edits):
+                edit.setText(alias)
+
+        # net_template_role is role -> literal, and role IS stable across a
+        # rail swap (unlike the literal itself) — so rather than reusing
+        # the old literal directly, look up which ALIAS it had back then
+        # and find today's candidate net carrying that same alias (just
+        # filled in above).
+        old_params = profile_entry.get("params") or {}
+        alias_for_old_literal = {v: k for k, v in old_params.items()}
+        for role, old_literal in (profile_entry.get("net_template_role") or {}).items():
+            combo = self._net_template_role_edits.get(role)
+            wanted_alias = alias_for_old_literal.get(old_literal)
+            if combo is None or combo.currentText().strip() or not wanted_alias:
+                continue
+            for i in range(combo.count()):
+                candidate_net = combo.itemText(i)
+                edit = self._net_alias_edits.get(candidate_net)
+                if edit is not None and edit.text().strip() == wanted_alias:
+                    combo.setCurrentText(candidate_net)
+                    break
+
+        # Origin — only applied while still at the untouched default (index
+        # 0, bbox): same empty-field-only spirit as the alias/role pulls
+        # above, so this never yanks the Origin selection out from under
+        # something the user (or an earlier pull) already set.
+        if self.origin_mode_combo.currentIndex() == 0:
+            origin_role = profile_entry.get("origin_by_component_role")
+            origin_via = profile_entry.get("origin_by_via_net")
+            if origin_role:
+                self.origin_mode_combo.setCurrentIndex(1)
+                self.origin_role_combo.setCurrentText(origin_role)
+                origin_pad = profile_entry.get("origin_by_component_pad")
+                if origin_pad:
+                    self.origin_pad_edit.setText(str(origin_pad))
+            elif origin_via:
+                self.origin_mode_combo.setCurrentIndex(2)
+                self.origin_via_net_combo.setCurrentText(origin_via)
+
+    def _find_profile_key_for_cell(self, cell_name: str) -> Optional[str]:
+        """A profile entry's own key and the cell name it writes can differ
+        (profile_key defaults to the cell name but can be overridden — see
+        _on_extract()'s entry['name'] — this project's own real data has
+        exactly this: profile key 'n2v5_adj_pi_filter', cell name
+        '2v5_adj_pi_filter'). Used when the Cells list is clicked, so that
+        click can find and pull the matching profile's aliases too, not
+        just the ones the Profiles list itself was clicked for."""
+        profiles = self._load_data(self._profile_path).get("extract_profiles", {}) or {}
+        return next((key for key, entry in profiles.items()
+                     if (entry.get("name") or key) == cell_name), None)
+
+    def _on_cell_item_clicked(self, item) -> None:
+        cell_name = item.text()
+        self.name_edit.setText(cell_name)
+        profile_key = self._find_profile_key_for_cell(cell_name)
+        if profile_key is not None:
+            if not self.profile_key_edit.text().strip():
+                self.profile_key_edit.setText(profile_key)
+            self._apply_profile_entry(profile_key)
+
+    def _on_profile_item_clicked(self, item) -> None:
+        profile_key = item.text()
+        self.profile_key_edit.setText(profile_key)
+        self._apply_profile_entry(profile_key)
 
     def _update_net_template_role_rows(self) -> None:
         """A role needs an explicit net_template_role pick exactly when 2+
