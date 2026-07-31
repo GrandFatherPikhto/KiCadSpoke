@@ -75,6 +75,40 @@ class RoleClusterTreeDock(QDockWidget):
         self._selected = selected
         self._rebuild()
 
+    def highlight_board_selection(self, refs) -> None:
+        """Reflects the live KiCad GUI selection into the tree — the reverse
+        direction of _on_clicked (tree click -> board selection). Called
+        frequently (see MainWindow's selection-watch timer), so unlike
+        _rebuild() this never touches the model itself, only the selection
+        (cheap) — and bails out early if the target refs already match
+        what's currently selected, so an unchanged board selection doesn't
+        cause any visible churn on every tick."""
+        model = self.tree.model()
+        if model is None:
+            return
+        _, current_refs = self._capture_view_state()
+        if current_refs == refs:
+            return
+        selection_model = self.tree.selectionModel()
+        selection_model.clearSelection()
+        if not refs:
+            return
+
+        def walk(item: QStandardItem, ancestor_indexes):
+            index = model.indexFromItem(item)
+            ref = item.data(_REF_ROLE)
+            if ref is not None and ref in refs:
+                selection_model.select(index, QItemSelectionModel.SelectionFlag.Select)
+                for ancestor in ancestor_indexes:
+                    self.tree.setExpanded(ancestor, True)
+                self.tree.scrollTo(index)
+            for row in range(item.rowCount()):
+                walk(item.child(row), ancestor_indexes + [index])
+
+        root = model.invisibleRootItem()
+        for row in range(root.rowCount()):
+            walk(root.child(row), [])
+
     def _rebuild(self) -> None:
         """Called on every poll tick (via set_footprints), on group-by
         toggle, and on every search-box keystroke — a brand new
