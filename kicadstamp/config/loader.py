@@ -320,7 +320,15 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
     check_unknown_keys(tva_data, _THERMAL_VIA_ARRAY_KNOWN_KEYS,
                        _("unknown fields in thermal_via_array"))
     thermal_via = ThermalViaArrayConfig(
-        retired=tva_data.get('retired', False),
+        # Absent thermal_via_array: section (tva_data == {}) must keep meaning
+        # "nothing configured, do nothing" — same sentinel convention as the
+        # name-check above, not the class-level default (which is False,
+        # unified with Rule/ManualSpoke/ClonePlacement for the case where the
+        # section IS present). See handoff_2026_07_31_consolidated.md §5 —
+        # found 2026-07-31: naive `tva_data.get('retired', False)` made every
+        # config without this section fatal on apply (no anchor_ref/anchor_role
+        # either, since those default to None too).
+        retired=tva_data.get('retired', not tva_data),
         anchor_ref=tva_data.get('anchor_ref'),
         anchor_role=tva_data.get('anchor_role'),
         anchor_sheet=tva_data.get('anchor_sheet'),

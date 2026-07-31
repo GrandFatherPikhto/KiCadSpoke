@@ -126,4 +126,6 @@ cells: {}
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.thermal_via_array.retired is False
+        # retired=True, not False: an absent section means "nothing configured,
+        # do nothing" — found 2026-07-31, see test_naming.py for the full story.
+        assert cfg.thermal_via_array.retired is True
