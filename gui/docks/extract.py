@@ -58,6 +58,21 @@ ready to use it, not just leave the cell sitting in a file nothing points
 at yet. Skipped when Cells/Extractor already IS the Placer file (self-
 reference is pointless — the file already effectively "has itself").
 
+Net template role (a component whose pads touch TWO aliased nets — a
+ferrite bead/inductor bridging two rails, e.g. a pi-filter's feedback
+element): extract_template_from_selection() can't auto-decide which of
+the two aliased nets becomes that role's net_template (see
+template_extraction.py, "N nets from --net-template on pads"), so it's
+left EMPTY there unless net_template_role={role: literal} says which one
+— a mechanism that already existed backend/CLI-side (--net-template-role)
+but had no GUI surface until now. The "Net template role:" section only
+ever shows a role once 2+ of ITS pads' nets have a non-empty alias typed
+next to them (checked live: this project's own board has exactly this
+shape — a PI_FILTER_FB ferrite bead with '-2V5' on one pad and
+'-2V5_DIRTY' on the other, both meant to be templated) — reactive to
+alias typing, not a fixed list. Extraction is blocked until every such
+row has a pick; there is no safe default to guess.
+
 The "Existing cells:"/"Existing profiles:" lists read straight from
 whatever those two files currently contain (top-level keys / the
 extract_profiles: section's keys) and let a click reuse an existing name
@@ -111,6 +126,7 @@ class ExtractDock(QDockWidget):
         self._profile_path: Optional[Path] = None
         self._placer_path: Optional[Path] = None
         self._net_alias_edits: Dict[str, QLineEdit] = {}
+        self._net_template_role_edits: Dict[str, QComboBox] = {}
         self._last_autofill_key: Optional[Tuple[frozenset, Optional[Path], Optional[Path]]] = None
 
         container = QWidget()
@@ -176,6 +192,17 @@ class ExtractDock(QDockWidget):
         scroll.setWidgetResizable(True)
         scroll.setWidget(self._nets_container)
         layout.addWidget(scroll, 1)
+
+        self._role_net_section = QWidget()
+        role_net_section_layout = QVBoxLayout(self._role_net_section)
+        role_net_section_layout.setContentsMargins(0, 0, 0, 0)
+        role_net_section_layout.addWidget(
+            QLabel(_("Net template role (bridging component — pick which aliased net is the template):")))
+        self._role_net_layout = QGridLayout()
+        self._role_net_layout.setContentsMargins(0, 0, 0, 0)
+        role_net_section_layout.addLayout(self._role_net_layout)
+        layout.addWidget(self._role_net_section)
+        self._role_net_section.setVisible(False)
 
         layout.addWidget(QLabel(_("Existing (click to reuse a name):")))
         existing_row = QHBoxLayout()
@@ -403,8 +430,66 @@ class ExtractDock(QDockWidget):
                     for alias, edit in zip(unmatched_aliases, empty_edits):
                         edit.setText(alias)
 
+                # net_template_role is role -> literal, and role IS stable
+                # across a rail swap (unlike the literal itself) — so
+                # rather than reusing the old literal directly, look up
+                # which ALIAS it had back then and find today's candidate
+                # net carrying that same alias (by now filled in above).
+                old_params = profile_entry.get("params") or {}
+                alias_for_old_literal = {v: k for k, v in old_params.items()}
+                for role, old_literal in (profile_entry.get("net_template_role") or {}).items():
+                    combo = self._net_template_role_edits.get(role)
+                    wanted_alias = alias_for_old_literal.get(old_literal)
+                    if combo is None or combo.currentText().strip() or not wanted_alias:
+                        continue
+                    for i in range(combo.count()):
+                        candidate_net = combo.itemText(i)
+                        edit = self._net_alias_edits.get(candidate_net)
+                        if edit is not None and edit.text().strip() == wanted_alias:
+                            combo.setCurrentText(candidate_net)
+                            break
+
         self._select_list_item(self.cells_list, matched_cell)
         self._select_list_item(self.profiles_list, matched_profile)
+
+    def _update_net_template_role_rows(self) -> None:
+        """A role needs an explicit net_template_role pick exactly when 2+
+        of ITS pads' nets currently have a non-empty alias next to them
+        (see module docstring) — recomputed live as alias text changes
+        (connected to each net-alias edit's textChanged), not just on
+        selection changes, since typing an alias is exactly what turns a
+        previously-unambiguous role into an ambiguous one."""
+        ambiguous: Dict[str, List[str]] = {}
+        for s in self._selected_footprints:
+            if not s.role:
+                continue
+            distinct_nets = set(s.nets.values())
+            aliased = sorted(n for n in distinct_nets
+                              if self._net_alias_edits.get(n) and self._net_alias_edits[n].text().strip())
+            if len(aliased) >= 2:
+                ambiguous[s.role] = aliased
+
+        if set(ambiguous) == set(self._net_template_role_edits):
+            return
+
+        previous = {role: combo.currentText() for role, combo in self._net_template_role_edits.items()}
+        while self._role_net_layout.count():
+            item = self._role_net_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        self._net_template_role_edits = {}
+        for row, (role, nets) in enumerate(sorted(ambiguous.items())):
+            self._role_net_layout.addWidget(QLabel(role), row, 0)
+            combo = QComboBox()
+            combo.addItem("")
+            combo.addItems(nets)
+            combo.setCurrentText(previous.get(role, ""))
+            self._role_net_layout.addWidget(combo, row, 1)
+            self._net_template_role_edits[role] = combo
+
+        self._role_net_section.setVisible(bool(ambiguous))
 
     def _update_selection_label(self) -> None:
         if not self._raw_items:
@@ -451,8 +536,10 @@ class ExtractDock(QDockWidget):
             edit = QLineEdit()
             edit.setPlaceholderText(_("alias, e.g. PWR_IN"))
             edit.setText(previous.get(net, ""))
+            edit.textChanged.connect(self._update_net_template_role_rows)
             self._nets_layout.addWidget(edit, row, 1)
             self._net_alias_edits[net] = edit
+        self._update_net_template_role_rows()
 
     def _update_button_state(self) -> None:
         self.extract_button.setEnabled(bool(self._raw_items) and self._target_path is not None)
@@ -513,9 +600,22 @@ class ExtractDock(QDockWidget):
                 return
             origin_kwargs["origin_via_net"] = net
 
+        net_template_role: Dict[str, str] = {}
+        for role, combo in self._net_template_role_edits.items():
+            literal = combo.currentText().strip()
+            if not literal:
+                self.message_label.setStyleSheet(_ERROR_STYLE)
+                self.message_label.setText(
+                    _("Net template role: role {role!r} bridges 2+ aliased nets — pick which one "
+                      "is the template.").format(role=role))
+                return
+            net_template_role[role] = literal
+
+        annotations: List[Tuple[str, str, str]] = []
         try:
             template_dict = extract_template_from_selection(
-                board.adapter, name, params=params, items=self._raw_items, **origin_kwargs)
+                board.adapter, name, params=params, items=self._raw_items,
+                net_template_role=net_template_role, annotations=annotations, **origin_kwargs)
         except PlacerError as e:
             self.message_label.setStyleSheet(_ERROR_STYLE)
             self.message_label.setText(str(e))
@@ -538,6 +638,8 @@ class ExtractDock(QDockWidget):
                 entry["name"] = name
             if params:
                 entry["params"] = params
+            if net_template_role:
+                entry["net_template_role"] = net_template_role
             for key, value in origin_kwargs.items():
                 # Function kwargs (origin_component_role) vs. profile YAML
                 # keys (origin_by_component_role) differ by "by_" — see
@@ -569,7 +671,14 @@ class ExtractDock(QDockWidget):
             except OSError as e:
                 messages.append(_("placer file wiring failed: {error}").format(error=e))
 
-        self.message_label.setStyleSheet(_SUCCESS_STYLE)
+        if annotations:
+            messages.append(_("{count} field(s) could not be determined automatically: {details}")
+                             .format(count=len(annotations),
+                                     details="; ".join(f"{role}/{field}: {hint}"
+                                                        for role, field, hint in annotations)))
+            self.message_label.setStyleSheet(_WARN_STYLE)
+        else:
+            self.message_label.setStyleSheet(_SUCCESS_STYLE)
         self.message_label.setText("; ".join(messages))
         self._refresh_existing_lists()
 
