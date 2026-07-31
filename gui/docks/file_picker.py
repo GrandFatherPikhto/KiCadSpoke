@@ -19,7 +19,7 @@ restarts, same mechanism as the last-picked-file memory below.
 """
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from PyQt6.QtGui import QFileSystemModel
 from PyQt6.QtWidgets import (QDockWidget, QFileDialog, QHBoxLayout, QLabel,
@@ -40,6 +40,11 @@ class FilePickerDock(QDockWidget):
         super().__init__(_("Files"), main_window)
         self._main_window = main_window
         self.picked_path: Optional[Path] = None
+        # Set by MainWindow once both docks exist — ExtractDock's target
+        # file follows whatever's picked here. Plain callback, not a
+        # pyqtSignal: only ever one listener, and this codebase doesn't use
+        # custom signals anywhere else yet.
+        self.on_pick_changed: Optional[Callable[[Optional[Path]], None]] = None
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -108,6 +113,8 @@ class FilePickerDock(QDockWidget):
         data = settings.load()
         data["last_picked_path"] = str(path)
         settings.save(data)
+        if self.on_pick_changed:
+            self.on_pick_changed(path)
 
     @staticmethod
     def _display_path(path: Path) -> str:

@@ -1,15 +1,18 @@
 # gui/main_window.py
 """
 MainWindow — persistent shell for the KiCadStamp GUI: connection lifecycle
-+ status bar + docks (Role/Cluster tree, bulk Role/Cluster field editor).
++ status bar + docks (Role/Cluster tree, bulk Role/Cluster field editor,
+file picker, extract-to-file).
 
-Step 1 (see techdocs/handoff for the design discussion): connect/reconnect,
-poll, show the live snapshot grouped by Role/Cluster, click to highlight on
-the real board. Step 2: BulkFieldEditorDock, the first real mutating panel
-— set Role/Cluster on whatever's currently selected. Still missing: the
-extract-to-file dock. kipy 0.7.1's Board has no selection/board-change push
-events (checked directly against the installed kipy.board.Board class), so
-"live" here means polled on a QTimer, not pushed.
+Step 1: RoleClusterTreeDock — connect/reconnect, poll, show the live
+snapshot grouped by Role/Cluster, click to highlight on the real board.
+Step 2: BulkFieldEditorDock, the first real mutating panel — set Role/
+Cluster on whatever's currently selected. Then FilePickerDock (pick a
+target file by clicking instead of typing a path) and ExtractDock (build a
+Cell from the current selection, write it into that target file). kipy
+0.7.1's Board has no selection/board-change push events (checked directly
+against the installed kipy.board.Board class), so "live" here means polled
+on a QTimer, not pushed.
 
 The timer's automatic tick only ever tries to CONNECT (while disconnected)
 — it deliberately never re-fetches/rebuilds the tree on its own. An earlier
@@ -44,6 +47,7 @@ from kicadstamp.i18n import _
 from . import settings
 from .connection import BoardConnection
 from .docks.bulk_field_editor import BulkFieldEditorDock
+from .docks.extract import ExtractDock
 from .docks.file_picker import FilePickerDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
 
@@ -80,6 +84,18 @@ class MainWindow(QMainWindow):
         self.file_picker_dock = FilePickerDock(self)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.file_picker_dock)
         self.tabifyDockWidget(self.bulk_edit_dock, self.file_picker_dock)
+
+        self.extract_dock = ExtractDock(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
+        self.tabifyDockWidget(self.file_picker_dock, self.extract_dock)
+
+        # Files -> Extract wiring: the target file follows whatever's picked
+        # in the Files dock. _restore_last_pick() (inside FilePickerDock's
+        # own __init__, already ran) may have already set picked_path before
+        # this callback existed to hear about it — push the current value
+        # once explicitly so a restored pick isn't silently missed.
+        self.file_picker_dock.on_pick_changed = self.extract_dock.set_target_file
+        self.extract_dock.set_target_file(self.file_picker_dock.picked_path)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
@@ -170,3 +186,4 @@ class MainWindow(QMainWindow):
         by_ref = {s.ref: s for s in self.connection.board.select()}
         selected = [by_ref[ref] for ref in refs if ref in by_ref]
         self.bulk_edit_dock.set_board_selection(selected)
+        self.extract_dock.set_board_selection(items, selected)
