@@ -13,6 +13,7 @@ template_files:
   - templates/ldo_3v3.yaml
 
 include:
+  - points.yaml  # Именованные Point (Фаза 5) — см. techdocs/handoff/handoff_2026_08_01_phase5_plan.md
   - power_extracts.yaml  # Коллекция экстраторов для силовой части платы
   - pn5v_filters.yaml
   - p3v3_ldo.yaml

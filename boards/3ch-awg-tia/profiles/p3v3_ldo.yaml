@@ -9,10 +9,7 @@ clone_placements:
     params:
       PWR_IN: '+5V'
       PWR_OUT: '+3V3_DIRTY'
-    anchor_role: C_OUT_BYPASS
-    anchor_cluster: In_Pi_Filter_Pos
-    # anchor_role: CONN_PM5V
-    anchor_pad: '1'
+    anchor_point: p3v3_ldo_origin
     xy: [-50.0, 35.0]
 
 

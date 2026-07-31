@@ -1,0 +1,9 @@
+points:
+  # Real-world reference: the bypass cap pad the 3V3 LDO subsystem is
+  # anchored on today (In_Pi_Filter_Pos cluster). Pure naming, no geometry
+  # change — same anchor_role/anchor_cluster/anchor_pad p3v3_ldo.yaml used
+  # inline before. See techdocs/handoff/handoff_2026_08_01_phase5_plan.md.
+  p3v3_ldo_origin:
+    anchor_role: C_OUT_BYPASS
+    anchor_cluster: In_Pi_Filter_Pos
+    anchor_pad: '1'
