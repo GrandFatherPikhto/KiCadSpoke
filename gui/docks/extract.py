@@ -279,15 +279,18 @@ class ExtractDock(QDockWidget):
         return re.sub(r"[^0-9a-zA-Z]+", "_", text.strip().lower()).strip("_")
 
     @staticmethod
-    def _existing_keys(path: Optional[Path], section: Optional[str] = None) -> Set[str]:
+    def _load_data(path: Optional[Path]) -> dict:
         if path is None or not path.exists():
-            return set()
+            return {}
         try:
             with open(path, "r", encoding="utf-8") as f:
-                data = (json.load(f) if path.suffix.lower() == ".json" else yaml.safe_load(f)) or {}
+                return (json.load(f) if path.suffix.lower() == ".json" else yaml.safe_load(f)) or {}
         except (OSError, yaml.YAMLError, json.JSONDecodeError) as e:
-            logger.warning("Failed to read %s for existing-keys list: %s", path, e)
-            return set()
+            logger.warning("Failed to read %s: %s", path, e)
+            return {}
+
+    def _existing_keys(self, path: Optional[Path], section: Optional[str] = None) -> Set[str]:
+        data = self._load_data(path)
         if section is not None:
             data = data.get(section) or {}
         return set(data.keys())
@@ -315,7 +318,15 @@ class ExtractDock(QDockWidget):
         that's still empty, so this never overwrites something already
         typed. Also highlights the match in its list either way, so a hit
         is visible even when the field was left untouched. No match ->
-        silently does nothing (see module docstring)."""
+        silently does nothing (see module docstring).
+
+        A matched profile's own params: (alias -> net literal, the same
+        shape _on_extract() writes) are pulled into the net-alias fields
+        too, matched up by net literal — reported live 2026-08-01 as
+        missing ("алиасы сетей не подтянул"): reusing a profile's name
+        without its aliases just means retyping them by hand every time.
+        Same empty-field-only rule as the name fields; a param whose net
+        isn't in the current selection has no matching row and is skipped."""
         clusters = frozenset(s.cluster for s in self._selected_footprints if s.cluster)
         key = (clusters, self._target_path, self._profile_path)
         if key == self._last_autofill_key:
@@ -336,8 +347,15 @@ class ExtractDock(QDockWidget):
 
             profile_keys = self._existing_keys(self._profile_path, section="extract_profiles")
             matched_profile = next((c for c in candidates if c in profile_keys), None)
-            if matched_profile and not self.profile_key_edit.text().strip():
-                self.profile_key_edit.setText(matched_profile)
+            if matched_profile:
+                if not self.profile_key_edit.text().strip():
+                    self.profile_key_edit.setText(matched_profile)
+                profile_entry = self._load_data(self._profile_path).get(
+                    "extract_profiles", {}).get(matched_profile, {})
+                for alias, net_literal in (profile_entry.get("params") or {}).items():
+                    edit = self._net_alias_edits.get(net_literal)
+                    if edit is not None and not edit.text().strip():
+                        edit.setText(alias)
 
         self._select_list_item(self.cells_list, matched_cell)
         self._select_list_item(self.profiles_list, matched_profile)
