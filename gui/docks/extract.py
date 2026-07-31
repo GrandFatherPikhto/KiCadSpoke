@@ -98,7 +98,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 from kipy.board_types import Via
@@ -113,6 +113,7 @@ from kicadstamp.explore import Selected
 from kicadstamp.i18n import _
 from kicadstamp.template_extraction import extract_template_from_selection
 
+from .. import yaml_io
 from ..docks.file_picker import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
@@ -341,22 +342,8 @@ class ExtractDock(QDockWidget):
     def _slugify(text: str) -> str:
         return re.sub(r"[^0-9a-zA-Z]+", "_", text.strip().lower()).strip("_")
 
-    @staticmethod
-    def _load_data(path: Optional[Path]) -> dict:
-        if path is None or not path.exists():
-            return {}
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return (json.load(f) if path.suffix.lower() == ".json" else yaml.safe_load(f)) or {}
-        except (OSError, yaml.YAMLError, json.JSONDecodeError) as e:
-            logger.warning("Failed to read %s: %s", path, e)
-            return {}
-
-    def _existing_keys(self, path: Optional[Path], section: Optional[str] = None) -> Set[str]:
-        data = self._load_data(path)
-        if section is not None:
-            data = data.get(section) or {}
-        return set(data.keys())
+    _load_data = staticmethod(yaml_io.load_data)
+    _existing_keys = staticmethod(yaml_io.existing_keys)
 
     def _refresh_existing_lists(self) -> None:
         self.cells_list.clear()

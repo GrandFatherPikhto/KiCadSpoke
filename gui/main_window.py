@@ -50,6 +50,7 @@ from .docks.bulk_field_editor import BulkFieldEditorDock
 from .docks.extract import ExtractDock
 from .docks.file_picker import FilePickerDock
 from .docks.log_panel import LogDock
+from .docks.placer import PlacerDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
 
 logger = logging.getLogger(__name__)
@@ -90,23 +91,39 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
         self.tabifyDockWidget(self.file_picker_dock, self.extract_dock)
 
+        self.placer_dock = PlacerDock(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.placer_dock)
+        self.tabifyDockWidget(self.extract_dock, self.placer_dock)
+
         self.log_dock = LogDock(self, verbose=verbose)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock)
 
-        # Files -> Extract wiring: ExtractDock's cell-output file follows
-        # the Cells role, its extract_profiles file follows the Extractor
-        # role (both assigned via "Use selected" in the Files dock).
+        # Files -> Extract/Placer wiring: ExtractDock's cell-output file and
+        # PlacerDock's cell list both follow the Cells role; ExtractDock's
+        # extract_profiles file follows the Extractor role; ExtractDock's
+        # and PlacerDock's Placer-file each follow the Placer role (both
+        # assigned via "Use selected" in the Files dock — one role can have
+        # more than one listener, hence the small dispatcher functions
+        # instead of assigning a dock method directly).
         # _restore_roles() (inside FilePickerDock's own __init__, already
         # ran) may have already restored a role from a previous session
         # before these callbacks existed to hear about it — push the
         # current values once explicitly so a restored assignment isn't
         # silently missed.
-        self.file_picker_dock.on_cells_file_changed = self.extract_dock.set_target_file
+        def _on_cells_file_changed(path):
+            self.extract_dock.set_target_file(path)
+            self.placer_dock.set_cells_file(path)
+
+        def _on_placer_file_changed(path):
+            self.extract_dock.set_placer_file(path)
+            self.placer_dock.set_placer_file(path)
+
+        self.file_picker_dock.on_cells_file_changed = _on_cells_file_changed
         self.file_picker_dock.on_extractor_file_changed = self.extract_dock.set_profile_file
-        self.file_picker_dock.on_placer_file_changed = self.extract_dock.set_placer_file
-        self.extract_dock.set_target_file(self.file_picker_dock.assigned["cells"])
+        self.file_picker_dock.on_placer_file_changed = _on_placer_file_changed
+        _on_cells_file_changed(self.file_picker_dock.assigned["cells"])
         self.extract_dock.set_profile_file(self.file_picker_dock.assigned["extractor"])
-        self.extract_dock.set_placer_file(self.file_picker_dock.assigned["placer"])
+        _on_placer_file_changed(self.file_picker_dock.assigned["placer"])
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
