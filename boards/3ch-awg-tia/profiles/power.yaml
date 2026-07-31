@@ -3,7 +3,7 @@ track_registry_path: registries/power.tracks.registry.json
 log_file: ../logs/power.log
 schematic_dir: ../../../test_boards/3CH-AWG-TIA
 
-template_files:
+cell_files:
   - templates/ldo_adj.yaml
   - templates/led_spoke.yaml
   - templates/ldo_adj_pi_filter.yaml

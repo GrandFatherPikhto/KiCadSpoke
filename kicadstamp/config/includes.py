@@ -5,7 +5,7 @@ files (e.g. by subsystem: ldo.yaml, pi_filters.yaml, dac_channels.yaml — each
 carrying whatever mix of extract_profiles/clone_placements/rules/cells
 that subsystem needs).
 
-Independent of templates_file (kicadstamp/config/loader.py) — that mechanism
+Independent of cells_file (kicadstamp/config/loader.py) — that mechanism
 stays as-is (single-purpose, cells only, inline-overrides-external).
 include: is general-purpose and used by BOTH load_config() (rules/
 clone_placements/cells) and load_profile() in kicadstamp_cli.py
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 _LIST_SECTIONS = ('rules', 'clone_placements')
 
 # Dict sections: merged key-by-key, fatal on a key defined in two different
-# files (unlike templates_file's silent inline-overrides-external — these are
+# files (unlike cells_file's silent inline-overrides-external — these are
 # meant to be genuinely separate subsystem files, so a repeated key is far
 # more likely a mistake than an intentional override).
 _DICT_SECTIONS = ('cells', 'points', 'extract_profiles', 'clone_profiles')

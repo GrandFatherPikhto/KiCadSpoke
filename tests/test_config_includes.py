@@ -45,7 +45,7 @@ clone_placements:
     assert "one_role" in cfg.cells
 
 
-def test_include_templates_merge_alongside_templates_file(tmp_path):
+def test_include_templates_merge_alongside_cells_file(tmp_path):
     (tmp_path / "sub.yaml").write_text("""
 cells:
   from_include:
@@ -56,7 +56,7 @@ cells:
         angle_deg: 0.0
 """, encoding="utf-8")
     (tmp_path / "ext_templates.yaml").write_text("""
-from_templates_file:
+from_cells_file:
   components:
     - role: R2
       offset_along_mm: 0.0
@@ -66,13 +66,13 @@ from_templates_file:
 
     root = tmp_path / "root.yaml"
     root.write_text("""
-templates_file: ext_templates.yaml
+cells_file: ext_templates.yaml
 include:
   - sub.yaml
 """, encoding="utf-8")
 
     cfg, _ = load_config(str(root))
-    assert set(cfg.cells.keys()) == {"from_include", "from_templates_file"}
+    assert set(cfg.cells.keys()) == {"from_include", "from_cells_file"}
 
 
 def test_duplicate_template_key_across_includes_is_fatal(tmp_path):

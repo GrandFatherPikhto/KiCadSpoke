@@ -94,7 +94,7 @@ def dump_rules(rules: List[Rule], path: str) -> None:
 
 def dump_template(template_dict: dict, path: str) -> None:
     """Writes a template_extraction.extract_template_from_selection() result
-    (already {name: {...}} shaped) straight to path, ready for templates_file.
+    (already {name: {...}} shaped) straight to path, ready for cells_file.
     Same yaml.dump style as kicadstamp_cli.py's cmd_extract, minus its
     merge-into-existing-file behaviour: this always overwrites the whole
     file, matching dump_clone_placements/dump_rules — a script re-running
@@ -150,7 +150,7 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
     argparse block (single source of truth for the apply-gating logic).
 
     root_config_path (NOT output_path) is what gets loaded/applied — it's
-    the one that carries schematic_dir/templates_file and (via include:)
+    the one that carries schematic_dir/cells_file and (via include:)
     picks up output_path, and it's what registry identity is keyed off (see
     apply_config's own docstring) — it must be the SAME config every run.
 

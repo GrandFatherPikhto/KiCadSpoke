@@ -591,15 +591,28 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
 
     cells_data = dict(data.get('cells', {}) or {})
 
-    templates_file = data.get('templates_file')
-    template_files = data.get('template_files') or []
-    if not isinstance(template_files, list):
+    # Deprecated pre-rename key names (see handoff_2026_08_01_metalanguage_p2_p3.md) —
+    # same "recognise + fatal with a rename hint" treatment as origin_x_mm/
+    # origin_y_mm/side above: these are root-level keys, not covered by any
+    # check_unknown_keys() call, so leaving the old names unhandled would
+    # have made them silently do nothing instead of failing loudly.
+    if 'templates_file' in data or 'template_files' in data:
         raise ValidationError(format_fatal_error(
-            _("template_files must be a list, got {type}").format(type=type(template_files).__name__),
-            [_("template_files: is a YAML list of paths ('- templates/a.yaml'); "
-               "for a single file use templates_file: <path> instead")]
+            _("deprecated fields 'templates_file'/'template_files'"),
+            [_("renamed to cells_file: <path> / cell_files: [...] — the class became "
+               "Cell (was SpokeTemplate), these were the one place the file-list keys "
+               "were left behind")]
         ))
-    external_files = ([templates_file] if templates_file else []) + list(template_files)
+
+    cells_file = data.get('cells_file')
+    cell_files = data.get('cell_files') or []
+    if not isinstance(cell_files, list):
+        raise ValidationError(format_fatal_error(
+            _("cell_files must be a list, got {type}").format(type=type(cell_files).__name__),
+            [_("cell_files: is a YAML list of paths ('- templates/a.yaml'); "
+               "for a single file use cells_file: <path> instead")]
+        ))
+    external_files = ([cells_file] if cells_file else []) + list(cell_files)
 
     # Each external file is the RAW extract() shape ({name: {...}}, no
     # 'cells:' wrapper — unlike include:, which expects one). Merged
@@ -607,7 +620,7 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
     # a collision is far more likely a copy-paste mistake than an
     # intentional override, same philosophy as include:'s _DICT_SECTIONS).
     # Inline cells: in this config file still overrides silently on top
-    # of all of them, unchanged from templates_file's original behaviour.
+    # of all of them, unchanged from cells_file's original behaviour.
     external_cells: Dict[str, Any] = {}
     for ext_file in external_files:
         cells_path = Path(path).parent / ext_file
@@ -625,9 +638,9 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
         for name, cdata in (file_cells or {}).items():
             if name in external_cells:
                 raise ValidationError(format_fatal_error(
-                    _("duplicate cell {name!r} across templates_file/template_files").format(name=name),
-                    [_("defined in more than one external templates file (templates_file "
-                       "and/or an entry of template_files) — external files are meant to "
+                    _("duplicate cell {name!r} across cells_file/cell_files").format(name=name),
+                    [_("defined in more than one external cells file (cells_file "
+                       "and/or an entry of cell_files) — external files are meant to "
                        "be independent, a repeated name is far more likely a mistake than "
                        "an intentional override; inline cells: in the config itself "
                        "CAN still override an external one, that is unaffected")]

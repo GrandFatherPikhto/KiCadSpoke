@@ -40,7 +40,7 @@ tests/
 ├── test_registry_rule_protection.py  # Защита реестра через known_anchor_ids
 ├── test_spoke_layout.py              # Преобразование локальных координат шаблона (spoke_layout)
 ├── test_template_extraction.py       # Извлечение шаблона из выделения (логика, треки)
-├── test_templates_file.py            # Объединение templates_file / template_files
+├── test_cell_files.py            # Объединение cells_file / cell_files
 ├── test_two_phase_execution.py       # Двухфазное выполнение (moves → refresh → vias) на моках
 ├── test_undo_layer.py                # Сохранение и восстановление слоя в undo
 ├── test_unique_roles.py              # Уникальность ролей в шаблоне
@@ -153,7 +153,7 @@ pytest tests/integration_tests/ -v -s -m integration
 | `test_registry_rule_protection.py` | Защиту реестра через `known_anchor_ids`: via/треки клонов не из `--only` не удаляются. |
 | `test_spoke_layout.py` | Геометрическое преобразование локальных координат шаблона в глобальные (`spoke_layout`), включая via уровня спицы и компонента, произвольное количество ролей. |
 | `test_template_extraction.py` | Извлечение шаблона из выделения: проверка ролей, уникальности, вычисление origin, фильтрация треков, параметризация цепей (`--net-template`), выбор origin по via/роли. |
-| `test_templates_file.py` | Объединение `templates_file` / `template_files`: один файл, несколько файлов, инлайн+внешние, обнаружение дубликатов, обработка отсутствующих файлов. |
+| `test_cell_files.py` | Объединение `cells_file` / `cell_files`: один файл, несколько файлов, инлайн+внешние, обнаружение дубликатов, обработка отсутствующих файлов. |
 | `test_two_phase_execution.py` | Двухфазное выполнение (moves → refresh → vias) на моках – гарантирует, что via планируются после перемещений и имеют корректный `registry_key`. |
 | `test_undo_layer.py` | Сохранение и восстановление слоя компонента при undo (`original_layer` в JSON-логе). |
 | `test_unique_roles.py` | Проверка уникальности ролей внутри шаблона (фатальная ошибка при дублировании). |

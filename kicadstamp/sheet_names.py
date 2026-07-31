@@ -63,7 +63,7 @@ def build_sheet_name_map(config_path: str, schematic_dir: Optional[str],
     Builds {uuid: Sheetname} from schematic_dir (all *.kicad_sch inside,
     non‑recursively — same as netexp's watchdog) + schematic_files (point
     additions for sheets "on the fringe"). Both paths are relative to the YAML
-    config itself (config_path), like templates_file.
+    config itself (config_path), like cells_file.
 
     Empty if neither is set — this is NOT an error by itself; it becomes fatal
     later only if anchor_sheet is actually needed and the dictionary is empty

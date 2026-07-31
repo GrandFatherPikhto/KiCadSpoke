@@ -47,7 +47,7 @@ What it does (read-only, never mutates the board):
      math needs to compose that rotation too, not just subtract.
   5. Writes boards/3ch-awg-tia/profiles/templates/p3v3_ldo_composite.yaml
      (a Cell definition, {name: {clone_placements: [...]}} shape, same
-     format as any other file in template_files:).
+     format as any other file in cell_files:).
 
 What it does NOT do: it does not touch profiles/p3v3_ldo.yaml itself. Once
 the generated file's numbers have been sanity-checked (e.g. via
@@ -60,7 +60,7 @@ rewrite p3v3_ldo.yaml by hand to a single clone_placement:
       cell: p3v3_ldo_composite
       anchor_point: p3v3_ldo_origin   # see profiles/points.yaml
       xy: [-50.0, 35.0]
-and add "templates/p3v3_ldo_composite.yaml" to power.yaml's template_files:.
+and add "templates/p3v3_ldo_composite.yaml" to power.yaml's cell_files:.
 
 Run: python boards/3ch-awg-tia/scripts/build_p3v3_ldo_cell.py
      [--config boards/3ch-awg-tia/profiles/power.yaml] [--timeout-ms 20000]
@@ -177,7 +177,7 @@ def main() -> None:
     print(f"  led_spoke:         xy={list(led_xy)}")
     print(f"  ldo_out_pi_filter: xy={list(pi_filter_xy)}")
     print()
-    print("Next: add \"templates/p3v3_ldo_composite.yaml\" to power.yaml's template_files:, "
+    print("Next: add \"templates/p3v3_ldo_composite.yaml\" to power.yaml's cell_files:, "
           "then sanity-check with apply --dry-run --verbose before rewriting "
           "profiles/p3v3_ldo.yaml by hand (see this script's own docstring).")
 

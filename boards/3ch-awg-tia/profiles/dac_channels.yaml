@@ -3,7 +3,7 @@ track_registry_path: registries/dac.tracks.registry.json
 log_file: ../logs/dac.log
 schematic_dir: ../../../test_boards/3CH-AWG-TIA
 
-template_files:
+cell_files:
   - templates/dac_clkvdd_pi_filter.yaml
   - templates/dac_avdd_pi_filter.yaml
   - templates/dac_dvdd_pi_filter.yaml

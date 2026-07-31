@@ -28,7 +28,7 @@ thermal_via_array:
   drill_mm: 0.3
   diameter_mm: 0.5
 
-template_files:
+cell_files:
   - templates/fpga_pi_filters.yaml
   - templates/fpga_cap_pair_spoke.yaml
   - templates/fpga_r_pi_filters.yaml
