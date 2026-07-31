@@ -615,27 +615,41 @@ class ExtractDock(QDockWidget):
     def _update_button_state(self) -> None:
         self.extract_button.setEnabled(bool(self._raw_items) and self._target_path is not None)
 
+    def _show_message(self, text: str, style: str = "") -> None:
+        """Sets the inline status label AND mirrors it into the Log dock
+        (see gui/docks/log_panel.py) at the matching level, so error/
+        warning messages survive after the label itself gets overwritten
+        by the next action — requested live 2026-08-01 ("для списка
+        ошибок сделать внизу отдельное окошко")."""
+        self.message_label.setStyleSheet(style)
+        self.message_label.setText(text)
+        if not text:
+            return
+        if style == _ERROR_STYLE:
+            logger.error(text)
+        elif style == _WARN_STYLE:
+            logger.warning(text)
+        else:
+            logger.info(text)
+
     def _on_extract(self) -> None:
-        self.message_label.setStyleSheet("")
-        self.message_label.setText("")
+        self._show_message("")
         name = self.name_edit.text().strip()
         if not name:
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(_("Cell name is required."))
+            self._show_message(_("Cell name is required."), _ERROR_STYLE)
             return
         if not self._raw_items or self._target_path is None:
             return
         save_profile = self.save_profile_checkbox.isChecked()
         if save_profile and self._profile_path is None:
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(
-                _("'Also save as extract_profile' is checked, but no profile file is picked."))
+            self._show_message(
+                _("'Also save as extract_profile' is checked, but no profile file is picked."),
+                _ERROR_STYLE)
             return
 
         board = self._main_window.connection.board
         if board is None:
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(_("Not connected."))
+            self._show_message(_("Not connected."), _ERROR_STYLE)
             return
 
         params: Dict[str, str] = {}
@@ -644,10 +658,10 @@ class ExtractDock(QDockWidget):
             if not alias:
                 continue
             if alias in params:
-                self.message_label.setStyleSheet(_ERROR_STYLE)
-                self.message_label.setText(
+                self._show_message(
                     _("Alias {alias!r} used for both {a!r} and {b!r} — each alias needs a "
-                      "distinct net.").format(alias=alias, a=params[alias], b=net_literal))
+                      "distinct net.").format(alias=alias, a=params[alias], b=net_literal),
+                    _ERROR_STYLE)
                 return
             params[alias] = net_literal
 
@@ -656,8 +670,7 @@ class ExtractDock(QDockWidget):
         if origin_mode == 1:  # component role (+ optional pad)
             role = self.origin_role_combo.currentText().strip()
             if not role:
-                self.message_label.setStyleSheet(_ERROR_STYLE)
-                self.message_label.setText(_("Origin: pick a component role."))
+                self._show_message(_("Origin: pick a component role."), _ERROR_STYLE)
                 return
             origin_kwargs["origin_component_role"] = role
             pad = self.origin_pad_edit.text().strip()
@@ -666,8 +679,7 @@ class ExtractDock(QDockWidget):
         elif origin_mode == 2:  # via net
             net = self.origin_via_net_combo.currentText().strip()
             if not net:
-                self.message_label.setStyleSheet(_ERROR_STYLE)
-                self.message_label.setText(_("Origin: pick a via net."))
+                self._show_message(_("Origin: pick a via net."), _ERROR_STYLE)
                 return
             origin_kwargs["origin_via_net"] = net
 
@@ -675,10 +687,10 @@ class ExtractDock(QDockWidget):
         for role, combo in self._net_template_role_edits.items():
             literal = combo.currentText().strip()
             if not literal:
-                self.message_label.setStyleSheet(_ERROR_STYLE)
-                self.message_label.setText(
+                self._show_message(
                     _("Net template role: role {role!r} bridges 2+ aliased nets — pick which one "
-                      "is the template.").format(role=role))
+                      "is the template.").format(role=role),
+                    _ERROR_STYLE)
                 return
             net_template_role[role] = literal
 
@@ -688,15 +700,13 @@ class ExtractDock(QDockWidget):
                 board.adapter, name, params=params, items=self._raw_items,
                 net_template_role=net_template_role, annotations=annotations, **origin_kwargs)
         except PlacerError as e:
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(str(e))
+            self._show_message(str(e), _ERROR_STYLE)
             return
 
         try:
             cell_overwritten = self._write_merged(self._target_path, template_dict)
         except OSError as e:
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(_("Write failed: {error}").format(error=e))
+            self._show_message(_("Write failed: {error}").format(error=e), _ERROR_STYLE)
             return
 
         messages = [_("{action} {name!r} in {path}").format(
@@ -720,8 +730,8 @@ class ExtractDock(QDockWidget):
                 profile_overwritten = self._write_merged(
                     self._profile_path, {"extract_profiles": {profile_key: entry}}, section="extract_profiles")
             except OSError as e:
-                self.message_label.setStyleSheet(_ERROR_STYLE)
-                self.message_label.setText(_("Cell written, but profile write failed: {error}").format(error=e))
+                self._show_message(
+                    _("Cell written, but profile write failed: {error}").format(error=e), _ERROR_STYLE)
                 return
             messages.append(_("{action} profile {key!r} in {path}").format(
                 action=_("overwrote") if profile_overwritten else _("wrote"),
@@ -747,10 +757,9 @@ class ExtractDock(QDockWidget):
                              .format(count=len(annotations),
                                      details="; ".join(f"{role}/{field}: {hint}"
                                                         for role, field, hint in annotations)))
-            self.message_label.setStyleSheet(_WARN_STYLE)
+            self._show_message("; ".join(messages), _WARN_STYLE)
         else:
-            self.message_label.setStyleSheet(_SUCCESS_STYLE)
-        self.message_label.setText("; ".join(messages))
+            self._show_message("; ".join(messages), _SUCCESS_STYLE)
         self._refresh_existing_lists()
 
     @staticmethod

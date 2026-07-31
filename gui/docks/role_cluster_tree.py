@@ -27,6 +27,8 @@ from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QHBoxLayout,
 from kicadstamp.explore import Selected
 from kicadstamp.i18n import _
 
+from .. import settings
+
 logger = logging.getLogger(__name__)
 
 # Leaf items carry their refdes here; group items carry None — _collect_refs
@@ -48,7 +50,8 @@ class RoleClusterTreeDock(QDockWidget):
 
         self.group_by = QComboBox()
         self.group_by.addItems([_("Role"), _("Cluster")])
-        self.group_by.currentIndexChanged.connect(self._rebuild)
+        self.group_by.setCurrentIndex(settings.load().get("tree_group_by", 0))
+        self.group_by.currentIndexChanged.connect(self._on_group_by_changed)
         layout.addWidget(self.group_by)
 
         search_row = QHBoxLayout()
@@ -108,6 +111,12 @@ class RoleClusterTreeDock(QDockWidget):
         root = model.invisibleRootItem()
         for row in range(root.rowCount()):
             walk(root.child(row), [])
+
+    def _on_group_by_changed(self) -> None:
+        data = settings.load()
+        data["tree_group_by"] = self.group_by.currentIndex()
+        settings.save(data)
+        self._rebuild()
 
     def _rebuild(self) -> None:
         """Called on every poll tick (via set_footprints), on group-by

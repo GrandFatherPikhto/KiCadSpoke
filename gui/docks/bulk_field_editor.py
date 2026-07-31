@@ -135,29 +135,40 @@ class BulkFieldEditorDock(QDockWidget):
         combo.setCurrentText(current_text)
         combo.blockSignals(False)
 
+    def _show_message(self, text: str, style: str = "") -> None:
+        """Sets the inline status label AND mirrors it into the Log dock
+        (see gui/docks/log_panel.py) at the matching level — same helper
+        shape as ExtractDock's, so error/warning messages here survive
+        past the next label overwrite too."""
+        self.message_label.setStyleSheet(style)
+        self.message_label.setText(text)
+        if not text:
+            return
+        if style == _ERROR_STYLE:
+            logger.error(text)
+        else:
+            logger.info(text)
+
     def _on_apply(self) -> None:
-        self.message_label.setStyleSheet("")
-        self.message_label.setText("")
+        self._show_message("")
         new_role = self.role_combo.currentText().strip() or None
         new_cluster = self.cluster_combo.currentText().strip() or None
         if new_role is None and new_cluster is None:
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(_("Nothing to apply — set Role and/or Cluster first."))
+            self._show_message(_("Nothing to apply — set Role and/or Cluster first."), _ERROR_STYLE)
             return
         if not self._selected:
             return
 
         board = self._main_window.connection.board
         if board is None:
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(_("Not connected."))
+            self._show_message(_("Not connected."), _ERROR_STYLE)
             return
 
         conflicts = self._find_conflicts(board, new_role, new_cluster)
         if conflicts:
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(
-                _("Blocked — would duplicate a Role within a Cluster:\n") + "\n".join(conflicts))
+            self._show_message(
+                _("Blocked — would duplicate a Role within a Cluster:\n") + "\n".join(conflicts),
+                _ERROR_STYLE)
             return
 
         updates = []
@@ -175,19 +186,17 @@ class BulkFieldEditorDock(QDockWidget):
         try:
             board.adapter.set_field_values_bulk(updates, description)
         except ValidationError as e:
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(str(e))
+            self._show_message(str(e), _ERROR_STYLE)
             return
         except Exception as e:
             logger.exception("Bulk field write failed")
-            self.message_label.setStyleSheet(_ERROR_STYLE)
-            self.message_label.setText(_("Write failed: {error}").format(error=e))
+            self._show_message(_("Write failed: {error}").format(error=e), _ERROR_STYLE)
             return
 
-        self.message_label.setStyleSheet(_SUCCESS_STYLE)
-        self.message_label.setText(
+        self._show_message(
             _("Applied {fields} to {count} components.").format(
-                fields=fields_changed, count=len(self._selected)))
+                fields=fields_changed, count=len(self._selected)),
+            _SUCCESS_STYLE)
 
     def _find_conflicts(self, board: Board, new_role: Optional[str],
                          new_cluster: Optional[str]) -> List[str]:

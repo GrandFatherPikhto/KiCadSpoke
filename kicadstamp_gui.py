@@ -42,7 +42,7 @@ def main():
     setup_logging(verbose=args.verbose)
 
     app = QApplication(sys.argv)
-    window = MainWindow(timeout_ms=args.timeout_ms)
+    window = MainWindow(timeout_ms=args.timeout_ms, verbose=args.verbose)
     window.show()
     sys.exit(app.exec())
 

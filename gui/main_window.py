@@ -49,6 +49,7 @@ from .connection import BoardConnection
 from .docks.bulk_field_editor import BulkFieldEditorDock
 from .docks.extract import ExtractDock
 from .docks.file_picker import FilePickerDock
+from .docks.log_panel import LogDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ SELECTION_POLL_INTERVAL_MS = 400
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, timeout_ms: int):
+    def __init__(self, timeout_ms: int, verbose: bool = False):
         super().__init__()
         self.setWindowTitle(_("KiCadStamp"))
         self.resize(360, 640)
@@ -88,6 +89,9 @@ class MainWindow(QMainWindow):
         self.extract_dock = ExtractDock(self)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
         self.tabifyDockWidget(self.file_picker_dock, self.extract_dock)
+
+        self.log_dock = LogDock(self, verbose=verbose)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock)
 
         # Files -> Extract wiring: ExtractDock's cell-output file follows
         # the Cells role, its extract_profiles file follows the Extractor
