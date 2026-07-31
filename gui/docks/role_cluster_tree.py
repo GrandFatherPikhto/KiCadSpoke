@@ -15,12 +15,14 @@ Channel_1/PI_FILTER in unrelated top-level buckets instead of showing the
 shared structure.
 """
 import logging
+import re
 from typing import Callable, List, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import QItemSelectionModel
 from PyQt6.QtGui import QStandardItem, QStandardItemModel
-from PyQt6.QtWidgets import QComboBox, QDockWidget, QTreeView, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QHBoxLayout,
+                              QLineEdit, QTreeView, QVBoxLayout, QWidget)
 
 from kicadstamp.explore import Selected
 from kicadstamp.i18n import _
@@ -30,6 +32,8 @@ logger = logging.getLogger(__name__)
 # Leaf items carry their refdes here; group items carry None — _collect_refs
 # below tells the two apart by this, not by row-count/child-count guessing.
 _REF_ROLE = Qt.ItemDataRole.UserRole + 1
+
+_INVALID_REGEX_STYLE = "background-color: #ffcccc;"
 
 
 class RoleClusterTreeDock(QDockWidget):
@@ -47,6 +51,17 @@ class RoleClusterTreeDock(QDockWidget):
         self.group_by.currentIndexChanged.connect(self._rebuild)
         layout.addWidget(self.group_by)
 
+        search_row = QHBoxLayout()
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(_("Filter (ref/role/cluster)..."))
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.textChanged.connect(self._rebuild)
+        search_row.addWidget(self.search_edit)
+        self.regex_checkbox = QCheckBox(_("regex"))
+        self.regex_checkbox.toggled.connect(self._rebuild)
+        search_row.addWidget(self.regex_checkbox)
+        layout.addLayout(search_row)
+
         self.tree = QTreeView()
         self.tree.setHeaderHidden(True)
         self.tree.clicked.connect(self._on_clicked)
@@ -61,21 +76,60 @@ class RoleClusterTreeDock(QDockWidget):
         self._rebuild()
 
     def _rebuild(self) -> None:
-        """Called on every poll tick (via set_footprints) AND on group-by
-        toggle — a brand new QStandardItemModel is built and swapped in each
-        time (simplest way to reflect additions/removals/renames), which by
-        itself would silently clear the tree's own selection/expansion state
-        every ~2s even though nothing the user did changed. Snapshot both
-        before the swap, by refdes/path (stable across rebuilds as long as
-        the underlying grouping didn't change), and restore them after."""
+        """Called on every poll tick (via set_footprints), on group-by
+        toggle, and on every search-box keystroke — a brand new
+        QStandardItemModel is built and swapped in each time (simplest way
+        to reflect additions/removals/renames, and to drop now-empty groups
+        after filtering), which by itself would silently clear the tree's
+        own selection/expansion state even though nothing the user did
+        changed. Snapshot both before the swap, by refdes/path (stable
+        across rebuilds as long as the underlying grouping didn't change),
+        and restore them after."""
         expanded_paths, selected_refs = self._capture_view_state()
+        visible = self._filtered_selected()
         model = QStandardItemModel()
         if self.group_by.currentIndex() == 0:  # Role
-            self._build_flat(model, key=lambda s: s.role)
+            self._build_flat(model, visible, key=lambda s: s.role)
         else:  # Cluster
-            self._build_hierarchical(model, key=lambda s: s.cluster)
+            self._build_hierarchical(model, visible, key=lambda s: s.cluster)
         self.tree.setModel(model)
         self._restore_view_state(expanded_paths, selected_refs)
+
+    def _filtered_selected(self) -> List[Selected]:
+        """Search box matches against ref/role/cluster (OR — typing a role
+        name and typing a refdes are both "find the thing" the same way).
+        Empty query -> everything, no filter. Regex mode is case-insensitive
+        for the same reason plain-text mode is: this is a quick "find it",
+        not a precise pattern tool."""
+        query = self.search_edit.text()
+        if not query:
+            self.search_edit.setStyleSheet("")
+            return self._selected
+
+        if self.regex_checkbox.isChecked():
+            try:
+                pattern = re.compile(query, re.IGNORECASE)
+            except re.error:
+                # Invalid/incomplete regex while typing — flag it, don't
+                # crash and don't hide everything mid-keystroke.
+                self.search_edit.setStyleSheet(_INVALID_REGEX_STYLE)
+                return self._selected
+            self.search_edit.setStyleSheet("")
+            return [s for s in self._selected if self._regex_matches(s, pattern)]
+
+        self.search_edit.setStyleSheet("")
+        needle = query.lower()
+        return [s for s in self._selected if self._substring_matches(s, needle)]
+
+    @staticmethod
+    def _regex_matches(s: Selected, pattern: "re.Pattern") -> bool:
+        return bool(pattern.search(s.ref) or (s.role and pattern.search(s.role))
+                    or (s.cluster and pattern.search(s.cluster)))
+
+    @staticmethod
+    def _substring_matches(s: Selected, needle: str) -> bool:
+        return (needle in s.ref.lower() or (s.role is not None and needle in s.role.lower())
+                or (s.cluster is not None and needle in s.cluster.lower()))
 
     def _capture_view_state(self):
         model = self.tree.model()
@@ -134,10 +188,10 @@ class RoleClusterTreeDock(QDockWidget):
         item.setData(s.ref, _REF_ROLE)
         return item
 
-    def _build_flat(self, model: QStandardItemModel,
+    def _build_flat(self, model: QStandardItemModel, items: List[Selected],
                      key: Callable[[Selected], Optional[str]]) -> None:
         groups = {}
-        for s in self._selected:
+        for s in items:
             groups.setdefault(key(s) or _("(none)"), []).append(s)
         root = model.invisibleRootItem()
         for name in sorted(groups):
@@ -149,11 +203,11 @@ class RoleClusterTreeDock(QDockWidget):
                 group_item.appendRow(self._leaf_item(s))
             root.appendRow(group_item)
 
-    def _build_hierarchical(self, model: QStandardItemModel,
+    def _build_hierarchical(self, model: QStandardItemModel, items: List[Selected],
                              key: Callable[[Selected], Optional[str]]) -> None:
         root = model.invisibleRootItem()
         nodes = {(): root}  # path tuple (segments so far) -> QStandardItem
-        for s in sorted(self._selected, key=lambda s: (key(s) or "", s.ref)):
+        for s in sorted(items, key=lambda s: (key(s) or "", s.ref)):
             cluster = key(s)
             segments = tuple(cluster.split("/")) if cluster else (_("(none)"),)
             for depth in range(1, len(segments) + 1):
