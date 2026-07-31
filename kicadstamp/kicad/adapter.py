@@ -9,7 +9,7 @@ from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, Track, 
 from kipy.geometry import Vector2, Box2, Angle
 
 from .interfaces import IBoardAdapter
-from ..exceptions import BoardNotFoundError, ComponentNotFoundError
+from ..exceptions import BoardNotFoundError, ComponentNotFoundError, ValidationError, format_fatal_error
 from ..utils.units import MM
 from ..constants import DEFAULT_TIMEOUT_MS
 from ..i18n import _
@@ -171,6 +171,70 @@ class KiCadBoardAdapter(IBoardAdapter):
             if isinstance(item, Field) and item.name == field_name:
                 return item.text.value if item.text else None
         return None
+
+    def set_field_value(self, footprint: FootprintInstance, field_name: str, value: str) -> None:
+        """
+        Write counterpart of get_field_value() — sets a custom footprint
+        field's text value IN PLACE. Does not by itself push anything to
+        KiCad; the caller still needs update_items([footprint]) inside a
+        commit (see set_field_values_bulk below), same as any other
+        footprint mutation (see undo.py's fp.position = ...; update_items()
+        pattern).
+
+        MUST mutate item.text.value on the Field object found in
+        footprint.texts_and_fields — NOT replace it with a fresh Field(...).
+        kipy's Footprint.items unwraps each proto item via Field(proto=...)
+        (board_types.py's unwrap()), which — unlike reference_field/
+        value_field, which use proto_ref= — copies into a brand-new detached
+        proto. That copy IS the one object definition.items/texts_and_fields
+        keeps around afterwards (Footprint._unwrapped_items), and
+        Wrapper.proto's getter calls _pack() before returning, which
+        re-serializes _unwrapped_items back into the footprint's proto — so
+        mutating the found Field's own .text.value here (not swapping in an
+        unrelated new Field) is what update_items() actually sees.
+
+        Fatal (ValidationError) if the footprint has no field with this
+        name — same "fatal, not silent" discipline as the rest of the
+        project; there is no sensible default for "create a new field from
+        scratch" (KIID/position/layer/schematic-symbol sync are all unknown
+        here), so this never attempts it.
+        """
+        for item in footprint.texts_and_fields:
+            if isinstance(item, Field) and item.name == field_name:
+                item.text.value = value
+                return
+        ref = footprint.reference_field.text.value if footprint.reference_field else "?"
+        raise ValidationError(format_fatal_error(
+            _("cannot set field {field!r}").format(field=field_name),
+            [_("{ref} has no field {field!r} on its footprint — add the field once in "
+               "the schematic/footprint editor first, this tool never creates one from scratch")
+             .format(ref=ref, field=field_name)]
+        ))
+
+    def set_field_values_bulk(self, updates: List[Any], description: str) -> bool:
+        """
+        updates: list of (footprint, field_name, value) triples. Sets them
+        all, then pushes every touched footprint in ONE update_items() call
+        inside ONE commit — so Ctrl+Z in KiCad undoes the whole batch at
+        once (e.g. "set Role on 5 components"), not one undo step per
+        component. Reuses commit_with_retry's begin_commit/work_fn/
+        push_commit/retry-on-busy pattern.
+
+        Raises ValidationError (propagated from set_field_value, via
+        commit_with_retry) without writing anything if ANY footprint in the
+        batch is missing the target field — begin_commit()/drop_commit()
+        wraps the whole batch, so a mid-batch failure rolls back the ones
+        already mutated in this Python process too (they were never sent).
+        """
+        touched = []
+
+        def work():
+            for footprint, field_name, value in updates:
+                self.set_field_value(footprint, field_name, value)
+                touched.append(footprint)
+            self.update_items(touched)
+
+        return self.commit_with_retry(description, work)
 
     def get_footprint_pads(self, footprint: FootprintInstance) -> List[Pad]:
         """

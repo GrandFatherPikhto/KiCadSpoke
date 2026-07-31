@@ -1,12 +1,12 @@
 # gui/main_window.py
 """
 MainWindow — persistent shell for the KiCadStamp GUI: connection lifecycle
-+ status bar + one dock (Role/Cluster tree) for now.
++ status bar + docks (Role/Cluster tree, bulk Role/Cluster field editor).
 
-Step 1 of the planned GUI (see techdocs/handoff for the design discussion):
-deliberately just this one vertical slice — connect/reconnect, poll, show
-the live snapshot grouped by Role/Cluster, click to highlight on the real
-board — before adding the bulk Role/Cluster field editor or the
+Step 1 (see techdocs/handoff for the design discussion): connect/reconnect,
+poll, show the live snapshot grouped by Role/Cluster, click to highlight on
+the real board. Step 2: BulkFieldEditorDock, the first real mutating panel
+— set Role/Cluster on whatever's currently selected. Still missing: the
 extract-to-file dock. kipy 0.7.1's Board has no selection/board-change push
 events (checked directly against the installed kipy.board.Board class), so
 "live" here means polled on a QTimer, not pushed.
@@ -42,6 +42,7 @@ from PyQt6.QtWidgets import QLabel, QMainWindow, QPushButton
 from kicadstamp.i18n import _
 
 from .connection import BoardConnection
+from .docks.bulk_field_editor import BulkFieldEditorDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,9 @@ class MainWindow(QMainWindow):
 
         self.tree_dock = RoleClusterTreeDock(self)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.tree_dock)
+
+        self.bulk_edit_dock = BulkFieldEditorDock(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.bulk_edit_dock)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
@@ -96,6 +100,7 @@ class MainWindow(QMainWindow):
             snapshot = self.connection.board.select()
             self.status_label.setText(_("Connected — {count} components").format(count=len(snapshot)))
             self.tree_dock.set_footprints(snapshot)
+            self.bulk_edit_dock.refresh_known_values(self.connection.board)
 
         self.action_button.setText(_("Refresh") if self.connection.is_connected else _("Reconnect"))
 
@@ -119,3 +124,7 @@ class MainWindow(QMainWindow):
         refs = {item.reference_field.text.value for item in items
                 if isinstance(item, FootprintInstance)}
         self.tree_dock.highlight_board_selection(refs)
+
+        by_ref = {s.ref: s for s in self.connection.board.select()}
+        selected = [by_ref[ref] for ref in refs if ref in by_ref]
+        self.bulk_edit_dock.set_board_selection(selected)
