@@ -53,13 +53,34 @@ class ViaPlanner:
 
     def _resolve_thermal_anchor(self) -> Optional[FootprintInstance]:
         """
-        Resolves the anchor for thermal vias by anchor_ref or anchor_role
-        (with anchor_sheet and anchor_cluster). Returns a FootprintInstance or
-        None if thermal vias are disabled.
+        Resolves the anchor for thermal vias by anchor_ref, anchor_role
+        (with anchor_sheet and anchor_cluster), or anchor_point. Returns a
+        FootprintInstance or None if thermal vias are disabled.
+
+        Called strictly after ApplyPipeline's Phase 1 (all rules/
+        clone_placements/points) has fully committed — see
+        planner.py's plan_vias() — so self.resolved_points is always fully
+        populated by the time anchor_point is read here; thermal_via_array
+        does not need to join the dependency_order.py graph itself to get
+        that freshness.
         """
         tva = self.cfg.thermal_via_array
         if tva.retired:
             return None
+
+        if tva.anchor_point is not None:
+            # footprint is guaranteed not None — config/loader.py's
+            # _point_is_footprint_eligible already rejected any point (or
+            # chain) with a shift/xy at load time; this is a defensive
+            # check, not the primary guard.
+            resolved = self.resolved_points[tva.anchor_point]
+            if resolved.footprint is None:
+                raise ValidationError(
+                    _("thermal_via_array: anchor_point {point!r} has no footprint — "
+                      "this should have been caught at load time (config/loader.py)")
+                    .format(point=tva.anchor_point)
+                )
+            return resolved.footprint
 
         if tva.anchor_ref is not None:
             return resolve_footprint_by_ref(self.adapter, tva.anchor_ref, _("thermal_via_array"))

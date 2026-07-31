@@ -116,6 +116,15 @@ class ClonePositionCalculator:
         A missing/ambiguous anchor is FATAL: the anchor is explicitly set, so
         placing the section "somewhere" or silently skipping it is worse than failing.
         """
+        if clone.anchor_point is not None:
+            # Guaranteed already resolved — dependency_order.py orders this
+            # clone_placement's Item after the point's (see
+            # resolve_clone_anchor_ref's anchor_point branch). Only ever
+            # needs a coordinate, unlike Rule/thermal_via_array — a shifted
+            # or xy-literal point is fine here.
+            logger.debug(_("  [{name}] anchor: point {point!r}")
+                         .format(name=clone.name, point=clone.anchor_point))
+            return self.resolved_points[clone.anchor_point].position
         if clone.anchor_ref is not None:
             fp = resolve_footprint_by_ref(self.adapter, clone.anchor_ref, clone.name)
         elif clone.anchor_role is not None:

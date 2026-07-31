@@ -6,6 +6,7 @@ from kipy.board_types import FootprintInstance, BoardLayer
 
 from ...config import Config, Rule
 from ...kicad.adapter import KiCadBoardAdapter
+from ...exceptions import ValidationError, format_fatal_error
 from ...geometry.spoke_layout import apply_spoke_geometry
 from ..commands import PlacedComponentInfo, ViaCommand, TrackCommand, make_registry_key
 from .clone_role_resolver import resolve_footprint_by_role
@@ -85,12 +86,29 @@ class ManualPositionCalculator:
         tracks_result: List[TrackCommand] = []
 
         for rule in rules:
-            # --- Resolve anchor (anchor_ref or anchor_role) ---
-            target_fp = self._resolver.resolve_anchor_fp(
-                rule.anchor_ref, rule.anchor_role,
-                rule.anchor_sheet, rule.anchor_cluster,
-                label=_("rule (net {net!r})").format(net=rule.net),
-            )
+            # --- Resolve anchor (anchor_ref / anchor_role / anchor_point) ---
+            if rule.anchor_point is not None:
+                # Guaranteed already resolved — dependency_order.py orders
+                # this rule's Item after the point's. footprint is
+                # guaranteed not None — config/loader.py's
+                # _point_is_footprint_eligible already rejected any point
+                # (or chain) with a shift/xy at load time; this is a
+                # defensive check, not the primary guard.
+                resolved = self.resolved_points[rule.anchor_point]
+                if resolved.footprint is None:
+                    raise ValidationError(format_fatal_error(
+                        _("rule (net {net!r}): anchor_point {point!r} has no footprint")
+                        .format(net=rule.net, point=rule.anchor_point),
+                        [_("this should have been caught at load time (config/loader.py) — "
+                           "please report")]
+                    ))
+                target_fp = resolved.footprint
+            else:
+                target_fp = self._resolver.resolve_anchor_fp(
+                    rule.anchor_ref, rule.anchor_role,
+                    rule.anchor_sheet, rule.anchor_cluster,
+                    label=_("rule (net {net!r})").format(net=rule.net),
+                )
             anchor_ref_resolved = target_fp.reference_field.text.value
 
             # --- Collect all roles needed for this rule ---
