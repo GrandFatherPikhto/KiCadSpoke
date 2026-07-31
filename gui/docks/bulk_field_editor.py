@@ -35,6 +35,7 @@ class BulkFieldEditorDock(QDockWidget):
         super().__init__(_("Bulk edit"), main_window)
         self._main_window = main_window
         self._selected: List[Selected] = []
+        self._selected_refs = frozenset()
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -68,15 +69,49 @@ class BulkFieldEditorDock(QDockWidget):
     def set_board_selection(self, selected: List[Selected]) -> None:
         """Called by MainWindow every selection-watch tick (same feed the
         tree's highlight_board_selection() gets) — keeps the edit target in
-        sync with whatever's actually selected in KiCad right now."""
+        sync with whatever's actually selected in KiCad right now.
+
+        Runs every ~400ms regardless of whether the selection actually
+        changed — the Role/Cluster combo boxes are only pre-filled from the
+        selection's existing values when the set of refs actually differs
+        from last time, otherwise every tick would stomp on whatever the
+        user is mid-typing (same lesson as the tree's own rebuild-wipes-
+        state fix)."""
         self._selected = selected
+        refs = frozenset(s.ref for s in selected)
+        changed = refs != self._selected_refs
+        self._selected_refs = refs
+
         if not selected:
             self.selection_label.setText(_("Nothing selected"))
         else:
-            refs = ", ".join(sorted(s.ref for s in selected))
+            ref_list = ", ".join(sorted(s.ref for s in selected))
             self.selection_label.setText(
-                _("{count} selected: {refs}").format(count=len(selected), refs=refs))
+                _("{count} selected: {refs}").format(count=len(selected), refs=ref_list))
         self.apply_button.setEnabled(bool(selected))
+
+        if changed:
+            self._prefill_combo(self.role_combo, [s.role for s in selected])
+            self._prefill_combo(self.cluster_combo, [s.cluster for s in selected])
+
+    @staticmethod
+    def _prefill_combo(combo: QComboBox, values: List[Optional[str]]) -> None:
+        """Shows what's already there instead of leaving the box wherever it
+        was: all selected components agreeing on a value -> that value,
+        ready to tweak or leave as-is; nothing selected or every one of them
+        has the field unset -> blank; genuinely different values across the
+        selection -> blank with a "(mixed)" placeholder hint, so an unset
+        field and a real disagreement don't look the same."""
+        distinct = set(values)
+        combo.setCurrentText("")
+        if combo.lineEdit() is not None:
+            combo.lineEdit().setPlaceholderText("")
+        if len(distinct) == 1:
+            value = next(iter(distinct))
+            if value is not None:
+                combo.setCurrentText(value)
+        elif len(distinct) > 1 and combo.lineEdit() is not None:
+            combo.lineEdit().setPlaceholderText(_("(mixed — differs across selection)"))
 
     def refresh_known_values(self, board: Board) -> None:
         """Populates the Role/Cluster combo boxes with distinct values
