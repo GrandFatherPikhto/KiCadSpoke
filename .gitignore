@@ -62,6 +62,7 @@ fp-info-cache
 
 *.zip
 *.7z
+*.tar
 
 *.json
 *.log
