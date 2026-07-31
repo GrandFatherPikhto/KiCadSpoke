@@ -35,8 +35,8 @@
 - **Файловый клонер** (`clone-extract`) – анализирует `.net` и `.kicad_pcb` без IPC, строит карту близнецов каналов для иерархических проектов.
 - **Дорожки (треки) в шаблонах** – шаблоны могут содержать прямые отрезки дорожек (ломаные поддерживаются через последовательность сегментов). Коллизии дорожек не проверяются автоматически (полагаемся на DRC KiCad).
 - **Внешние файлы шаблонов** – шаблоны можно хранить отдельно как JSON или YAML и подключать через `cells_file:` в основном конфиге, чтобы не загромождать основной файл геометрией.
-- **Разбиение профиля на файлы подсистем** – `include:` в корне профиля подключает один или несколько других YAML-файлов (каждый может нести любую комбинацию `extract_profiles`/`clone_placements`/`rules`/`templates`), рекурсивно, с `enabled: false` на записи инклюда, чтобы выключить всю подсистему разом. Независим от `cells_file` (см. [docs/commands_ru.md](docs/commands_ru.md) — семантика мёржа, дубликаты, циклы).
-- **Scripting API** – `kicadstamp.explore.Board` для точечных read-only запросов (`board.select(role=..., cluster=..., sheet=..., net=...)`), и `kicadstamp.author` для построения `ClonePlacement`/`Rule` в коде вместо копипаста YAML — с прямым запуском через `apply_config()` или сохранением в `include:`-совместимый YAML (см. [docs/scripting_ru.md](docs/scripting_ru.md)).
+- **Разбиение профиля на файлы подсистем** – `include:` в корне профиля подключает один или несколько других YAML-файлов (каждый может нести любую комбинацию `extract_profiles`/`clone_placements`/`rules`/`cells`), рекурсивно, с `enabled: false` на самой записи инклюда, чтобы выключить весь подключаемый файл разом. Независим от `cells_file` (см. [docs/config_ru.md](docs/config_ru.md) — семантика мёржа, дубликаты, циклы).
+- **Scripting API** – `kicadstamp.explore.Board` для точечных read-only запросов (`board.select(role=..., cluster=..., sheet=..., net=...)`), и `kicadstamp.author` для построения `ClonePlacement`/`Rule` в коде вместо копипаста YAML — с прямым запуском через `apply_config()` или сохранением в `include:`-совместимый YAML (см. [docs/python_ru.md](docs/python_ru.md)).
 
 ---
 
@@ -151,130 +151,9 @@ pip install kipy pyyaml sexpdata
 
 ## Формат конфигурационного файла (YAML)
 
-### Корневые параметры (новое)
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `layer` | строка | Глобальный слой для ManualSpoke-правил: `"F.Cu"` или `"B.Cu"` (вместо устаревшего `side`). |
-| `templates` | словарь | Именованные шаблоны спиц (можно заменить `cells_file`). |
-| `cells_file` | строка | Путь к внешнему файлу шаблонов (JSON или YAML). Инлайновые `templates` дополняют/переопределяют его. |
-| `include` | список | Другие файлы профиля для подключения (`rules`/`clone_placements` конкатенируются, `templates`/`extract_profiles`/`clone_profiles` мёржатся по ключу, фатал на дубликатах/циклах). Запись — строка-путь или `{path, enabled}`, чтобы выключить целый файл подсистемы. |
-| `rules` | список | Правила для ручных спиц (ManualSpoke), каждое с `anchor_ref`. |
-| `clone_placements` | список | Клонируемые размещения (TemplatePlacer). |
-| `thermal_via_array` | словарь | Настройки термовиа (опционально). |
-| `place_components` | булево | Включить перемещение компонентов (по умолчанию `true`). |
-| `skip_existing_components` | булево | Пропускать уже стоящие на месте компоненты и via/треки. |
-| `via_keepout_clearance_mm`, `via_search_step_mm`, `via_search_max_radius_mm`, `via_search_n_directions` | числа | Параметры поиска места для термовиа. |
-
-**Устаревшие поля:** `target_ref` и `side` в корне больше не поддерживаются (фатальная ошибка при загрузке).
-
-### Шаблон (`templates`) – теперь с `layer` и `tracks`
-
-```yaml
-templates:
-  cap_pair_standard:
-    layer: B.Cu       # абсолютный слой шаблона
-    vias:
-      - offset_along_mm: 0.0
-        offset_across_mm: -1.5
-        drill_mm: 0.3
-        diameter_mm: 0.6
-        # net не указан – для ManualSpoke берётся rule.net, для ClonePlacement должен быть задан явно
-    tracks:
-      - start_along_mm: 0.0
-        start_across_mm: 0.0
-        end_along_mm: 1.0
-        end_across_mm: 1.0
-        width_mm: 0.25
-        net: GND
-        layer: F.Cu    # опционально, наследуется от шаблона
-    components:
-      - role: LIGHT
-        offset_along_mm: 1.0
-        offset_across_mm: -1.0
-        angle_deg: 90.0
-        vias:
-          - offset_along_mm: 0.0
-            offset_across_mm: -1.0
-            net: GND
-            drill_mm: 0.3
-            diameter_mm: 0.6
-      - role: HEAVY
-        offset_along_mm: 1.0
-        offset_across_mm: 2.0
-        angle_deg: 270.0
-        vias:
-          - offset_along_mm: 0.0
-            offset_across_mm: 1.3
-            net: GND
-            drill_mm: 0.3
-            diameter_mm: 0.6
-```
-
-### Ручные спицы (`rules`) – теперь с `anchor_ref`
-
-```yaml
-rules:
-- net: +1V2_VCCINT
-  anchor_ref: IC1       # обязательное поле – якорь для этого правила
-  spokes:
-  - pad: '109'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: 0.0
-    rotation_deg: 90.0
-  - pad: '62'
-    template: cap_pair_standard
-    shift_x_mm: 0.4
-    shift_y_mm: 0.0
-    rotation_deg: 270.0
-```
-
-### Клонируемые размещения (`clone_placements`) – все новые поля
-
-```yaml
-clone_placements:
-  - name: dac_channel_2
-    template: dac_channel
-    anchor_ref: IC1
-    anchor_pad: '17'      # опционально
-    origin_x_mm: -10.0    # сдвиг от якоря, если anchor_ref задан, иначе абсолютная точка
-    origin_y_mm: -10.0
-    rotation_deg: 90.0
-    params:
-      channel: 2
-    nets:
-      CAP_IN: "GPIO12"
-      CAP_OUT: "GPIO12_FILTERED"
-    net_overrides:
-      "/STM32F4xx/BOOT0": "/STM32F4xx_2/BOOT0"
-    layer: B.Cu          # явный слой размещения (если отличается от слоя шаблона)
-    mirror: true         # зеркальное отражение всей конструкции (требует смены слоя)
-    by_selection: false  # явный запрос режима "по выделению" (приоритетнее, чем отсутствие nets)
-    refs:                # явное сопоставление роль->ref (крайняя мера)
-      DAC_PI_FILTER_C1: C601
-    enabled: true
-```
-
-- Если задан `anchor_ref` (или `anchor_role`), `origin_x/y` становятся **сдвигом** от якоря.
-- Поля `layer` и `mirror` позволяют размещать шаблон на другой стороне платы с зеркалированием.
-- `by_selection: true` заставляет интерпретировать размещение как режим выделения, даже если заданы `params` (которые могут использоваться для резолва via, но не для ролей).
-
-### Термовиа (`thermal_via_array`) – переименован `target_ref` в `anchor_ref`
-
-```yaml
-thermal_via_array:
-  enabled: true
-  anchor_ref: IC1       # было target_ref
-  pad: '145'
-  net: GND
-  rows: 4
-  cols: 4
-  margin_mm: 0.5
-  pattern: grid
-  drill_mm: 0.3
-  diameter_mm: 0.5
-```
+Полный, поле-за-полем справочник по каждой секции (`cells`/`rules`/`clone_placements`/
+`thermal_via_array`/`points`/`include`/`extract_profiles`) с реальными, реально загружающимися
+примерами теперь живёт на отдельной странице: [docs/config_ru.md](docs/config_ru.md).
 
 ---
 
@@ -433,8 +312,8 @@ kicadstamp/
 - [Адаптер KiCad](./docs/kicad_ru.md)
 - [Использование kipy](./docs/kipy_ru.md)
 - [Планирование и исполнение](./docs/placement_ru.md)
-- [Скриптинг: explore/author](./docs/scripting_ru.md)
-- [Кодим плату — сквозной пример](./docs/board_coding_ru.md)
+- [Справочник по YAML-конфигу](./docs/config_ru.md)
+- [Кодинг расстановки на Python: explore/author](./docs/python_ru.md)
 - [Тесты](./docs/tests_ru.md)
 - [Модули верхнего уровня](./docs/uplevel_modules_ru.md)
 - [Файловый клонер](./docs/cloner_ru.md)

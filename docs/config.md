@@ -1,0 +1,447 @@
+# YAML Configuration Reference
+
+Everything about **writing** a KiCadStamp config from scratch: root fields, every section
+(`cells:`/`rules:`/`clone_placements:`/`thermal_via_array:`/`points:`), `include:`, and
+`extract_profiles:`/`clone_profiles:`. For running commands against a config, see
+[docs/commands.md](commands.md); for coding placement in Python instead of hand-writing YAML, see
+[docs/python.md](python.md); for the module/class architecture behind all of this, see
+[docs/architect.md](architect.md).
+
+Every example on this page is drawn from a real, currently-loading config —
+`boards/3ch-awg-tia/profiles/*.yaml` — not invented syntax. Field names match
+`kicadstamp/config/models.py` exactly as of 2026-08-01.
+
+---
+
+## Root fields
+
+```yaml
+# boards/3ch-awg-tia/profiles/fpga.yaml
+registry_path: registries/fpga.json
+track_registry_path: registries/fpga.tracks.registry.json
+log_file: ../logs/fpga.log
+schematic_dir: ../../../test_boards/3CH-AWG-TIA
+layer: B.Cu
+
+thermal_via_array:
+  ...
+
+cell_files:
+  - templates/fpga_pi_filters.yaml
+
+include:
+  - fpga_extracts.yaml
+  - rules/fpga_spokes.yaml
+
+clone_placements:
+  ...
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `layer` | string | `F.Cu`\|`B.Cu` — default layer for the `rules:`/ManualSpoke path only. `clone_placements:` each carry their own `layer:`, unaffected by this. |
+| `cells` | mapping | Inline `Cell` definitions (see below). Rare to write by hand — usually populated by `extract`. |
+| `cells_file` | string | One external file of `Cell` definitions (raw `{name: {...}}` shape, no `cells:` wrapper — the shape `extract --output` writes). |
+| `cell_files` | list of strings | Several external `Cell`-definition files, merged together (fatal on a name repeated across files). `cells_file`/`cell_files` can both be set at once. Inline `cells:` silently overrides an external definition of the same name. |
+| `points` | mapping | Named, reusable anchors (see **Points** below). |
+| `include` | list | Other YAML files to merge in — see **`include:`** below. |
+| `rules` | list | ManualSpoke rules — see **`rules:`** below. |
+| `clone_placements` | list | TemplatePlacer placements — see **`clone_placements:`** below. |
+| `thermal_via_array` | mapping | One thermal via grid — see **`thermal_via_array:`** below. |
+| `place_components` | bool | Default `true`. `false` moves/creates vias and tracks but leaves component positions untouched. |
+| `skip_existing_components` | bool | Default `false`. Skip components (and their vias/tracks) already at the target position — cheap idempotency for re-runs. |
+| `via_keepout_clearance_mm`, `via_search_step_mm`, `via_search_max_radius_mm`, `via_search_n_directions` | numbers | Free-space search parameters, used only by thermal via placement. |
+| `schematic_dir` | string | Folder with the project's `*.kicad_sch` files, for `anchor_sheet` resolution. Relative to this YAML file's own location, like `cells_file`/`registry_path`. |
+| `schematic_files` | list of strings | Extra `.kicad_sch` files outside `schematic_dir` (e.g. the root sheet, if it lives elsewhere). |
+| `registry_path`, `track_registry_path` | strings | Explicit paths for the placement/track registries (see [docs/placement.md](placement.md)). Default: derived from the config file's own name/path if unset. |
+| `log_file` | string | Log file for `apply` runs against this config — avoids retyping `--log-file` every time. The CLI's own `--log-file` flag wins if both are given. |
+
+**Deprecated, fatal on load (no silent fallback):** `templates_file`/`template_files` (renamed to
+`cells_file`/`cell_files`), `target_ref`/`side` at the root.
+
+---
+
+## `cells:` / `cells_file:` / `cell_files:` — defining reusable geometry
+
+A `Cell` (until 2026-07-31, `SpokeTemplate`) is a piece of geometry described **once**, in its own
+local coordinate system (`along`/`across`, rotation-invariant — always described at `rotation_deg=0`),
+then placed (and rotated/mirrored/shifted as a whole) wherever it's used — by a `rules:` spoke or a
+`clone_placements:` entry.
+
+A `Cell` can be a **leaf** (`vias:`/`components:`/`tracks:`), a **composite** (`clone_placements:`
+nesting other cells), or both at once.
+
+### Leaf cell
+
+```yaml
+# boards/3ch-awg-tia/profiles/templates/ldo_3v3.yaml
+p3v3_ldo:
+  layer: F.Cu
+  vias:
+    - offset_along_mm: -7.415
+      offset_across_mm: -2.28
+      net: GND
+      drill_mm: 0.5
+      diameter_mm: 1.0
+    - offset_along_mm: -7.415
+      offset_across_mm: 2.28
+      net: '{PWR_IN}'          # {placeholder} — resolved from params: at placement time
+      drill_mm: 0.5
+      diameter_mm: 1.0
+  components:
+    - role: LDO_3V3             # matched by the Role custom field, not a specific ref
+      offset_along_mm: 0.0
+      offset_across_mm: 0.0
+      angle_deg: 0.0
+      net_template: '{PWR_OUT}' # for ClonePlacement's by-nets role matching only
+  tracks:
+    - start_along_mm: -5.04
+      start_across_mm: -2.28
+      end_along_mm: -7.415
+      end_across_mm: -2.28
+      width_mm: 0.8
+      net: GND
+```
+
+- `vias:` — `offset_along_mm`/`offset_across_mm` (local), `net:` (`null`/omitted means "inherit the
+  rule's net" — only `rules:`/ManualSpoke supports that; `clone_placements:` fatals on a via with no
+  net, since it has no single "rule net" to fall back to), `drill_mm`, `diameter_mm`.
+- `components:` — `role:` (matched against the board's `Role` custom field, **not** a refdes — the
+  same role can resolve to a different real component every time the cell is placed), local
+  offset+angle, its own `vias:` (same shape, nested under the component), optional `layer:` (only
+  when it differs from the cell's own layer — e.g. a bottom-side component in an otherwise top-side
+  cell), and `net_template:` (used only by `clone_placements:`'s by-nets role matching — see below;
+  `rules:`/ManualSpoke ignores it entirely, matching roles purely by `(rule.net, Role)`).
+- `tracks:` — straight segments only (no arcs); a polyline is just several consecutive `tracks:`
+  entries sharing an endpoint. Collisions with existing copper are **not** checked by this tool —
+  KiCad's own DRC is the source of truth for that, by design (see [docs/geometry.md](geometry.md)).
+- `layer:` at the cell's own top level — the layer it was extracted on; components/tracks without
+  their own `layer:` inherit it.
+
+### Composite cell (recursive, since 2026-07-31)
+
+```yaml
+# a Cell whose content is other cells, not raw geometry
+p3v3_ldo_composite:
+  clone_placements:
+    - name: ldo_reg
+      cell: p3v3_ldo        # the leaf cell above
+      xy: [0.0, 0.0]        # relative to THIS composite's own (0,0) — see the xy: note below
+      nets:
+        LDO_1V2: '+3V3_DIRTY'
+      params:
+        PWR_IN: '+5V'
+        PWR_OUT: '+3V3_DIRTY'
+    - name: led_spoke
+      cell: led_spoke
+      xy: [-2.0, 5.0]
+      params:
+        PWR_IN: '+3V3'
+        PWR_OUT: '/Power/+3V3_LED'
+```
+
+Each nested entry is a `CellPlacement` — **not** the same type as a top-level `clone_placements:`
+entry (`ClonePlacement`). It's deliberately narrower: **closed boundary**, no `anchor_ref`/
+`anchor_role`/`anchor_sheet`/`anchor_cluster`/`anchor_pad`/`by_selection`/`ignore_selection` at all —
+those only make sense for something attached to the live board, and a nested placement never is.
+Fields: `name` (required — used to build this nested item's own registry key), `cell:` **or** `role:`
+(same meaning as `ClonePlacement.cell`/`role`, mutually exclusive), `xy:`, `rotation_deg:`, `mirror:`,
+`layer:`, `nets:`, `params:`, `net_overrides:`, `refs:` — no param scoping, a nested placement never
+inherits `params`/`nets` from its parent, same convention `ClonePlacement.params` already has.
+
+Mirroring a **composite** cell (non-empty `clone_placements:`) is a fatal error, not implemented yet —
+mirroring a **leaf** cell works as always.
+
+> **Reading `xy:` in someone else's YAML — it's the same field name in three different coordinate
+> frames, worth knowing which one you're in:**
+> 1. On a `ClonePlacement` **with** an anchor (`anchor_ref`/`anchor_role`/`anchor_point`) — a flat
+>    shift **from the resolved anchor position**.
+> 2. On a `ClonePlacement` **without** any anchor — an **absolute** board coordinate.
+> 3. On a `CellPlacement` (nested inside a composite `Cell`) — a shift from the **parent cell's own
+>    local (0,0)**, never the board or a live anchor.
+>
+> Same rule everywhere ("flat shift, no automatic rotation"), three different origins — check for a
+> sibling `anchor_*` field, and whether you're inside a `Cell` definition or a top-level
+> `clone_placements:`, before trusting a bare `xy:` number.
+
+---
+
+## `rules:` — ManualSpoke (radial decoupling around one IC)
+
+The original, oldest mechanism: a group of spokes (small cells, usually a decap pair) placed
+radially around specific pads of **one** anchor component, drawing real components from a pool by
+`(net, Role)` — not tied to a specific refdes, so re-annotation-safe. Does **not** support tracks
+between spokes across different pads (each spoke is self-contained).
+
+```yaml
+# boards/3ch-awg-tia/profiles/rules/fpga_spokes.yaml
+rules:
+- net: +3V3_VCCIO
+  name: +3V3_VCCIO       # optional — defaults to net if omitted, see below
+  anchor_role: FPGA
+  retired: false
+  skip: false
+  spokes:
+  - pad: '17'
+    cell: fpga_cap_pair_spoke
+    shift_x_mm: 1.2
+    shift_y_mm: -0.5
+    rotation_deg: 90.0
+    cluster: FPGA_PWR_BANK
+  - pad: '26'
+    cell: fpga_cap_pair_spoke
+    shift_x_mm: 1.2
+    shift_y_mm: -2.4
+    rotation_deg: 90.0
+    cluster: FPGA_PWR_BANK
+```
+
+**`Rule` fields:**
+
+| Field | Meaning |
+|---|---|
+| `net` | Required. The net every spoke's components/vias resolve against (component pool lookup is `(net, Role)`). |
+| `anchor_ref` **or** `anchor_role` (`+anchor_sheet`/`anchor_cluster`) **or** `anchor_point` | Exactly one — the anchor component whose pads the spokes attach to. |
+| `name` | Optional, for `--only`. Defaults to `net` (see `rule_effective_name`). **Not** a grouping mechanism — don't reuse one `name:` across several rules to bundle them for `--only`; use a shared `Cluster` (`anchor_cluster`/`spoke.cluster`) instead. Two rules that resolve to the same effective name is a fatal load error. |
+| `retired` | Default `false`. `true` = "does not exist on the board" — prunes this rule's via/track registry entries. Always wins over `--only`/`--cluster`. |
+| `skip` | Default `false`. `true` = "leave alone this run" — narrows work like `--only`/`--cluster` would, but inline, without protecting/pruning the registry either way. |
+
+**`ManualSpoke` (one entry of `spokes:`) fields:**
+
+| Field | Meaning |
+|---|---|
+| `pad` | Required. Which pad of the rule's anchor this spoke attaches to (a string, like KiCad — `'17'`, not `17`). |
+| `cell` | Required. The `Cell` (must be a leaf) this spoke places. |
+| `shift_x_mm`/`shift_y_mm` | Board-absolute mm shift from the pad centre to the spoke's own origin (not local/rotated — tuned visually per spoke). |
+| `rotation_deg` | Rotation of the resulting origin and all cell contents. |
+| `cluster` | Optional — narrows which physical component pool entry a role resolves to when the same net+Role combination isn't unique on its own. |
+| `retired`/`skip` | Same meaning as on `Rule`, scoped to just this one spoke. |
+
+---
+
+## `clone_placements:` — ClonePlacement (TemplatePlacer)
+
+Applies a `Cell` at a new location — unlike `rules:` (anchor is always an IC pad), the anchor here is
+just a name (`anchor_id` in the registry is `f"name:{name}"`), so it's the mechanism for repeated
+multi-component sections (PI-filters, DAC channels, LDO subsystems) as well as one-off ones.
+
+```yaml
+# boards/3ch-awg-tia/profiles/fpga.yaml
+clone_placements:
+  - name: p3v3_vccio_pi_filter
+    retired: false
+    skip: false
+    cell: fpga_in_pi_filter
+    anchor_cluster: Pi_Filter_3V3_VCCIO
+    anchor_role: FPGA
+    anchor_pad: '139'
+    xy: [-6.0, -6.0]
+    params:
+      PWR_IN: '+3V3'
+      PWR_OUT: '+3V3_VCCIO'
+```
+
+**Positioning — two modes:**
+- **Anchored** (`anchor_ref`/`anchor_role`(+`anchor_sheet`+`anchor_cluster`)/`anchor_point` set) —
+  origin = centre of `anchor_pad` if given, else the anchor footprint's own centre, or the resolved
+  Point's own position for `anchor_point`. `xy:` is then a flat shift from that (no auto-rotation —
+  see the `xy:` note above), `rotation_deg` rotates only the cell's contents.
+- **Absolute** (no anchor field set at all) — `xy:` is a required, literal board coordinate.
+
+**Role → real component — two modes**, decided by presence of `params`/`nets` (by-nets) vs their
+absence (by-selection):
+- **By nets** (repeated sections — PI-filters, DAC channels): each role inside the cell resolves
+  against a real net, via `nets:` (literal `role: net`) and/or `params:` (fills `{placeholder}`s in
+  the cell's own `net_template:` fields, same substitution as via/track `net:`). Ambiguous candidates
+  (2+ matching the resolved net) are narrowed by `anchor_sheet` → `Cluster` → current board selection
+  → physical proximity to the anchor → a fatal error, in that order — see
+  `clone_role_resolver.py`'s docstrings for the exact cascade.
+- **By selection** (rare, one-off sections — a single MCU): no `params`/`nets` at all (or
+  `by_selection: true` explicitly, if `params` is present only for via/track net resolution and would
+  otherwise be misread as "by nets" mode) — roles resolve against whatever's currently selected on the
+  live board in the PCB editor.
+
+**Full field reference:**
+
+| Field | Meaning |
+|---|---|
+| `name` | Required — registry identity fallback, `--only` target, shows up in every diagnostic message. |
+| `xy` | Required. See the anchored/absolute modes above and the `xy:` note. |
+| `cell` **or** `role` | Exactly one. `cell:` references `cells:`/`cells_file:`. `role:` synthesises a temporary one-component cell on the fly (for a placement not worth a whole cell file). |
+| `rotation_deg` | Default `0.0`. Rotates the cell's contents (anchored mode) or the whole thing (absolute mode). |
+| `anchor_ref` / `anchor_role`(+`anchor_sheet`+`anchor_cluster`) / `anchor_point` | Optional, mutually exclusive — see **Positioning** above. |
+| `anchor_pad` | Optional, only meaningful with an anchor set — narrows the anchor to a specific pad rather than the footprint's centre. |
+| `nets` | `{role: literal_net}` — by-nets role mapping. |
+| `params` | `{placeholder: value}` — fills `{placeholder}`s in the cell's `net_template:`/via/track `net:` fields; presence alone (even with empty `nets`) selects by-nets mode unless `by_selection: true`. |
+| `net_overrides` | `{resolved_net: replacement_net}` — final string substitution after the rest of net resolution, for edge cases the placeholder system can't express directly. |
+| `refs` | `{role: refdes}` — explicit override, bypassing net-based search entirely; last resort when candidates are electrically indistinguishable. |
+| `retired` / `skip` | Same convention as `Rule` — see above. `retired` always wins over `--only`/`--cluster`. |
+| `by_selection` | Default `false`. Forces selection mode even when `params`/`nets` are present. |
+| `ignore_selection` | Default `false`. Per-item counterpart of the CLI's `--no-selection`: treats the live GUI selection as empty for THIS placement's own resolution, regardless of the global flag — OR-composes with it. |
+| `layer` | `F.Cu`\|`B.Cu`\|unset (inherit the cell's own layer, place verbatim). |
+| `mirror` | Default `false`. Mirrors the whole construction — contradiction with `layer` (mirror without a layer change, or vice versa) is a fatal load error, since it would be physically meaningless. |
+
+**Deprecated, fatal on load:** `origin_x_mm`/`origin_y_mm` (renamed to `xy: [x, y]`), `side` (replaced
+by explicit `layer:`+`mirror:`).
+
+---
+
+## `thermal_via_array:` — one thermal via grid
+
+```yaml
+# boards/3ch-awg-tia/profiles/fpga.yaml
+thermal_via_array:
+  name: fpga_thermal
+  retired: false
+  skip: false
+  anchor_role: FPGA
+  pad: '145'
+  net: GND
+  rows: 4
+  cols: 4
+  margin_mm: 0.5
+  pattern: grid
+  drill_mm: 0.3
+  diameter_mm: 0.5
+```
+
+Only **one** `thermal_via_array:` per config (unlike `rules:`/`clone_placements:`, it's not a list —
+if a board needs more than one thermal pad handled, split across `include:`d files, each with its own
+root-level `thermal_via_array:`). `name` is **required** if the section is present at all (used for
+`--only` and the registry identity `f"thermal:{name}"`).
+
+| Field | Meaning |
+|---|---|
+| `anchor_ref` / `anchor_role`(+`anchor_sheet`+`anchor_cluster`) / `anchor_point` | Exactly one — the IC whose thermal pad gets the grid. |
+| `pad` | Which pad of the anchor is the thermal pad (grid is centred on it). |
+| `net` | Default `GND`. |
+| `rows`/`cols` | Grid dimensions. |
+| `margin_mm` | Clearance from the pad edge to the first via. |
+| `pattern` | `grid` or `staggered`. |
+| `drill_mm`/`diameter_mm` | Via dimensions. |
+| `retired` | Default `false`. Same "does not exist" meaning as elsewhere. Unified to default `false` across all four `retired`-bearing types on 2026-07-31 — before that, `thermal_via_array` alone defaulted its old `enabled` field to `False` (opt-in), an inconsistency now resolved. |
+| `skip` | Default `false`. Same "leave alone this run" meaning as elsewhere. |
+
+**Deprecated, fatal on load:** `target_ref` (renamed to `anchor_ref`), the old `enabled:` (renamed and
+inverted to `retired:` — `enabled: true` ≠ `retired: true`, don't do a literal find-and-replace on an
+old config, re-check the intended sense).
+
+---
+
+## `points:` — named, reusable anchors
+
+```yaml
+# boards/3ch-awg-tia/profiles/points.yaml
+points:
+  p3v3_ldo_origin:
+    anchor_role: C_OUT_BYPASS
+    anchor_cluster: In_Pi_Filter_Pos
+    anchor_pad: '1'
+```
+
+Then referenced by name from `Rule`/`ClonePlacement`/`ThermalViaArrayConfig`:
+
+```yaml
+clone_placements:
+  - name: 3v3_ldo
+    cell: p3v3_ldo
+    anchor_point: p3v3_ldo_origin
+    xy: [-50.0, 35.0]
+```
+
+A `Point` resolves once, is cached, and everything that references it by `anchor_point:` gets the
+same resolved position — added 2026-07-31 as a real node in the placement dependency graph (not text
+substitution), so ordering/freshness across a run is handled automatically, the same way any other
+anchor dependency is.
+
+| Field | Meaning |
+|---|---|
+| `name` | The key under `points:` — not a separate field, just how it's referenced. |
+| `anchor_ref` / `anchor_role`(+`anchor_sheet`+`anchor_cluster`) **or** `anchor_pad` | Live-board anchor, same fields/resolution as `Rule`/`ClonePlacement`. |
+| `anchor_point` | Chain to another, already-defined point by name — points can reference points (a cycle is caught by the same graph algorithm that catches any other anchor cycle). |
+| `xy` | A literal, absolute board coordinate — no live anchor at all. |
+| `shift_x_mm`/`shift_y_mm` | Board-absolute mm shift layered on top of any of the three bases above (not on `xy:` — fatal if both are set, just edit the literal coordinate instead). |
+
+Exactly one of `{anchor_ref or anchor_role, anchor_point, xy}` must be the base — fatal at load
+otherwise. `Rule`/`ThermalViaArrayConfig`'s own `anchor_point:` requires the referenced point to
+resolve to an actual footprint (no shift, not `xy:`-literal, and not chained through one that has a
+shift) — they need to look up a specific pad by number from it; `ClonePlacement` only ever needs a
+coordinate, so any Point works there.
+
+---
+
+## `include:` — splitting a profile across files
+
+```yaml
+# boards/3ch-awg-tia/profiles/power.yaml
+include:
+  - points.yaml
+  - power_extracts.yaml
+  - pn5v_filters.yaml
+  - p3v3_ldo.yaml
+```
+
+Each entry is either a bare path string, or `{path: <str>, enabled: <bool>}` to switch a whole
+included file off without deleting or commenting it out.
+
+- **List sections** (`rules`, `clone_placements`) — concatenated: this file's own entries first, then
+  each included file's, in listed order. (Real placement order at `apply` time is decided separately,
+  by actual anchor dependencies, not YAML order — see [docs/placement.md](placement.md).)
+- **Dict sections** (`cells`, `points`, `extract_profiles`, `clone_profiles`) — merged key-by-key,
+  **fatal** on a key defined in two different files (deliberately stricter than `cells_file:`'s silent
+  inline-overrides-external — included files are meant to be genuinely independent subsystems, so a
+  repeated name is far more likely a copy-paste mistake than an intentional override).
+- **Any other top-level key** (`layer:`, `thermal_via_array:`, `schematic_dir:`, `registry_path:`, …)
+  inside an *included* (non-root) file has no defined multi-file merge rule and is a **fatal** error —
+  move it to the root config instead. (This used to be silently dropped — a real, repeatedly-hit bug
+  class on `boards/3ch-awg-tia`, now caught at load time.)
+- Cycles and diamond-includes (the same file reachable twice) are both fatal.
+
+Independent of `cells_file:`/`cell_files:` (a narrower, single-purpose mechanism for external `Cell`
+definitions only) — `include:` is general-purpose and used by both `load_config()` (`rules`/
+`clone_placements`/`cells`/`points`) and the CLI's own profile loader (`extract_profiles`/
+`clone_profiles`), so one subsystem file can carry a mix of everything it needs.
+
+---
+
+## `extract_profiles:` / `clone_profiles:` — saved `extract`/`clone-extract` arguments
+
+Not part of `Config`/`load_config()` — a separate, CLI-only mechanism (`kicadstamp_cli.py extract
+--profiles ... --profile ...`) for saving repeated `extract`/`clone-extract` invocations as named YAML
+entries instead of retyping long flag lists. See [docs/commands.md](commands.md) for the full
+CLI-level walkthrough; the syntax:
+
+```yaml
+# boards/3ch-awg-tia/profiles/power_extracts.yaml
+extract_profiles:
+  p5v_pi_filter:
+    name: 5v_pi_filter
+    output: boards/3ch-awg-tia/profiles/templates/power_pi_filters.yaml
+    params:
+      PWR_IN: '+5V_DIRTY'
+      PWR_OUT: '+5V'
+    net_template:
+      '+5V_DIRTY': '{PWR_IN}'
+      '+5V': '{PWR_OUT}'
+```
+
+`extract_profiles:` entries accept: `name`, `output`, `params`, `net_template`, `net_template_role`,
+`origin_by_via_net`, `origin_by_component_role`, `origin_by_component_pad` — unknown keys are a fatal
+error (a typo'd key, e.g. `origin-by-via-net` with the wrong separator, used to be silently ignored).
+`clone_profiles:` (for `clone-extract`) accepts: `net`, `pcb`, `channel`, `output`.
+
+`output:` can be set once at the file's own root as a fallback for every profile inside it, if they
+all write to the same cells file — a profile that needs a different one still overrides it directly.
+
+---
+
+## See also
+
+- [docs/commands.md](commands.md) — the CLI commands (`apply`/`extract`/`undo`/`clone-extract`) that
+  consume everything documented here.
+- [docs/python.md](python.md) — building the same `Rule`/`ClonePlacement`/`Cell` objects from Python
+  instead of hand-writing YAML.
+- [docs/architect.md](architect.md) — the module architecture (`config/`, `placement/`, `geometry/`)
+  behind this schema.
+- [docs/placement.md](placement.md) — what actually happens with this config at `apply` time
+  (dependency ordering, the registry, collision handling).

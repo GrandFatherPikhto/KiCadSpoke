@@ -4,7 +4,7 @@ boards/3ch-awg-tia/scripts/dac_channels.py — generates clone_placements for
 the 3-channel DAC section (AD9707 + its immediate passives), reproducing
 what's already live and verified in profiles/3ch-awg-tia.yaml, via
 kicadstamp.author instead of hand-written YAML (see
-docs/board_coding.md for the walkthrough this mirrors).
+docs/python.md for the walkthrough this mirrors).
 
 AD_DAC itself is placed on all 3 channels — a real per-channel lookup table,
 NOT a formula (each channel's DAC sits on a different side of the FPGA, see

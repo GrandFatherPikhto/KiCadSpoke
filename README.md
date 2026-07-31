@@ -35,8 +35,8 @@
 - **File‑based cloner** (`clone-extract`) – parses `.net` and `.kicad_pcb` without IPC, builds a twin map of channels for hierarchical projects.
 - **Tracks in templates** – templates can include straight track segments (polylines are supported as a sequence of segments). Track collisions are not automatically checked (rely on KiCad DRC).
 - **External template files** – templates can be stored separately as JSON or YAML and referenced via `cells_file:` in the main config, keeping the main file clean and diff‑friendly.
-- **Splitting a profile into subsystem files** – `include:` at the root of a profile merges in one or more other YAML files (each carrying any mix of `extract_profiles`/`clone_placements`/`rules`/`templates`), recursively, with a per‑entry `enabled: false` to switch a whole subsystem off without touching every item inside it. Independent of `cells_file` (see [docs/commands.md](docs/commands.md) for merge semantics and duplicate/cycle handling).
-- **Scripting API** – `kicadstamp.explore.Board` for ad‑hoc read‑only querying (`board.select(role=..., cluster=..., sheet=..., net=...)`), and `kicadstamp.author` for building `ClonePlacement`/`Rule` in real Python instead of hand‑writing repetitive YAML, either applied directly or dumped back to an `include:`‑ready YAML file (see [docs/scripting.md](docs/scripting.md)).
+- **Splitting a profile into subsystem files** – `include:` at the root of a profile merges in one or more other YAML files (each carrying any mix of `extract_profiles`/`clone_placements`/`rules`/`cells`), recursively, with a per‑entry `enabled: false` on the include itself to switch a whole subsystem file off without touching every item inside it. Independent of `cells_file` (see [docs/config.md](docs/config.md) for merge semantics and duplicate/cycle handling).
+- **Scripting API** – `kicadstamp.explore.Board` for ad‑hoc read‑only querying (`board.select(role=..., cluster=..., sheet=..., net=...)`), and `kicadstamp.author` for building `ClonePlacement`/`Rule` in real Python instead of hand‑writing repetitive YAML, either applied directly or dumped back to an `include:`‑ready YAML file (see [docs/python.md](docs/python.md)).
 
 ---
 
@@ -134,130 +134,9 @@ During extraction, the reverse operation (`--net-template`) is available, turnin
 
 ## Configuration File Format (YAML)
 
-### Root Parameters
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `layer` | string | Global layer for ManualSpoke rules: `"F.Cu"` or `"B.Cu"` (replaces deprecated `side`). |
-| `templates` | dict | Inline named spoke templates (optional). |
-| `cells_file` | string | Path to an external JSON/YAML file containing templates (overridden by inline `templates`). |
-| `include` | list | Other profile files to merge in (`rules`/`clone_placements` concatenated, `templates`/`extract_profiles`/`clone_profiles` merged, fatal on duplicate keys or cycles). Each entry is a path string, or `{path, enabled}` to disable a whole subsystem file. |
-| `rules` | list | Manual spoke rules, each with `anchor_ref`. |
-| `clone_placements` | list | Cloned placements (TemplatePlacer). |
-| `thermal_via_array` | dict | Thermal via settings (optional). |
-| `place_components` | boolean | Enable component moves (default `true`). |
-| `skip_existing_components` | boolean | Skip components and vias/tracks already in place. |
-| `via_keepout_clearance_mm`, `via_search_step_mm`, `via_search_max_radius_mm`, `via_search_n_directions` | numbers | Parameters for thermal via placement search. |
-
-**Deprecated:** `target_ref` and `side` at the root are no longer supported (fatal error on load).
-
-### Template (`templates`) – now with `layer` and `tracks`
-
-```yaml
-templates:
-  cap_pair_standard:
-    layer: B.Cu
-    vias:
-      - offset_along_mm: 0.0
-        offset_across_mm: -1.5
-        drill_mm: 0.3
-        diameter_mm: 0.6
-        # net omitted – for ManualSpoke uses rule.net, for ClonePlacement must be explicit
-    tracks:
-      - start_along_mm: 0.0
-        start_across_mm: 0.0
-        end_along_mm: 1.0
-        end_across_mm: 1.0
-        width_mm: 0.25
-        net: GND
-        layer: F.Cu    # optional, inherits from template
-    components:
-      - role: LIGHT
-        offset_along_mm: 1.0
-        offset_across_mm: -1.0
-        angle_deg: 90.0
-        vias:
-          - offset_along_mm: 0.0
-            offset_across_mm: -1.0
-            net: GND
-            drill_mm: 0.3
-            diameter_mm: 0.6
-      - role: HEAVY
-        offset_along_mm: 1.0
-        offset_across_mm: 2.0
-        angle_deg: 270.0
-        vias:
-          - offset_along_mm: 0.0
-            offset_across_mm: 1.3
-            net: GND
-            drill_mm: 0.3
-            diameter_mm: 0.6
-```
-
-### Manual Spokes (`rules`) – with `anchor_ref`
-
-```yaml
-rules:
-- net: +1V2_VCCINT
-  anchor_ref: IC1       # mandatory – anchor for this rule
-  spokes:
-  - pad: '109'
-    template: cap_pair_standard
-    shift_x_mm: 0.0
-    shift_y_mm: 0.0
-    rotation_deg: 90.0
-  - pad: '62'
-    template: cap_pair_standard
-    shift_x_mm: 0.4
-    shift_y_mm: 0.0
-    rotation_deg: 270.0
-```
-
-### Cloned Placements (`clone_placements`) – all new fields
-
-```yaml
-clone_placements:
-  - name: dac_channel_2
-    template: dac_channel
-    anchor_ref: IC1
-    anchor_pad: '17'      # optional
-    origin_x_mm: -10.0    # shift from anchor (if anchor_ref given) or absolute point
-    origin_y_mm: -10.0
-    rotation_deg: 90.0
-    params:
-      channel: 2
-    nets:
-      CAP_IN: "GPIO12"
-      CAP_OUT: "GPIO12_FILTERED"
-    net_overrides:
-      "/STM32F4xx/BOOT0": "/STM32F4xx_2/BOOT0"
-    layer: B.Cu          # explicit placement layer (if different from template layer)
-    mirror: true         # mirror the whole construction (requires layer change)
-    by_selection: false  # explicit selection‑mode request (overrides implicit detection)
-    refs:                # explicit role->ref mapping (last resort)
-      DAC_PI_FILTER_C1: C601
-    enabled: true
-```
-
-- If `anchor_ref` (or `anchor_role`) is set, `origin_x/y` become a **shift** from the anchor.
-- `layer` and `mirror` allow placing the template on the opposite side with mirroring.
-- `by_selection: true` forces selection mode even if `params` are present (which may be used for via resolution, not for role mapping).
-
-### Thermal Vias (`thermal_via_array`) – renamed `target_ref` to `anchor_ref`
-
-```yaml
-thermal_via_array:
-  enabled: true
-  anchor_ref: IC1       # was target_ref
-  pad: '145'
-  net: GND
-  rows: 4
-  cols: 4
-  margin_mm: 0.5
-  pattern: grid
-  drill_mm: 0.3
-  diameter_mm: 0.5
-```
+Full field-by-field reference for every section (`cells`/`rules`/`clone_placements`/
+`thermal_via_array`/`points`/`include`/`extract_profiles`) with real, currently-loading examples now
+lives in its own page: [docs/config.md](docs/config.md).
 
 ---
 
@@ -406,8 +285,8 @@ Detailed documentation is in the `docs/` folder:
 - [KiCad adapter](./docs/kicad.md)
 - [Using kipy](./docs/kipy.md)
 - [Placement planning and execution](./docs/placement.md)
-- [Scripting: explore/author](./docs/scripting.md)
-- [Board coding — worked walkthrough](./docs/board_coding.md)
+- [YAML configuration reference](./docs/config.md)
+- [Coding placement in Python: explore/author](./docs/python.md)
 - [Tests](./docs/tests.md)
 - [Top‑level modules](./docs/uplevel_modules.md)
 - [File‑based cloner](./docs/cloner.md)
