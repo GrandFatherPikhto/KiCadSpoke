@@ -37,7 +37,7 @@ import logging
 
 from kipy.board_types import FootprintInstance
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QLabel, QMainWindow, QPushButton
+from PyQt6.QtWidgets import QCheckBox, QLabel, QMainWindow, QPushButton
 
 from kicadstamp.i18n import _
 
@@ -63,6 +63,10 @@ class MainWindow(QMainWindow):
         self.action_button = QPushButton(_("Reconnect"))
         self.action_button.clicked.connect(lambda: self._poll(manual=True))
         self.statusBar().addWidget(self.status_label, 1)
+
+        always_on_top = QCheckBox(_("Always on top"))
+        always_on_top.toggled.connect(self._set_always_on_top)
+        self.statusBar().addPermanentWidget(always_on_top)
         self.statusBar().addPermanentWidget(self.action_button)
 
         self.tree_dock = RoleClusterTreeDock(self)
@@ -80,6 +84,13 @@ class MainWindow(QMainWindow):
         self._selection_timer.start(SELECTION_POLL_INTERVAL_MS)
 
         self._poll(manual=True)  # don't wait a full interval for the first attempt
+
+    def _set_always_on_top(self, checked: bool) -> None:
+        """setWindowFlag() only takes effect on the next show() — the window
+        briefly disappears and reappears on most platforms (X11/Windows),
+        which is the normal/expected way Qt does this, not a bug here."""
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)
+        self.show()
 
     def _poll(self, manual: bool = False) -> None:
         """manual=True (button click, or the initial call at startup) always
