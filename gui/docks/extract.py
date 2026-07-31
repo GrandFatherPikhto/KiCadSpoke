@@ -83,9 +83,15 @@ is still empty — never stomps something the user already typed) and
 highlighted in its list. Matching is a plain slug comparison (e.g. Cluster
 'PWR/DAC0' -> 'pwr_dac0'), not a stored Cluster->name mapping — nothing in
 the file formats records that association today, so this is a heuristic
-that helps when it hits and is silently a no-op when it doesn't ("если
-нашли — выводим": only surface it when there's an actual match, never
-invent/guess a name).
+that helps when it hits.
+
+Cell name specifically ALSO falls back to the Cluster's own slug when
+nothing existing matches (Profile key does not — it already defaults to
+the cell name at extraction time, see _on_extract()). Requested live
+2026-08-01: "если есть имя кластера, зачем придумывать что-то" — a first-
+time extraction has no existing key to match yet, but the Cluster name is
+already right there, so Cell name is never left blank purely because
+nothing's been extracted from it before.
 """
 import json
 import logging
@@ -408,8 +414,14 @@ class ExtractDock(QDockWidget):
 
             cell_keys = self._existing_keys(self._target_path)
             matched_cell = next((c for c in candidates if c in cell_keys), None)
-            if matched_cell and not self.name_edit.text().strip():
-                self.name_edit.setText(matched_cell)
+            if not self.name_edit.text().strip():
+                # An existing key wins if there is one (it reflects
+                # whatever naming was actually chosen last time); otherwise
+                # the Cluster's own slug is still a perfectly good default
+                # — no reason to leave the field blank just because nothing
+                # was extracted under that name yet (2026-08-01: "если есть
+                # имя кластера, зачем придумывать что-то").
+                self.name_edit.setText(matched_cell or candidates[0])
 
             profile_keys = self._existing_keys(self._profile_path, section="extract_profiles")
             matched_profile = next((c for c in candidates if c in profile_keys), None)
