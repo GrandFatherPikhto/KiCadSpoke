@@ -149,17 +149,59 @@ class TemplateTrack:
 
 
 @dataclass
+class CellPlacement:
+    """
+    A nested reference to another cell (or a single role), INSIDE a
+    composite Cell definition — recursion, see Cell.clone_placements below.
+
+    Closed boundary (see handoff_2026_07_31_blocks.md §3): nothing inside a
+    cell may reference anything outside it. Deliberately has NO anchor_ref/
+    anchor_role/anchor_sheet/anchor_cluster/anchor_pad/by_selection/
+    ignore_selection at all — those only make sense for a top-level,
+    board-attached ClonePlacement. xy/rotation_deg are ALWAYS relative to
+    the parent cell's own local (0,0), never to anything live on the board.
+
+    No param scoping — params/nets/net_overrides/refs here are the ONLY
+    ones this nested placement sees, never inherited from the parent cell's
+    own placement (same convention ClonePlacement.params already has today,
+    deliberately kept, not a new rule for nesting specifically).
+
+    cell OR role (mutually exclusive, exactly one required) — same meaning
+    as ClonePlacement.cell/role.
+    """
+    name: str
+    cell: Optional[str] = None
+    role: Optional[str] = None
+    xy: Tuple[float, float] = (0.0, 0.0)
+    rotation_deg: float = 0.0
+    mirror: bool = False
+    layer: Optional[str] = None
+    nets: Dict[str, str] = field(default_factory=dict)
+    params: Dict[str, Any] = field(default_factory=dict)
+    net_overrides: Dict[str, str] = field(default_factory=dict)
+    refs: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class Cell:
     """
     Cell — all geometry is local and rotation‑invariant:
     described once at rotation_deg=0 (the reference board orientation), then
     each actual spoke rotates it as a whole. Any list may be empty — e.g. a
     spoke with no vias, or a cell with just one component.
+
+    Recursive (2026-07-31): a cell may ALSO carry clone_placements — nested
+    references to other cells (or single roles), positioned relative to
+    THIS cell's own local (0,0) — see CellPlacement above. A cell can be a
+    pure leaf (only vias/components/tracks), a pure composite (only
+    clone_placements), or both at once — nothing about the two is mutually
+    exclusive.
     """
     name: str
     vias: List[TemplateVia] = field(default_factory=list)
     components: List[TemplateComponentSlot] = field(default_factory=list)
     tracks: List[TemplateTrack] = field(default_factory=list)
+    clone_placements: List[CellPlacement] = field(default_factory=list)
     # Cell layer — FACT, absolute: 'F.Cu' | 'B.Cu', as extracted
     # (written automatically). Components without their own layer inherit it.
     # No automatic guesswork: the cell is placed verbatim; to flip the whole

@@ -170,6 +170,11 @@ def check_clone_cells_exist(cfg: Config) -> None:
     placements are skipped: their cell is intentionally None, and
     ClonePositionCalculator synthesises a single‑component cell on the fly,
     so there is nothing to check in cfg.cells.
+
+    Also walks every Cell's OWN clone_placements (nested CellPlacement
+    entries, see config/models.py — recursive cells, 2026-07-31) and checks
+    their cell references the same way — one place for "does every
+    reference into cfg.cells resolve", not a second, separate check.
     """
     problems = []
     for clone in cfg.clone_placements:
@@ -178,12 +183,66 @@ def check_clone_cells_exist(cfg: Config) -> None:
         if clone.cell not in cfg.cells:
             problems.append(_("clone_placement {name!r}: cell {cell!r} not found in cells")
                             .format(name=clone.name, cell=clone.cell))
+    for cell in cfg.cells.values():
+        for nested in cell.clone_placements:
+            if nested.cell is None:
+                continue
+            if nested.cell not in cfg.cells:
+                problems.append(
+                    _("cell {owner!r}: nested clone_placement {name!r}: cell {cell!r} not found in cells")
+                    .format(owner=cell.name, name=nested.name, cell=nested.cell))
     if problems:
         raise ValidationError(format_fatal_error(
             _("clone_placement references a non‑existent cell"),
             problems
         ))
     logger.debug(_("Clone cell existence checks passed"))
+
+
+def check_no_cell_definition_cycles(cfg: Config) -> None:
+    """
+    "Occurs check" over cell DEFINITIONS (not placements) — a cell that,
+    directly or through nested clone_placements, ends up containing itself
+    has no well‑founded geometry (infinite recursion) and must be rejected
+    at load time, before any recursive resolution is ever attempted (see
+    ClonePositionCalculator's recursive resolver).
+
+    Pure config check, no live board needed. Deliberately a SEPARATE concern
+    from dependency_order.py's cycle detection: that one is about the order
+    of PLACEMENT within one apply run (rules/clone_placements/points
+    anchored on each other's live output); this one is about the tree of
+    cell DEFINITIONS itself, resolved once at load time, well before any
+    board is even connected to.
+    """
+    WHITE, GREY, BLACK = 0, 1, 2
+    color: Dict[str, int] = {name: WHITE for name in cfg.cells}
+    path: List[str] = []
+
+    def visit(name: str) -> None:
+        color[name] = GREY
+        path.append(name)
+        cell = cfg.cells[name]
+        for nested in cell.clone_placements:
+            if nested.cell is None or nested.cell not in cfg.cells:
+                continue  # unknown-cell case already reported by check_clone_cells_exist
+            child_color = color[nested.cell]
+            if child_color == GREY:
+                cycle_start = path.index(nested.cell)
+                cycle = path[cycle_start:] + [nested.cell]
+                raise ValidationError(format_fatal_error(
+                    _("cycle among cell definitions"),
+                    [_("{cycle} — a cell cannot contain itself, directly or through nesting")
+                     .format(cycle=" -> ".join(cycle))]
+                ))
+            if child_color == WHITE:
+                visit(nested.cell)
+        path.pop()
+        color[name] = BLACK
+
+    for name in cfg.cells:
+        if color[name] == WHITE:
+            visit(name)
+    logger.debug(_("Cell definition cycle checks passed"))
 
 
 def check_no_duplicate_clone_anchors(cfg: Config) -> None:
@@ -370,6 +429,7 @@ def run_all_checks(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) ->
     _sn = sheet_names or {}
     logger.info(_("Running pre‑validation checks..."))
     check_clone_cells_exist(cfg)
+    check_no_cell_definition_cycles(cfg)
     check_no_duplicate_clone_anchors(cfg)
     check_anchor_sheet_configured(cfg, sheet_names=_sn)
     check_single_selection_based_clone(cfg)

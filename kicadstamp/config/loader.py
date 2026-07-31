@@ -18,7 +18,7 @@ from ..runtime_context import RuntimeContext
 from .includes import resolve_includes
 from .models import (
     ThermalViaArrayConfig, TemplateVia, TemplateComponentSlot, TemplateTrack,
-    Cell, ManualSpoke, Rule, ClonePlacement, Config, rule_effective_name,
+    Cell, CellPlacement, ManualSpoke, Rule, ClonePlacement, Config, rule_effective_name,
 )
 from .points import Point
 from ..i18n import _
@@ -120,12 +120,98 @@ def _load_cell(name: str, data: Dict[str, Any]) -> Cell:
     layer = data.get('layer', 'F.Cu')
     _check_layer_value(layer, _("in cell {name!r}").format(name=name))
 
+    clone_placements = [_load_cell_placement(name, cp) for cp in data.get('clone_placements', [])]
+    nested_names = [cp.name for cp in clone_placements]
+    dup_names = {n for n in nested_names if nested_names.count(n) > 1}
+    if dup_names:
+        raise ValidationError(format_fatal_error(
+            _("name appears twice among clone_placements of cell {name!r}").format(name=name),
+            [_("name {dup!r} appears {count} times — nested clone_placement names must be unique "
+               "within their cell (used to build the registry key for nested content)")
+             .format(dup=n, count=nested_names.count(n)) for n in sorted(dup_names)]
+        ))
+
     return Cell(
         name=name,
         vias=[_load_template_via(v) for v in data.get('vias', [])],
         components=components,
         tracks=[_load_template_track(t) for t in data.get('tracks', [])],
+        clone_placements=clone_placements,
         layer=layer,
+    )
+
+
+_CELL_PLACEMENT_KNOWN_KEYS = {
+    'name', 'cell', 'role', 'xy', 'rotation_deg', 'mirror', 'layer',
+    'nets', 'params', 'net_overrides', 'refs',
+}
+
+
+def _load_cell_placement(cell_name: str, data: Dict[str, Any]) -> CellPlacement:
+    """Loads one entry of a Cell's own clone_placements: — a nested,
+    closed-boundary reference to another cell/role. See CellPlacement's
+    docstring (config/models.py) for why anchor_*/by_selection/
+    ignore_selection are deliberately absent from _CELL_PLACEMENT_KNOWN_KEYS."""
+    name = data.get('name', '?')
+    if not data.get('name'):
+        raise ValidationError(format_fatal_error(
+            _("nested clone_placement without name in cell {cell!r}").format(cell=cell_name),
+            [_("every nested clone_placement must have a name — used to build the registry "
+               "key for its content, write name: <string>")]
+        ))
+    check_unknown_keys(
+        data, _CELL_PLACEMENT_KNOWN_KEYS,
+        _("unknown fields in nested clone_placement {name!r} of cell {cell!r}")
+        .format(name=name, cell=cell_name),
+        extra_hint=_(" (cell placements are closed-boundary — no anchor_ref/anchor_role/"
+                     "anchor_sheet/anchor_cluster/anchor_pad/by_selection/ignore_selection "
+                     "here, only xy: relative to the parent cell's own (0,0))"))
+
+    cell = data.get('cell')
+    role = data.get('role')
+    if cell is not None and role is not None:
+        raise ValidationError(format_fatal_error(
+            _("cell and role together in nested clone_placement {name!r} of cell {cell_name!r}")
+            .format(name=name, cell_name=cell_name),
+            [_("these are mutually exclusive ways to define the content: either a reference to "
+               "another cell (cell), or a single-component placement by role (role), not both")]
+        ))
+    if cell is None and role is None:
+        raise ValidationError(format_fatal_error(
+            _("neither cell nor role set in nested clone_placement {name!r} of cell {cell_name!r}")
+            .format(name=name, cell_name=cell_name),
+            [_("need either cell: <name from cells:>, or role: <ROLE> for a single-component "
+               "placement without a separate cell")]
+        ))
+
+    xy_raw = data.get('xy')
+    if xy_raw is not None:
+        if not (isinstance(xy_raw, (list, tuple)) and len(xy_raw) == 2):
+            raise ValidationError(format_fatal_error(
+                _("xy must be a 2-element [x, y] list in nested clone_placement {name!r} "
+                  "of cell {cell_name!r}").format(name=name, cell_name=cell_name),
+                [_("got: {xy!r}").format(xy=xy_raw)]
+            ))
+        xy = (float(xy_raw[0]), float(xy_raw[1]))
+    else:
+        xy = (0.0, 0.0)
+
+    layer = data.get('layer')
+    _check_layer_value(layer, _("in nested clone_placement {name!r} of cell {cell_name!r}")
+                       .format(name=name, cell_name=cell_name))
+
+    return CellPlacement(
+        name=name,
+        cell=cell,
+        role=role,
+        xy=xy,
+        rotation_deg=data.get('rotation_deg', 0.0),
+        mirror=bool(data.get('mirror', False)),
+        layer=layer,
+        nets=data.get('nets', {}) or {},
+        params=data.get('params', {}) or {},
+        net_overrides=data.get('net_overrides', {}) or {},
+        refs=data.get('refs', {}) or {},
     )
 
 
