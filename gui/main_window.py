@@ -99,8 +99,10 @@ class MainWindow(QMainWindow):
         # silently missed.
         self.file_picker_dock.on_cells_file_changed = self.extract_dock.set_target_file
         self.file_picker_dock.on_extractor_file_changed = self.extract_dock.set_profile_file
+        self.file_picker_dock.on_placer_file_changed = self.extract_dock.set_placer_file
         self.extract_dock.set_target_file(self.file_picker_dock.assigned["cells"])
         self.extract_dock.set_profile_file(self.file_picker_dock.assigned["extractor"])
+        self.extract_dock.set_placer_file(self.file_picker_dock.assigned["placer"])
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)

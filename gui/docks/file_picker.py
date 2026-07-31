@@ -8,9 +8,19 @@ the extract_profiles file, alongside this dock's tree — two different ways
 to pick a file for closely related purposes, reported as confusing live
 2026-08-01 ("получается каша с выбором"). Now there's exactly one place to
 pick any file this GUI writes to: click a file in the tree, then "Use
-selected" on whichever role it belongs to. Placer has no consumer yet (no
-placer dock exists), but the slot exists so its assignment isn't lost once
-one does.
+selected" on whichever role it belongs to.
+
+Extractor and Placer are meant to be shareable — both are the same
+"structured root config" shape (extract_profiles:/cell_files:/include:/
+clone_placements: as sibling keys), and pointing both at one file is the
+normal way to use this (see ExtractDock, which writes cell_files:/
+include: entries into whatever the Placer file is right after an
+extract). Cells is NOT shareable with either: cell_files/cells_file
+content is parsed as a FLAT {cell_name: {...}} dict with no wrapper (see
+config/loader.py) — every top-level key is read as a cell name, so an
+extract_profiles:/cell_files: key sharing that file would itself be
+misread as a cell. _update_role_warning() flags that combination rather
+than silently letting it happen.
 
 Default root is boards/ (this project's own config tree), NOT derived from
 the live board connection. Checked live before assuming that would work:
@@ -98,11 +108,17 @@ class FilePickerDock(QDockWidget):
             row.addWidget(button)
             layout.addLayout(row)
 
+        self.role_warning_label = QLabel("")
+        self.role_warning_label.setWordWrap(True)
+        self.role_warning_label.setStyleSheet("color: #a00;")
+        layout.addWidget(self.role_warning_label)
+
         self.setWidget(container)
 
         self.set_root(self._load_root())
         self._restore_last_pick()
         self._restore_roles()
+        self._update_role_warning()
 
     @staticmethod
     def _load_root() -> Path:
@@ -150,9 +166,20 @@ class FilePickerDock(QDockWidget):
         data = settings.load()
         data[f"{role_key}_file"] = str(self.picked_path)
         settings.save(data)
+        self._update_role_warning()
         callback = getattr(self, f"on_{role_key}_file_changed")
         if callback:
             callback(self.picked_path)
+
+    def _update_role_warning(self) -> None:
+        cells = self.assigned["cells"]
+        if cells is not None and cells in (self.assigned["extractor"], self.assigned["placer"]):
+            self.role_warning_label.setText(
+                _("Cells shares a file with Extractor/Placer — every top-level key in a "
+                  "Cells file is read as a cell name, so extract_profiles:/cell_files: "
+                  "entries in the same file would corrupt it. Give Cells its own file."))
+        else:
+            self.role_warning_label.setText("")
 
     def _role_text(self, role_key: str, path: Optional[Path]) -> str:
         value = self._display_path(path) if path is not None else _("not set")

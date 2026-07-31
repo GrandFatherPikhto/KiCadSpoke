@@ -45,6 +45,19 @@ have its own separate "Change profile file..." QFileDialog button for the
 profile file alone, which meant two different ways to pick a file for two
 closely related purposes — reported as confusing live 2026-08-01.
 
+There's a third role, Placer (set_placer_file()) — the root config a
+placement run would actually be pointed at. After a successful extract,
+if a Placer file is assigned, this dock also makes sure that file's own
+cell_files: list includes the Cells file and its include: list includes
+the Extractor file (deduped by resolved path, never duplicated, every
+other key in the file left alone — see _add_list_entry(), same read-
+merge-write shape as _write_merged() but for a list section instead of a
+dict one). Requested live 2026-08-01 ("это всё собралось вместе, и placer
+— это точка сборки"): extracting a cell is meant to leave the Placer file
+ready to use it, not just leave the cell sitting in a file nothing points
+at yet. Skipped when Cells/Extractor already IS the Placer file (self-
+reference is pointless — the file already effectively "has itself").
+
 The "Existing cells:"/"Existing profiles:" lists read straight from
 whatever those two files currently contain (top-level keys / the
 extract_profiles: section's keys) and let a click reuse an existing name
@@ -61,6 +74,7 @@ invent/guess a name).
 """
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
@@ -95,6 +109,7 @@ class ExtractDock(QDockWidget):
         self._selected_footprints: List[Selected] = []
         self._target_path: Optional[Path] = None
         self._profile_path: Optional[Path] = None
+        self._placer_path: Optional[Path] = None
         self._net_alias_edits: Dict[str, QLineEdit] = {}
         self._last_autofill_key: Optional[Tuple[frozenset, Optional[Path], Optional[Path]]] = None
 
@@ -194,6 +209,10 @@ class ExtractDock(QDockWidget):
         self.profile_target_label.setWordWrap(True)
         layout.addWidget(self.profile_target_label)
 
+        self.placer_target_label = QLabel(_("No placer file picked (pick one in Files, optional)"))
+        self.placer_target_label.setWordWrap(True)
+        layout.addWidget(self.placer_target_label)
+
         self.extract_button = QPushButton(_("Extract to file"))
         self.extract_button.setEnabled(False)
         self.extract_button.clicked.connect(self._on_extract)
@@ -267,6 +286,17 @@ class ExtractDock(QDockWidget):
             else _("No profile file picked (pick one in Files)"))
         self._refresh_existing_lists()
 
+    def set_placer_file(self, path: Optional[Path]) -> None:
+        """Called by MainWindow whenever the Files dock's Placer-role file
+        changes (wired via FilePickerDock.on_placer_file_changed).
+        Optional — extraction works the same without one, it just skips
+        the cell_files:/include: wiring described in the module
+        docstring."""
+        self._placer_path = path
+        self.placer_target_label.setText(
+            _("Placer file: {path}").format(path=path) if path is not None
+            else _("No placer file picked (pick one in Files, optional)"))
+
     @staticmethod
     def _display_path(path: Path) -> str:
         try:
@@ -322,11 +352,20 @@ class ExtractDock(QDockWidget):
 
         A matched profile's own params: (alias -> net literal, the same
         shape _on_extract() writes) are pulled into the net-alias fields
-        too, matched up by net literal — reported live 2026-08-01 as
-        missing ("алиасы сетей не подтянул"): reusing a profile's name
-        without its aliases just means retyping them by hand every time.
-        Same empty-field-only rule as the name fields; a param whose net
-        isn't in the current selection has no matching row and is skipped."""
+        too — reported live 2026-08-01 as missing ("алиасы сетей не
+        подтянул"): reusing a profile's name without its aliases just
+        means retyping them by hand every time. Tries an exact net-literal
+        match first (the profile is being re-run on the SAME nets); a
+        param whose literal isn't present in the current selection falls
+        back to filling the next still-empty row, in declared order — the
+        common case this covers is reusing a profile for an analogous
+        Cluster on a different rail (found live 2026-08-01: a '-2V5'/
+        '-2V5_DIRTY' selection matching a profile whose params were
+        recorded against '+2V5'/'+2V5_DIRTY' — no literal in common, but
+        the two aliases still belong in the same two rows). It's a
+        heuristic, not a guarantee — same empty-field-only rule as the
+        name fields, so a bad guess is just as easy to overtype as a
+        blank field would have been."""
         clusters = frozenset(s.cluster for s in self._selected_footprints if s.cluster)
         key = (clusters, self._target_path, self._profile_path)
         if key == self._last_autofill_key:
@@ -352,9 +391,16 @@ class ExtractDock(QDockWidget):
                     self.profile_key_edit.setText(matched_profile)
                 profile_entry = self._load_data(self._profile_path).get(
                     "extract_profiles", {}).get(matched_profile, {})
+                unmatched_aliases = []
                 for alias, net_literal in (profile_entry.get("params") or {}).items():
                     edit = self._net_alias_edits.get(net_literal)
-                    if edit is not None and not edit.text().strip():
+                    if edit is None:
+                        unmatched_aliases.append(alias)
+                    elif not edit.text().strip():
+                        edit.setText(alias)
+                if unmatched_aliases:
+                    empty_edits = [e for e in self._net_alias_edits.values() if not e.text().strip()]
+                    for alias, edit in zip(unmatched_aliases, empty_edits):
                         edit.setText(alias)
 
         self._select_list_item(self.cells_list, matched_cell)
@@ -508,6 +554,21 @@ class ExtractDock(QDockWidget):
                 action=_("overwrote") if profile_overwritten else _("wrote"),
                 key=profile_key, path=self._profile_path))
 
+        if self._placer_path is not None:
+            try:
+                if self._target_path != self._placer_path:
+                    rel = Path(os.path.relpath(self._target_path, self._placer_path.parent)).as_posix()
+                    if self._add_list_entry(self._placer_path, "cell_files", rel):
+                        messages.append(_("added {rel!r} to cell_files: in {path}").format(
+                            rel=rel, path=self._placer_path))
+                if save_profile and self._profile_path != self._placer_path:
+                    rel = Path(os.path.relpath(self._profile_path, self._placer_path.parent)).as_posix()
+                    if self._add_list_entry(self._placer_path, "include", rel):
+                        messages.append(_("added {rel!r} to include: in {path}").format(
+                            rel=rel, path=self._placer_path))
+            except OSError as e:
+                messages.append(_("placer file wiring failed: {error}").format(error=e))
+
         self.message_label.setStyleSheet(_SUCCESS_STYLE)
         self.message_label.setText("; ".join(messages))
         self._refresh_existing_lists()
@@ -551,3 +612,40 @@ class ExtractDock(QDockWidget):
             else:
                 yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
         return overwritten
+
+    @staticmethod
+    def _add_list_entry(path: Path, section: str, entry: str) -> bool:
+        """Appends `entry` (a path string, relative to `path`'s own
+        directory — the same resolution rule config/loader.py and
+        config/includes.py use for cell_files:/include: themselves) to
+        that list section in `path`, unless an entry already there
+        resolves to the same file. Read-merge-write like _write_merged(),
+        but for a list section (cell_files:/include:) instead of a dict
+        one — every other key in the file is left untouched. Returns
+        whether an entry was actually added."""
+        is_json = path.suffix.lower() == '.json'
+        existing: dict = {}
+        if path.exists():
+            with open(path, "r", encoding="utf-8") as f:
+                existing = (json.load(f) if is_json else yaml.safe_load(f)) or {}
+
+        items = existing.setdefault(section, [])
+        if not isinstance(items, list):
+            raise OSError(_("{section}: in {path} is not a list — refusing to touch it")
+                          .format(section=section, path=path))
+
+        base_dir = path.parent
+        target = (base_dir / entry).resolve()
+        for existing_entry in items:
+            existing_str = existing_entry if isinstance(existing_entry, str) \
+                else (existing_entry or {}).get('path')
+            if existing_str and (base_dir / existing_str).resolve() == target:
+                return False
+
+        items.append(entry)
+        with open(path, "w", encoding="utf-8") as f:
+            if is_json:
+                json.dump(existing, f, indent=2, ensure_ascii=False, sort_keys=False)
+            else:
+                yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
+        return True
