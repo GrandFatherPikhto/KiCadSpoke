@@ -14,6 +14,17 @@ FootprintInstance refs, extraction needs the FULL raw selection (vias and
 tracks too — a thermal via array or a decoupling-cap+via pattern has both),
 so MainWindow passes this dock the raw get_selected_items() result
 alongside the Selected-wrapped footprint list the other docks use.
+
+Optionally also writes an extract_profiles: entry (the --profile mechanism
+in kicadstamp_cli.py's extract command) — a replayable recipe (name/output/
+net_template/params) so the same extraction can be re-run from the CLI
+later without retyping the alias mapping by hand. This CANNOT go in the
+same file as the cell output: cell_files/cells_file content is parsed as a
+flat {cell_name: {...}} dict with no wrapper (see config/loader.py — every
+top-level key is treated as a cell name), so an extract_profiles: sibling
+key in that file would be misread as another cell. extract_profiles: lives
+in a root/included profile config instead (alongside clone_placements:/
+include:/cells_file: etc.) — a second, independent file target.
 """
 import json
 import logging
@@ -21,14 +32,17 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import yaml
-from PyQt6.QtWidgets import (QDockWidget, QFormLayout, QGridLayout, QLabel,
-                              QLineEdit, QPushButton, QScrollArea, QVBoxLayout,
-                              QWidget)
+from PyQt6.QtWidgets import (QCheckBox, QDockWidget, QFileDialog, QFormLayout,
+                              QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+                              QPushButton, QScrollArea, QVBoxLayout, QWidget)
 
 from kicadstamp.exceptions import PlacerError
 from kicadstamp.explore import Selected
 from kicadstamp.i18n import _
 from kicadstamp.template_extraction import extract_template_from_selection
+
+from .. import settings
+from ..docks.file_picker import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +59,7 @@ class ExtractDock(QDockWidget):
         self._selected_footprints: List[Selected] = []
         self._target_path: Optional[Path] = None
         self._net_alias_edits: Dict[str, QLineEdit] = {}
+        self._profile_path: Optional[Path] = self._load_last_profile_path()
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -78,6 +93,25 @@ class ExtractDock(QDockWidget):
         scroll.setWidget(self._nets_container)
         layout.addWidget(scroll, 1)
 
+        self.save_profile_checkbox = QCheckBox(_("Also save as extract_profile"))
+        layout.addWidget(self.save_profile_checkbox)
+
+        profile_form = QFormLayout()
+        self.profile_key_edit = QLineEdit()
+        self.profile_key_edit.setPlaceholderText(_("profile key (defaults to cell name)"))
+        profile_form.addRow(_("Profile key:"), self.profile_key_edit)
+        layout.addLayout(profile_form)
+
+        profile_file_row = QHBoxLayout()
+        self.profile_target_label = QLabel(self._display_path(self._profile_path)
+                                            if self._profile_path else _("No profile file picked"))
+        self.profile_target_label.setWordWrap(True)
+        profile_file_row.addWidget(self.profile_target_label, 1)
+        change_profile_button = QPushButton(_("Change profile file..."))
+        change_profile_button.clicked.connect(self._on_change_profile_file)
+        profile_file_row.addWidget(change_profile_button)
+        layout.addLayout(profile_file_row)
+
         self.extract_button = QPushButton(_("Extract to file"))
         self.extract_button.setEnabled(False)
         self.extract_button.clicked.connect(self._on_extract)
@@ -108,6 +142,34 @@ class ExtractDock(QDockWidget):
             _("Target: {path}").format(path=path) if path is not None
             else _("No target file picked (pick one in Files)"))
         self._update_button_state()
+
+    @staticmethod
+    def _load_last_profile_path() -> Optional[Path]:
+        last = settings.load().get("last_profile_path")
+        if last and Path(last).is_file():
+            return Path(last)
+        return None
+
+    @staticmethod
+    def _display_path(path: Path) -> str:
+        try:
+            return str(path.relative_to(PROJECT_ROOT))
+        except ValueError:
+            return str(path)
+
+    def _on_change_profile_file(self) -> None:
+        start_dir = str(self._profile_path.parent) if self._profile_path else str(PROJECT_ROOT / "boards")
+        chosen, _filter = QFileDialog.getSaveFileName(
+            self, _("Pick extract_profiles target file"), start_dir,
+            _("YAML/JSON files (*.yaml *.yml *.json)"),
+            options=QFileDialog.Option.DontConfirmOverwrite)
+        if not chosen:
+            return
+        self._profile_path = Path(chosen)
+        self.profile_target_label.setText(self._display_path(self._profile_path))
+        data = settings.load()
+        data["last_profile_path"] = chosen
+        settings.save(data)
 
     def _update_selection_label(self) -> None:
         if not self._raw_items:
@@ -170,6 +232,12 @@ class ExtractDock(QDockWidget):
             return
         if not self._raw_items or self._target_path is None:
             return
+        save_profile = self.save_profile_checkbox.isChecked()
+        if save_profile and self._profile_path is None:
+            self.message_label.setStyleSheet(_ERROR_STYLE)
+            self.message_label.setText(
+                _("'Also save as extract_profile' is checked, but no profile file is picked."))
+            return
 
         board = self._main_window.connection.board
         if board is None:
@@ -189,31 +257,70 @@ class ExtractDock(QDockWidget):
             return
 
         try:
-            overwritten = self._write_merged(template_dict, name)
+            cell_overwritten = self._write_merged(self._target_path, template_dict)
         except OSError as e:
             self.message_label.setStyleSheet(_ERROR_STYLE)
             self.message_label.setText(_("Write failed: {error}").format(error=e))
             return
 
-        self.message_label.setStyleSheet(_SUCCESS_STYLE)
-        action = _("Overwrote") if overwritten else _("Wrote")
-        self.message_label.setText(
-            _("{action} {name!r} in {path}").format(action=action, name=name, path=self._target_path))
+        messages = [_("{action} {name!r} in {path}").format(
+            action=_("Overwrote") if cell_overwritten else _("Wrote"), name=name, path=self._target_path)]
 
-    def _write_merged(self, template_dict: dict, name: str) -> bool:
+        if save_profile:
+            profile_key = self.profile_key_edit.text().strip() or name
+            entry: Dict[str, Any] = {"output": self._display_path(self._target_path)}
+            if profile_key != name:
+                entry["name"] = name
+            if net_template_map:
+                entry["net_template"] = net_template_map
+            try:
+                profile_overwritten = self._write_merged(
+                    self._profile_path, {"extract_profiles": {profile_key: entry}}, section="extract_profiles")
+            except OSError as e:
+                self.message_label.setStyleSheet(_ERROR_STYLE)
+                self.message_label.setText(_("Cell written, but profile write failed: {error}").format(error=e))
+                return
+            messages.append(_("{action} profile {key!r} in {path}").format(
+                action=_("overwrote") if profile_overwritten else _("wrote"),
+                key=profile_key, path=self._profile_path))
+
+        self.message_label.setStyleSheet(_SUCCESS_STYLE)
+        self.message_label.setText("; ".join(messages))
+
+    @staticmethod
+    def _write_merged(path: Path, new_data: dict, section: Optional[str] = None) -> bool:
         """Same read-merge-write shape as kicadstamp_cli.py's cmd_extract:
-        existing entries in the target file are kept, only the one being
-        written now is added/replaced — an extract target is routinely
-        home to several cells accumulated over time, not exclusively owned
-        by this one write."""
-        is_json = self._target_path.suffix.lower() == '.json'
+        existing content in the target file is kept, only what's in
+        new_data is added/replaced — a target file is routinely home to
+        several cells/profiles accumulated over time, not exclusively owned
+        by this one write.
+
+        section=None: new_data is {cell_name: {...}} merged at the file's
+        top level (the flat cell_files/cells_file shape).
+        section='extract_profiles': new_data is
+        {'extract_profiles': {key: {...}}} — only that one nested dict gets
+        merged, every OTHER top-level key already in the file (clone_
+        placements:, include:, cells_file:, ...) is left untouched.
+        Returns whether the specific key being written already existed.
+        """
+        is_json = path.suffix.lower() == '.json'
         existing: dict = {}
-        if self._target_path.exists():
-            with open(self._target_path, "r", encoding="utf-8") as f:
+        if path.exists():
+            with open(path, "r", encoding="utf-8") as f:
                 existing = (json.load(f) if is_json else yaml.safe_load(f)) or {}
-        overwritten = name in existing
-        existing.update(template_dict)
-        with open(self._target_path, "w", encoding="utf-8") as f:
+
+        if section is None:
+            key = next(iter(new_data))
+            overwritten = key in existing
+            existing.update(new_data)
+        else:
+            new_section = new_data[section]
+            key = next(iter(new_section))
+            target_section = existing.setdefault(section, {})
+            overwritten = key in target_section
+            target_section.update(new_section)
+
+        with open(path, "w", encoding="utf-8") as f:
             if is_json:
                 json.dump(existing, f, indent=2, ensure_ascii=False, sort_keys=False)
             else:
