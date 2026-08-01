@@ -58,18 +58,28 @@ def plan_set_edits(
     config_path: Path,
 ) -> Tuple[Dict[str, List[Edit]], Dict[str, str], List[EditReport]]:
     """Resolves config_path (root_sheet + fields:) against the live
-    schematic tree and returns (edits_by_file, file_texts, report). Raises
-    FieldsToolError with every problem listed at once (unknown refdes,
-    multi-instance conflicts) — nothing is planned if anything is wrong,
-    same "stop before touching anything" discipline the rest of this
-    project uses."""
+    schematic tree. Thin wrapper around plan_set_edits_for_root() — see
+    there for the actual planning logic (shared with fieldstool/gui's
+    Apply, which stages refdes -> {field: value} in memory rather than
+    writing a temporary YAML config just to reuse this)."""
     base = config_path.parent
     root_sheet, fields_cfg = load_set_config(config_path)
     root_path = base / root_sheet
     if not root_path.is_file():
         raise FieldsToolError(f"root_sheet {root_sheet!r} not found ({root_path})")
+    return plan_set_edits_for_root(str(root_path), fields_cfg)
 
-    files = walk_schematic_hierarchy(str(root_path))
+
+def plan_set_edits_for_root(
+    root_sheet_path: str, fields_cfg: Dict[str, Dict[str, str]],
+) -> Tuple[Dict[str, List[Edit]], Dict[str, str], List[EditReport]]:
+    """Same planning as plan_set_edits(), given an already-resolved root
+    sheet path and an in-memory fields_cfg (refdes -> {field: value})
+    instead of a YAML config file. Raises FieldsToolError with every
+    problem listed at once (unknown refdes, multi-instance conflicts) —
+    nothing is planned if anything is wrong, same "stop before touching
+    anything" discipline the rest of this project uses."""
+    files = walk_schematic_hierarchy(root_sheet_path)
     file_texts, all_blocks = _parse_all_blocks(files)
 
     ref_to_blocks: Dict[str, List[SymbolBlock]] = {}
@@ -84,7 +94,7 @@ def plan_set_edits(
         for r in missing:
             suggestion = difflib.get_close_matches(r, known, n=1)
             hint = f" (did you mean {suggestion[0]!r}?)" if suggestion else ""
-            lines.append(f"  {r} — not found in any .kicad_sch reachable from {root_sheet}{hint}")
+            lines.append(f"  {r} — not found in any .kicad_sch reachable from {root_sheet_path}{hint}")
         raise FieldsToolError("unknown refdes in config:\n" + "\n".join(lines))
 
     # bid -> {field: (value, first_requesting_refdes)}

@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from fieldstool.exceptions import FieldsToolError
-from fieldstool.set_fields import plan_set_edits
+from fieldstool.set_fields import plan_set_edits, plan_set_edits_for_root
 from tests.fieldstool_fixtures import sch_file, symbol_block
 
 
@@ -86,6 +86,18 @@ def test_plan_set_multi_instance_same_value_is_not_a_conflict(tmp_path):
     edits_by_file, file_texts, report = plan_set_edits(config)
     assert len(report) == 1
     assert set(report[0].refs) == {"R41", "R50"}
+
+
+def test_plan_set_edits_for_root_matches_config_based_planning(tmp_path):
+    """The in-memory entry point fieldstool/gui's Apply will use — same
+    planning as plan_set_edits(), no YAML file involved."""
+    root = tmp_path / "root.kicad_sch"
+    root.write_text(sch_file(symbol_block(["R1"], role="OLD")), encoding="utf-8")
+
+    edits_by_file, file_texts, report = plan_set_edits_for_root(str(root), {"R1": {"Role": "NEW"}})
+
+    assert len(report) == 1
+    assert report[0].old_value == "OLD" and report[0].new_value == "NEW"
 
 
 def test_plan_set_missing_root_sheet_key_is_fatal(tmp_path):

@@ -21,5 +21,7 @@
 # rename_fields.py, and fieldstool_cli.py are dependency-free from
 # kicadstamp — no kipy import anywhere in that offline core.
 #
-# Status 2026-08-01: offline core (set/rename via fieldstool_cli.py) done.
-# fieldstool/gui/ (live-selection staging + Apply) not yet built.
+# Status 2026-08-01: offline core (set/rename via fieldstool_cli.py) AND
+# fieldstool/gui/ (live-selection staging + Apply, fieldstool_gui.py) both
+# done — see techdocs/handoff/handoff_2026_08_01_fieldstool.md. Not yet
+# verified against a live KiCad session (offscreen/synthetic tests only).
