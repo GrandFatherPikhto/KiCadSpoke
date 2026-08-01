@@ -245,3 +245,50 @@ def test_placer_gets_cell_files_and_include_entries_deduped(main_window, tmp_pat
     placer_data2 = yaml.safe_load(placer_file.read_text())
     assert placer_data2["cell_files"] == ["templates/test.yaml"]
     assert placer_data2["include"] == ["extracts.yaml"]
+
+
+def test_placer_wiring_skips_include_for_a_root_shaped_extractor_file(main_window, tmp_path, monkeypatch):
+    """Reproduces the real failure found live 2026-08-01: an Extractor
+    file that's ALSO a full root config (registry_path/cell_files/...,
+    e.g. because it predates being assigned this role, or is reused as a
+    standalone config too) can't be include:'d — config/includes.py only
+    merges rules/clone_placements/cells/points/extract_profiles/
+    clone_profiles from an included file, everything else is fatal there.
+    Blindly adding include: left the Placer file unloadable the next time
+    anything read it (Redraw, or a real `apply`)."""
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    extractor_file = tmp_path / "extractor.yaml"
+    _write_yaml(extractor_file, {"registry_path": "registries/x.json", "cell_files": ["templates/x.yaml"]})
+    placer_file = tmp_path / "root.yaml"
+    _write_yaml(placer_file, {"clone_placements": []})
+
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+    dock.set_profile_file(extractor_file)
+    dock.set_placer_file(placer_file)
+
+    monkeypatch.setattr(extract_mod, "extract_template_from_selection", _fake_extract)
+    main_window.connection.board = FakeBoard()
+
+    dock.name_edit.setText("some_cell")
+    dock.save_profile_checkbox.setChecked(True)
+    dock.profile_key_edit.setText("some_profile")
+    dock._raw_items = [object()]
+    dock._on_extract()
+
+    assert "root-config-only" in dock.message_label.text()
+    placer_data = yaml.safe_load(placer_file.read_text())
+    assert "include" not in placer_data  # skipped, not written
+    assert placer_data["cell_files"] == ["cells.yaml"]  # unaffected, still added
+
+    # The written extractor file must still actually load_config() cleanly
+    # via include: once it stops carrying root-only keys — confirms the
+    # guard's diagnosis is real, not just a plausible-sounding message.
+    from kicadstamp.config import load_config
+    extractor_data = yaml.safe_load(extractor_file.read_text())
+    del extractor_data["registry_path"]
+    del extractor_data["cell_files"]
+    _write_yaml(extractor_file, extractor_data)
+    _write_yaml(placer_file, {**yaml.safe_load(placer_file.read_text()), "include": ["extractor.yaml"]})
+    load_config(str(placer_file))  # must not raise, now that extractor.yaml is include:-safe

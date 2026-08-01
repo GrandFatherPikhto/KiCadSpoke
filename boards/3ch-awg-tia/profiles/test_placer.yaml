@@ -5,5 +5,3 @@ schematic_dir: ../../../test_boards/3CH-AWG-TIA
 
 cell_files:
 - templates/test.yaml
-include:
-- test_extract.yaml

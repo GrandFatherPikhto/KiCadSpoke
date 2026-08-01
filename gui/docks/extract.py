@@ -732,10 +732,18 @@ class ExtractDock(QDockWidget):
                         messages.append(_("added {rel!r} to cell_files: in {path}").format(
                             rel=rel, path=self._placer_path))
                 if save_profile and self._profile_path != self._placer_path:
-                    rel = Path(os.path.relpath(self._profile_path, self._placer_path.parent)).as_posix()
-                    if self._add_list_entry(self._placer_path, "include", rel):
-                        messages.append(_("added {rel!r} to include: in {path}").format(
-                            rel=rel, path=self._placer_path))
+                    bad_keys = self._non_includable_keys(self._profile_path)
+                    if bad_keys:
+                        messages.append(
+                            _("skipped adding to include: — {path} has root-config-only key(s) "
+                              "{keys} that include: can't merge (move them to the Placer file "
+                              "itself, or point Placer at this same file)")
+                            .format(path=self._display_path(self._profile_path), keys=sorted(bad_keys)))
+                    else:
+                        rel = Path(os.path.relpath(self._profile_path, self._placer_path.parent)).as_posix()
+                        if self._add_list_entry(self._placer_path, "include", rel):
+                            messages.append(_("added {rel!r} to include: in {path}").format(
+                                rel=rel, path=self._placer_path))
             except OSError as e:
                 messages.append(_("placer file wiring failed: {error}").format(error=e))
 
@@ -788,6 +796,21 @@ class ExtractDock(QDockWidget):
             else:
                 yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
         return overwritten
+
+    # include: only ever merges these top-level keys from an included file
+    # (config/includes.py's _LIST_SECTIONS/_DICT_SECTIONS) — everything
+    # else is fatal there (no defined multi-file merge behaviour). A file
+    # assigned the Extractor role can perfectly well ALSO be a full root
+    # config in its own right (registry_path/cell_files/schematic_dir/...)
+    # if it was set up that way before being pointed at by this role —
+    # found live 2026-08-01: writing include: blindly in that case leaves
+    # the Placer file unloadable the next time anything reads it.
+    _INCLUDABLE_KEYS = frozenset(
+        {"rules", "clone_placements", "cells", "points", "extract_profiles", "clone_profiles", "include"})
+
+    @classmethod
+    def _non_includable_keys(cls, path: Path) -> set:
+        return set(cls._load_data(path).keys()) - cls._INCLUDABLE_KEYS
 
     @staticmethod
     def _add_list_entry(path: Path, section: str, entry: str) -> bool:
