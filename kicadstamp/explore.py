@@ -35,13 +35,14 @@ class Selected:
 
 
 class Selection(list):
-    """List[Selected] with a human-readable table print — no new dependency,
-    plain fixed-width columns."""
+    """List[Selected] with a human-readable table — no new dependency, plain
+    fixed-width columns. ``str(selection)`` returns the table as text; the
+    library itself never prints to stdout (only ``show()`` does, as a CLI-only
+    convenience)."""
 
-    def show(self) -> None:
+    def __str__(self) -> str:
         if not self:
-            print("(empty)")
-            return
+            return "(empty)"
         headers = ("ref", "role", "cluster", "sheet", "nets")
         rows = []
         for s in self:
@@ -56,10 +57,13 @@ class Selection(list):
         def fmt(row):
             return "  ".join(c.ljust(w) for c, w in zip(row, widths))
 
-        print(fmt(headers))
-        print(fmt(["-" * w for w in widths]))
-        for r in rows:
-            print(fmt(r))
+        lines = [fmt(headers), fmt(["-" * w for w in widths])]
+        lines += [fmt(r) for r in rows]
+        return "\n".join(lines)
+
+    def show(self) -> None:
+        """Print the table — CLI-only convenience wrapper around __str__()."""
+        print(self)
 
 
 class Board:

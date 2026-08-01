@@ -254,6 +254,9 @@ class ApplyPipeline:
         # Internal state
         self.cfg = preloaded_cfg
         self.ctx: RuntimeContext | None = preloaded_ctx
+        # Cached sheet-name map ({} when there is no ctx) — computed once instead
+        # of repeating `self.ctx.sheet_names if self.ctx else {}` in every step.
+        self.sheet_names: dict[str, str] = preloaded_ctx.sheet_names if preloaded_ctx else {}
         self.adapter: KiCadBoardAdapter | None = None
         self.planner: PlacementPlanner | None = None
         self.items = None
@@ -269,6 +272,7 @@ class ApplyPipeline:
         if self.cfg is None:
             logger.info(_("Loading config: {config}").format(config=self.config_path))
             self.cfg, self.ctx = load_config(self.config_path)
+            self.sheet_names = self.ctx.sheet_names if self.ctx else {}
 
     def _filter_config(self) -> None:
         drop_disabled_rules(self.cfg)
@@ -286,18 +290,16 @@ class ApplyPipeline:
         self.adapter.refresh_board()
 
     def _validate(self) -> None:
-        run_all_checks(self.adapter, self.cfg, sheet_names=self.ctx.sheet_names if self.ctx else {})
+        run_all_checks(self.adapter, self.cfg, sheet_names=self.sheet_names)
 
     def _resolve_order(self) -> None:
         logger.info(_("Resolving item execution order (dependency chain — see dependency_order.py)..."))
-        _sn = self.ctx.sheet_names if self.ctx else {}
-        self.items = resolve_execution_order(self.adapter, self.cfg, sheet_names=_sn)
+        self.items = resolve_execution_order(self.adapter, self.cfg, sheet_names=self.sheet_names)
         logger.info(_("Execution order: {order}")
                     .format(order=" -> ".join(it.label for it in self.items)))
 
     def _create_planner(self) -> None:
-        _sn = self.ctx.sheet_names if self.ctx else {}
-        self.planner = PlacementPlanner(self.adapter, self.cfg, sheet_names=_sn)
+        self.planner = PlacementPlanner(self.adapter, self.cfg, sheet_names=self.sheet_names)
 
     # ── Dry‑run ─────────────────────────────────────────────────────────────
 

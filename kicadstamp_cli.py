@@ -8,6 +8,7 @@ Usage:
 """
 
 import argparse
+import difflib
 import sys
 from pathlib import Path
 
@@ -34,14 +35,50 @@ from kicadstamp.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
 from kicadstamp.i18n import _
 
 
+# Real subcommands the CLI can dispatch to. Any other first argument (that is
+# not a flag) is treated as a bare config path for 'apply' — see
+# _rewrite_bare_config_to_apply().
+_SUBCOMMANDS = ("apply", "undo", "extract", "clone-extract")
+
+
+def _looks_like_misspelled_subcommand(token: str) -> bool:
+    """True when `token` is lexically close to a real subcommand name but is
+    probably not a config path (no path separators / config extension).
+
+    Lets argparse produce its clean "invalid choice: 'aply' (choose from ...)"
+    instead of the confusing "apply: error: unrecognized arguments" that the
+    bare-config rewrite would otherwise cause for a misspelled subcommand.
+    """
+    if any(sep in token for sep in ("/", "\\")) or token.endswith((".yaml", ".yml")):
+        return False
+    return bool(difflib.get_close_matches(token, _SUBCOMMANDS, n=1, cutoff=0.6))
+
+
+def _rewrite_bare_config_to_apply(argv) -> bool:
+    """Bare-config shorthand: `kicadstamp_cli.py config.yaml` is the same as
+    `kicadstamp_cli.py apply config.yaml`.
+
+    An unknown first argument (not a known subcommand and not --version/-V) is
+    rewritten to be the config path of the 'apply' subcommand — unless it looks
+    like a misspelled subcommand (e.g. `aply`), in which case nothing is
+    rewritten so argparse reports "invalid choice" with the real subcommand
+    list. Returns True if a rewrite happened; main() then adds a hint on parse
+    errors.
+    """
+    if len(argv) > 1 and argv[1] not in _SUBCOMMANDS and argv[1] not in ("--version", "-V"):
+        if _looks_like_misspelled_subcommand(argv[1]):
+            return False
+        argv.insert(1, "apply")
+        return True
+    return False
+
+
 def main() -> int:
     # --version/-V exempted from the bare-config-path -> 'apply' rewrite
     # below, same as the other real subcommands — otherwise it would be
     # silently rewritten to 'apply --version' and fail as an unknown apply
     # argument instead of printing the version.
-    if len(sys.argv) > 1 and sys.argv[1] not in ['apply', 'undo', 'extract', 'clone-extract',
-                                                  '--version', '-V']:
-        sys.argv.insert(1, 'apply')
+    rewritten = _rewrite_bare_config_to_apply(sys.argv)
 
     parser = argparse.ArgumentParser(
         description=_("KiCad Decap Placer – capacitor placement (manual strategy)"),
@@ -138,7 +175,14 @@ def main() -> int:
                                        "the specific pad of that component, not its centre. "
                                        "Fatal without --origin-by-component-role."))
 
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except SystemExit as e:
+        if rewritten and e.code == 2:
+            print(_("Note: the first argument was taken as a config path for 'apply' "
+                    "(bare-config shorthand). If you meant a subcommand, spell it exactly: "
+                    "apply, undo, extract, clone-extract."), file=sys.stderr)
+        raise
 
     # Load config early (only for apply) to pick up log_file from config if --log-file not given.
     cfg = None
