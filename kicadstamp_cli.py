@@ -155,7 +155,9 @@ def main() -> int:
 
     def _dispatch() -> None:
         if args.command == "apply":
-            cmd_apply(args, cfg=cfg, ctx=ctx)
+            report = cmd_apply(args, cfg=cfg, ctx=ctx)
+            if report:
+                print("\n".join(report))
         elif args.command == "undo":
             cmd_undo(args)
         elif args.command == "clone-extract":

@@ -258,6 +258,10 @@ class ApplyPipeline:
         self.planner: Optional[PlacementPlanner] = None
         self.items = None
         self.all_anchor_ids: Set[str] = set()
+        # П.8: populated by _dry_run() — a structured, printable report that
+        # the CLI layer prints and a future GUI panel could render. The
+        # library itself never prints to stdout; it only produces this.
+        self.dry_run_report: Optional[List[str]] = None
 
     # ── Pipeline steps ──────────────────────────────────────────────────────
 
@@ -297,35 +301,46 @@ class ApplyPipeline:
 
     # ── Dry‑run ─────────────────────────────────────────────────────────────
 
-    def _dry_run(self) -> None:
+    def _dry_run(self) -> List[str]:
+        """Plan without touching the board and return a printable report.
+
+        Builds a structured list of lines instead of printing to stdout
+        directly (П.8) — the CLI layer prints them (``print("\\n".join(...))``)
+        and a future GUI panel could render them. Also stored on
+        ``self.dry_run_report`` so library callers can grab the report
+        without going through stdout at all.
+        """
         moves = self.planner.plan_items(self.items)
         vias = self.planner.plan_vias()
         tracks = self.planner.plan_tracks()
-        print("\n=== DRY RUN ===")
-        print(_("Order: {order}").format(order=" -> ".join(it.label for it in self.items)))
-        print(_("Moves:"))
+        lines: List[str] = []
+        lines.append("\n=== DRY RUN ===")
+        lines.append(_("Order: {order}").format(order=" -> ".join(it.label for it in self.items)))
+        lines.append(_("Moves:"))
         for m in moves:
-            print(_("  {ref}: ({x:.3f}, {y:.3f}) mm, angle={angle:.1f}°")
-                  .format(ref=m.ref, x=m.position.x / 1e6, y=m.position.y / 1e6,
-                          angle=m.angle.degrees))
-        print("\n" + _("Vias:"))
+            lines.append(_("  {ref}: ({x:.3f}, {y:.3f}) mm, angle={angle:.1f}°")
+                         .format(ref=m.ref, x=m.position.x / 1e6, y=m.position.y / 1e6,
+                                 angle=m.angle.degrees))
+        lines.append("\n" + _("Vias:"))
         for v in vias:
-            print(_("  via for {owner}: ({x:.3f}, {y:.3f}) mm, net={net}")
-                  .format(owner=v.owner_ref, x=v.position.x / 1e6, y=v.position.y / 1e6,
-                          net=v.net_name))
-        print("\n" + _("Tracks:"))
+            lines.append(_("  via for {owner}: ({x:.3f}, {y:.3f}) mm, net={net}")
+                         .format(owner=v.owner_ref, x=v.position.x / 1e6, y=v.position.y / 1e6,
+                                 net=v.net_name))
+        lines.append("\n" + _("Tracks:"))
         for t in tracks:
-            print(_("  track for {owner}: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
-                    "net={net}, width={w} mm")
-                  .format(owner=t.owner_ref, sx=t.start.x / 1e6, sy=t.start.y / 1e6,
-                          ex=t.end.x / 1e6, ey=t.end.y / 1e6, net=t.net_name, w=t.width_mm))
-        print("\n" + _("(thermal via keepout is computed based on CURRENT component positions, "
-                       "not the target ones — may slightly differ from the real run)"))
-        print(_("(track collisions with other copper/components are NOT checked by this tool — "
-                "rely on KiCad DRC after placement)"))
-        print(_("(items later in the dependency chain above are ALSO planned from the CURRENT "
-                "board, not the post-move board of their prerequisite — a real apply may place "
-                "them differently; rerun without --dry-run for the true chained result)"))
+            lines.append(_("  track for {owner}: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
+                           "net={net}, width={w} mm")
+                         .format(owner=t.owner_ref, sx=t.start.x / 1e6, sy=t.start.y / 1e6,
+                                 ex=t.end.x / 1e6, ey=t.end.y / 1e6, net=t.net_name, w=t.width_mm))
+        lines.append("\n" + _("(thermal via keepout is computed based on CURRENT component positions, "
+                              "not the target ones — may slightly differ from the real run)"))
+        lines.append(_("(track collisions with other copper/components are NOT checked by this tool — "
+                       "rely on KiCad DRC after placement)"))
+        lines.append(_("(items later in the dependency chain above are ALSO planned from the CURRENT "
+                       "board, not the post-move board of their prerequisite — a real apply may place "
+                       "them differently; rerun without --dry-run for the true chained result)"))
+        self.dry_run_report = lines
+        return lines
 
     # ── Execution ───────────────────────────────────────────────────────────
 
@@ -398,8 +413,13 @@ class ApplyPipeline:
 
     # ── Public entry point ──────────────────────────────────────────────────
 
-    def run(self) -> None:
-        """Run the full pipeline."""
+    def run(self) -> Optional[List[str]]:
+        """Run the full pipeline.
+
+        Returns the dry-run report (list of lines) when dry_run is set,
+        otherwise None. The library never prints — the CLI layer decides how
+        to present the returned report (П.8).
+        """
         self._load_config()
         self._filter_config()
         self._connect_adapter()
@@ -408,9 +428,9 @@ class ApplyPipeline:
         self._create_planner()
 
         if self.dry_run:
-            self._dry_run()
-        else:
-            self._execute()
+            return self._dry_run()
+        self._execute()
+        return None
 
 
 # ── Module-level convenience entry point ──────────────────────────────────
@@ -439,7 +459,7 @@ class RunOptions:
     cluster: Optional[List[str]] = None
 
 
-def run_apply(options: RunOptions, cfg=None, ctx=None) -> None:
+def run_apply(options: RunOptions, cfg=None, ctx=None) -> Optional[List[str]]:
     """Run the apply pipeline for a fully-typed :class:`RunOptions`.
 
     *options* — the typed run configuration (:class:`RunOptions`).
@@ -449,6 +469,9 @@ def run_apply(options: RunOptions, cfg=None, ctx=None) -> None:
 
     This is the library-facing entry point; the CLI wrapper :func:`cmd_apply`
     and :func:`kicadstamp.author.apply_config` both funnel into it.
+
+    Returns the dry-run report (list of lines) when *options.dry_run* is set,
+    else None — the caller decides how to print/present it (П.8).
     """
     pipeline = ApplyPipeline(
         config_path=options.config_path,
@@ -463,7 +486,7 @@ def run_apply(options: RunOptions, cfg=None, ctx=None) -> None:
         preloaded_cfg=cfg,
         preloaded_ctx=ctx,
     )
-    pipeline.run()
+    return pipeline.run()
 
 
 def cmd_apply(args, cfg=None, ctx=None):
@@ -488,4 +511,4 @@ def cmd_apply(args, cfg=None, ctx=None):
         only=getattr(args, "only", None),
         cluster=getattr(args, "cluster", None),
     )
-    run_apply(options, cfg=cfg, ctx=ctx)
+    return run_apply(options, cfg=cfg, ctx=ctx)

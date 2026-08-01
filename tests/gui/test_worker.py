@@ -148,6 +148,11 @@ def test_poll_suspends_during_long_op(real_main_window, monkeypatch):
     window = real_main_window
     window._timer.stop()  # deterministic: no auto-tick can fire mid-test
     window._selection_timer.stop()
+    # Hermetic: MainWindow.__init__ already ran a startup connect(), and if a
+    # live KiCad is reachable that succeeds (board set -> is_connected True),
+    # so _poll(manual=True) would call refresh() instead of connect() and this
+    # test would flip-flop with the environment. Force the disconnected path.
+    window.connection.board = None
 
     connect_calls = []
     monkeypatch.setattr(window.connection, "connect",

@@ -104,10 +104,11 @@ def dump_template(template_dict: dict, path: str) -> None:
 
 
 def apply_config(cfg: Config, config_path: str, *, ctx: Optional[RuntimeContext] = None,
-                  dry_run: bool = False,
-                  only: Optional[List[str]] = None, cluster: Optional[List[str]] = None,
-                  timeout_ms: int = DEFAULT_TIMEOUT_MS, batch_size: int = DEFAULT_BATCH_SIZE,
-                  no_collision_check: bool = False, collision_margin: float = 0.2) -> None:
+                 dry_run: bool = False,
+                 only: Optional[List[str]] = None, cluster: Optional[List[str]] = None,
+                 timeout_ms: int = DEFAULT_TIMEOUT_MS, batch_size: int = DEFAULT_BATCH_SIZE,
+                 no_collision_check: bool = False, collision_margin: float = 0.2
+                 ) -> Optional[List[str]]:
     """Runs cfg through the exact same pipeline a YAML-driven `apply` run
     uses (run_apply() already accepts a pre-built Config — this just builds
     the typed :class:`~kicadstamp.apply_pipeline.RunOptions` it needs).
@@ -137,7 +138,7 @@ def apply_config(cfg: Config, config_path: str, *, ctx: Optional[RuntimeContext]
         only=only,
         cluster=cluster,
     )
-    run_apply(options, cfg=cfg, ctx=ctx)
+    return run_apply(options, cfg=cfg, ctx=ctx)
 
 
 def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
@@ -200,7 +201,9 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
 
         if args.apply:
             cfg, ctx = load_config(root_config_path)
-            apply_config(cfg, root_config_path, ctx=ctx, dry_run=args.dry_run)
+            report = apply_config(cfg, root_config_path, ctx=ctx, dry_run=args.dry_run)
+            if report:
+                print("\n".join(report))
 
     _code = run_cli(_run)
     if _code:
