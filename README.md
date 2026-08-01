@@ -287,6 +287,7 @@ Detailed documentation is in the `docs/` folder:
 - [Placement planning and execution](./docs/placement.md)
 - [YAML configuration reference](./docs/config.md)
 - [Coding placement in Python: explore/author](./docs/python.md)
+- [PyQt6 GUI](./docs/gui.md)
 - [Tests](./docs/tests.md)
 - [Top‑level modules](./docs/uplevel_modules.md)
 - [File‑based cloner](./docs/cloner.md)
