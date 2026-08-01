@@ -89,16 +89,19 @@ def real_main_window(qapp):
     window._selection_timer.stop()
     window.fieldstool_dock.window._timer.stop()
     window.fieldstool_dock.window._selection_timer.stop()
+    # Phase 4.3 — the embedded LogDock attaches its handler to the ROOT
+    # logger; detach it so a session with several windows doesn't accumulate
+    # handlers that keep every torn-down dock alive / keep logging forever.
+    window.log_dock.remove_handler()
     if window._tray_icon is not None:
         window._tray_icon.hide()
 
 
 @pytest.fixture
 def log_dock(main_window):
-    """LogDock attaches its handler to the ROOT logger and never removes
-    it on its own (fine for the one instance a real GUI process creates,
-    not fine across many test functions in one session) — this fixture
-    tears that down, and temporarily forces the root logger to DEBUG so
+    """LogDock attaches its handler to the ROOT logger and (since Phase
+    4.3) detaches it via LogDock.remove_handler() when the dock is closed
+    or destroyed — this fixture forces the root logger to DEBUG so
     handler-level filtering (INFO vs DEBUG) is actually what's being
     tested, matching what kicadstamp_gui.py's setup_logging() does for
     real (root logger at DEBUG, each handler filters independently) —
@@ -108,5 +111,5 @@ def log_dock(main_window):
     root.setLevel(logging.DEBUG)
     dock = LogDock(main_window, verbose=False)
     yield dock
-    root.removeHandler(dock._handler)
+    dock.remove_handler()
     root.setLevel(original_level)

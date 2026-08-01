@@ -105,6 +105,34 @@ class LogDock(QDockWidget):
         self._handler.setLevel(logging.DEBUG if verbose else logging.INFO)
         logging.getLogger().addHandler(self._handler)
         self.verbose_checkbox.setChecked(verbose)
+        # Phase 4.3 — the handler lives on the ROOT logger, so a window torn
+        # down without an explicit close (tests, crash, re-parenting) would
+        # otherwise leak it there; detach on destroy as well as on
+        # closeEvent, and let teardown fixtures call remove_handler() too.
+        self.destroyed.connect(lambda *_: self.remove_handler())
+
+    def remove_handler(self) -> None:
+        """Detach this dock's handler from the ROOT logger (idempotent —
+        safe to call from closeEvent, from the destroyed signal and from
+        teardown fixtures). Phase 4.3."""
+        root = logging.getLogger()
+        if self._handler is not None and self._handler in root.handlers:
+            root.removeHandler(self._handler)
+
+    def closeEvent(self, event) -> None:
+        # A closed dock is hidden, not destroyed — detach now so a window
+        # torn down while the dock is closed doesn't leak its handler.
+        self.remove_handler()
+        super().closeEvent(event)
+
+    def showEvent(self, event) -> None:
+        # Re-attach on (re)show: remove_handler() is about teardown hygiene,
+        # not about permanently silencing a dock the user merely closed and
+        # re-opened from the View menu.
+        root = logging.getLogger()
+        if self._handler is not None and self._handler not in root.handlers:
+            root.addHandler(self._handler)
+        super().showEvent(event)
 
     def _on_verbose_toggled(self, checked: bool) -> None:
         self._handler.setLevel(logging.DEBUG if checked else logging.INFO)

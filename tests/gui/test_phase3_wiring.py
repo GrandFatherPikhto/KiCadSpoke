@@ -8,7 +8,6 @@ Files dock's role signals reaching every listener, restore_roles() re-firing
 a previous session's assignments, and the two connection-taking docks using
 the injected object instead of main_window.connection.
 """
-import logging
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -250,7 +249,7 @@ def _teardown_hub(hub):
     that would otherwise leak across tests."""
     hub.fieldstool_dock.window._timer.stop()
     hub.fieldstool_dock.window._selection_timer.stop()
-    logging.getLogger().removeHandler(hub.log_dock._handler)
+    hub.log_dock.remove_handler()
 
 
 def test_main_window_exposes_all_docks_through_the_hub(real_main_window):

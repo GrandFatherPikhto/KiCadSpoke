@@ -47,11 +47,56 @@ def test_verbose_checkbox_seeded_from_constructor_flag(main_window):
     root = logging_module.getLogger()
     original_level = root.level
     root.setLevel(logging_module.DEBUG)
+    dock = LogDock(main_window, verbose=True)
     try:
-        dock = LogDock(main_window, verbose=True)
-        try:
-            assert dock.verbose_checkbox.isChecked()
-        finally:
-            root.removeHandler(dock._handler)
+        assert dock.verbose_checkbox.isChecked()
     finally:
+        dock.remove_handler()
         root.setLevel(original_level)
+
+
+def test_remove_handler_detaches_idempotently_and_stops_receiving(main_window):
+    """Phase 4.3 — remove_handler() is the single teardown path for the
+    root-logger handler: it detaches the handler, is safe to call twice
+    (closeEvent + destroyed + fixture teardown can all fire), and a
+    detached handler no longer feeds the panel."""
+    from gui.docks.log_panel import LogDock
+
+    root = logging.getLogger()
+    original_level = root.level
+    root.setLevel(logging.DEBUG)
+    dock = LogDock(main_window, verbose=False)
+    try:
+        assert dock._handler in root.handlers
+        dock.remove_handler()
+        assert dock._handler not in root.handlers
+        # idempotent — a second call (e.g. from the destroyed signal after
+        # closeEvent already ran) must be a no-op
+        dock.remove_handler()
+        assert dock._handler not in root.handlers
+        # detached handler no longer feeds the panel
+        logging.getLogger("kicadstamp.gui_test.removed").info("after removal")
+        assert "after removal" not in dock.text.toPlainText()
+    finally:
+        dock.remove_handler()
+        root.setLevel(original_level)
+
+
+def test_close_removes_handler_and_reshow_readds(real_main_window):
+    """Phase 4.3 — closing the dock detaches its root-logger handler (so a
+    window torn down while the dock is closed can't leak it), and showing
+    the dock again re-attaches it, so closing/reopening from the View menu
+    keeps the panel live."""
+    root = logging.getLogger()
+    dock = real_main_window.log_dock
+    assert dock._handler in root.handlers
+
+    real_main_window.show()
+    dock.close()
+    assert dock._handler not in root.handlers
+
+    dock.show()
+    assert dock._handler in root.handlers
+    # teardown of real_main_window also calls remove_handler() — idempotent
+    dock.remove_handler()
+    assert dock._handler not in root.handlers
