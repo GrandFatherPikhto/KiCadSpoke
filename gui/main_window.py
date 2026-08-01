@@ -1,18 +1,23 @@
 # gui/main_window.py
 """
 MainWindow — persistent shell for the KiCadStamp GUI: connection lifecycle
-+ status bar + docks (Role/Cluster tree, bulk Role/Cluster field editor,
-file picker, extract-to-file).
++ status bar + docks (Role/Cluster tree, fieldstool, file picker,
+extract-to-file) + an optional tray icon.
 
 Step 1: RoleClusterTreeDock — connect/reconnect, poll, show the live
 snapshot grouped by Role/Cluster, click to highlight on the real board.
-Step 2: BulkFieldEditorDock, the first real mutating panel — set Role/
-Cluster on whatever's currently selected. Then FilePickerDock (pick a
-target file by clicking instead of typing a path) and ExtractDock (build a
-Cell from the current selection, write it into that target file). kipy
-0.7.1's Board has no selection/board-change push events (checked directly
-against the installed kipy.board.Board class), so "live" here means polled
-on a QTimer, not pushed.
+Step 2 used to be BulkFieldEditorDock, a PCB-only live-IPC Role/Cluster
+editor — retired 2026-08-01: any field it wrote got silently reverted by
+KiCad's own "Update PCB from Schematic" (Role/Cluster actually originate in
+the schematic symbol), which is exactly the problem `fieldstool` was built
+to solve correctly (direct `.kicad_sch` edits). FieldsToolDock (see
+gui/docks/fieldstool_dock.py) now occupies that first right-hand tab
+instead, embedding fieldstool's own standalone MainWindow whole. Then
+FilePickerDock (pick a target file by clicking instead of typing a path)
+and ExtractDock (build a Cell from the current selection, write it into
+that target file). kipy 0.7.1's Board has no selection/board-change push
+events (checked directly against the installed kipy.board.Board class), so
+"live" here means polled on a QTimer, not pushed.
 
 The timer's automatic tick only ever tries to CONNECT (while disconnected)
 — it deliberately never re-fetches/rebuilds the tree on its own. An earlier
@@ -37,23 +42,26 @@ trip against the already-cached footprint list, no per-footprint Role/
 Cluster field reads) that a short interval here doesn't need a thread.
 """
 import logging
+from typing import Optional
 
 from kipy.board_types import FootprintInstance
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QCheckBox, QLabel, QMainWindow, QPushButton
+from PyQt6.QtWidgets import (QApplication, QCheckBox, QLabel, QMainWindow,
+                              QMenu, QPushButton, QSystemTrayIcon)
 
 from kicadstamp.i18n import _
 
 from . import settings
 from .connection import BoardConnection
-from .docks.bulk_field_editor import BulkFieldEditorDock
 from .docks.cell_list import CellListDock
 from .docks.extract import ExtractDock
+from .docks.fieldstool_dock import FieldsToolDock
 from .docks.file_picker import FilePickerDock
 from .docks.log_panel import LogDock
 from .docks.placer import PlacerDock
 from .docks.placer_list import PlacerListDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
+from .tray_icon import build_tray_icon
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +76,7 @@ class MainWindow(QMainWindow):
         self.resize(360, 640)
 
         self.connection = BoardConnection(timeout_ms=timeout_ms)
+        self._tray_icon: Optional[QSystemTrayIcon] = None
 
         self.status_label = QLabel(_("Not connected"))
         self.action_button = QPushButton(_("Reconnect"))
@@ -77,6 +86,15 @@ class MainWindow(QMainWindow):
         self.always_on_top_checkbox = QCheckBox(_("Always on top"))
         self.always_on_top_checkbox.toggled.connect(self._set_always_on_top)
         self.statusBar().addPermanentWidget(self.always_on_top_checkbox)
+
+        self.tray_checkbox = QCheckBox(_("Tray icon"))
+        self.tray_checkbox.toggled.connect(self._set_tray_enabled)
+        self.statusBar().addPermanentWidget(self.tray_checkbox)
+
+        self.open_fieldstool_button = QPushButton(_("Open fieldstool"))
+        self.open_fieldstool_button.clicked.connect(self.open_fieldstool)
+        self.statusBar().addPermanentWidget(self.open_fieldstool_button)
+
         self.statusBar().addPermanentWidget(self.action_button)
 
         self.tree_dock = RoleClusterTreeDock(self)
@@ -90,12 +108,16 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.placer_list_dock)
         self.tabifyDockWidget(self.cell_list_dock, self.placer_list_dock)
 
-        self.bulk_edit_dock = BulkFieldEditorDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.bulk_edit_dock)
+        self.fieldstool_dock = FieldsToolDock(self, timeout_ms=timeout_ms)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fieldstool_dock)
+        # Only safe now that fieldstool_dock exists — restoring "schematic
+        # mode" would otherwise touch self.fieldstool_dock before it's built
+        # (see RoleClusterTreeDock.restore_mode_from_settings()'s docstring).
+        self.tree_dock.restore_mode_from_settings()
 
         self.file_picker_dock = FilePickerDock(self)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.file_picker_dock)
-        self.tabifyDockWidget(self.bulk_edit_dock, self.file_picker_dock)
+        self.tabifyDockWidget(self.fieldstool_dock, self.file_picker_dock)
 
         self.extract_dock = ExtractDock(self)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
@@ -177,14 +199,29 @@ class MainWindow(QMainWindow):
             self.setGeometry(geometry["x"], geometry["y"], geometry["width"], geometry["height"])
         if data.get("always_on_top"):
             self.always_on_top_checkbox.setChecked(True)  # triggers _set_always_on_top via its signal
+        if data.get("tray_enabled"):
+            self.tray_checkbox.setChecked(True)  # triggers _set_tray_enabled via its signal
 
-    def closeEvent(self, event) -> None:
+    def _persist_settings(self) -> None:
         rect = self.geometry()
         data = settings.load()
         data["window_geometry"] = {"x": rect.x(), "y": rect.y(),
                                     "width": rect.width(), "height": rect.height()}
         data["always_on_top"] = self.always_on_top_checkbox.isChecked()
+        data["tray_enabled"] = self.tray_checkbox.isChecked()
         settings.save(data)
+
+    def closeEvent(self, event) -> None:
+        """While the tray icon is enabled, the title-bar X hides instead of
+        quitting — reachable again via the tray (see _set_tray_enabled/
+        _toggle_visibility). Real quit only happens here when tray is off
+        (today's original behavior, unchanged) or via the tray menu's Quit
+        action, which bypasses this entirely (see _quit)."""
+        if self.tray_checkbox.isChecked():
+            event.ignore()
+            self.hide()
+            return
+        self._persist_settings()
         super().closeEvent(event)
 
     def _set_always_on_top(self, checked: bool) -> None:
@@ -193,6 +230,66 @@ class MainWindow(QMainWindow):
         which is the normal/expected way Qt does this, not a bug here."""
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)
         self.show()
+
+    # ── Tray icon ────────────────────────────────────────────────────────
+
+    def _set_tray_enabled(self, checked: bool) -> None:
+        if checked:
+            if self._tray_icon is not None:
+                return
+            if not QSystemTrayIcon.isSystemTrayAvailable():
+                logger.warning(_("Tray icon requested but no system tray is available here."))
+            self._tray_icon = QSystemTrayIcon(build_tray_icon(), self)
+            self._tray_icon.setToolTip(_("KiCadStamp"))
+            menu = QMenu()
+            menu.addAction(_("Show/Hide"), self._toggle_visibility)
+            menu.addAction(_("Open fieldstool"), self.open_fieldstool)
+            menu.addSeparator()
+            menu.addAction(_("Quit"), self._quit)
+            self._tray_icon.setContextMenu(menu)
+            self._tray_icon.activated.connect(self._on_tray_activated)
+            self._tray_icon.show()
+        else:
+            if self._tray_icon is not None:
+                self._tray_icon.hide()
+                self._tray_icon = None
+
+    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        if reason in (QSystemTrayIcon.ActivationReason.Trigger,
+                      QSystemTrayIcon.ActivationReason.DoubleClick):
+            self._toggle_visibility()
+
+    def _toggle_visibility(self) -> None:
+        if self.isVisible():
+            self.hide()
+        else:
+            self.bring_to_front()
+
+    def bring_to_front(self) -> None:
+        """Un-hides/raises this window — called from the tray's Show/Hide
+        action, and from SingleInstanceGuard.activation_requested when a
+        second launch attempt pings this already-running instance
+        (see kicadstamp_gui.py)."""
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def open_fieldstool(self) -> None:
+        """Un-hides the main window if tray-hidden, and brings the
+        fieldstool tab to front even if another right-hand tab is active or
+        the dock was individually closed — used by both the tray menu and
+        the status-bar button."""
+        self.bring_to_front()
+        self.fieldstool_dock.setVisible(True)
+        self.fieldstool_dock.raise_()
+
+    def _quit(self) -> None:
+        """Tray menu's Quit — a real quit regardless of the tray checkbox.
+        QApplication.quit() doesn't invoke closeEvent on any window (it just
+        stops the event loop), so this deliberately bypasses self.close()/
+        closeEvent entirely rather than needing a "really quit" flag."""
+        self._persist_settings()
+        QApplication.instance().quit()
 
     def _poll(self, manual: bool = False) -> None:
         """manual=True (button click, or the initial call at startup) always
@@ -213,7 +310,6 @@ class MainWindow(QMainWindow):
             snapshot = self.connection.board.select()
             self.status_label.setText(_("Connected — {count} components").format(count=len(snapshot)))
             self.tree_dock.set_footprints(snapshot)
-            self.bulk_edit_dock.refresh_known_values(self.connection.board)
             self.placer_dock.refresh_known_roles(self.connection.board)
             self.placer_dock.refresh_known_nets(self.connection.board)
 
@@ -242,5 +338,4 @@ class MainWindow(QMainWindow):
 
         by_ref = {s.ref: s for s in self.connection.board.select()}
         selected = [by_ref[ref] for ref in refs if ref in by_ref]
-        self.bulk_edit_dock.set_board_selection(selected)
         self.extract_dock.set_board_selection(items, selected)

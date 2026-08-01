@@ -1,21 +1,39 @@
 # gui/docks/role_cluster_tree.py
 """
-RoleClusterTreeDock — groups the live footprint snapshot by Role or by
-Cluster and highlights the picked component(s) on the real board on click.
-First real panel of the GUI (see gui/main_window.py's docstring for why this
-one first: validates the whole IPC -> model -> UI -> highlight-on-board
-chain on the simplest possible, read-only case before anything writes to
-the board).
+RoleClusterTreeDock — groups either the live PCB footprint snapshot or
+fieldstool's parsed-schematic component list by Role or by Cluster, and
+highlights/routes the picked component(s) accordingly. First real panel of
+the GUI (see gui/main_window.py's docstring for why this one first:
+validates the whole IPC -> model -> UI -> highlight-on-board chain on the
+simplest possible, read-only case before anything writes to the board).
 
-Cluster grouping is a real nested tree, split on '/' (Channel_1/PI_FILTER),
-matching the segment-hierarchy _cluster_prefix_match's callers already rely
-on elsewhere (see kicadstamp/explore.py's Board.select() docstring) — NOT a
-flat group on the exact string, which would put Channel_0/PI_FILTER and
-Channel_1/PI_FILTER in unrelated top-level buckets instead of showing the
-shared structure.
+Two modes, toggled by the "Not yet applied" checkbox:
+- Live (default, unchecked) — today's original behavior: data comes from
+  kicadstamp.explore.Selected (live PCB footprints), a click pushes the
+  selection onto the real board, and (Cluster grouping only) a group click
+  fires on_cluster_picked() for PlacerDock.
+- Schematic ("not yet applied", checked) — data comes from fieldstool's
+  already-parsed SchematicComponent list (gui/docks/fieldstool_dock.py's
+  embedded fieldstool MainWindow, read fresh at every rebuild, never
+  cached here) — for picking a fieldstool target without needing a live
+  board selection, the same job fieldstool's own now-deleted internal tree
+  used to do. A click calls straight into fieldstool's existing
+  _on_tree_leaf_picked()/_on_group_picked() (reusing its staging/combo-fill
+  logic verbatim) and brings the fieldstool tab to front.
+
+Both modes share one filter/build/view-state-preservation pipeline —
+normalized into a small _Row(ref, role, cluster, divergent) so the tree
+itself doesn't need two families of build methods. Cluster grouping is a
+real nested tree in both modes, split on '/' (Channel_1/PI_FILTER),
+matching the segment-hierarchy _cluster_prefix_match's callers already
+rely on elsewhere (see kicadstamp/explore.py's Board.select() docstring)
+— NOT a flat group on the exact string (fieldstool's old tree used to do
+that for Cluster; this is a deliberate, approved behavior change to match
+this dock's existing Cluster handling instead).
 """
 import logging
 import re
+from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
 from PyQt6.QtCore import Qt
@@ -35,8 +53,21 @@ logger = logging.getLogger(__name__)
 # Leaf items carry their refdes here; group items carry None — _collect_refs
 # below tells the two apart by this, not by row-count/child-count guessing.
 _REF_ROLE = Qt.ItemDataRole.UserRole + 1
+# Every group item (flat top-level or hierarchical intermediate node) carries
+# its own bare (flat)/full '/'-joined (hierarchical) value here — reading
+# this directly avoids re-deriving it from displayed text, which has i18n
+# "(none)"/"(count)" decoration baked in for flat groups.
+_GROUP_VALUE_ROLE = Qt.ItemDataRole.UserRole + 2
 
 _INVALID_REGEX_STYLE = "background-color: #ffcccc;"
+
+
+@dataclass
+class _Row:
+    ref: str
+    role: Optional[str]
+    cluster: Optional[str]
+    divergent: bool = field(default=False)
 
 
 class RoleClusterTreeDock(QDockWidget):
@@ -57,11 +88,12 @@ class RoleClusterTreeDock(QDockWidget):
         # ever gets a chance to auto-expand.
         self._auto_expand_pending = True
         # Fired when a Cluster GROUP node is clicked while grouped by
-        # Cluster (see _on_clicked) — PlacerDock listens, so picking a
-        # cluster here fills its Cluster field the same way picking a
-        # cell elsewhere fills the Cell field. Not fired for Role-mode or
-        # leaf clicks (see PlacerDock module docstring for the rest of
-        # this "pick from a list, don't retype" pattern).
+        # Cluster, in LIVE mode only (see _on_clicked) — PlacerDock
+        # listens, so picking a cluster here fills its Cluster field the
+        # same way picking a cell elsewhere fills the Cell field. Not
+        # fired for Role-mode or leaf clicks, and not fired at all in
+        # schematic mode (that mode routes into fieldstool instead — see
+        # module docstring).
         self.on_cluster_picked: Optional[Callable[[str], None]] = None
 
         container = QWidget()
@@ -78,6 +110,13 @@ class RoleClusterTreeDock(QDockWidget):
         self.collapse_all_button.clicked.connect(self.tree_collapse_all)
         top_row.addWidget(self.collapse_all_button)
         layout.addLayout(top_row)
+
+        # NOT restored from settings here — see restore_mode_from_settings()
+        # below for why (main_window.fieldstool_dock doesn't exist yet at
+        # this point in gui/main_window.py's __init__).
+        self.mode_checkbox = QCheckBox(_("Not yet applied"))
+        self.mode_checkbox.toggled.connect(self._on_mode_changed)
+        layout.addWidget(self.mode_checkbox)
 
         search_row = QHBoxLayout()
         self.search_edit = QLineEdit()
@@ -97,11 +136,32 @@ class RoleClusterTreeDock(QDockWidget):
 
         self.setWidget(container)
 
+    def restore_mode_from_settings(self) -> None:
+        """Call once, from gui/main_window.py, only after self._main_window's
+        fieldstool_dock has been constructed — restoring "schematic mode"
+        triggers a rebuild that reads main_window.fieldstool_dock.window,
+        which doesn't exist yet during this dock's own __init__ (tree_dock
+        is built before fieldstool_dock there)."""
+        if settings.load().get("tree_schematic_mode"):
+            self.mode_checkbox.setChecked(True)  # triggers _on_mode_changed via its signal
+
     def set_footprints(self, selected: List[Selected]) -> None:
         """Called by MainWindow after every successful poll/refresh with the
-        full current snapshot (Board.select() with no filters)."""
+        full current snapshot (Board.select() with no filters). Only
+        rebuilds the tree if currently showing live data — must not
+        clobber an active schematic view on every ~2s poll tick."""
         self._selected = selected
-        self._rebuild()
+        if not self.mode_checkbox.isChecked():
+            self._rebuild()
+
+    def refresh_schematic_view(self) -> None:
+        """Wired to fieldstool's on_components_changed hook (see
+        gui/docks/fieldstool_dock.py) — an explicit Rescan/Apply-triggered
+        schematic refresh updates this tree immediately if it's currently
+        showing schematic data, instead of going stale until an unrelated
+        event (search keystroke, mode toggle) happens to rebuild it."""
+        if self.mode_checkbox.isChecked():
+            self._rebuild()
 
     def highlight_board_selection(self, refs) -> None:
         """Reflects the live KiCad GUI selection into the tree — the reverse
@@ -110,7 +170,8 @@ class RoleClusterTreeDock(QDockWidget):
         _rebuild() this never touches the model itself, only the selection
         (cheap) — and bails out early if the target refs already match
         what's currently selected, so an unchanged board selection doesn't
-        cause any visible churn on every tick."""
+        cause any visible churn on every tick. Mode-agnostic: just matches
+        against whatever _REF_ROLE data is in the currently active model."""
         model = self.tree.model()
         if model is None:
             return
@@ -146,27 +207,39 @@ class RoleClusterTreeDock(QDockWidget):
         settings.save(data)
         self._rebuild()
 
+    def _on_mode_changed(self, checked: bool) -> None:
+        data = settings.load()
+        data["tree_schematic_mode"] = checked
+        settings.save(data)
+        self._rebuild()
+
+    def _current_rows(self) -> List[_Row]:
+        if not self.mode_checkbox.isChecked():
+            return [_Row(s.ref, s.role, s.cluster) for s in self._selected]
+        components = self._main_window.fieldstool_dock.window._components
+        return [_Row(c.ref, c.role, c.cluster, divergent=c.divergent) for c in components]
+
     def _rebuild(self) -> None:
-        """Called on every poll tick (via set_footprints), on group-by
-        toggle, and on every search-box keystroke — a brand new
-        QStandardItemModel is built and swapped in each time (simplest way
-        to reflect additions/removals/renames, and to drop now-empty groups
-        after filtering), which by itself would silently clear the tree's
-        own selection/expansion state even though nothing the user did
-        changed. Snapshot both before the swap, by refdes/path (stable
-        across rebuilds as long as the underlying grouping didn't change),
-        and restore them after."""
+        """Called on every poll tick while in live mode (via set_footprints),
+        on group-by/mode toggle, and on every search-box keystroke — a
+        brand new QStandardItemModel is built and swapped in each time
+        (simplest way to reflect additions/removals/renames, and to drop
+        now-empty groups after filtering), which by itself would silently
+        clear the tree's own selection/expansion state even though nothing
+        the user did changed. Snapshot both before the swap, by refdes/path
+        (stable across rebuilds as long as the underlying grouping didn't
+        change), and restore them after."""
         expanded_paths, selected_refs = self._capture_view_state()
-        visible = self._filtered_selected()
+        visible = self._filtered(self._current_rows())
         model = QStandardItemModel()
         if self.group_by.currentIndex() == 0:  # Role
-            self._build_flat(model, visible, key=lambda s: s.role)
+            self._build_flat(model, visible, key=lambda r: r.role)
         else:  # Cluster
-            self._build_hierarchical(model, visible, key=lambda s: s.cluster)
+            self._build_hierarchical(model, visible, key=lambda r: r.cluster)
         self.tree.setModel(model)
         self._restore_view_state(expanded_paths, selected_refs)
 
-    def _filtered_selected(self) -> List[Selected]:
+    def _filtered(self, rows: List[_Row]) -> List[_Row]:
         """Search box matches against ref/role/cluster (OR — typing a role
         name and typing a refdes are both "find the thing" the same way).
         Empty query -> everything, no filter. Regex mode is case-insensitive
@@ -175,7 +248,7 @@ class RoleClusterTreeDock(QDockWidget):
         query = self.search_edit.text()
         if not query:
             self.search_edit.setStyleSheet("")
-            return self._selected
+            return rows
 
         if self.regex_checkbox.isChecked():
             try:
@@ -184,23 +257,23 @@ class RoleClusterTreeDock(QDockWidget):
                 # Invalid/incomplete regex while typing — flag it, don't
                 # crash and don't hide everything mid-keystroke.
                 self.search_edit.setStyleSheet(_INVALID_REGEX_STYLE)
-                return self._selected
+                return rows
             self.search_edit.setStyleSheet("")
-            return [s for s in self._selected if self._regex_matches(s, pattern)]
+            return [r for r in rows if self._regex_matches(r, pattern)]
 
         self.search_edit.setStyleSheet("")
         needle = query.lower()
-        return [s for s in self._selected if self._substring_matches(s, needle)]
+        return [r for r in rows if self._substring_matches(r, needle)]
 
     @staticmethod
-    def _regex_matches(s: Selected, pattern: "re.Pattern") -> bool:
-        return bool(pattern.search(s.ref) or (s.role and pattern.search(s.role))
-                    or (s.cluster and pattern.search(s.cluster)))
+    def _regex_matches(r: _Row, pattern: "re.Pattern") -> bool:
+        return bool(pattern.search(r.ref) or (r.role and pattern.search(r.role))
+                    or (r.cluster and pattern.search(r.cluster)))
 
     @staticmethod
-    def _substring_matches(s: Selected, needle: str) -> bool:
-        return (needle in s.ref.lower() or (s.role is not None and needle in s.role.lower())
-                or (s.cluster is not None and needle in s.cluster.lower()))
+    def _substring_matches(r: _Row, needle: str) -> bool:
+        return (needle in r.ref.lower() or (r.role is not None and needle in r.role.lower())
+                or (r.cluster is not None and needle in r.cluster.lower()))
 
     def _capture_view_state(self):
         model = self.tree.model()
@@ -260,33 +333,37 @@ class RoleClusterTreeDock(QDockWidget):
             self._auto_expand_pending = False
 
     @staticmethod
-    def _leaf_item(s: Selected) -> QStandardItem:
-        item = QStandardItem(s.ref)
+    def _leaf_item(r: _Row) -> QStandardItem:
+        text = r.ref + (" ⚠" if r.divergent else "")  # warn on multi-unit divergence (schematic mode)
+        item = QStandardItem(text)
         item.setEditable(False)
-        item.setData(s.ref, _REF_ROLE)
+        item.setData(r.ref, _REF_ROLE)
+        if r.divergent:
+            item.setToolTip(_("This refdes' units disagree on Role/Cluster — edit carefully."))
         return item
 
-    def _build_flat(self, model: QStandardItemModel, items: List[Selected],
-                     key: Callable[[Selected], Optional[str]]) -> None:
+    def _build_flat(self, model: QStandardItemModel, items: List[_Row],
+                     key: Callable[[_Row], Optional[str]]) -> None:
         groups = {}
-        for s in items:
-            groups.setdefault(key(s) or _("(none)"), []).append(s)
+        for r in items:
+            groups.setdefault(key(r) or _("(none)"), []).append(r)
         root = model.invisibleRootItem()
         for name in sorted(groups):
             members = groups[name]
             group_item = QStandardItem(f"{name} ({len(members)})")
             group_item.setEditable(False)
             group_item.setData(None, _REF_ROLE)
-            for s in sorted(members, key=lambda s: s.ref):
-                group_item.appendRow(self._leaf_item(s))
+            group_item.setData(name, _GROUP_VALUE_ROLE)
+            for r in sorted(members, key=lambda r: r.ref):
+                group_item.appendRow(self._leaf_item(r))
             root.appendRow(group_item)
 
-    def _build_hierarchical(self, model: QStandardItemModel, items: List[Selected],
-                             key: Callable[[Selected], Optional[str]]) -> None:
+    def _build_hierarchical(self, model: QStandardItemModel, items: List[_Row],
+                             key: Callable[[_Row], Optional[str]]) -> None:
         root = model.invisibleRootItem()
         nodes = {(): root}  # path tuple (segments so far) -> QStandardItem
-        for s in sorted(items, key=lambda s: (key(s) or "", s.ref)):
-            cluster = key(s)
+        for r in sorted(items, key=lambda r: (key(r) or "", r.ref)):
+            cluster = key(r)
             segments = tuple(cluster.split("/")) if cluster else (_("(none)"),)
             for depth in range(1, len(segments) + 1):
                 path = segments[:depth]
@@ -296,41 +373,35 @@ class RoleClusterTreeDock(QDockWidget):
                 node = QStandardItem(segments[depth - 1])
                 node.setEditable(False)
                 node.setData(None, _REF_ROLE)
+                node.setData("/".join(path), _GROUP_VALUE_ROLE)
                 parent.appendRow(node)
                 nodes[path] = node
-            nodes[segments].appendRow(self._leaf_item(s))
+            nodes[segments].appendRow(self._leaf_item(r))
 
     def _on_clicked(self, index) -> None:
         item = self.tree.model().itemFromIndex(index)
         refs = set(self._collect_refs(item))
+        is_group = item.data(_REF_ROLE) is None
 
-        if (self.group_by.currentIndex() == 1  # Cluster grouping
-                and item.data(_REF_ROLE) is None  # a group node, not a leaf component
-                and self.on_cluster_picked is not None):
-            self.on_cluster_picked(self._cluster_path_for_item(item))
+        if not self.mode_checkbox.isChecked():
+            if (self.group_by.currentIndex() == 1  # Cluster grouping
+                    and is_group and self.on_cluster_picked is not None):
+                self.on_cluster_picked(item.data(_GROUP_VALUE_ROLE))
 
-        board = self._main_window.connection.board
-        if board is None or not refs:
-            return
-        footprints = [s.fp for s in self._selected if s.ref in refs]
-        board.adapter.select_items(footprints)
-
-    @staticmethod
-    def _cluster_path_for_item(item: QStandardItem) -> str:
-        """Rebuilds the full '/'-joined Cluster path for a group node in
-        the hierarchical (Cluster) tree — _build_hierarchical() gives each
-        intermediate node just its OWN segment as text() (unlike
-        _build_flat()'s '(count)'-suffixed group items), so the full path
-        has to be walked back up through .parent() (None once past the
-        top-level items — QStandardItem's own root sentinel, not a real
-        node) and reassembled root-to-leaf."""
-        segments = []
-        node = item
-        while node is not None:
-            segments.append(node.text())
-            node = node.parent()
-        segments.reverse()
-        return "/".join(segments)
+            board = self._main_window.connection.board
+            if board is None or not refs:
+                return
+            footprints = [s.fp for s in self._selected if s.ref in refs]
+            board.adapter.select_items(footprints)
+        else:
+            fieldstool_window = self._main_window.fieldstool_dock.window
+            if is_group:
+                field_name = "Role" if self.group_by.currentIndex() == 0 else "Cluster"
+                fieldstool_window._on_group_picked(field_name, item.data(_GROUP_VALUE_ROLE),
+                                                   sorted(refs))
+            else:
+                fieldstool_window._on_tree_leaf_picked(sorted(refs))
+            self._main_window.open_fieldstool()
 
     def _collect_refs(self, item: QStandardItem) -> List[str]:
         """Leaf items answer with their own refdes; group items answer with

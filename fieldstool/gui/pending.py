@@ -136,7 +136,8 @@ class PendingChangesDock(QDockWidget):
     def stage_group(self, refs: List[str], field: str, new_value: str) -> None:
         """Group-rename entry point: one pending entry per member ref, see
         module docstring — this is the mechanism a tree group-rename
-        action (fieldstool/gui/tree.py's on_group_picked) feeds into."""
+        action (fieldstool.gui.main_window.MainWindow._on_group_picked)
+        feeds into."""
         for ref in refs:
             self.registry.stage(ref, field, new_value)
         self.refresh()

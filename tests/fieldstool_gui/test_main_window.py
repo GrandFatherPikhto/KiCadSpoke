@@ -20,13 +20,30 @@ def _write_root(tmp_path, *blocks):
     return root
 
 
-def test_set_root_sheet_populates_tree_and_combos(main_window, tmp_path):
+def test_set_root_sheet_populates_components_and_combos(main_window, tmp_path):
     root = _write_root(tmp_path, symbol_block(["R1"], role="R_A", cluster="Cl_A"))
     main_window._set_root_sheet(root)
 
-    assert len(main_window.tree_dock._components) == 1
+    assert len(main_window._components) == 1
     assert main_window.role_combo.findText("R_A") != -1
     assert main_window.cluster_combo.findText("Cl_A") != -1
+
+
+def test_rescan_fires_on_components_changed_callback(main_window, tmp_path):
+    root = _write_root(tmp_path, symbol_block(["R1"], role="R_A"))
+    calls = []
+    main_window.on_components_changed = lambda: calls.append(1)
+
+    main_window._set_root_sheet(root)  # _set_root_sheet triggers _rescan() internally
+
+    assert calls == [1]
+
+
+def test_rescan_with_no_callback_set_does_not_raise(main_window, tmp_path):
+    root = _write_root(tmp_path, symbol_block(["R1"], role="R_A"))
+    assert main_window.on_components_changed is None
+
+    main_window._set_root_sheet(root)  # must not raise AttributeError
 
 
 def test_group_picked_sets_targets_and_prefills_combo(main_window, tmp_path):
@@ -38,6 +55,52 @@ def test_group_picked_sets_targets_and_prefills_combo(main_window, tmp_path):
     assert sorted(main_window._current_targets) == ["R1", "R2"]
     assert main_window.role_combo.currentText() == "R_A"
     assert main_window.stage_button.isEnabled()
+
+
+def test_group_picked_also_fills_the_other_field_when_it_happens_to_be_uniform(main_window, tmp_path):
+    # Grouped by Role, but both members also happen to share the same
+    # Cluster — _prefill_combos_for_refs should fill that too, not just the
+    # field being grouped by.
+    root = _write_root(
+        tmp_path,
+        symbol_block(["R1"], role="R_A", cluster="Cl_A"),
+        symbol_block(["R2"], role="R_A", cluster="Cl_A"),
+    )
+    main_window._set_root_sheet(root)
+
+    main_window._on_group_picked("Role", "R_A", ["R1", "R2"])
+
+    assert main_window.role_combo.currentText() == "R_A"
+    assert main_window.cluster_combo.currentText() == "Cl_A"
+
+
+def test_leaf_picked_prefills_both_combos_from_existing_values(main_window, tmp_path):
+    root = _write_root(tmp_path, symbol_block(["R1"], role="R_A", cluster="Cl_A"))
+    main_window._set_root_sheet(root)
+
+    main_window._on_tree_leaf_picked(["R1"])
+
+    assert main_window.role_combo.currentText() == "R_A"
+    assert main_window.cluster_combo.currentText() == "Cl_A"
+
+
+def test_leaf_picked_clears_combos_when_targets_differ(main_window, tmp_path):
+    root = _write_root(
+        tmp_path,
+        symbol_block(["R1"], role="R_A", cluster="Cl_A"),
+        symbol_block(["R2"], role="R_B", cluster="Cl_B"),
+    )
+    main_window._set_root_sheet(root)
+    # Prime the combos with a stale value from an earlier pick — must be
+    # cleared, not left showing a misleading single value, once the new
+    # pick turns out to be mixed.
+    main_window.role_combo.setCurrentText("STALE")
+    main_window.cluster_combo.setCurrentText("STALE")
+
+    main_window._on_tree_leaf_picked(["R1", "R2"])
+
+    assert main_window.role_combo.currentText() == ""
+    assert main_window.cluster_combo.currentText() == ""
 
 
 def test_stage_writes_to_pending_registry(main_window, tmp_path):

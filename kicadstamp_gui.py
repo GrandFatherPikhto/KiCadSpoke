@@ -5,7 +5,10 @@ board over kipy IPC, alongside kicadstamp_cli.py for scripted batch work.
 
 Step 1 (see gui/main_window.py): connection lifecycle + a Role/Cluster tree
 dock, click a component/group to highlight it on the real board. Meant to
-be left open while working in KiCad, not run once and closed like the CLI.
+be left open while working in KiCad, not run once and closed like the CLI
+— hence the optional tray icon (minimize instead of quitting) and the
+single-instance guard below (relaunching just raises the existing window
+instead of opening a second one).
 
 Usage:
     python kicadstamp_gui.py [--timeout-ms 20000] [--verbose]
@@ -30,6 +33,9 @@ from kicadstamp.i18n import _
 from kicadstamp.logging_setup import setup_logging
 
 from gui.main_window import MainWindow
+from gui.single_instance import SingleInstanceGuard
+
+_SINGLE_INSTANCE_NAME = "kicadstamp-gui-singleton"
 
 
 def main():
@@ -42,7 +48,16 @@ def main():
     setup_logging(verbose=args.verbose)
 
     app = QApplication(sys.argv)
+
+    guard = SingleInstanceGuard(_SINGLE_INSTANCE_NAME)
+    if not guard.try_acquire():
+        # Another instance is already running — it's been pinged to raise
+        # itself, nothing left to do here.
+        sys.exit(0)
+    app.aboutToQuit.connect(guard.release)
+
     window = MainWindow(timeout_ms=args.timeout_ms, verbose=args.verbose)
+    guard.activation_requested.connect(window.bring_to_front)
     window.show()
     sys.exit(app.exec())
 

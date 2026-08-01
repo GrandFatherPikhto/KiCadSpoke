@@ -1,13 +1,21 @@
 # fieldstool — bulk Role/Cluster set/rename in `.kicad_sch`
 
-A standalone app, separate from `kicadstamp`/the [PyQt6 GUI](./gui.md): `fieldstool/` (library) +
-`fieldstool_cli.py` (CLI) + `fieldstool_gui.py` (GUI). It edits `.kicad_sch` **directly, as text**
-— not through KiCad's live IPC — because `Role`/`Cluster` custom fields originate in the schematic
-symbol, and a PCB-only IPC write (what `gui/docks/bulk_field_editor.py` does) gets silently
-reverted by KiCad's own "Update PCB from Schematic". See [Why a separate app](#why-a-separate-app)
-below before assuming this could just be another GUI dock.
+`fieldstool/` (library) + `fieldstool_cli.py` (CLI) + `fieldstool_gui.py` (standalone GUI) — and,
+since 2026-08-01, also embedded as the first tab of the main [PyQt6 GUI](./gui.md) (`gui/docks/
+fieldstool_dock.py`, see [gui.md's fieldstool tab section](./gui.md#fieldstool-tab)). It edits
+`.kicad_sch` **directly, as text** — not through KiCad's live IPC — because `Role`/`Cluster` custom
+fields originate in the schematic symbol, and a PCB-only IPC write gets silently reverted by
+KiCad's own "Update PCB from Schematic" (the main GUI used to have exactly that as a dock,
+`BulkFieldEditorDock` — retired in favor of fieldstool taking its place). See
+[Why a separate package](#why-a-separate-package) below — that's what stays separate, not the
+window/process, now that it's embeddable.
 
-## Why a separate app
+## Why a separate package
+
+`fieldstool/` and `fieldstool/gui/` stay their own dependency-free packages (no import of
+`kicadstamp`/`gui` in the offline core; `gui/docks/fieldstool_dock.py` is the one place that
+imports `fieldstool.gui.main_window`, never the reverse) — this is about the write pipeline being
+different, not about the window living in its own process:
 
 - **A different, riskier write surface.** `kicadstamp`/`gui` only ever write through KiCad's live,
   transactional IPC (`BeginCommit`/`UpdateItems`/`EndCommit` — undoable in KiCad itself).
@@ -18,8 +26,8 @@ below before assuming this could just be another GUI dock.
   not hot-reload an externally-modified schematic file. Checked exhaustively (kipy 0.7.1): there is
   **no application-level quit/close/shutdown call, and no "unsaved changes" check**, anywhere in
   `kipy.KiCad`, `kipy.Board`, `kipy.Schematic`, or any of its proto command definitions. So this
-  can only ever be an **instruction** to the user ("close KiCad, then Apply") — never automated.
-  That requirement is incompatible with the main GUI's always-open-alongside-KiCad model.
+  can only ever be an **instruction** to the user ("close KiCad, then Apply") — never automated,
+  regardless of whether fieldstool's window is standalone or embedded in the main GUI.
 - **Point-edit, not parse→dump.** Edits are byte-offset text splices (regex + paren-balance
   matching for block boundaries), never a full `sexpdata` parse→`dumps()` round trip — there is no
   precedent that `sexpdata.dumps()` reproduces KiCad's own formatting byte-for-byte. `sexpdata` is
@@ -98,6 +106,14 @@ just as likely a harmless re-run (renaming is idempotent) as a typo.
 python fieldstool_gui.py [--timeout-ms 20000] [--verbose]
 ```
 
+The same GUI (`fieldstool.gui.main_window.MainWindow`) is also embedded whole as the first
+right-hand tab of the main GUI (`gui/docks/fieldstool_dock.py`, see
+[gui.md's fieldstool tab section](./gui.md#fieldstool-tab)) — this standalone entry point still
+exists unchanged for anyone who wants just fieldstool without the rest of the main GUI running.
+This window has **no Components tree of its own** (retired 2026-08-01, along with the separate
+`ComponentTreeDock` class that used to provide one — picking a target without a live board
+selection now only exists via the main GUI's own Components tree, see below).
+
 Splits the workflow into two phases with different KiCad requirements, matching the constraint
 above:
 
@@ -105,19 +121,24 @@ above:
 
 - **Pick root sheet** — points the tool at a project (same `root_sheet:` concept as the CLI).
   **Rescan** re-parses it (explicit action, not auto-polled — the schematic only changes when
-  someone saves in Eeschema, not every couple of seconds).
-- **Components tree** — same UX as the main GUI's [Components tree](./gui.md#components-tree)
-  (group by Role/Cluster, filter with optional regex), but built from the **parsed schematic**, not
-  a live PCB snapshot. One row per refdes (a shared multi-instance block expands to one row per
-  member; a multi-unit refdes collapses to one row, flagged ⚠ if its units disagree on Role/Cluster
-  — the schema allows this, nothing enforces it stays in sync).
-- **Picking a target** — three interchangeable ways, all feeding the same edit panel:
-  - click a tree **leaf** (one refdes),
-  - click a tree **group** node (every refdes in that Role/Cluster group at once — this is how you
-    do a "rename a whole group" without retyping refdes),
-  - or just **select something in KiCad itself** (Eeschema *or* Pcbnew — a live, read-only
-    connection watches the PCB selection, and since PCB/schematic selection cross-probe in KiCad,
-    a schematic-side selection shows up here too).
+  someone saves in Eeschema, not every couple of seconds) into `self._components` — one row per
+  refdes (a shared multi-instance block expands to one row per member; a multi-unit refdes
+  collapses to one row, flagged divergent if its units disagree on Role/Cluster — the schema allows
+  this, nothing enforces it stays in sync).
+- **Picking a target**:
+  - **Always available**: **select something in KiCad itself** (Eeschema *or* Pcbnew — a live,
+    read-only connection watches the PCB selection, and since PCB/schematic selection cross-probe in
+    KiCad, a schematic-side selection shows up here too). This is the *only* way when running
+    standalone (`fieldstool_gui.py`, no main GUI open).
+  - **Only when embedded** in the main GUI: its own [Components tree](./gui.md#components-tree),
+    switched to **Not yet applied** mode, reads this window's `self._components` directly — click a
+    **leaf** (one refdes) or a **group** node (every refdes in that Role/Cluster group at once, for
+    a group-rename without retyping refdes) there instead, no live board selection needed. Clicking
+    calls straight into this window's own `_on_tree_leaf_picked()`/`_on_group_picked()` and brings
+    this tab to front.
+  - However the target got picked, the **Role**/**Cluster** combo boxes pre-fill with the picked
+    target(s)' existing value when it's uniform across all of them (read from the parsed schematic),
+    and are cleared — not left showing a stale value — when it differs.
 - **Stage** — writes the current Role/Cluster form values into a JSON pending-changes queue, one
   entry per target refdes. Nothing touches `.kicad_sch` yet. The queue persists (`<root
   sheet>.pending.json`, next to the schematic) — safe to close the GUI and come back later.
@@ -126,7 +147,7 @@ above:
 
 - Checks for a running KiCad process — if found, shows an **instruction** dialog ("save your work
   and close KiCad, then Apply again"). This is never automated (see
-  [Why a separate app](#why-a-separate-app)).
+  [Why a separate package](#why-a-separate-package)).
 - If KiCad is closed: plans every staged edit through the exact same offline pipeline
   `fieldstool_cli.py set` uses, shows a confirmation summary, then writes (same `.bak`/self-verify
   guards as the CLI). On success, the pending queue is cleared and the tree is rescanned.

@@ -20,9 +20,10 @@ from the first run instead of having to turn it on after something goes wrong.
 Eight docks, tabbed into two groups plus a status bar:
 
 - **Left** (tabbed): **Components** (Role/Cluster tree) and **Cells** (extracted Cell list).
-- **Right** (tabbed): **Bulk edit**, **Files**, **Extract**, **Placer**.
+- **Right** (tabbed): **fieldstool**, **Files**, **Extract**, **Placer**.
 - **Bottom**: **Log**.
-- **Status bar**: connection state, Reconnect/Refresh button, Always on top checkbox.
+- **Status bar**: connection state, Reconnect/Refresh button, Always on top checkbox, Tray icon
+  checkbox, Open fieldstool button.
 
 Nothing here pushes updates from KiCad — kipy 0.7.1 has no selection/board-change events, so
 "live" means polled: a slow timer (~2s) only reconnects while disconnected and never rebuilds the
@@ -33,32 +34,48 @@ tree. Rebuilding the full snapshot happens only on an explicit action — the st
 
 ## Components tree
 
-Groups the live footprint snapshot by **Role** (flat) or **Cluster** (hierarchical, split on `/` —
-`Channel_1/PI_FILTER` nests under `Channel_1`, matching the segment-prefix matching used
-throughout the config system). The grouping choice is remembered across restarts.
+Two data sources, one tree, toggled by the **Not yet applied** checkbox:
 
-- Click a leaf (one component) or a group (everything under it) to select it **on the real
-  board**.
-- The reverse also works: selecting something in KiCad's own PCB editor highlights it here.
-- **Filter** field matches ref/role/cluster; the **regex** checkbox switches from substring to a
-  case-insensitive regex (an invalid pattern just flags the field red, it doesn't crash or hide
-  everything).
-- Clicking a **Cluster group node** (only in Cluster grouping, only a group — not a leaf) also
-  fills the Placer dock's Cluster field, so you don't have to retype it.
+- **Unchecked (default) — live board.** Groups the live footprint snapshot by **Role** (flat) or
+  **Cluster** (hierarchical, split on `/` — `Channel_1/PI_FILTER` nests under `Channel_1`, matching
+  the segment-prefix matching used throughout the config system). Click a leaf (one component) or a
+  group (everything under it) to select it **on the real board**; the reverse also works — selecting
+  something in KiCad's own PCB editor highlights it here. Clicking a **Cluster group node** (only in
+  Cluster grouping, only a group — not a leaf) also fills the Placer dock's Cluster field.
+- **Checked — not yet applied (schematic).** Same tree, same grouping/filter UI, but the data comes
+  from the [fieldstool tab](#fieldstool-tab)'s own already-parsed `.kicad_sch` component list instead
+  of the live board — so you can pick a fieldstool target (a component that might not even be placed
+  on the PCB yet) without needing a live board selection at all. Divergent multi-unit refs (units
+  disagreeing on Role/Cluster) get a ⚠ marker. Clicking a leaf or group here stages that target into
+  fieldstool (same as clicking used to inside fieldstool's own, now-retired, internal tree) and
+  brings the fieldstool tab to front. Refreshes automatically whenever fieldstool's own Rescan runs.
+
+The grouping choice and the live/schematic toggle are both remembered across restarts. **Filter**
+matches ref/role/cluster in either mode; **regex** switches from substring to a case-insensitive
+regex (an invalid pattern just flags the field red, it doesn't crash or hide everything).
 
 ## Cells tab
 
 A flat list of Cell names read from whatever file is assigned the **Cells** role in Files (see
 below). Click one to feed the **Placer** dock's Cell field.
 
-## Bulk edit
+## fieldstool tab
 
-Sets Role and/or Cluster on whatever is currently selected on the board (mouse in KiCad, or a tree
-click) — one transaction for the whole batch. The combo boxes pre-fill with the selection's
-existing value when it's uniform, show `(mixed — differs across selection)` when it isn't, and
-autocomplete from every distinct Role/Cluster already used on the board. Blocks (doesn't write
-anything) if applying would create a duplicate Role within a Cluster, anywhere on the board — not
-just within the batch being edited.
+The first right-hand tab embeds [fieldstool](fieldstool.md)'s own GUI whole — the same window
+`fieldstool_gui.py` runs standalone, wrapped in one dock (`gui/docks/fieldstool_dock.py`) so
+there's no second process/window to keep track of. It has its own internal Pending changes queue at
+its bottom, and its own live, read-only connection to KiCad — independent of this GUI's own
+connection, polling on its own timers. Unlike standalone `fieldstool_gui.py`, it doesn't need its
+own Components tree — the main [Components tree](#components-tree)'s "Not yet applied" mode covers
+that job when embedded here (retired 2026-08-01, along with fieldstool's own tree entirely — the
+standalone entry point now relies solely on live board-selection cross-probe to pick a target).
+
+This replaced **Bulk edit** (also retired 2026-08-01), which used to set Role/Cluster directly over
+live PCB IPC from this tab's slot — that write was PCB-only and got silently reverted by KiCad's
+own "Update PCB from Schematic", since `Role`/`Cluster` actually originate in the schematic symbol.
+fieldstool edits `.kicad_sch` directly instead, which survives that resync — see
+[fieldstool.md](fieldstool.md) for the full design and why it needs KiCad closed to Apply
+(regardless of being embedded here or run standalone).
 
 ## Files
 
@@ -156,12 +173,34 @@ GUI writes itself. **Verbose** toggles this panel's own level between INFO and D
 console/file logging `kicadstamp_gui.py` was launched with, if any, is untouched). **Find** /
 **Prev** / **Next** search the accumulated text; **Clear** empties it.
 
+## Tray icon
+
+The **Tray icon** status-bar checkbox creates an OS tray icon (a small programmatic icon, not a
+binary asset — `gui/tray_icon.py`) with a menu: **Show/Hide**, **Open fieldstool**, **Quit**.
+While checked, closing the window via its title-bar X hides it instead of quitting — reachable
+again from the tray (single click/double-click, or the Show/Hide menu item). Unchecked, closing
+behaves exactly as without a tray at all — a real quit. The tray menu's **Quit** always does a real
+quit either way.
+
+A single-instance guard (`gui/single_instance.py`, `QLocalServer`/`QLocalSocket`-based) means
+running `kicadstamp_gui.py` a second time while one is already running doesn't open a second
+window — it raises the existing one instead and exits immediately. This guard is always active,
+independent of the Tray icon checkbox.
+
+## Open fieldstool
+
+The status-bar **Open fieldstool** button (and the tray menu's identical item) un-hides the main
+window if it was tray-hidden and brings the [fieldstool tab](#fieldstool-tab) to front — useful if
+another right-hand tab is currently active, or if that dock was individually closed.
+
 ## What's remembered between restarts
 
 Plain JSON in `gui/gui_state.json` (gitignored, human-readable, deliberately not Qt's own
-`QSettings`/`saveGeometry()` blob): window position/size, Always on top, Components tree grouping,
-the Files dock's root directory and last click, and all three file-role assignments
-(Cells/Extractor/Placer).
+`QSettings`/`saveGeometry()` blob): window position/size, Always on top, Tray icon, Components tree
+grouping and its live/"Not yet applied" toggle, the Files dock's root directory and last click, and
+all three file-role assignments (Cells/Extractor/Placer). fieldstool's own tab keeps its own
+separate state file (`fieldstool/gui/fieldstool_gui_state.json`), shared with the standalone
+`fieldstool_gui.py`.
 
 ## Tests
 
@@ -169,4 +208,6 @@ the Files dock's root directory and last click, and all three file-role assignme
 connection needed, part of the default `pytest` run. Board-mutating logic (Placer's Redraw) is
 tested with `ApplyPipeline`/`PlacementPlanner` mocked — it verifies the dock builds the right
 config and calls the pipeline correctly, never that it actually moves anything. See
-`tests/gui/conftest.py` for the fixtures (`qapp`, `main_window`, `isolated_settings`, `log_dock`).
+`tests/gui/conftest.py` for the fixtures: `qapp`, `main_window` (a bare stub, for dock-level tests),
+`real_main_window` (the real `MainWindow`, needed for tray/close/fieldstool-embedding tests),
+`isolated_settings`, `log_dock`.

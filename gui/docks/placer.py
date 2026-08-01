@@ -13,14 +13,14 @@ Cluster tagging: ClonePlacement itself has NO output "Cluster" field —
 checked directly against the pipeline (kicadstamp/placement/,
 apply_pipeline.py): Cluster is only ever READ during apply (to narrow
 anchor/role search), never written. The only place Cluster gets written
-anywhere in this codebase is BulkFieldEditorDock's set_field_values_bulk()
-call — placement and tagging were always two separate manual steps.
-Redraw here closes that gap itself: after a successful ApplyPipeline run,
-it independently replays the SAME item through a throwaway
-PlacementPlanner (plan_item() is pure computation, doesn't move anything
-— the real move already happened via the pipeline) to recover which refs
-this placement actually touched, and tags Cluster=<name> on them via the
-same set_field_values_bulk() BulkFieldEditorDock uses.
+anywhere in this codebase is KiCadBoardAdapter.set_field_values_bulk() —
+placement and tagging were always two separate manual steps. Redraw here
+closes that gap itself: after a successful ApplyPipeline run, it
+independently replays the SAME item through a throwaway PlacementPlanner
+(plan_item() is pure computation, doesn't move anything — the real move
+already happened via the pipeline) to recover which refs this placement
+actually touched, and tags Cluster=<name> on them via the same
+set_field_values_bulk() call.
 
 Redraw uses the REAL Placer file's full config (load_config), not a
 synthetic single-placement one — critical for
@@ -51,7 +51,7 @@ GROUP node is clicked there (set_cluster_name()) — both requested live
 кластера надо сразу автоматически заполнять поле кластер"). Anchor
 Role/Cluster are editable QComboBoxes populated from the live board
 snapshot (refresh_known_roles(), called by MainWindow at the same ~2s
-cadence as BulkFieldEditorDock.refresh_known_values()) — "если выбираем
+poll cadence as the rest of the docks) — "если выбираем
 по роли то надо и поле anchor cluster да и лист... якорить, так уж по
 полной". Ref stays a plain, unassisted text field — this project
 deliberately avoids relying on refdes elsewhere (Role survives
@@ -258,9 +258,9 @@ class PlacerDock(QDockWidget):
         """Populates the anchor Role/Cluster combos with distinct values
         already used on the board — "если выбираем по роли то надо и
         поле anchor cluster да и лист" (2026-08-01). Called by MainWindow
-        alongside BulkFieldEditorDock.refresh_known_values(), same ~2s
-        cadence (a full poll, not the 400ms selection-watch tick — the
-        known-value list barely changes tick to tick)."""
+        at the same ~2s full-poll cadence as the rest of the docks (not
+        the 400ms selection-watch tick — the known-value list barely
+        changes tick to tick)."""
         snapshot = board.select()
         roles = sorted({s.role for s in snapshot if s.role})
         clusters = sorted({s.cluster for s in snapshot if s.cluster})
@@ -348,7 +348,7 @@ class PlacerDock(QDockWidget):
         self._point_row.setVisible(mode == 2)
         self._shift_row.setVisible(mode in (1, 2))
 
-    # ── Message helper (same shape as ExtractDock/BulkFieldEditorDock) ──────
+    # ── Message helper (same shape as ExtractDock's) ────────────────────────
 
     def _show_message(self, text: str, style: str = "") -> None:
         self.message_label.setStyleSheet(style)

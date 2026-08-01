@@ -1,20 +1,27 @@
 # fieldstool/gui/main_window.py
 """
-MainWindow — root-sheet picker, ComponentTreeDock (parsed from the
-SCHEMATIC, see schema_model.py), an edit panel, PendingChangesDock, and
+MainWindow — root-sheet picker, an edit panel, PendingChangesDock, and
 Apply. Two phases with different KiCad requirements (see
 fieldstool/__init__.py):
 
 1. Staging (KiCad open): a live, read-only BoardConnection (this
    module's own fieldstool/gui/connection.py, NOT kicadstamp/gui's —
-   separate process) watches the PCB selection on a fast QTimer, same
-   pattern as kicadstamp/gui/main_window.py's SELECTION_POLL — because
-   PCB/schematic selection cross-probe in KiCad, a selection made in
-   Eeschema shows up here too. The tree also lets you pick a target
-   directly (leaf click = one ref, group click = a whole Role/Cluster
-   group) without needing a live selection at all. Either way, staging
-   only ever writes to PendingRegistry (JSON) — nothing touches
-   .kicad_sch yet.
+   separate process when run standalone) watches the PCB selection on a
+   fast QTimer, same pattern as kicadstamp/gui/main_window.py's
+   SELECTION_POLL — because PCB/schematic selection cross-probe in KiCad,
+   a selection made in Eeschema shows up here too. That live selection is
+   the only way to pick a target when this window runs standalone
+   (fieldstool_gui.py). When embedded in the main GUI (gui/docks/
+   fieldstool_dock.py), the main GUI's own Components tree (gui/docks/
+   role_cluster_tree.py) can ALSO pick a target without a live selection
+   at all — its "Not yet applied" mode reads this window's own parsed
+   schematic components (self._components, refreshed via _rescan()) and
+   calls _on_tree_leaf_picked()/_on_group_picked() below directly. This
+   window used to have its own internal tree for that (ComponentTreeDock,
+   fieldstool/gui/tree.py) — retired 2026-08-01 in favor of the merged
+   tree, everywhere, including standalone (no tree there anymore at all,
+   only live-selection cross-probe). Either way, staging only ever writes
+   to PendingRegistry (JSON) — nothing touches .kicad_sch yet.
 2. Apply (KiCad must be closed): converts the whole pending queue into
    real edits via fieldstool.set_fields.plan_set_edits_for_root() +
    fieldstool.editing.write_files() — the same offline pipeline the CLI's
@@ -25,23 +32,22 @@ fieldstool/__init__.py):
 """
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from kipy.board_types import FootprintInstance
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import (QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
-                              QLabel, QMainWindow, QMessageBox,
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout,
+                              QHBoxLayout, QLabel, QMainWindow, QMessageBox,
                               QPushButton, QVBoxLayout, QWidget)
 
 from kicadstamp.i18n import _
 
 from .. import editing, set_fields
 from ..exceptions import FieldsToolError
-from ..schema_model import load_schematic_components
+from ..schema_model import SchematicComponent, load_schematic_components
 from . import settings
 from .connection import BoardConnection
 from .pending import PendingChangesDock, PendingRegistry
-from .tree import ComponentTreeDock
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +64,14 @@ class MainWindow(QMainWindow):
         self.connection = BoardConnection(timeout_ms=timeout_ms)
         self._root_sheet: Optional[Path] = None
         self._current_targets: List[str] = []
+        self._components: List[SchematicComponent] = []
+        # Set by gui/docks/fieldstool_dock.py when embedded (never set when
+        # run standalone). Must default to None and _rescan() must guard on
+        # it (not assume it's already wired) — _restore_last_root_sheet()
+        # below can synchronously trigger the FIRST _rescan() during this
+        # very __init__, before FieldsToolDock has had a chance to assign
+        # the real callback.
+        self.on_components_changed: Optional[Callable[[], None]] = None
 
         central = QWidget()
         layout = QVBoxLayout(central)
@@ -74,13 +88,13 @@ class MainWindow(QMainWindow):
         root_row.addWidget(rescan_button)
         layout.addLayout(root_row)
 
+        status_row = QHBoxLayout()
         self.status_label = QLabel(_("Not connected"))
-        layout.addWidget(self.status_label)
-
-        self.tree_dock = ComponentTreeDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.tree_dock)
-        self.tree_dock.on_leaf_picked = self._set_targets
-        self.tree_dock.on_group_picked = self._on_group_picked
+        status_row.addWidget(self.status_label, 1)
+        self.always_on_top_checkbox = QCheckBox(_("Always on top"))
+        self.always_on_top_checkbox.toggled.connect(self._set_always_on_top)
+        status_row.addWidget(self.always_on_top_checkbox)
+        layout.addLayout(status_row)
 
         edit_box = QWidget()
         edit_layout = QVBoxLayout(edit_box)
@@ -117,6 +131,8 @@ class MainWindow(QMainWindow):
         self._selection_timer.start(SELECTION_POLL_INTERVAL_MS)
 
         self._restore_last_root_sheet()
+        if settings.load().get("always_on_top"):
+            self.always_on_top_checkbox.setChecked(True)  # triggers _set_always_on_top via its signal
 
     # ── Root sheet ───────────────────────────────────────────────────────
 
@@ -124,6 +140,16 @@ class MainWindow(QMainWindow):
         saved = settings.load().get("root_sheet")
         if saved and Path(saved).is_file():
             self._set_root_sheet(Path(saved))
+
+    def _set_always_on_top(self, checked: bool) -> None:
+        """setWindowFlag() only takes effect on the next show() — the window
+        briefly disappears and reappears on most platforms (X11/Windows),
+        same as kicadstamp/gui/main_window.py's identical checkbox."""
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)
+        self.show()
+        data = settings.load()
+        data["always_on_top"] = checked
+        settings.save(data)
 
     def _on_pick_root_sheet(self) -> None:
         path, _filter = QFileDialog.getOpenFileName(
@@ -157,11 +183,21 @@ class MainWindow(QMainWindow):
         except (OSError, ValueError) as e:
             QMessageBox.warning(self, _("Rescan failed"), str(e))
             return
-        self.tree_dock.set_components(components)
-        roles = sorted({c.role for c in components if c.role})
-        clusters = sorted({c.cluster for c in components if c.cluster})
-        self._set_combo_items(self.role_combo, roles)
-        self._set_combo_items(self.cluster_combo, clusters)
+        self._components = components
+        roles = {c.role for c in components if c.role}
+        clusters = {c.cluster for c in components if c.cluster}
+        # Union in still-unapplied Role/Cluster values from the pending queue too —
+        # they won't be in the schematic on disk until Apply (KiCad closed), so a
+        # rescan alone would never surface a value you just staged this session.
+        for e in self._pending_registry.entries():
+            if e.field == "Role":
+                roles.add(e.new_value)
+            elif e.field == "Cluster":
+                clusters.add(e.new_value)
+        self._set_combo_items(self.role_combo, sorted(roles))
+        self._set_combo_items(self.cluster_combo, sorted(clusters))
+        if self.on_components_changed:
+            self.on_components_changed()
 
     @staticmethod
     def _set_combo_items(combo: QComboBox, items: List[str]) -> None:
@@ -172,6 +208,11 @@ class MainWindow(QMainWindow):
         combo.setCurrentText(current)
         combo.blockSignals(False)
 
+    @staticmethod
+    def _add_combo_item_if_missing(combo: QComboBox, value: str) -> None:
+        if combo.findText(value) < 0:
+            combo.addItem(value)
+
     # ── Target selection (leaf click / group click / live PCB selection) ──
 
     def _set_targets(self, refs: List[str]) -> None:
@@ -181,12 +222,54 @@ class MainWindow(QMainWindow):
             if refs else _("Nothing selected"))
         self.stage_button.setEnabled(bool(refs))
 
+    def _on_tree_leaf_picked(self, refs: List[str]) -> None:
+        self._set_targets(refs)
+        self._push_selection_to_board(refs)
+        self._prefill_combos_for_refs(refs)
+
     def _on_group_picked(self, field: str, value: str, refs: List[str]) -> None:
         self._set_targets(refs)
-        if field == "Role":
-            self.role_combo.setCurrentText(value)
-        elif field == "Cluster":
-            self.cluster_combo.setCurrentText(value)
+        self._push_selection_to_board(refs)
+        # _prefill_combos_for_refs already reproduces at least the grouped
+        # field's value (every member of a Role/Cluster group shares it, by
+        # construction — that's what "group" means here), and additionally
+        # fills the OTHER field too if it happens to be uniform across the
+        # group as well, so field/value aren't needed for the fill itself.
+        self._prefill_combos_for_refs(refs)
+
+    def _prefill_combos_for_refs(self, refs: List[str]) -> None:
+        """Role/Cluster combos reflect the picked target(s)' EXISTING value
+        (from the parsed schematic, self._components) when it's uniform
+        across all of them — cleared when it differs, rather than a
+        "(mixed)" placeholder that could get accidentally staged as a
+        literal value if Stage is clicked without editing it first. Called
+        from every way a target gets picked (tree leaf/group click, live
+        board-selection cross-probe) — previously only group clicks filled
+        anything at all, and only the one field being grouped by."""
+        by_ref = {c.ref: c for c in self._components}
+        picked = [by_ref[ref] for ref in refs if ref in by_ref]
+        if not picked:
+            return
+        roles = {c.role for c in picked}
+        clusters = {c.cluster for c in picked}
+        self.role_combo.setCurrentText(next(iter(roles)) or "" if len(roles) == 1 else "")
+        self.cluster_combo.setCurrentText(next(iter(clusters)) or "" if len(clusters) == 1 else "")
+
+    def _push_selection_to_board(self, refs: List[str]) -> None:
+        """Target picked (leaf/group click, from either the live-selection
+        cross-probe below or — when embedded — the main GUI's Components
+        tree in schematic mode) -> live board selection, so the picked
+        component(s) are visibly highlighted on the real board too, not
+        just in this window's target label. adapter.select_items() only
+        sets GUI selection state, not board data (see its docstring in
+        kicadstamp/kicad/adapter.py) — doesn't conflict with this
+        connection being otherwise read-only (fieldstool/gui/connection.py)."""
+        if not self.connection.is_connected or not refs:
+            return
+        adapter = self.connection.board.adapter
+        footprints = [fp for fp in (adapter.get_footprint(ref) for ref in refs) if fp is not None]
+        if footprints:
+            adapter.select_items(footprints)
 
     def _on_stage(self) -> None:
         role = self.role_combo.currentText().strip()
@@ -200,6 +283,12 @@ class MainWindow(QMainWindow):
                 self.pending_dock.stage(ref, "Role", role)
             if cluster:
                 self.pending_dock.stage(ref, "Cluster", cluster)
+        # Reflect a brand-new Role/Cluster value in the dropdown right away —
+        # don't make the user hit Rescan just to reuse what they typed a moment ago.
+        if role:
+            self._add_combo_item_if_missing(self.role_combo, role)
+        if cluster:
+            self._add_combo_item_if_missing(self.cluster_combo, cluster)
 
     # ── Live connection (staging only — never writes) ──────────────────────
 
@@ -223,9 +312,9 @@ class MainWindow(QMainWindow):
             return
         refs = {item.reference_field.text.value for item in items
                 if isinstance(item, FootprintInstance)}
-        self.tree_dock.highlight_refs(refs)
         if refs:
             self._set_targets(sorted(refs))
+            self._prefill_combos_for_refs(sorted(refs))
 
     # ── Apply (KiCad must be closed — instruction, not automation) ─────────
 

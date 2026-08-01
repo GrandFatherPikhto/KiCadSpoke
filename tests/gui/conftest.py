@@ -27,8 +27,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
+from fieldstool.gui import settings as fieldstool_settings
 from gui import settings
 from gui.docks.log_panel import LogDock
+from gui.main_window import MainWindow
 
 
 @pytest.fixture(scope="session")
@@ -44,8 +46,13 @@ def qapp():
 def isolated_settings(tmp_path, monkeypatch):
     """Every gui.settings.load()/save() call in a test hits a throwaway
     file instead of the developer's real gui/gui_state.json — autouse so
-    no test can forget it and accidentally pollute real GUI state."""
+    no test can forget it and accidentally pollute real GUI state. Also
+    isolates fieldstool.gui.settings — constructing the real MainWindow
+    (see real_main_window below) embeds a real fieldstool MainWindow via
+    FieldsToolDock, which would otherwise touch the developer's real
+    fieldstool_gui_state.json (e.g. restoring a real root_sheet path)."""
     monkeypatch.setattr(settings, "SETTINGS_PATH", tmp_path / "gui_state.json")
+    monkeypatch.setattr(fieldstool_settings, "SETTINGS_PATH", tmp_path / "fieldstool_gui_state.json")
 
 
 class _FakeConnection:
@@ -62,6 +69,28 @@ def main_window(qapp):
     window = QMainWindow()
     window.connection = _FakeConnection()
     return window
+
+
+@pytest.fixture
+def real_main_window(qapp):
+    """The real gui.main_window.MainWindow — unlike `main_window` above
+    (a bare QMainWindow stub), this is needed for anything that exercises
+    tray/closeEvent/single-instance/fieldstool-dock-embedding logic, all of
+    which live on the real class. A tiny timeout_ms keeps construction fast
+    (no live KiCad here — Board.connect() fails quickly and _poll() just
+    records "not connected"). Stops all four QTimers on teardown (this
+    window's own two, plus the two the embedded fieldstool MainWindow
+    starts in its own __init__) so a torn-down window doesn't keep polling
+    (and writing MockLogRecords /touching connections) in the background
+    across the rest of the test session."""
+    window = MainWindow(timeout_ms=10, verbose=False)
+    yield window
+    window._timer.stop()
+    window._selection_timer.stop()
+    window.fieldstool_dock.window._timer.stop()
+    window.fieldstool_dock.window._selection_timer.stop()
+    if window._tray_icon is not None:
+        window._tray_icon.hide()
 
 
 @pytest.fixture

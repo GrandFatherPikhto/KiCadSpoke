@@ -1,8 +1,10 @@
 # fieldstool/schema_model.py
 """
 load_schematic_components() — flattens the whole schematic hierarchy
-(discovery.py + blocks.py) into one row per REFDES, for the GUI's
-Role/Cluster tree (fieldstool/gui/tree.py) and for staging edits by ref.
+(discovery.py + blocks.py) into one row per REFDES, for the main GUI's
+Components tree in "Not yet applied" mode (gui/docks/role_cluster_tree.py,
+reading fieldstool.gui.main_window.MainWindow's own self._components) and
+for staging edits by ref.
 A (symbol ...) block can carry several refdes (multi-instance sheet) or a
 refdes can span several blocks (multi-unit symbol, see set_fields.py's
 module docstring) — this expands/collapses both into "one row per ref"
