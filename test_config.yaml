@@ -1,0 +1,18 @@
+# DO NOT DELETE — this file is needed for manual CLI smoke tests.
+# Usage:  .venv\Scripts\python.exe kicadstamp_cli.py apply test_config.yaml
+#
+# It is a deliberately minimal but VALID config: it must keep passing
+# kicadstamp.config.loader.load_config() so the smoke test exercises the real
+# apply pipeline (config load -> filters -> KiCad connect) instead of dying
+# with FileNotFoundError. Note that `apply` still needs a live KiCad board;
+# without one it fails later with an ApiError (expected, exit code 1).
+#
+# This file is NOT a real board config — keep it small and stable on purpose.
+
+# One absolute-position clone placement (no live component needed at load time).
+clone_placements:
+- name: smoke_test_placement
+  role: TEST_ROLE
+  xy: [0.0, 0.0]
+
+# Nothing else — rules/cells/points are optional and stay empty on purpose.
