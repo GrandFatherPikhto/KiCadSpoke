@@ -25,7 +25,7 @@ Both modes share one filter/build/view-state-preservation pipeline —
 normalized into a small _Row(ref, role, cluster, divergent) so the tree
 itself doesn't need two families of build methods. Cluster grouping is a
 real nested tree in both modes, split on '/' (Channel_1/PI_FILTER),
-matching the segment-hierarchy _cluster_prefix_match's callers already
+matching the segment-hierarchy cluster_prefix_match's callers already
 rely on elsewhere (see kicadstamp/explore.py's Board.select() docstring)
 — NOT a flat group on the exact string (fieldstool's old tree used to do
 that for Cluster; this is a deliberate, approved behavior change to match

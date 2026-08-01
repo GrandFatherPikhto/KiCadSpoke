@@ -26,7 +26,7 @@ def _natural_sort_key(ref: str):
     return [int(p) if p.isdigit() else p for p in parts]
 
 
-def _cluster_prefix_match(candidate_cluster: str, wanted: str) -> bool:
+def cluster_prefix_match(candidate_cluster: str, wanted: str) -> bool:
     """
     candidate_cluster == wanted, OR candidate_cluster starts with 'wanted/' —
     segment‑prefix comparison, not substring (so 'Channel_1' does not match
@@ -64,7 +64,7 @@ class ComponentPool:
             # as anchor_cluster) — not exact equality.
             if self.cluster is not None:
                 fp_cluster = self.adapter.get_field_value(fp, CLUSTER_FIELD_NAME)
-                if fp_cluster is None or not _cluster_prefix_match(fp_cluster, self.cluster):
+                if fp_cluster is None or not cluster_prefix_match(fp_cluster, self.cluster):
                     continue
             pads = self.adapter.get_footprint_pads(fp)
             nets_on_fp = {p.net.name for p in pads if p.net and p.net.name}

@@ -73,7 +73,7 @@ def test_select_by_role_exact_match():
 def test_select_by_cluster_uses_prefix_matching():
     """Real ambiguity hit live 2026-07-28: select(cluster=...) must use the
     SAME segment-prefix semantics as the real anchor_cluster resolver
-    (_cluster_prefix_match), not exact equality — 'Channel_1' matches
+    (cluster_prefix_match), not exact equality — 'Channel_1' matches
     'Channel_1/1V2_PLL' but must NOT match 'Channel_10'."""
     fps = [
         _make_fp("C1", cluster="Channel_1"),

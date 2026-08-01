@@ -18,7 +18,7 @@ from kipy.board_types import FootprintInstance
 
 from .constants import CLUSTER_FIELD_NAME, DEFAULT_TIMEOUT_MS, ROLE_FIELD_NAME
 from .kicad.adapter import KiCadBoardAdapter
-from .placement.services.component_pool import _cluster_prefix_match
+from .placement.services.component_pool import cluster_prefix_match
 from .sheet_names import build_sheet_name_map, resolve_sheet_path_names
 
 
@@ -145,7 +145,7 @@ class Board:
         current snapshot:
           - ref: exact refdes match.
           - role: exact match against the Role field.
-          - cluster: segment-prefix match (_cluster_prefix_match, same
+          - cluster: segment-prefix match (cluster_prefix_match, same
             function the real anchor_cluster resolver uses) — NOT exact
             equality, so this previews what apply would actually pick.
           - sheet: membership in the footprint's resolved sheet-instance
@@ -161,7 +161,7 @@ class Board:
             if role is not None and fp_role != role:
                 continue
             fp_cluster = self._cluster(fp)
-            if cluster is not None and not _cluster_prefix_match(fp_cluster or '', cluster):
+            if cluster is not None and not cluster_prefix_match(fp_cluster or '', cluster):
                 continue
             fp_sheet = self._sheet(fp)
             if sheet is not None and sheet not in fp_sheet:

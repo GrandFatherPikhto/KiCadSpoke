@@ -31,7 +31,7 @@ from .placement.dependency_order import resolve_execution_order
 from .placement.services.clone_position_calculator import clone_anchor_id
 from .placement.services.via_planner import thermal_anchor_id
 from .placement.services.manual_position_calculator import rule_anchor_ids
-from .placement.services.component_pool import _cluster_prefix_match
+from .placement.services.component_pool import cluster_prefix_match
 from .placement.executor import BatchExecutor
 from .exceptions import PlacerError
 from .validation import run_all_checks
@@ -59,7 +59,7 @@ def _split_comma_values(raw: Optional[List[str]]) -> List[str]:
 def _matches_any_cluster(candidate: Optional[str], wanted: List[str]) -> bool:
     if candidate is None:
         return False
-    return any(_cluster_prefix_match(candidate, w) for w in wanted)
+    return any(cluster_prefix_match(candidate, w) for w in wanted)
 
 
 def drop_disabled_rules(cfg, _logger=None) -> None:

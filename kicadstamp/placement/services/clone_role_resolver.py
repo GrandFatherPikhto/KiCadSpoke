@@ -29,7 +29,7 @@ from ...config import Cell, ClonePlacement
 from ...exceptions import ValidationError, format_fatal_error
 from ...net_resolution import resolve_net, resolve_placeholder
 from ...utils.units import MM
-from .component_pool import ROLE_FIELD_NAME, _cluster_prefix_match
+from .component_pool import ROLE_FIELD_NAME, cluster_prefix_match
 from ...constants import CLUSTER_FIELD_NAME
 from ...sheet_names import resolve_sheet_path_names
 from ...i18n import _
@@ -138,7 +138,7 @@ def _narrow_by_sheet_cluster_selection(
 
     Each step only narrows if it reduces the set — never chooses for the user:
       1. anchor_sheet — filter by _fp_on_sheet (structural, survives Cluster absence).
-      2. anchor_cluster — filter by _cluster_prefix_match.
+      2. anchor_cluster — filter by cluster_prefix_match.
       3. selected_refs — filter intersection with current board selection.
 
     Returns the (possibly narrowed) list — same list if no narrowing applied.
@@ -155,7 +155,7 @@ def _narrow_by_sheet_cluster_selection(
 
     if anchor_cluster and len(narrowed) > 1:
         by_cluster = [fp for fp in narrowed
-                     if _cluster_prefix_match(
+                     if cluster_prefix_match(
                          adapter.get_field_value(fp, CLUSTER_FIELD_NAME) or '',
                          anchor_cluster)]
         if by_cluster and len(by_cluster) < len(narrowed):
@@ -284,7 +284,7 @@ def resolve_roles_by_nets(adapter, cell: Cell, clone: ClonePlacement,
          already uses for resolving the anchor itself (resolve_footprint_by_role).
       3. if several candidates AND clone.anchor_cluster is set — narrow to
          candidates whose Cluster field matches by prefix segments
-         (see _cluster_prefix_match). This is the main path for the typical case
+         (see cluster_prefix_match). This is the main path for the typical case
          "N identical roles on one sheet because the net is common power, not
          per‑channel". Independent of step 2 — a reused hierarchical sheet
          shares custom fields (Cluster included) across every instance, so
@@ -450,7 +450,7 @@ def resolve_footprint_by_role(adapter, anchor_role: str, anchor_sheet: Optional[
          (via sheet_names, see kicadstamp/sheet_names.py) contains this segment
          (see _fp_on_sheet).
       2b. still several — narrow by anchor_cluster (if set):
-          Cluster field matches by prefix segments (see _cluster_prefix_match) —
+          Cluster field matches by prefix segments (see cluster_prefix_match) —
           independent of anchor_sheet, read from the schematic, not from UUID/sheet_path.
       3. still several — narrow to the current selection on the board.
       4. still several, or 0 — FATAL with candidate list and hints
