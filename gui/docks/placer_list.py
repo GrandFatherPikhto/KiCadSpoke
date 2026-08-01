@@ -8,13 +8,14 @@ CellListDock/RoleClusterTreeDock use for Cell/Cluster. Requested live
 2026-08-02: "таб пласеров (там где дерево компонент и экстракторов)".
 
 refresh() is called both on set_placer_file() (file picked/changed) and
-via PlacerDock.on_saved (a Save just added/overwrote an entry) — the list
-would otherwise go stale the moment the user Saves without reassigning
-the Placer file (see gui/main_window.py wiring).
+via PlacerDock's saved signal (a Save just added/overwrote an entry) —
+the list would otherwise go stale the moment the user Saves without
+reassigning the Placer file (see gui/main_window.py wiring).
 """
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QDockWidget, QListWidget, QVBoxLayout, QWidget
 
 from kicadstamp.i18n import _
@@ -23,11 +24,14 @@ from .. import yaml_io
 
 
 class PlacerListDock(QDockWidget):
+    # Fired when an already-saved clone_placement is clicked — PlacerDock
+    # listens to load it back into the form (see gui/main_window.py).
+    placement_picked = pyqtSignal(object)
+
     def __init__(self, main_window):
         super().__init__(_("Placements"), main_window)
         self._main_window = main_window
         self._placer_path: Optional[Path] = None
-        self.on_placement_picked: Optional[Callable[[dict], None]] = None
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -53,9 +57,7 @@ class PlacerListDock(QDockWidget):
         return [e for e in data if isinstance(e, dict)]
 
     def _on_clicked(self, item) -> None:
-        if self.on_placement_picked is None:
-            return
         for entry in self._entries():
             if entry.get("name") == item.text():
-                self.on_placement_picked(entry)
+                self.placement_picked.emit(entry)
                 return

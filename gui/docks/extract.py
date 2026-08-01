@@ -121,9 +121,13 @@ logger = logging.getLogger(__name__)
 
 
 class ExtractDock(QDockWidget):
-    def __init__(self, main_window):
+    def __init__(self, main_window, connection=None):
         super().__init__(_("Extract"), main_window)
         self._main_window = main_window
+        # Injected BoardConnection — falls back to the owning window's when
+        # not passed explicitly (keeps direct-construction callers, e.g.
+        # tests that mutate main_window.connection.board, working).
+        self._connection = connection if connection is not None else main_window.connection
         self._raw_items: List[Any] = []
         self._selected_footprints: List[Selected] = []
         self._target_path: Optional[Path] = None
@@ -288,7 +292,7 @@ class ExtractDock(QDockWidget):
 
     def set_target_file(self, path: Optional[Path]) -> None:
         """Called by MainWindow whenever the Files dock's Cells-role file
-        changes (wired via FilePickerDock.on_cells_file_changed)."""
+        changes (wired via FilePickerDock's cells_file_changed signal)."""
         self._target_path = path
         self.target_label.setText(
             _("Target: {path}").format(path=path) if path is not None
@@ -298,7 +302,8 @@ class ExtractDock(QDockWidget):
 
     def set_profile_file(self, path: Optional[Path]) -> None:
         """Called by MainWindow whenever the Files dock's Extractor-role
-        file changes (wired via FilePickerDock.on_extractor_file_changed) —
+        file changes (wired via FilePickerDock's extractor_file_changed
+        signal) —
         replaces this dock's former standalone file-dialog button, so all
         three file roles (Cells/Extractor/Placer) are picked from one
         place (see file_picker.py)."""
@@ -310,7 +315,7 @@ class ExtractDock(QDockWidget):
 
     def set_placer_file(self, path: Optional[Path]) -> None:
         """Called by MainWindow whenever the Files dock's Placer-role file
-        changes (wired via FilePickerDock.on_placer_file_changed).
+        changes (wired via FilePickerDock's placer_file_changed signal).
         Optional — extraction works the same without one, it just skips
         the cell_files:/include: wiring described in the module
         docstring."""
@@ -614,7 +619,7 @@ class ExtractDock(QDockWidget):
                 _ERROR_STYLE)
             return
 
-        board = self._main_window.connection.board
+        board = self._connection.board
         if board is None:
             self._show_message(_("Not connected."), _ERROR_STYLE)
             return

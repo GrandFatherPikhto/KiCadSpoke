@@ -11,7 +11,7 @@ Two modes, toggled by the "Not yet applied" checkbox:
 - Live (default, unchecked) — today's original behavior: data comes from
   kicadstamp.explore.Selected (live PCB footprints), a click pushes the
   selection onto the real board, and (Cluster grouping only) a group click
-  fires on_cluster_picked() for PlacerDock.
+  fires the cluster_picked signal for PlacerDock.
 - Schematic ("not yet applied", checked) — data comes from fieldstool's
   already-parsed SchematicComponent list (gui/docks/fieldstool_dock.py's
   embedded fieldstool MainWindow, read fresh at every rebuild, never
@@ -36,7 +36,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtCore import QItemSelectionModel
 from PyQt6.QtGui import QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QHBoxLayout,
@@ -71,9 +71,21 @@ class _Row:
 
 
 class RoleClusterTreeDock(QDockWidget):
-    def __init__(self, main_window):
+    # Fired when a Cluster GROUP node is clicked while grouped by Cluster,
+    # in LIVE mode only (see _on_clicked) — PlacerDock listens, so picking
+    # a cluster here fills its Cluster field the same way picking a cell
+    # elsewhere fills the Cell field. Not fired for Role-mode or leaf
+    # clicks, and not fired at all in schematic mode (that mode routes
+    # into fieldstool instead — see module docstring).
+    cluster_picked = pyqtSignal(str)
+
+    def __init__(self, main_window, connection=None):
         super().__init__(_("Components"), main_window)
         self._main_window = main_window
+        # Injected BoardConnection — falls back to the owning window's when
+        # not passed explicitly (keeps direct-construction callers, e.g.
+        # tests that mutate main_window.connection.board, working).
+        self._connection = connection if connection is not None else main_window.connection
         self._selected: List[Selected] = []
         # Distinguishes "first build with actual data" (auto-expand top
         # level so the tree isn't a single flat blob) from "user just
@@ -87,15 +99,6 @@ class RoleClusterTreeDock(QDockWidget):
         # and that empty build must not burn the flag before real data
         # ever gets a chance to auto-expand.
         self._auto_expand_pending = True
-        # Fired when a Cluster GROUP node is clicked while grouped by
-        # Cluster, in LIVE mode only (see _on_clicked) — PlacerDock
-        # listens, so picking a cluster here fills its Cluster field the
-        # same way picking a cell elsewhere fills the Cell field. Not
-        # fired for Role-mode or leaf clicks, and not fired at all in
-        # schematic mode (that mode routes into fieldstool instead — see
-        # module docstring).
-        self.on_cluster_picked: Optional[Callable[[str], None]] = None
-
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -219,8 +222,18 @@ class RoleClusterTreeDock(QDockWidget):
         # Public accessor on fieldstool's MainWindow (see fieldstool/gui/
         # main_window.py's components property) — not the private
         # `_components`, which is refreshed wholesale and owned by that window.
-        components = self._main_window.fieldstool_dock.window.components
-        return [_Row(c.ref, c.role, c.cluster, divergent=c.divergent) for c in components]
+        dock = self._fieldstool()
+        if dock is None:
+            return []
+        return [_Row(c.ref, c.role, c.cluster, divergent=c.divergent) for c in dock.components]
+
+    def _fieldstool(self):
+        """The embedded fieldstool dock, resolved lazily — this dock is
+        constructed BEFORE fieldstool_dock in gui/main_window.py, and
+        direct-construction tests build it with no fieldstool_dock at all,
+        so the reference must be looked up at use-time (never at __init__)
+        and may legitimately be absent."""
+        return getattr(self._main_window, "fieldstool_dock", None)
 
     def _rebuild(self) -> None:
         """Called on every poll tick while in live mode (via set_footprints),
@@ -388,22 +401,23 @@ class RoleClusterTreeDock(QDockWidget):
 
         if not self.mode_checkbox.isChecked():
             if (self.group_by.currentIndex() == 1  # Cluster grouping
-                    and is_group and self.on_cluster_picked is not None):
-                self.on_cluster_picked(item.data(_GROUP_VALUE_ROLE))
+                    and is_group):
+                self.cluster_picked.emit(item.data(_GROUP_VALUE_ROLE))
 
-            board = self._main_window.connection.board
+            board = self._connection.board
             if board is None or not refs:
                 return
             footprints = [s.fp for s in self._selected if s.ref in refs]
             board.adapter.select_items(footprints)
         else:
-            fieldstool_window = self._main_window.fieldstool_dock.window
+            dock = self._fieldstool()
+            if dock is None:
+                return
             if is_group:
                 field_name = "Role" if self.group_by.currentIndex() == 0 else "Cluster"
-                fieldstool_window._on_group_picked(field_name, item.data(_GROUP_VALUE_ROLE),
-                                                   sorted(refs))
+                dock.pick_group(field_name, item.data(_GROUP_VALUE_ROLE), sorted(refs))
             else:
-                fieldstool_window._on_tree_leaf_picked(sorted(refs))
+                dock.pick_leaf(sorted(refs))
             self._main_window.open_fieldstool()
 
     def _collect_refs(self, item: QStandardItem) -> List[str]:

@@ -35,8 +35,9 @@ restarts, same mechanism as the last-picked-file memory below.
 """
 import logging
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Dict, Optional
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFileSystemModel
 from PyQt6.QtWidgets import (QDockWidget, QFileDialog, QHBoxLayout, QLabel,
                               QPushButton, QTreeView, QVBoxLayout, QWidget)
@@ -53,20 +54,21 @@ ROLE_KEYS = ("cells", "extractor", "placer")
 
 
 class FilePickerDock(QDockWidget):
+    # Fired when "Use selected" assigns a file to a role, and again by
+    # restore_roles() when a previous session's assignment is restored —
+    # MainWindow wires every dock that follows that role (see
+    # gui/main_window.py). Payload is Optional[Path] (None when the role
+    # is unset).
+    cells_file_changed = pyqtSignal(object)
+    extractor_file_changed = pyqtSignal(object)
+    placer_file_changed = pyqtSignal(object)
+
     def __init__(self, main_window):
         super().__init__(_("Files"), main_window)
         self._main_window = main_window
         self.picked_path: Optional[Path] = None  # last file clicked in the tree, not yet assigned to a role
         self.assigned: Dict[str, Optional[Path]] = {key: None for key in ROLE_KEYS}
         self._role_titles = {"cells": _("Cells:"), "extractor": _("Extractor:"), "placer": _("Placer:")}
-        # Set by MainWindow once the relevant dock exists — ExtractDock's
-        # cell-output file follows the Cells role, its extract_profiles
-        # file follows the Extractor role. Plain callbacks, not
-        # pyqtSignals: at most one listener each, and this codebase doesn't
-        # use custom signals anywhere else yet.
-        self.on_cells_file_changed: Optional[Callable[[Optional[Path]], None]] = None
-        self.on_extractor_file_changed: Optional[Callable[[Optional[Path]], None]] = None
-        self.on_placer_file_changed: Optional[Callable[[Optional[Path]], None]] = None
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -117,7 +119,6 @@ class FilePickerDock(QDockWidget):
 
         self.set_root(self._load_root())
         self._restore_last_pick()
-        self._restore_roles()
         self._update_role_warning()
 
     @staticmethod
@@ -158,7 +159,7 @@ class FilePickerDock(QDockWidget):
     def _assign_role(self, role_key: str) -> None:
         """"Use selected" button for one of the three role rows — assigns
         whatever's currently clicked in the tree to that role, persists it,
-        and notifies whichever dock is listening (see on_*_file_changed)."""
+        and notifies every listener via the {role_key}_file_changed signal."""
         if self.picked_path is None:
             return
         self.assigned[role_key] = self.picked_path
@@ -167,9 +168,7 @@ class FilePickerDock(QDockWidget):
         data[f"{role_key}_file"] = str(self.picked_path)
         settings.save(data)
         self._update_role_warning()
-        callback = getattr(self, f"on_{role_key}_file_changed")
-        if callback:
-            callback(self.picked_path)
+        getattr(self, f"{role_key}_file_changed").emit(self.picked_path)
 
     def _update_role_warning(self) -> None:
         cells = self.assigned["cells"]
@@ -185,13 +184,20 @@ class FilePickerDock(QDockWidget):
         value = display_path(path) if path is not None else _("not set")
         return f"{self._role_titles[role_key]} {value}"
 
-    def _restore_roles(self) -> None:
+    def restore_roles(self) -> None:
+        """Re-reads the three role assignments from the previous session and
+        re-pushes them through the *_file_changed signals. Called by
+        MainWindow AFTER connecting the signal listeners — a restored
+        assignment exists before those listeners do, so without this
+        re-push it would be silently missed (see gui/main_window.py)."""
         data = settings.load()
         for role_key in ROLE_KEYS:
             saved = data.get(f"{role_key}_file")
             path = Path(saved) if saved and Path(saved).is_file() else None
             self.assigned[role_key] = path
             self._role_labels[role_key].setText(self._role_text(role_key, path))
+            getattr(self, f"{role_key}_file_changed").emit(path)
+        self._update_role_warning()
 
     def _restore_last_pick(self) -> None:
         """Restores the last file picked in a previous session — skipped

@@ -44,8 +44,9 @@ click already created, via the SAME registry file a real
 
 Cell picking moved out to CellListDock (gui/docks/cell_list.py), tabified
 with the Components tree — feeds set_selected_cell() here. Cluster name
-similarly follows RoleClusterTreeDock.on_cluster_picked when a Cluster
-GROUP node is clicked there (set_cluster_name()) — both requested live
+similarly follows RoleClusterTreeDock's cluster_picked signal when a
+Cluster GROUP node is clicked there (set_cluster_name()) — both requested
+live
 2026-08-01 ("где выбирать cell? ...к дереву компонент надо добавить
 табик со списком cell", "раз уж у нас есть список Cluster то при выборе
 кластера надо сразу автоматически заполнять поле кластер"). Anchor
@@ -82,10 +83,11 @@ combo, NoInsert policy), this is a picker, not a whitelist: "сети стоит
 import logging
 import re
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 from kipy.errors import ApiError
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget,
                               QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                               QLineEdit, QPushButton, QVBoxLayout, QWidget)
@@ -109,6 +111,10 @@ _PLACEHOLDER_RE = re.compile(r"\{(\w+)\}")
 
 
 class PlacerDock(QDockWidget):
+    # Fired after a successful Save — PlacerListDock listens to refresh its
+    # list of already-saved placements (see gui/main_window.py).
+    saved = pyqtSignal()
+
     def __init__(self, main_window):
         super().__init__(_("Placer"), main_window)
         self._main_window = main_window
@@ -117,9 +123,6 @@ class PlacerDock(QDockWidget):
         self._selected_cell: Optional[str] = None
         self._param_edits: Dict[str, QComboBox] = {}
         self._known_nets: List[str] = []
-        # Fired after a successful Save — PlacerListDock listens to refresh
-        # its list of already-saved placements (see gui/main_window.py).
-        self.on_saved: Optional[Callable[[], None]] = None
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -245,8 +248,9 @@ class PlacerDock(QDockWidget):
         self._rebuild_param_rows()
 
     def set_cluster_name(self, name: str) -> None:
-        """Called by RoleClusterTreeDock.on_cluster_picked when a Cluster
-        group node is clicked there — requested alongside the Cell-list
+        """Called by RoleClusterTreeDock's cluster_picked signal when a
+        Cluster group node is clicked there — requested alongside the
+        Cell-list
         move (2026-08-01: "раз уж у нас есть список Cluster то при выборе
         кластера надо сразу автоматически заполнять поле кластер")."""
         self.cluster_edit.setText(name)
@@ -542,14 +546,13 @@ class PlacerDock(QDockWidget):
                 action=_("Overwrote") if overwritten else _("Wrote"),
                 name=entry["name"], path=display_path(self._placer_path)),
             _SUCCESS_STYLE)
-        if self.on_saved is not None:
-            self.on_saved()
+        self.saved.emit()
 
     # ── Loading an already-saved placement back into the form ──────────────
 
     def load_placement(self, entry: Dict[str, Any]) -> None:
-        """Reverse of _build_entry_dict() — called by PlacerListDock
-        (on_placement_picked) when the user clicks an already-saved
+        """Reverse of _build_entry_dict() — called by PlacerListDock (via
+        its placement_picked signal) when the user clicks an already-saved
         clone_placement in the new "Placements" tab, so it can be edited
         and Redrawn/re-Saved instead of only ever building placements from
         scratch (2026-08-02: "таб пласеров... там где дерево компонент и

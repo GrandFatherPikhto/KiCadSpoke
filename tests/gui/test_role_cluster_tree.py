@@ -37,7 +37,7 @@ def _find_item(model, text):
     return walk(model.invisibleRootItem())
 
 
-def test_clicking_a_cluster_group_node_fires_on_cluster_picked(main_window):
+def test_clicking_a_cluster_group_node_fires_cluster_picked_signal(main_window):
     dock = RoleClusterTreeDock(main_window)
     dock.group_by.setCurrentIndex(1)  # Cluster grouping
     dock.set_footprints([
@@ -46,7 +46,7 @@ def test_clicking_a_cluster_group_node_fires_on_cluster_picked(main_window):
     ])
 
     picked = []
-    dock.on_cluster_picked = picked.append
+    dock.cluster_picked.connect(picked.append)
 
     model = dock.tree.model()
     top_level = _find_item(model, "Channel_1")
@@ -84,12 +84,12 @@ def test_collapse_all_survives_a_later_rebuild(main_window):
     assert not dock.tree.isExpanded(dock.tree.model().indexFromItem(top_level))
 
 
-def test_leaf_click_and_role_mode_do_not_fire_on_cluster_picked(main_window):
+def test_leaf_click_and_role_mode_do_not_fire_cluster_picked_signal(main_window):
     dock = RoleClusterTreeDock(main_window)
     dock.set_footprints([FakeSelected("C1", "C_IN", "Channel_1/PI_FILTER")])
 
     picked = []
-    dock.on_cluster_picked = picked.append
+    dock.cluster_picked.connect(picked.append)
 
     # Role grouping (the default) — clicking a group here is a Role, not a Cluster.
     # _build_flat() suffixes group labels with a "(count)", unlike _build_hierarchical().

@@ -31,15 +31,15 @@ def test_clicking_an_entry_fires_on_placement_picked_with_full_dict(main_window,
     dock.set_placer_file(placer_file)
 
     picked = []
-    dock.on_placement_picked = picked.append
+    dock.placement_picked.connect(picked.append)
     dock._on_clicked(dock.list.item(0))
 
     assert picked == [entry]
 
 
 def test_refresh_picks_up_a_placement_added_after_the_file_was_first_assigned(main_window, tmp_path):
-    """PlacerDock.on_saved wires straight into this — a Save must show up
-    here without the user reassigning the Placer file in Files."""
+    """PlacerDock's saved signal wires straight into this — a Save must
+    show up here without the user reassigning the Placer file in Files."""
     placer_file = tmp_path / "placer.yaml"
     _write_placer_file(placer_file, [])
 

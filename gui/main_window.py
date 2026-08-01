@@ -106,7 +106,7 @@ class MainWindow(QMainWindow):
 
         self.statusBar().addPermanentWidget(self.action_button)
 
-        self.tree_dock = RoleClusterTreeDock(self)
+        self.tree_dock = RoleClusterTreeDock(self, connection=self.connection)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.tree_dock)
 
         self.cell_list_dock = CellListDock(self)
@@ -128,7 +128,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.file_picker_dock)
         self.tabifyDockWidget(self.fieldstool_dock, self.file_picker_dock)
 
-        self.extract_dock = ExtractDock(self)
+        self.extract_dock = ExtractDock(self, connection=self.connection)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
         self.tabifyDockWidget(self.file_picker_dock, self.extract_dock)
 
@@ -139,49 +139,42 @@ class MainWindow(QMainWindow):
         self.log_dock = LogDock(self, verbose=verbose)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock)
 
-        # Files -> Extract/Placer/Cells-tab wiring: ExtractDock's cell-
-        # output file, PlacerDock's placeholder discovery, and the Cells
-        # tab's own list all follow the Cells role; ExtractDock's
+        # Files -> Extract/Placer/Cells-tab wiring (real pyqtSignals — a
+        # role can legitimately have more than one listener): ExtractDock's
+        # cell-output file, PlacerDock's placeholder discovery, and the
+        # Cells tab's own list all follow the Cells role; ExtractDock's
         # extract_profiles file follows the Extractor role; ExtractDock's
-        # and PlacerDock's Placer-file each follow the Placer role (both
-        # assigned via "Use selected" in the Files dock — one role can have
-        # more than one listener, hence the small dispatcher functions
-        # instead of assigning a dock method directly).
-        # _restore_roles() (inside FilePickerDock's own __init__, already
-        # ran) may have already restored a role from a previous session
-        # before these callbacks existed to hear about it — push the
-        # current values once explicitly so a restored assignment isn't
-        # silently missed.
-        def _on_cells_file_changed(path):
-            self.extract_dock.set_target_file(path)
-            self.placer_dock.set_cells_file(path)
-            self.cell_list_dock.set_cells_file(path)
-
-        def _on_placer_file_changed(path):
-            self.extract_dock.set_placer_file(path)
-            self.placer_dock.set_placer_file(path)
-            self.placer_list_dock.set_placer_file(path)
-
-        self.file_picker_dock.on_cells_file_changed = _on_cells_file_changed
-        self.file_picker_dock.on_extractor_file_changed = self.extract_dock.set_profile_file
-        self.file_picker_dock.on_placer_file_changed = _on_placer_file_changed
-        _on_cells_file_changed(self.file_picker_dock.assigned["cells"])
-        self.extract_dock.set_profile_file(self.file_picker_dock.assigned["extractor"])
-        _on_placer_file_changed(self.file_picker_dock.assigned["placer"])
+        # and PlacerDock's Placer-file each follow the Placer role — all
+        # assigned via "Use selected" in the Files dock.
+        self.file_picker_dock.cells_file_changed.connect(self.extract_dock.set_target_file)
+        self.file_picker_dock.cells_file_changed.connect(self.placer_dock.set_cells_file)
+        self.file_picker_dock.cells_file_changed.connect(self.cell_list_dock.set_cells_file)
+        self.file_picker_dock.extractor_file_changed.connect(self.extract_dock.set_profile_file)
+        self.file_picker_dock.placer_file_changed.connect(self.extract_dock.set_placer_file)
+        self.file_picker_dock.placer_file_changed.connect(self.placer_dock.set_placer_file)
+        self.file_picker_dock.placer_file_changed.connect(self.placer_list_dock.set_placer_file)
+        # Roles restored from a previous session must reach the listeners
+        # above — restore_roles() re-fires the current values through the
+        # same signals (they were restored before these connections existed).
+        self.file_picker_dock.restore_roles()
 
         # Components tree -> Placer: clicking a Cluster group node in the
         # tree fills PlacerDock's Cluster field; Cells tab -> Placer:
         # clicking a Cell fills PlacerDock's Cell field (both requested
         # live 2026-08-01 as the natural place to pick from, instead of a
         # picker embedded in PlacerDock itself).
-        self.tree_dock.on_cluster_picked = self.placer_dock.set_cluster_name
-        self.cell_list_dock.on_cell_picked = self.placer_dock.set_selected_cell
+        self.tree_dock.cluster_picked.connect(self.placer_dock.set_cluster_name)
+        self.cell_list_dock.cell_picked.connect(self.placer_dock.set_selected_cell)
         # Placements tab -> Placer: clicking an already-saved clone_placement
         # re-opens it in the form for editing/Redraw; Placer -> Placements
         # tab the other way: a successful Save refreshes the list so a
         # brand new (or renamed) entry shows up without reassigning Files.
-        self.placer_list_dock.on_placement_picked = self.placer_dock.load_placement
-        self.placer_dock.on_saved = self.placer_list_dock.refresh
+        self.placer_list_dock.placement_picked.connect(self.placer_dock.load_placement)
+        self.placer_dock.saved.connect(self.placer_list_dock.refresh)
+
+        # fieldstool tab -> Components tree: an explicit Rescan/Apply there
+        # refreshes this tree's schematic view (see FieldsToolDock).
+        self.fieldstool_dock.components_changed.connect(self.tree_dock.refresh_schematic_view)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)

@@ -11,6 +11,6 @@ def test_list_populated_from_cells_file_and_click_fires_callback(main_window, tm
     assert [dock.list.item(i).text() for i in range(dock.list.count())] == ["ldo_adj", "pi_filter"]
 
     picked = []
-    dock.on_cell_picked = picked.append
+    dock.cell_picked.connect(picked.append)
     dock.list.itemClicked.emit(dock.list.item(0))
     assert picked == ["ldo_adj"]

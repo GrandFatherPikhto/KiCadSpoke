@@ -24,20 +24,23 @@ def test_role_assignment_persists_and_restores(main_window, tmp_path):
     assert persisted["cells_file"] == str(cells_file)
     assert persisted["extractor_file"] == str(extractor_file)
 
-    # A fresh instance (simulating a GUI restart) should pick the roles back up.
+    # A fresh instance (simulating a GUI restart) should pick the roles
+    # back up — restore_roles() is called by MainWindow after wiring the
+    # signal listeners (see gui/main_window.py).
     restarted = FilePickerDock(main_window)
+    restarted.restore_roles()
     assert restarted.assigned["cells"] == cells_file
     assert restarted.assigned["extractor"] == extractor_file
     assert restarted.assigned["placer"] is None
 
 
-def test_role_callback_fires_on_assignment(main_window, tmp_path):
+def test_role_signal_fires_on_assignment(main_window, tmp_path):
     cells_file = tmp_path / "cells.yaml"
     cells_file.write_text("{}\n", encoding="utf-8")
 
     dock = FilePickerDock(main_window)
     received = []
-    dock.on_cells_file_changed = received.append
+    dock.cells_file_changed.connect(received.append)
 
     dock.picked_path = cells_file
     dock._assign_role("cells")
