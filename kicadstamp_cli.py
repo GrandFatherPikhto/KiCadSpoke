@@ -8,12 +8,8 @@ Usage:
 """
 
 import argparse
-import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import yaml
 
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -31,35 +27,11 @@ if hasattr(sys.stderr, "reconfigure"):
 from kicadstamp import __version__
 from kicadstamp.config import load_config, RuntimeContext
 from kicadstamp.apply_pipeline import ApplyPipeline, cmd_apply
-from kicadstamp.cli import cmd_extract
+from kicadstamp.cli import cmd_clone_extract, cmd_extract, cmd_undo
 from kicadstamp.cli_common import run_cli
-from kicadstamp.cli_extract import load_profile, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
 from kicadstamp.logging_setup import setup_logging
-from kicadstamp.undo import undo_last_operation
 from kicadstamp.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
 from kicadstamp.i18n import _
-
-
-def cmd_undo(args):
-    """Undo the last operation."""
-    logger = logging.getLogger(__name__)
-    log_dir = Path("logs")
-    if not log_dir.exists():
-        logger.error(_("logs directory not found."))
-        return
-
-    files = sorted(log_dir.glob("operation_*.json"), key=lambda p: p.stat().st_ctime)
-    if not files:
-        logger.error(_("No operation files to undo."))
-        return
-
-    last_file = files[-1]
-    logger.info(_("Undoing operation from {file}").format(file=last_file.name))
-    success = undo_last_operation(last_file)
-    if success:
-        logger.info(_("✅ Operation successfully undone."))
-    else:
-        logger.error(_("❌ Failed to undo operation."))
 
 
 def main() -> int:
@@ -184,29 +156,7 @@ def main() -> int:
         elif args.command == "undo":
             cmd_undo(args)
         elif args.command == "clone-extract":
-            direct_given = bool(args.net or args.pcb or args.channel or args.output)
-            if args.profile and direct_given:
-                sys.exit(_("[error] --profile cannot be combined with --net/--pcb/--channel/--output"))
-            if args.profile:
-                if not args.profiles:
-                    sys.exit(_("[error] --profile given without --profiles (profiles file)"))
-                prof = load_profile(args.profiles, "clone_profiles", args.profile,
-                                    known_keys=_CLONE_EXTRACT_PROFILE_KNOWN_KEYS)
-                for required in ("net", "pcb", "channel", "output"):
-                    if required not in prof:
-                        sys.exit(_("[error] profile {profile!r} missing required field {field!r}")
-                                 .format(profile=args.profile, field=required))
-                net_path, pcb_path, channel, output = prof["net"], prof["pcb"], prof["channel"], prof["output"]
-            else:
-                if not (args.net and args.pcb and args.channel and args.output):
-                    sys.exit(_("[error] need --net/--pcb/--channel/--output (or --profiles/--profile)"))
-                net_path, pcb_path, channel, output = args.net, args.pcb, args.channel, args.output
-            from kicadstamp.cloner.extract import extract_channel
-            d = extract_channel(net_path, pcb_path, channel, output)
-            s = d['summary']
-            print(_("[{channel}] footprints: {fp}, segments: {seg}, vias: {vias} -> {output}")
-                  .format(channel=channel, fp=s['footprints'], seg=s['segments'],
-                          vias=s['vias'], output=output))
+            cmd_clone_extract(args)
         elif args.command == "extract":
             cmd_extract(args)
         else:

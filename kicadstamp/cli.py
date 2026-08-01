@@ -9,12 +9,15 @@ into process exit codes. No sys.exit / print here.
 """
 
 import logging
+from pathlib import Path
 
 from kicadstamp.cli_extract import (load_profile, extract_template,
-                                    _EXTRACT_PROFILE_KNOWN_KEYS)
+                                    _EXTRACT_PROFILE_KNOWN_KEYS,
+                                    _CLONE_EXTRACT_PROFILE_KNOWN_KEYS)
 from kicadstamp.exceptions import PlacerError
 from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from kicadstamp.i18n import _
+from kicadstamp.undo import undo_last_operation
 
 logger = logging.getLogger(__name__)
 
@@ -99,3 +102,65 @@ def cmd_extract(args) -> None:
                      origin_via_net=origin_via_net,
                      origin_component_role=origin_component_role,
                      origin_component_pad=origin_component_pad)
+
+
+def cmd_clone_extract(args) -> None:
+    """Snapshot a channel to YAML (file-based cloner, no IPC).
+
+    Thin CLI wrapper: turns argparse.Namespace into explicit arguments for
+    kicadstamp.cloner.extract.extract_channel, raising PlacerError on invalid
+    input (the entry point maps it to exit code 1). The success summary is
+    logged (INFO) instead of print()ed — the module owns no stdout writes.
+    """
+    direct_given = bool(args.net or args.pcb or args.channel or args.output)
+    if args.profile and direct_given:
+        raise PlacerError(_("[error] --profile cannot be combined with --net/--pcb/--channel/--output"))
+
+    if args.profile:
+        if not args.profiles:
+            raise PlacerError(_("[error] --profile given without --profiles (profiles file)"))
+        prof = load_profile(args.profiles, "clone_profiles", args.profile,
+                            known_keys=_CLONE_EXTRACT_PROFILE_KNOWN_KEYS)
+        for required in ("net", "pcb", "channel", "output"):
+            if required not in prof:
+                raise PlacerError(_("[error] profile {profile!r} missing required field {field!r}")
+                                  .format(profile=args.profile, field=required))
+        net_path, pcb_path, channel, output = prof["net"], prof["pcb"], prof["channel"], prof["output"]
+    else:
+        if not (args.net and args.pcb and args.channel and args.output):
+            raise PlacerError(_("[error] need --net/--pcb/--channel/--output (or --profiles/--profile)"))
+        net_path, pcb_path, channel, output = args.net, args.pcb, args.channel, args.output
+
+    from kicadstamp.cloner.extract import extract_channel
+    d = extract_channel(net_path, pcb_path, channel, output)
+    s = d['summary']
+    logger.info(_("[{channel}] footprints: {fp}, segments: {seg}, vias: {vias} -> {output}")
+                .format(channel=channel, fp=s['footprints'], seg=s['segments'],
+                        vias=s['vias'], output=output))
+
+
+def cmd_undo(args) -> None:
+    """Undo the last operation.
+
+    Thin CLI wrapper: finds the newest operation_*.json in the CWD logs/
+    directory and undoes it via kicadstamp.undo.undo_last_operation. Raises
+    PlacerError when there is nothing to undo (the entry point maps it to
+    exit code 1) — an error that used to silently exit 0. `args` is accepted
+    for a uniform Namespace signature across cmd_* wrappers (--log-file is
+    wired up by the entry point's setup_logging, not here).
+    """
+    log_dir = Path("logs")
+    if not log_dir.exists():
+        raise PlacerError(_("logs directory not found."))
+
+    files = sorted(log_dir.glob("operation_*.json"), key=lambda p: p.stat().st_ctime)
+    if not files:
+        raise PlacerError(_("No operation files to undo."))
+
+    last_file = files[-1]
+    logger.info(_("Undoing operation from {file}").format(file=last_file.name))
+    success = undo_last_operation(last_file)
+    if success:
+        logger.info(_("✅ Operation successfully undone."))
+    else:
+        raise PlacerError(_("❌ Failed to undo operation."))
