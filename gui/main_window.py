@@ -52,6 +52,7 @@ from .docks.extract import ExtractDock
 from .docks.file_picker import FilePickerDock
 from .docks.log_panel import LogDock
 from .docks.placer import PlacerDock
+from .docks.placer_list import PlacerListDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,10 @@ class MainWindow(QMainWindow):
         self.cell_list_dock = CellListDock(self)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.cell_list_dock)
         self.tabifyDockWidget(self.tree_dock, self.cell_list_dock)
+
+        self.placer_list_dock = PlacerListDock(self)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.placer_list_dock)
+        self.tabifyDockWidget(self.cell_list_dock, self.placer_list_dock)
 
         self.bulk_edit_dock = BulkFieldEditorDock(self)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.bulk_edit_dock)
@@ -124,6 +129,7 @@ class MainWindow(QMainWindow):
         def _on_placer_file_changed(path):
             self.extract_dock.set_placer_file(path)
             self.placer_dock.set_placer_file(path)
+            self.placer_list_dock.set_placer_file(path)
 
         self.file_picker_dock.on_cells_file_changed = _on_cells_file_changed
         self.file_picker_dock.on_extractor_file_changed = self.extract_dock.set_profile_file
@@ -139,6 +145,12 @@ class MainWindow(QMainWindow):
         # picker embedded in PlacerDock itself).
         self.tree_dock.on_cluster_picked = self.placer_dock.set_cluster_name
         self.cell_list_dock.on_cell_picked = self.placer_dock.set_selected_cell
+        # Placements tab -> Placer: clicking an already-saved clone_placement
+        # re-opens it in the form for editing/Redraw; Placer -> Placements
+        # tab the other way: a successful Save refreshes the list so a
+        # brand new (or renamed) entry shows up without reassigning Files.
+        self.placer_list_dock.on_placement_picked = self.placer_dock.load_placement
+        self.placer_dock.on_saved = self.placer_list_dock.refresh
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
@@ -203,6 +215,7 @@ class MainWindow(QMainWindow):
             self.tree_dock.set_footprints(snapshot)
             self.bulk_edit_dock.refresh_known_values(self.connection.board)
             self.placer_dock.refresh_known_roles(self.connection.board)
+            self.placer_dock.refresh_known_nets(self.connection.board)
 
         self.action_button.setText(_("Refresh") if self.connection.is_connected else _("Reconnect"))
 

@@ -54,8 +54,8 @@ def test_build_entry_dict_absolute_xy_round_trips_through_loader(main_window, tm
     dock.cluster_edit.setText("Channel_2_PI_Filter")
     dock.x_edit.setText("10.5")
     dock.y_edit.setText("-3.2")
-    dock._param_edits["PWR_IN"].setText("+3V3_CH2")
-    dock._param_edits["PWR_OUT"].setText("+3V3_CH2_DIRTY")
+    dock._param_edits["PWR_IN"].setCurrentText("+3V3_CH2")
+    dock._param_edits["PWR_OUT"].setCurrentText("+3V3_CH2_DIRTY")
 
     entry = dock._build_entry_dict()
     assert entry == {
@@ -161,8 +161,8 @@ def test_redraw_preserves_other_placements_for_registry_safety(main_window, tmp_
     dock.cluster_edit.setText("Channel_2_PI_Filter")
     dock.x_edit.setText("10")
     dock.y_edit.setText("5")
-    dock._param_edits["PWR_IN"].setText("+3V3_CH2")
-    dock._param_edits["PWR_OUT"].setText("+3V3_CH2_DIRTY")
+    dock._param_edits["PWR_IN"].setCurrentText("+3V3_CH2")
+    dock._param_edits["PWR_OUT"].setCurrentText("+3V3_CH2_DIRTY")
 
     pre_existing = _load_clone_placement({"name": "OTHER_PLACEMENT", "cell": "pi_filter", "xy": [0, 0]})
     fake_cfg = Config(
@@ -233,3 +233,100 @@ def test_redraw_preserves_other_placements_for_registry_safety(main_window, tmp_
     assert names.count("Channel_2_PI_Filter") == 1  # replaced, not duplicated
     assert "Placed" in dock.message_label.text()
     assert "1 component(s) tagged Cluster" in dock.message_label.text()
+
+
+def test_load_placement_round_trips_absolute_xy(main_window, tmp_path):
+    """Reverse of _build_entry_dict — PlacerListDock feeds a saved
+    clone_placement dict straight back in via load_placement()."""
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    entry = {
+        "name": "Channel_2_PI_Filter", "cell": "pi_filter", "xy": [10.5, -3.2],
+        "params": {"PWR_IN": "+3V3_CH2", "PWR_OUT": "+3V3_CH2_DIRTY"},
+    }
+
+    dock.load_placement(entry)
+
+    assert dock.cluster_edit.text() == "Channel_2_PI_Filter"
+    assert dock._selected_cell == "pi_filter"
+    assert dock.origin_mode_combo.currentIndex() == 0
+    assert dock.x_edit.text() == "10.5"
+    assert dock.y_edit.text() == "-3.2"
+    assert dock._param_edits["PWR_IN"].currentText() == "+3V3_CH2"
+    assert dock._param_edits["PWR_OUT"].currentText() == "+3V3_CH2_DIRTY"
+
+
+def test_load_placement_round_trips_anchor_mode(main_window, tmp_path):
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    entry = {
+        "name": "X", "cell": "pi_filter", "xy": [2.0, 0.0],
+        "anchor_role": "SOME_ROLE", "anchor_pad": "1", "anchor_cluster": "Channel_1",
+    }
+
+    dock.load_placement(entry)
+
+    assert dock.origin_mode_combo.currentIndex() == 1
+    assert dock.anchor_role_edit.currentText() == "SOME_ROLE"
+    assert dock.anchor_pad_edit.text() == "1"
+    assert dock.anchor_cluster_edit.currentText() == "Channel_1"
+    assert dock.shift_x_edit.text() == "2.0"
+    assert dock.shift_y_edit.text() == "0.0"
+    # Round-trips back through _build_entry_dict without loss.
+    assert dock._build_entry_dict() == entry
+
+
+def test_load_placement_round_trips_point_mode(main_window, tmp_path):
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    entry = {"name": "X", "cell": "pi_filter", "xy": [1.0, 2.0], "anchor_point": "origin_point"}
+
+    dock.load_placement(entry)
+
+    assert dock.origin_mode_combo.currentIndex() == 2
+    assert dock.point_edit.text() == "origin_point"
+    assert dock.shift_x_edit.text() == "1.0"
+    assert dock.shift_y_edit.text() == "2.0"
+
+
+class _FakeNet:
+    def __init__(self, name):
+        self.name = name
+
+
+class _FakeNetAdapter:
+    def __init__(self, nets):
+        self._nets = nets
+
+    def get_all_nets(self):
+        return self._nets
+
+
+class _FakeNetBoard:
+    def __init__(self, nets):
+        self.adapter = _FakeNetAdapter(nets)
+
+
+def test_refresh_known_nets_populates_param_combos(main_window, tmp_path):
+    """Requested live 2026-08-02: "сети стоит сделать выпадашками
+    (комбобоксами с поиском)" — Params comboboxes should list real net
+    names from the board, not stay free-text fields."""
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    board = _FakeNetBoard([_FakeNet("+3V3"), _FakeNet("GND"), _FakeNet("")])
+
+    dock.refresh_known_nets(board)
+
+    assert dock._known_nets == ["+3V3", "GND"]  # sorted, blank net dropped
+    combo = dock._param_edits["PWR_IN"]
+    assert [combo.itemText(i) for i in range(combo.count())] == ["+3V3", "GND"]
+    assert combo.isEditable()  # still accepts a literal not in the list
+
+
+def test_rebuilt_param_rows_use_cached_known_nets(main_window, tmp_path):
+    """A newly-discovered param row (picking a Cell after nets were already
+    fetched) must not have to wait for the next ~2s poll tick to show the
+    net list — refresh_known_nets() caches on self for this reason."""
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    dock.refresh_known_nets(_FakeNetBoard([_FakeNet("+3V3"), _FakeNet("GND")]))
+
+    dock.set_selected_cell("pi_filter")  # forces _rebuild_param_rows again
+
+    combo = dock._param_edits["PWR_IN"]
+    assert [combo.itemText(i) for i in range(combo.count())] == ["+3V3", "GND"]

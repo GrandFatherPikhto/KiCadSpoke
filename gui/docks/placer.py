@@ -64,18 +64,33 @@ oversight): anchor_sheet narrowing, anchor_point Point-name autocomplete,
 refs: explicit role->ref override, by_selection mode. All still reachable
 by hand-editing the saved YAML; add UI for them if they turn out to be
 needed often.
+
+load_placement() (reverse of _build_entry_dict) lets PlacerListDock
+(gui/docks/placer_list.py) re-open an already-saved clone_placement for
+editing/Redraw — requested live 2026-08-02 alongside a "Placements" tab
+next to the Components tree/Cells list ("таб пласеров (там где дерево
+компонент и экстракторов)"), same "pick from a list you already browse"
+pattern as Cell/Cluster picking.
+
+Params comboboxes (placeholder -> literal net) are populated from the
+live board's actual net names (refresh_known_nets(), same ~2s poll
+cadence as refresh_known_roles()) and filter-as-you-type via
+_configure_searchable() — plain literal text is still accepted (editable
+combo, NoInsert policy), this is a picker, not a whitelist: "сети стоит
+сделать выпадашками (комбобоксами с поиском)" (2026-08-02).
 """
 import json
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import yaml
 from kipy.errors import ApiError
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QFormLayout,
-                              QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-                              QPushButton, QVBoxLayout, QWidget)
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QCompleter, QDockWidget,
+                              QFormLayout, QGridLayout, QHBoxLayout, QLabel,
+                              QLineEdit, QPushButton, QVBoxLayout, QWidget)
 
 from kicadstamp.apply_pipeline import ApplyPipeline
 from kicadstamp.config import Config, RuntimeContext, _load_clone_placement, load_config
@@ -103,7 +118,11 @@ class PlacerDock(QDockWidget):
         self._cells_path: Optional[Path] = None
         self._placer_path: Optional[Path] = None
         self._selected_cell: Optional[str] = None
-        self._param_edits: Dict[str, QLineEdit] = {}
+        self._param_edits: Dict[str, QComboBox] = {}
+        self._known_nets: List[str] = []
+        # Fired after a successful Save — PlacerListDock listens to refresh
+        # its list of already-saved placements (see gui/main_window.py).
+        self.on_saved: Optional[Callable[[], None]] = None
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -152,13 +171,13 @@ class PlacerDock(QDockWidget):
         self.anchor_ref_edit.setPlaceholderText(_("e.g. U3 (refdes — mostly avoided in this project)"))
         anchor_form.addRow(_("Ref:"), self.anchor_ref_edit)
         self.anchor_role_edit = QComboBox()
-        self.anchor_role_edit.setEditable(True)
+        self._configure_searchable(self.anchor_role_edit)
         anchor_form.addRow(_("Role:"), self.anchor_role_edit)
         self.anchor_pad_edit = QLineEdit()
         self.anchor_pad_edit.setPlaceholderText(_("pad (optional)"))
         anchor_form.addRow(_("Pad:"), self.anchor_pad_edit)
         self.anchor_cluster_edit = QComboBox()
-        self.anchor_cluster_edit.setEditable(True)
+        self._configure_searchable(self.anchor_cluster_edit)
         anchor_form.addRow(_("Anchor cluster:"), self.anchor_cluster_edit)
         layout.addWidget(self._anchor_row)
 
@@ -248,6 +267,34 @@ class PlacerDock(QDockWidget):
         self._set_combo_items(self.anchor_role_edit, roles)
         self._set_combo_items(self.anchor_cluster_edit, clusters)
 
+    def refresh_known_nets(self, board) -> None:
+        """Populates the Params comboboxes (placeholder -> literal net) with
+        the live board's actual net names — "сети стоит сделать выпадашками
+        (комбобоксами с поиском)" (2026-08-02). Same ~2s poll cadence as
+        refresh_known_roles(); cached on self so newly-discovered param
+        rows (_rebuild_param_rows, triggered by picking a different Cell)
+        don't have to wait for the next poll tick to be populated."""
+        self._known_nets = sorted({n.name for n in board.adapter.get_all_nets() if n.name})
+        for combo in self._param_edits.values():
+            self._set_combo_items(combo, self._known_nets)
+
+    @staticmethod
+    def _configure_searchable(combo: QComboBox) -> None:
+        """Turns a plain editable QComboBox into a filter-as-you-type search
+        box. Qt's own default completer for an editable combo only matches
+        from the start of the string, which isn't enough once there are
+        dozens of nets/roles on a real board (2026-08-02: "сети стоит
+        сделать выпадашками (комбобоксами с поиском)"). NoInsert keeps this
+        a picker, not a whitelist — typed text that isn't in the list is
+        still accepted as the field's value, it just doesn't get added as a
+        new permanent entry."""
+        combo.setEditable(True)
+        combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        completer = combo.completer()
+        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+
     @staticmethod
     def _set_combo_items(combo: QComboBox, items: List[str]) -> None:
         current_text = combo.currentText()
@@ -260,7 +307,7 @@ class PlacerDock(QDockWidget):
     def _rebuild_param_rows(self) -> None:
         cell_data = yaml_io.load_data(self._cells_path).get(self._selected_cell, {})
         placeholders = sorted(self._discover_placeholders(cell_data))
-        previous = {name: edit.text() for name, edit in self._param_edits.items()}
+        previous = {name: edit.currentText() for name, edit in self._param_edits.items()}
 
         while self._params_layout.count():
             item = self._params_layout.takeAt(0)
@@ -271,9 +318,11 @@ class PlacerDock(QDockWidget):
         self._param_edits = {}
         for row, name in enumerate(placeholders):
             self._params_layout.addWidget(QLabel(name), row, 0)
-            edit = QLineEdit()
-            edit.setPlaceholderText(_("literal net for {{{name}}}").format(name=name))
-            edit.setText(previous.get(name, ""))
+            edit = QComboBox()
+            self._configure_searchable(edit)
+            edit.lineEdit().setPlaceholderText(_("literal net for {{{name}}}").format(name=name))
+            edit.addItems(self._known_nets)
+            edit.setCurrentText(previous.get(name, ""))
             self._params_layout.addWidget(edit, row, 1)
             self._param_edits[name] = edit
 
@@ -398,7 +447,8 @@ class PlacerDock(QDockWidget):
         if self.mirror_checkbox.isChecked():
             entry["mirror"] = True
 
-        params = {name: edit.text().strip() for name, edit in self._param_edits.items() if edit.text().strip()}
+        params = {name: edit.currentText().strip() for name, edit in self._param_edits.items()
+                  if edit.currentText().strip()}
         if params:
             entry["params"] = params
 
@@ -523,6 +573,50 @@ class PlacerDock(QDockWidget):
                 action=_("Overwrote") if overwritten else _("Wrote"),
                 name=entry["name"], path=self._display_path(self._placer_path)),
             _SUCCESS_STYLE)
+        if self.on_saved is not None:
+            self.on_saved()
+
+    # ── Loading an already-saved placement back into the form ──────────────
+
+    def load_placement(self, entry: Dict[str, Any]) -> None:
+        """Reverse of _build_entry_dict() — called by PlacerListDock
+        (on_placement_picked) when the user clicks an already-saved
+        clone_placement in the new "Placements" tab, so it can be edited
+        and Redrawn/re-Saved instead of only ever building placements from
+        scratch (2026-08-02: "таб пласеров... там где дерево компонент и
+        экстракторов")."""
+        self._show_message("")
+        self.cluster_edit.setText(str(entry.get("name", "")))
+        if "cell" in entry:
+            self.set_selected_cell(entry["cell"])
+
+        xy = entry.get("xy") or [0.0, 0.0]
+        if "anchor_point" in entry:
+            self.origin_mode_combo.setCurrentIndex(2)
+            self.point_edit.setText(str(entry["anchor_point"]))
+            self.shift_x_edit.setText(str(xy[0]))
+            self.shift_y_edit.setText(str(xy[1]))
+        elif "anchor_ref" in entry or "anchor_role" in entry:
+            self.origin_mode_combo.setCurrentIndex(1)
+            self.anchor_ref_edit.setText(str(entry.get("anchor_ref", "")))
+            self.anchor_role_edit.setCurrentText(str(entry.get("anchor_role", "")))
+            self.anchor_pad_edit.setText(str(entry.get("anchor_pad", "")))
+            self.anchor_cluster_edit.setCurrentText(str(entry.get("anchor_cluster", "")))
+            self.shift_x_edit.setText(str(xy[0]))
+            self.shift_y_edit.setText(str(xy[1]))
+        else:
+            self.origin_mode_combo.setCurrentIndex(0)
+            self.x_edit.setText(str(xy[0]))
+            self.y_edit.setText(str(xy[1]))
+        self._on_origin_mode_changed()  # setCurrentIndex above is a no-op signal-wise when unchanged
+
+        self.rotation_edit.setText(str(entry.get("rotation_deg", 0)))
+        self.layer_combo.setCurrentIndex({"F.Cu": 1, "B.Cu": 2}.get(entry.get("layer"), 0))
+        self.mirror_checkbox.setChecked(bool(entry.get("mirror", False)))
+
+        params = entry.get("params") or {}
+        for name, edit in self._param_edits.items():
+            edit.setCurrentText(str(params.get(name, "")))
 
     @staticmethod
     def _upsert_clone_placement(path: Path, entry: Dict[str, Any]) -> bool:
