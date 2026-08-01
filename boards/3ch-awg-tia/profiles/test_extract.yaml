@@ -1,0 +1,17 @@
+registry_path: registries/test.json
+track_registry_path: registries/test.tracks.registry.json
+log_file: ../logs/test.log
+schematic_dir: ../../../test_boards/3CH-AWG-TIA
+cell_files:
+- templates/test.yaml
+extract_profiles:
+  n2v5_adj_pi_filter:
+    output: boards/3ch-awg-tia/profiles/templates/test.yaml
+    name: 2v5_adj_pi_filter
+    params:
+      PWR_OUT: -2V5
+      PWR_IN: -2V5_DIRTY
+    net_template_role:
+      PI_FILTER_FB: -2V5
+    origin_by_component_role: C_IN_BYPASS
+    origin_by_component_pad: '1'

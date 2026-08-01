@@ -1,0 +1,9 @@
+registry_path: registries/test.json
+track_registry_path: registries/test.tracks.registry.json
+log_file: ../logs/test.log
+schematic_dir: ../../../test_boards/3CH-AWG-TIA
+
+cell_files:
+- templates/test.yaml
+include:
+- test_extract.yaml
