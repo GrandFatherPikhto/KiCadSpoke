@@ -32,13 +32,12 @@ from kicadstamp import __version__
 from kicadstamp.config import load_config, RuntimeContext
 from kicadstamp.apply_pipeline import ApplyPipeline, cmd_apply
 from kicadstamp.cli import cmd_extract
+from kicadstamp.cli_common import run_cli
 from kicadstamp.cli_extract import load_profile, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
-from kicadstamp.exceptions import PlacerError
 from kicadstamp.logging_setup import setup_logging
 from kicadstamp.undo import undo_last_operation
 from kicadstamp.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
 from kicadstamp.i18n import _
-from kipy.errors import ApiError, ApiStatusCode
 
 
 def cmd_undo(args):
@@ -63,7 +62,7 @@ def cmd_undo(args):
         logger.error(_("❌ Failed to undo operation."))
 
 
-def main():
+def main() -> int:
     # --version/-V exempted from the bare-config-path -> 'apply' rewrite
     # below, same as the other real subcommands — otherwise it would be
     # silently rewritten to 'apply --version' and fail as an unknown apply
@@ -179,7 +178,7 @@ def main():
     log_file = getattr(args, "log_file", None) or (cfg.log_file if cfg else None)
     setup_logging(verbose=getattr(args, "verbose", False), log_file=log_file)
 
-    try:
+    def _dispatch() -> None:
         if args.command == "apply":
             cmd_apply(args, cfg=cfg, ctx=ctx)
         elif args.command == "undo":
@@ -213,24 +212,11 @@ def main():
         else:
             parser.print_help()
             sys.exit(1)
-    except PlacerError as e:
-        logging.error(_("Error: {e}").format(e=e))
-        sys.exit(1)
-    except ApiError as e:
-        if e.code == ApiStatusCode.AS_BUSY:
-            logging.error(
-                _("KiCad is busy and cannot respond right now. Usually this means an unfinished "
-                  "tool is running in the GUI (dimensioning, interactive routing, move tool, etc.) — "
-                  "finish it (Esc or right-click -> Cancel) and run the command again. "
-                  "The board was not modified.")
-            )
-        else:
-            logging.error(_("KiCad returned API error: {e}").format(e=e))
-        sys.exit(1)
-    except Exception as e:
-        logging.exception(_("Unexpected error"))
-        sys.exit(2)
+
+    # Exception → exit-code translation is delegated to cli_common.run_cli —
+    # the single owner of exit codes, shared with author.cli_main().
+    return run_cli(_dispatch)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

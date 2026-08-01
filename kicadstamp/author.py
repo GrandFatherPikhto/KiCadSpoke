@@ -20,18 +20,16 @@ No changes to the planner/executor/registry engine or the YAML config
 format — both are strictly additive.
 """
 import dataclasses
-import logging
 import sys
 from pathlib import Path
 from typing import Any, Callable, List, Optional
 
 import yaml
-from kipy.errors import ApiError, ApiStatusCode
 
 from .config import ClonePlacement, Config, Rule, RuntimeContext, load_config
 from .constants import DEFAULT_BATCH_SIZE, DEFAULT_TIMEOUT_MS
-from .exceptions import PlacerError
 from .apply_pipeline import RunOptions, run_apply
+from .cli_common import run_cli
 
 _MISSING = dataclasses.MISSING
 
@@ -184,13 +182,17 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
     from kicadstamp.logging_setup import setup_logging
     setup_logging(verbose=args.verbose)
 
-    # Mirrors kicadstamp_cli.py's own main() exception handling: without
+    # Exception → exit-code translation is delegated to cli_common.run_cli
+    # (the single owner of exit codes, shared with kicadstamp_cli.py). Without
     # this, a ValidationError/PlacerError from apply_config() (e.g. a role
     # ambiguity fatal — format_fatal_error's boxed message, already the
-    # useful part) propagated as a raw Python traceback instead, burying the
-    # actual message under a wall of stack frames — found live debugging
-    # dac_pi_filter.py's role-resolution ambiguity.
-    try:
+    # useful part) would propagate as a raw Python traceback instead, burying
+    # the actual message under a wall of stack frames — found live debugging
+    # dac_pi_filter.py's role-resolution ambiguity. Only a non-zero code is
+    # turned into sys.exit() — a successful run returns normally, exactly as
+    # before — so bare `cli_main(...)` calls in scripts still propagate
+    # failure exit codes while tests can exercise the success path directly.
+    def _run() -> None:
         clones = build_fn()
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         dump_clone_placements(clones, output_path)
@@ -199,20 +201,7 @@ def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
         if args.apply:
             cfg, ctx = load_config(root_config_path)
             apply_config(cfg, root_config_path, ctx=ctx, dry_run=args.dry_run)
-    except PlacerError as e:
-        logging.error(f"Error: {e}")
-        sys.exit(1)
-    except ApiError as e:
-        if e.code == ApiStatusCode.AS_BUSY:
-            logging.error(
-                "KiCad is busy and cannot respond right now. Usually this means an unfinished "
-                "tool is running in the GUI (dimensioning, interactive routing, move tool, etc.) — "
-                "finish it (Esc or right-click -> Cancel) and run the command again. "
-                "The board was not modified."
-            )
-        else:
-            logging.error(f"KiCad returned API error: {e}")
-        sys.exit(1)
-    except Exception:
-        logging.exception("Unexpected error")
-        sys.exit(2)
+
+    _code = run_cli(_run)
+    if _code:
+        sys.exit(_code)
