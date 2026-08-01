@@ -89,6 +89,9 @@ test_boards
 *.txt
 kicad-spoke.txt
 kicad_spoke.txt
+kicadstamp.txt
+
+zip_project.yaml
 
 # ─────────────────────────────── i18n ───────────────────────────────
 # Temporary extraction file regenerated (and deleted) by tools/update_i18n.py

@@ -288,6 +288,7 @@ Detailed documentation is in the `docs/` folder:
 - [YAML configuration reference](./docs/config.md)
 - [Coding placement in Python: explore/author](./docs/python.md)
 - [PyQt6 GUI](./docs/gui.md)
+- [fieldstool: bulk Role/Cluster set/rename in .kicad_sch](./docs/fieldstool.md)
 - [Tests](./docs/tests.md)
 - [Top‑level modules](./docs/uplevel_modules.md)
 - [File‑based cloner](./docs/cloner.md)

@@ -315,6 +315,7 @@ kicadstamp/
 - [Справочник по YAML-конфигу](./docs/config_ru.md)
 - [Кодинг расстановки на Python: explore/author](./docs/python_ru.md)
 - [PyQt6 GUI](./docs/gui_ru.md)
+- [fieldstool: массовая простановка/переименование Role/Cluster в .kicad_sch](./docs/fieldstool_ru.md)
 - [Тесты](./docs/tests_ru.md)
 - [Модули верхнего уровня](./docs/uplevel_modules_ru.md)
 - [Файловый клонер](./docs/cloner_ru.md)
