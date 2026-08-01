@@ -55,6 +55,31 @@ def test_clicking_a_cluster_group_node_fires_on_cluster_picked(main_window):
     assert picked == ["Channel_1", "Channel_1/PI_FILTER"]
 
 
+def test_collapse_all_survives_a_later_rebuild(main_window):
+    # Regression test for the "snaps back open on the next poll tick" bug:
+    # _rebuild() runs on every set_footprints() call (simulating a ~2s poll
+    # tick), and its expanded-state restore used to treat "nothing expanded"
+    # as "first build ever" every time, re-expanding depth 0 regardless of
+    # whether the user had just collapsed everything on purpose.
+    dock = RoleClusterTreeDock(main_window)
+    dock.group_by.setCurrentIndex(1)  # Cluster grouping
+    footprints = [
+        FakeSelected("C1", "C_IN", "Channel_1/PI_FILTER"),
+        FakeSelected("C2", "C_IN", "Channel_2/PI_FILTER"),
+    ]
+    dock.set_footprints(footprints)
+
+    top_level = _find_item(dock.tree.model(), "Channel_1")
+    assert dock.tree.isExpanded(dock.tree.model().indexFromItem(top_level))
+
+    dock.tree_collapse_all()
+    assert not dock.tree.isExpanded(dock.tree.model().indexFromItem(top_level))
+
+    dock.set_footprints(footprints)  # simulates the next poll tick
+    top_level = _find_item(dock.tree.model(), "Channel_1")
+    assert not dock.tree.isExpanded(dock.tree.model().indexFromItem(top_level))
+
+
 def test_leaf_click_and_role_mode_do_not_fire_on_cluster_picked(main_window):
     dock = RoleClusterTreeDock(main_window)
     dock.set_footprints([FakeSelected("C1", "C_IN", "Channel_1/PI_FILTER")])

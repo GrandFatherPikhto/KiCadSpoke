@@ -22,7 +22,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtCore import QItemSelectionModel
 from PyQt6.QtGui import QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QHBoxLayout,
-                              QLineEdit, QTreeView, QVBoxLayout, QWidget)
+                              QLineEdit, QPushButton, QTreeView, QVBoxLayout,
+                              QWidget)
 
 from kicadstamp.explore import Selected
 from kicadstamp.i18n import _
@@ -43,6 +44,18 @@ class RoleClusterTreeDock(QDockWidget):
         super().__init__(_("Components"), main_window)
         self._main_window = main_window
         self._selected: List[Selected] = []
+        # Distinguishes "first build with actual data" (auto-expand top
+        # level so the tree isn't a single flat blob) from "user just
+        # collapsed everything via the button" (both leave
+        # _capture_view_state's expanded_paths empty, but only the former
+        # should re-expand) — _rebuild() runs on every ~2s poll tick, so
+        # without this flag Collapse all would snap back open on the very
+        # next tick. Only consumed once a rebuild actually has rows: the
+        # group_by combo's persisted setting can itself trigger an empty
+        # _rebuild() during __init__ (before the first set_footprints()),
+        # and that empty build must not burn the flag before real data
+        # ever gets a chance to auto-expand.
+        self._auto_expand_pending = True
         # Fired when a Cluster GROUP node is clicked while grouped by
         # Cluster (see _on_clicked) — PlacerDock listens, so picking a
         # cluster here fills its Cluster field the same way picking a
@@ -55,11 +68,16 @@ class RoleClusterTreeDock(QDockWidget):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(4, 4, 4, 4)
 
+        top_row = QHBoxLayout()
         self.group_by = QComboBox()
         self.group_by.addItems([_("Role"), _("Cluster")])
         self.group_by.setCurrentIndex(settings.load().get("tree_group_by", 0))
         self.group_by.currentIndexChanged.connect(self._on_group_by_changed)
-        layout.addWidget(self.group_by)
+        top_row.addWidget(self.group_by)
+        self.collapse_all_button = QPushButton(_("Collapse all"))
+        self.collapse_all_button.clicked.connect(self.tree_collapse_all)
+        top_row.addWidget(self.collapse_all_button)
+        layout.addLayout(top_row)
 
         search_row = QHBoxLayout()
         self.search_edit = QLineEdit()
@@ -118,6 +136,9 @@ class RoleClusterTreeDock(QDockWidget):
         root = model.invisibleRootItem()
         for row in range(root.rowCount()):
             walk(root.child(row), [])
+
+    def tree_collapse_all(self) -> None:
+        self.tree.collapseAll()
 
     def _on_group_by_changed(self) -> None:
         data = settings.load()
@@ -226,10 +247,17 @@ class RoleClusterTreeDock(QDockWidget):
         for row in range(root.rowCount()):
             child = root.child(row)
             walk(child, (child.text(),))
-        if not expanded_paths:
-            # First build (or everything was collapsed) — start with
-            # top-level groups visible instead of a single flat blob.
+        has_rows = model.invisibleRootItem().rowCount() > 0
+        if not expanded_paths and self._auto_expand_pending and has_rows:
+            # First build with actual data — start with top-level groups
+            # visible instead of a single flat blob. Once the user has
+            # interacted with expansion (including collapsing everything
+            # on purpose via the Collapse all button), later rebuilds must
+            # respect that instead of forcing depth-0 back open every poll
+            # tick.
             self.tree.expandToDepth(0)
+        if has_rows:
+            self._auto_expand_pending = False
 
     @staticmethod
     def _leaf_item(s: Selected) -> QStandardItem:
