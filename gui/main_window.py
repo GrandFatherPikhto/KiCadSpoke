@@ -2,7 +2,10 @@
 """
 MainWindow — persistent shell for the KiCadStamp GUI: connection lifecycle
 + status bar + docks (Role/Cluster tree, fieldstool, file picker,
-extract-to-file) + an optional tray icon.
+extract-to-file) + an optional tray icon. The docks themselves live in a
+DockHub controller (see gui/dock_hub.py, Phase 3.3) — MainWindow only owns
+the window and the BoardConnection, and drives its docks through DockHub
+delegates.
 
 Step 1: RoleClusterTreeDock — connect/reconnect, poll, show the live
 snapshot grouped by Role/Cluster, click to highlight on the real board.
@@ -62,14 +65,7 @@ from kicadstamp.i18n import _
 
 from . import settings
 from .connection import BoardConnection
-from .docks.cell_list import CellListDock
-from .docks.extract import ExtractDock
-from .docks.fieldstool_dock import FieldsToolDock
-from .docks.file_picker import FilePickerDock
-from .docks.log_panel import LogDock
-from .docks.placer import PlacerDock
-from .docks.placer_list import PlacerListDock
-from .docks.role_cluster_tree import RoleClusterTreeDock
+from .dock_hub import DockHub
 from .tray_icon import build_tray_icon
 
 logger = logging.getLogger(__name__)
@@ -106,75 +102,16 @@ class MainWindow(QMainWindow):
 
         self.statusBar().addPermanentWidget(self.action_button)
 
-        self.tree_dock = RoleClusterTreeDock(self, connection=self.connection)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.tree_dock)
-
-        self.cell_list_dock = CellListDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.cell_list_dock)
-        self.tabifyDockWidget(self.tree_dock, self.cell_list_dock)
-
-        self.placer_list_dock = PlacerListDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.placer_list_dock)
-        self.tabifyDockWidget(self.cell_list_dock, self.placer_list_dock)
-
-        self.fieldstool_dock = FieldsToolDock(self, timeout_ms=timeout_ms)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fieldstool_dock)
-        # Only safe now that fieldstool_dock exists — restoring "schematic
-        # mode" would otherwise touch self.fieldstool_dock before it's built
-        # (see RoleClusterTreeDock.restore_mode_from_settings()'s docstring).
-        self.tree_dock.restore_mode_from_settings()
-
-        self.file_picker_dock = FilePickerDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.file_picker_dock)
-        self.tabifyDockWidget(self.fieldstool_dock, self.file_picker_dock)
-
-        self.extract_dock = ExtractDock(self, connection=self.connection)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
-        self.tabifyDockWidget(self.file_picker_dock, self.extract_dock)
-
-        self.placer_dock = PlacerDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.placer_dock)
-        self.tabifyDockWidget(self.extract_dock, self.placer_dock)
-
-        self.log_dock = LogDock(self, verbose=verbose)
-        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock)
-
-        # Files -> Extract/Placer/Cells-tab wiring (real pyqtSignals — a
-        # role can legitimately have more than one listener): ExtractDock's
-        # cell-output file, PlacerDock's placeholder discovery, and the
-        # Cells tab's own list all follow the Cells role; ExtractDock's
-        # extract_profiles file follows the Extractor role; ExtractDock's
-        # and PlacerDock's Placer-file each follow the Placer role — all
-        # assigned via "Use selected" in the Files dock.
-        self.file_picker_dock.cells_file_changed.connect(self.extract_dock.set_target_file)
-        self.file_picker_dock.cells_file_changed.connect(self.placer_dock.set_cells_file)
-        self.file_picker_dock.cells_file_changed.connect(self.cell_list_dock.set_cells_file)
-        self.file_picker_dock.extractor_file_changed.connect(self.extract_dock.set_profile_file)
-        self.file_picker_dock.placer_file_changed.connect(self.extract_dock.set_placer_file)
-        self.file_picker_dock.placer_file_changed.connect(self.placer_dock.set_placer_file)
-        self.file_picker_dock.placer_file_changed.connect(self.placer_list_dock.set_placer_file)
-        # Roles restored from a previous session must reach the listeners
-        # above — restore_roles() re-fires the current values through the
-        # same signals (they were restored before these connections existed).
-        self.file_picker_dock.restore_roles()
-
-        # Components tree -> Placer: clicking a Cluster group node in the
-        # tree fills PlacerDock's Cluster field; Cells tab -> Placer:
-        # clicking a Cell fills PlacerDock's Cell field (both requested
-        # live 2026-08-01 as the natural place to pick from, instead of a
-        # picker embedded in PlacerDock itself).
-        self.tree_dock.cluster_picked.connect(self.placer_dock.set_cluster_name)
-        self.cell_list_dock.cell_picked.connect(self.placer_dock.set_selected_cell)
-        # Placements tab -> Placer: clicking an already-saved clone_placement
-        # re-opens it in the form for editing/Redraw; Placer -> Placements
-        # tab the other way: a successful Save refreshes the list so a
-        # brand new (or renamed) entry shows up without reassigning Files.
-        self.placer_list_dock.placement_picked.connect(self.placer_dock.load_placement)
-        self.placer_dock.saved.connect(self.placer_list_dock.refresh)
-
-        # fieldstool tab -> Components tree: an explicit Rescan/Apply there
-        # refreshes this tree's schematic view (see FieldsToolDock).
-        self.fieldstool_dock.components_changed.connect(self.tree_dock.refresh_schematic_view)
+        # All docks + their layout and inter-dock signal wiring live in
+        # DockHub (Phase 3.3) — MainWindow keeps ownership of the window and
+        # the BoardConnection, and drives its docks through this controller.
+        self._dock_hub = DockHub(self, connection=self.connection,
+                                 timeout_ms=timeout_ms, verbose=verbose)
+        # Restoring "schematic mode" rebuilds the Components tree, and that
+        # rebuild resolves main_window.fieldstool_dock through the tree
+        # dock's lazy lookup — only possible now that _dock_hub is bound
+        # (see DockHub.restore_tree_mode()).
+        self._dock_hub.restore_tree_mode()
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
@@ -191,6 +128,43 @@ class MainWindow(QMainWindow):
         self._restore_window_state()
 
         self._poll(manual=True)  # don't wait a full interval for the first attempt
+
+    # Docks are owned by DockHub — these forwarding properties keep the
+    # public surface working (and RoleClusterTreeDock's lazy fieldstool
+    # lookup at gui/docks/role_cluster_tree.py:230) without MainWindow
+    # owning the docks itself.
+
+    @property
+    def tree_dock(self):
+        return self._dock_hub.tree_dock
+
+    @property
+    def cell_list_dock(self):
+        return self._dock_hub.cell_list_dock
+
+    @property
+    def placer_list_dock(self):
+        return self._dock_hub.placer_list_dock
+
+    @property
+    def fieldstool_dock(self):
+        return self._dock_hub.fieldstool_dock
+
+    @property
+    def file_picker_dock(self):
+        return self._dock_hub.file_picker_dock
+
+    @property
+    def extract_dock(self):
+        return self._dock_hub.extract_dock
+
+    @property
+    def placer_dock(self):
+        return self._dock_hub.placer_dock
+
+    @property
+    def log_dock(self):
+        return self._dock_hub.log_dock
 
     def _restore_window_state(self) -> None:
         """Plain x/y/width/height ints in gui_state.json, not Qt's own
@@ -286,8 +260,7 @@ class MainWindow(QMainWindow):
         the dock was individually closed — used by both the tray menu and
         the status-bar button."""
         self.bring_to_front()
-        self.fieldstool_dock.setVisible(True)
-        self.fieldstool_dock.raise_()
+        self._dock_hub.open_fieldstool()
 
     def _quit(self) -> None:
         """Tray menu's Quit — a real quit regardless of the tray checkbox.
@@ -311,18 +284,16 @@ class MainWindow(QMainWindow):
 
         if error:
             self.status_label.setText(_("Not connected: {error}").format(error=error))
-            self.tree_dock.set_footprints([])
+            self._dock_hub.clear_components()
         else:
             # connect()/refresh() already rebuilt BoardConnection.snapshot —
             # this is the ONE place that snapshot is consumed, so the docks
-            # below never call board.select() themselves (PlacerDock's
+            # never call board.select() themselves (PlacerDock's
             # refresh_known_roles used to build a second full snapshot here;
             # the fast selection-watch tick used to build one every 400ms).
             snapshot = self.connection.snapshot
             self.status_label.setText(_("Connected — {count} components").format(count=len(snapshot)))
-            self.tree_dock.set_footprints(snapshot)
-            self.placer_dock.refresh_known_roles(snapshot)
-            self.placer_dock.refresh_known_nets(self.connection.board)
+            self._dock_hub.push_snapshot(snapshot, self.connection.board)
 
         self.action_button.setText(_("Refresh") if self.connection.is_connected else _("Reconnect"))
 
@@ -361,10 +332,10 @@ class MainWindow(QMainWindow):
             return
         self._last_selection_signature = signature
 
-        self.tree_dock.highlight_board_selection(refs)
+        self._dock_hub.highlight_selection(refs)
         by_ref = {s.ref: s for s in self.connection.snapshot}
         selected = [by_ref[ref] for ref in refs if ref in by_ref]
-        self.extract_dock.set_board_selection(items, selected)
+        self._dock_hub.set_board_selection(items, selected)
 
     @staticmethod
     def _raw_selection_signature(items) -> tuple:
