@@ -202,7 +202,9 @@ def test_net_template_role_blocks_extraction_until_resolved(main_window, tmp_pat
     assert yaml.safe_load(cells_file.read_text()) in (None, {})
 
     dock._net_template_role_edits["PI_FILTER_FB"].setCurrentText("-2V5")
-    dock._on_extract()
+    # Full success-path extract: runs synchronously via the _do_extract() core
+    # (the async _on_extract() path would race the read on the next line).
+    dock._do_extract()
     saved = yaml.safe_load(cells_file.read_text())
     assert "n2v5_adj_pi_filter" in saved
 
@@ -229,7 +231,7 @@ def test_placer_gets_cell_files_and_include_entries_deduped(main_window, tmp_pat
     dock.save_profile_checkbox.setChecked(True)
     dock.profile_key_edit.setText("some_profile")
     dock._raw_items = [object()]
-    dock._on_extract()
+    dock._do_extract()
 
     placer_data = yaml.safe_load(placer_file.read_text())
     assert placer_data["cell_files"] == ["templates/test.yaml"]
@@ -240,7 +242,7 @@ def test_placer_gets_cell_files_and_include_entries_deduped(main_window, tmp_pat
     dock._last_autofill_key = None
     dock.name_edit.setText("another_cell")
     dock.profile_key_edit.setText("another_profile")
-    dock._on_extract()
+    dock._do_extract()
 
     placer_data2 = yaml.safe_load(placer_file.read_text())
     assert placer_data2["cell_files"] == ["templates/test.yaml"]
@@ -275,7 +277,7 @@ def test_placer_wiring_skips_include_for_a_root_shaped_extractor_file(main_windo
     dock.save_profile_checkbox.setChecked(True)
     dock.profile_key_edit.setText("some_profile")
     dock._raw_items = [object()]
-    dock._on_extract()
+    dock._do_extract()
 
     assert "root-config-only" in dock.message_label.text()
     placer_data = yaml.safe_load(placer_file.read_text())
@@ -292,3 +294,60 @@ def test_placer_wiring_skips_include_for_a_root_shaped_extractor_file(main_windo
     _write_yaml(extractor_file, extractor_data)
     _write_yaml(placer_file, {**yaml.safe_load(placer_file.read_text()), "include": ["extractor.yaml"]})
     load_config(str(placer_file))  # must not raise, now that extractor.yaml is include:-safe
+
+
+def test_on_extract_dispatches_to_worker(main_window, tmp_path, monkeypatch):
+    """Phase 5.2 — the Extract button must NOT block the UI thread:
+    _on_extract() collects + validates the inputs on the UI thread, then
+    hands the plain-data payload to start_long_op with the shared connection,
+    the guard widget, and the split run/finish callbacks (the result comes
+    back through a queued signal, so the socket is never held by two owners)."""
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+    main_window.connection.board = FakeBoard()
+
+    captured = {}
+
+    def _fake_start(connection, widgets, fn, on_success, on_error, *args):
+        captured["connection"] = connection
+        captured["widgets"] = widgets
+        captured["fn"] = fn
+        captured["on_success"] = on_success
+        captured["on_error"] = on_error
+        captured["args"] = args
+        return "fake-controller"
+
+    monkeypatch.setattr(extract_mod, "start_long_op", _fake_start)
+
+    dock.name_edit.setText("some_cell")
+    dock.profile_key_edit.setText("some_profile")
+    dock._raw_items = [object()]
+    dock._on_extract()
+
+    # The controller reference is kept on the dock so a parent-less QThread
+    # isn't garbage-collected mid-flight.
+    assert dock._active_op == "fake-controller"
+
+    assert captured["connection"] is main_window.connection
+    assert captured["widgets"] == (dock.extract_button,)
+    # Bound methods: each access creates a fresh object, so compare with ==
+    # (equality checks __self__ + __func__) rather than `is`.
+    assert captured["fn"] == dock._run_extract
+    assert captured["on_success"] == dock._finish_extract
+    assert captured["on_error"] == dock._on_extract_failed
+
+    # The payload is plain data for the worker — board/adapter included, but
+    # no widget references.
+    payload = captured["args"][0]
+    assert payload["name"] == "some_cell"
+    assert payload["profile_key"] == "some_profile"
+    assert payload["save_profile"] is False
+    assert payload["board"] is main_window.connection.board
+    assert payload["target_path"] == cells_file
+    assert payload["placer_path"] is None
+    assert payload["params"] == {}
+    assert payload["origin_kwargs"] == {}
+    assert payload["net_template_role"] == {}
+    assert payload["raw_items"] == dock._raw_items

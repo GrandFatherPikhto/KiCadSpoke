@@ -272,6 +272,11 @@ class MainWindow(QMainWindow):
         does real work. manual=False (an automatic timer tick) only tries to
         connect while disconnected — see module docstring for why an
         already-connected idle tick is a deliberate no-op."""
+        # Phase 5.2 — a long op (Extract/Redraw) holds the shared socket;
+        # connecting/refreshing now would interleave a second request into
+        # its in-flight REQ transaction. Skip every tick, manual or not.
+        if self.connection.long_op_active:
+            return
         if self.connection.is_connected:
             if not manual:
                 return
@@ -306,6 +311,10 @@ class MainWindow(QMainWindow):
         connection loss: update the status bar immediately rather than
         waiting for the slower timer to notice, but don't touch the tree's
         component list itself — only its live-selection highlighting."""
+        # Phase 5.2 — a long op (Extract/Redraw) holds the shared socket;
+        # get_selected_items() here would interleave into its in-flight REQ.
+        if self.connection.long_op_active:
+            return
         if not self.connection.is_connected:
             return
         try:

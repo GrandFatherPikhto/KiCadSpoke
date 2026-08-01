@@ -112,7 +112,7 @@ from kicadstamp.i18n import _
 from kicadstamp.template_extraction import extract_template_from_selection
 
 from .. import yaml_io
-from ..ui_utils import busy
+from ..worker import start_long_op
 from ._common import (ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STYLE,
                       WARN_STYLE as _WARN_STYLE, add_list_entry, display_path,
                       merge_write, set_combo_items, show_message)
@@ -128,6 +128,9 @@ class ExtractDock(QDockWidget):
         # not passed explicitly (keeps direct-construction callers, e.g.
         # tests that mutate main_window.connection.board, working).
         self._connection = connection if connection is not None else main_window.connection
+        # The currently running long op (gui/worker.py) — held so the
+        # parent-less QThread isn't garbage-collected mid-run.
+        self._active_op: Optional[Any] = None
         self._raw_items: List[Any] = []
         self._selected_footprints: List[Selected] = []
         self._target_path: Optional[Path] = None
@@ -597,32 +600,38 @@ class ExtractDock(QDockWidget):
         show_message(self.message_label, text, style, logger)
 
     def _on_extract(self) -> None:
-        """Extract button handler — extraction does board IPC + file writes,
-        so it's wrapped in the busy cursor + button-disable context (see
-        gui/ui_utils.py) to signal progress and stop a double-click from
-        queueing a second concurrent extract."""
+        """Extract button handler — form collection (validation + widget
+        reads) runs on the UI thread; the board IPC + file writes run on a
+        worker thread (see gui/worker.py), so the GUI stays responsive while
+        the shared socket stays exclusively ours (connection.long_op_active
+        pauses the polling timers for the duration)."""
         self._show_message("")
-        with busy((self.extract_button,)):
-            self._do_extract()
+        payload = self._collect_extract_inputs()
+        if payload is None:
+            return
+        self._start_extract_op(payload)
 
-    def _do_extract(self) -> None:
+    def _collect_extract_inputs(self) -> Optional[Dict[str, Any]]:
+        """UI thread: read every widget + run every validation that can
+        reject the request up front. Returns a plain-data payload for the
+        worker (no widget references), or None after showing the error."""
         name = self.name_edit.text().strip()
         if not name:
             self._show_message(_("Cell name is required."), _ERROR_STYLE)
-            return
+            return None
         if not self._raw_items or self._target_path is None:
-            return
+            return None
         save_profile = self.save_profile_checkbox.isChecked()
         if save_profile and self._profile_path is None:
             self._show_message(
                 _("'Also save as extract_profile' is checked, but no profile file is picked."),
                 _ERROR_STYLE)
-            return
+            return None
 
         board = self._connection.board
         if board is None:
             self._show_message(_("Not connected."), _ERROR_STYLE)
-            return
+            return None
 
         params: Dict[str, str] = {}
         for net_literal, edit in self._net_alias_edits.items():
@@ -634,7 +643,7 @@ class ExtractDock(QDockWidget):
                     _("Alias {alias!r} used for both {a!r} and {b!r} — each alias needs a "
                       "distinct net.").format(alias=alias, a=params[alias], b=net_literal),
                     _ERROR_STYLE)
-                return
+                return None
             params[alias] = net_literal
 
         origin_kwargs: Dict[str, str] = {}
@@ -643,7 +652,7 @@ class ExtractDock(QDockWidget):
             role = self.origin_role_combo.currentText().strip()
             if not role:
                 self._show_message(_("Origin: pick a component role."), _ERROR_STYLE)
-                return
+                return None
             origin_kwargs["origin_component_role"] = role
             pad = self.origin_pad_edit.text().strip()
             if pad:
@@ -652,7 +661,7 @@ class ExtractDock(QDockWidget):
             net = self.origin_via_net_combo.currentText().strip()
             if not net:
                 self._show_message(_("Origin: pick a via net."), _ERROR_STYLE)
-                return
+                return None
             origin_kwargs["origin_via_net"] = net
 
         net_template_role: Dict[str, str] = {}
@@ -663,75 +672,106 @@ class ExtractDock(QDockWidget):
                     _("Net template role: role {role!r} bridges 2+ aliased nets — pick which one "
                       "is the template.").format(role=role),
                     _ERROR_STYLE)
-                return
+                return None
             net_template_role[role] = literal
 
+        return {
+            "name": name,
+            "raw_items": self._raw_items,
+            "target_path": self._target_path,
+            "save_profile": save_profile,
+            "profile_key": self.profile_key_edit.text().strip() or name,
+            "profile_path": self._profile_path,
+            "placer_path": self._placer_path,
+            "params": params,
+            "origin_kwargs": origin_kwargs,
+            "net_template_role": net_template_role,
+            "board": board,
+        }
+
+    def _run_extract(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Worker thread: board IPC + file writes only — never touches a
+        widget. Returns {"messages": [...], "annotations": [...]} on
+        success, or {"error": str} for the expected failure modes (an
+        unexpected exception is caught by _LongOpWorker and reported through
+        the failed signal instead)."""
+        name = payload["name"]
         annotations: List[Tuple[str, str, str]] = []
         try:
             template_dict = extract_template_from_selection(
-                board.adapter, name, params=params, items=self._raw_items,
-                net_template_role=net_template_role, annotations=annotations, **origin_kwargs)
+                payload["board"].adapter, name, params=payload["params"],
+                items=payload["raw_items"], net_template_role=payload["net_template_role"],
+                annotations=annotations, **payload["origin_kwargs"])
         except PlacerError as e:
-            self._show_message(str(e), _ERROR_STYLE)
-            return
+            return {"error": str(e)}
 
         try:
-            cell_overwritten = merge_write(self._target_path, template_dict)
+            cell_overwritten = merge_write(payload["target_path"], template_dict)
         except OSError as e:
-            self._show_message(_("Write failed: {error}").format(error=e), _ERROR_STYLE)
-            return
+            return {"error": _("Write failed: {error}").format(error=e)}
 
         messages = [_("{action} {name!r} in {path}").format(
-            action=_("Overwrote") if cell_overwritten else _("Wrote"), name=name, path=self._target_path)]
+            action=_("Overwrote") if cell_overwritten else _("Wrote"),
+            name=name, path=payload["target_path"])]
 
-        if save_profile:
-            profile_key = self.profile_key_edit.text().strip() or name
-            entry: Dict[str, Any] = {"output": display_path(self._target_path)}
+        if payload["save_profile"]:
+            profile_key = payload["profile_key"]
+            entry: Dict[str, Any] = {"output": display_path(payload["target_path"])}
             if profile_key != name:
                 entry["name"] = name
-            if params:
-                entry["params"] = params
-            if net_template_role:
-                entry["net_template_role"] = net_template_role
-            for key, value in origin_kwargs.items():
+            if payload["params"]:
+                entry["params"] = payload["params"]
+            if payload["net_template_role"]:
+                entry["net_template_role"] = payload["net_template_role"]
+            for key, value in payload["origin_kwargs"].items():
                 # Function kwargs (origin_component_role) vs. profile YAML
                 # keys (origin_by_component_role) differ by "by_" — see
                 # kicadstamp_cli.py's cmd_extract profile branch.
                 entry[f"origin_by_{key[len('origin_'):]}"] = value
             try:
                 profile_overwritten = merge_write(
-                    self._profile_path, {"extract_profiles": {profile_key: entry}}, section="extract_profiles")
+                    payload["profile_path"],
+                    {"extract_profiles": {profile_key: entry}}, section="extract_profiles")
             except OSError as e:
-                self._show_message(
-                    _("Cell written, but profile write failed: {error}").format(error=e), _ERROR_STYLE)
-                return
+                return {"error": _("Cell written, but profile write failed: {error}").format(error=e)}
             messages.append(_("{action} profile {key!r} in {path}").format(
                 action=_("overwrote") if profile_overwritten else _("wrote"),
-                key=profile_key, path=self._profile_path))
+                key=profile_key, path=payload["profile_path"]))
 
-        if self._placer_path is not None:
+        placer_path = payload["placer_path"]
+        if placer_path is not None:
             try:
-                if self._target_path != self._placer_path:
-                    rel = Path(os.path.relpath(self._target_path, self._placer_path.parent)).as_posix()
-                    if add_list_entry(self._placer_path, "cell_files", rel):
+                if payload["target_path"] != placer_path:
+                    rel = Path(os.path.relpath(payload["target_path"], placer_path.parent)).as_posix()
+                    if add_list_entry(placer_path, "cell_files", rel):
                         messages.append(_("added {rel!r} to cell_files: in {path}").format(
-                            rel=rel, path=self._placer_path))
-                if save_profile and self._profile_path != self._placer_path:
-                    bad_keys = self._non_includable_keys(self._profile_path)
+                            rel=rel, path=placer_path))
+                if payload["save_profile"] and payload["profile_path"] != placer_path:
+                    bad_keys = self._non_includable_keys(payload["profile_path"])
                     if bad_keys:
                         messages.append(
                             _("skipped adding to include: — {path} has root-config-only key(s) "
                               "{keys} that include: can't merge (move them to the Placer file "
                               "itself, or point Placer at this same file)")
-                            .format(path=display_path(self._profile_path), keys=sorted(bad_keys)))
+                            .format(path=display_path(payload["profile_path"]), keys=sorted(bad_keys)))
                     else:
-                        rel = Path(os.path.relpath(self._profile_path, self._placer_path.parent)).as_posix()
-                        if add_list_entry(self._placer_path, "include", rel):
+                        rel = Path(os.path.relpath(payload["profile_path"], placer_path.parent)).as_posix()
+                        if add_list_entry(placer_path, "include", rel):
                             messages.append(_("added {rel!r} to include: in {path}").format(
-                                rel=rel, path=self._placer_path))
+                                rel=rel, path=placer_path))
             except OSError as e:
                 messages.append(_("placer file wiring failed: {error}").format(error=e))
 
+        return {"messages": messages, "annotations": annotations}
+
+    def _finish_extract(self, result: Dict[str, Any]) -> None:
+        """UI thread: reflect the worker's result into the message label and
+        refresh the existing-lists widgets."""
+        if result.get("error"):
+            self._show_message(result["error"], _ERROR_STYLE)
+            return
+        messages = result["messages"]
+        annotations = result["annotations"]
         if annotations:
             messages.append(_("{count} field(s) could not be determined automatically: {details}")
                              .format(count=len(annotations),
@@ -741,6 +781,24 @@ class ExtractDock(QDockWidget):
         else:
             self._show_message("; ".join(messages), _SUCCESS_STYLE)
         self._refresh_existing_lists()
+
+    def _start_extract_op(self, payload: Dict[str, Any]) -> None:
+        self._active_op = start_long_op(
+            self._connection, (self.extract_button,),
+            self._run_extract, self._finish_extract, self._on_extract_failed, payload)
+
+    def _on_extract_failed(self, message: str) -> None:
+        self._show_message(_("Extract failed: {error}").format(error=message), _ERROR_STYLE)
+
+    def _do_extract(self) -> None:
+        """Synchronous composition of collect + run + finish — the same
+        behaviour the async button path would produce, kept for tests and
+        any caller that must not return until the extract is complete."""
+        payload = self._collect_extract_inputs()
+        if payload is None:
+            return
+        result = self._run_extract(payload)
+        self._finish_extract(result)
 
     # include: only ever merges these top-level keys from an included file
     # (config/includes.py's _LIST_SECTIONS/_DICT_SECTIONS) — everything

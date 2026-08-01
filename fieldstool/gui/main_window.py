@@ -296,6 +296,11 @@ class MainWindow(QMainWindow):
         connection being otherwise read-only (fieldstool/gui/connection.py)."""
         if not self.connection.is_connected or not refs:
             return
+        # Phase 5.2 — a background long op (Extract/Redraw) holds the shared
+        # socket; select_items() here would interleave into its in-flight
+        # REQ transaction (this connection IS the shared one when embedded).
+        if self.connection.long_op_active:
+            return
         adapter = self.connection.board.adapter
         footprints = [fp for fp in (adapter.get_footprint(ref) for ref in refs) if fp is not None]
         if footprints:

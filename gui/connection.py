@@ -20,6 +20,11 @@ class BoardConnection:
     def __init__(self, timeout_ms: int = DEFAULT_TIMEOUT_MS):
         self.timeout_ms = timeout_ms
         self.board: Optional[Board] = None
+        # Phase 5.2 — held exclusively by a background long op (Extract/
+        # Redraw, see gui/worker.py): while True, MainWindow's polling timers
+        # skip their ticks so this kipy REQ socket has exactly one in-flight
+        # owner at a time (Extract runs on this shared socket directly).
+        self.long_op_active = False
         # Full-board footprint snapshot (Board.select() with no filters),
         # rebuilt ONLY by _rebuild_snapshot() — i.e. on connect()/refresh()
         # (the ~2s poll / manual Refresh in gui/main_window.py._poll), never

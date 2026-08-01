@@ -223,7 +223,9 @@ def test_redraw_preserves_other_placements_for_registry_safety(main_window, tmp_
     monkeypatch.setattr(placer_mod, "ApplyPipeline", _FakePipeline)
     monkeypatch.setattr(placer_mod, "PlacementPlanner", _FakePlanner)
 
-    dock._on_redraw()
+    # Full success-path redraw: runs synchronously via the _do_redraw() core
+    # (the async _on_redraw() path would not have finished by the asserts).
+    dock._do_redraw()
 
     assert pipeline_calls[-1]["only"] == ["Channel_2_PI_Filter"]
     assert pipeline_calls[-1]["config_path"] == str(placer_file)
@@ -353,3 +355,53 @@ def test_refresh_known_roles_populates_from_snapshot(main_window):
     clusters = [dock.anchor_cluster_edit.itemText(i) for i in range(dock.anchor_cluster_edit.count())]
     assert roles == ["ROLE_A"]
     assert clusters == ["C1", "C2"]
+
+
+def test_on_redraw_dispatches_to_worker(main_window, tmp_path, monkeypatch):
+    """Phase 5.2 — the Redraw button must NOT block the UI thread:
+    _on_redraw() collects + validates inputs on the UI thread (including
+    loading the Placer config), then hands the plain-data payload to
+    start_long_op. PlacerDock has no injected connection, so the shared
+    socket comes from the main window."""
+    dock, cells_file, placer_file = _make_cell_and_dock(main_window, tmp_path)
+    dock.cluster_edit.setText("Channel_2_PI_Filter")
+    dock.x_edit.setText("1")
+    dock.y_edit.setText("2")
+
+    # _collect_redraw_inputs loads the Placer file to verify the cell is
+    # reachable via its cell_files: — fake the load with a config that has it.
+    fake_cfg = Config(
+        cells={"pi_filter": Cell(name="pi_filter", vias=[], tracks=[],
+                                 clone_placements=[], components=[])})
+    fake_ctx = RuntimeContext()
+    monkeypatch.setattr(placer_mod, "load_config", lambda path: (fake_cfg, fake_ctx))
+
+    captured = {}
+
+    def _fake_start(connection, widgets, fn, on_success, on_error, *args):
+        captured["connection"] = connection
+        captured["widgets"] = widgets
+        captured["fn"] = fn
+        captured["on_success"] = on_success
+        captured["on_error"] = on_error
+        captured["args"] = args
+        return "fake-controller"
+
+    monkeypatch.setattr(placer_mod, "start_long_op", _fake_start)
+
+    dock._on_redraw()
+
+    assert dock._active_op == "fake-controller"
+    assert captured["connection"] is main_window.connection
+    assert captured["widgets"] == (dock.redraw_button, dock.save_button)
+    # Bound methods: each access creates a fresh object, so compare with ==
+    # (equality checks __self__ + __func__) rather than `is`.
+    assert captured["fn"] == dock._run_redraw
+    assert captured["on_success"] == dock._finish_redraw
+    assert captured["on_error"] == dock._on_redraw_failed
+
+    payload = captured["args"][0]
+    assert payload["name"] == "Channel_2_PI_Filter"
+    assert payload["placer_path"] == placer_file
+    assert payload["cfg"] is fake_cfg
+    assert payload["ctx"] is fake_ctx

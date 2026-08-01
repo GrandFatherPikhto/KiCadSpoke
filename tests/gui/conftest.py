@@ -61,6 +61,11 @@ class _FakeConnection:
     # directly (it checks connection.is_connected in _push_selection_to_board),
     # so the fake needs the same attribute the real BoardConnection exposes.
     is_connected = False
+    # Phase 5.2 — held exclusively by a background long op (Extract/Redraw,
+    # gui/worker.py); the main window's polling timers and the fieldstool's
+    # _push_selection_to_board check it, so the fake needs the same attribute
+    # the real BoardConnection exposes.
+    long_op_active = False
 
 
 @pytest.fixture

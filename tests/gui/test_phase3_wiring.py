@@ -175,7 +175,9 @@ def test_extract_dock_feeds_injected_adapter_into_extraction(main_window, tmp_pa
     dock.name_edit.setText("c1")
     dock._raw_items = ["item1"]
 
-    dock._on_extract()
+    # Full success-path extract: synchronous core (the async _on_extract()
+    # path would not have written captured[] by the asserts below).
+    dock._do_extract()
 
     assert captured["adapter"] is adapter
     assert captured["items"] == ["item1"]

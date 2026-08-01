@@ -23,6 +23,12 @@ class BoardConnection:
     def __init__(self, timeout_ms: int = DEFAULT_TIMEOUT_MS):
         self.timeout_ms = timeout_ms
         self.board: Optional[Board] = None
+        # Phase 5.2 — set while a background long op owns the shared socket
+        # (see gui/worker.py); gates _push_selection_to_board so a tree-pick
+        # can't interleave a select_items() call into an in-flight op. This
+        # is the same BoardConnection the embedding GUI injects when
+        # embedded, so the flag is shared with the main GUI's timers.
+        self.long_op_active = False
 
     @property
     def is_connected(self) -> bool:

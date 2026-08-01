@@ -101,6 +101,7 @@ from kicadstamp.placement.planner import PlacementPlanner
 
 from .. import yaml_io
 from ..ui_utils import busy
+from ..worker import start_long_op
 from ._common import (ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STYLE,
                       WARN_STYLE as _WARN_STYLE, configure_searchable, display_path,
                       set_combo_items, show_message, upsert_clone_placement)
@@ -118,6 +119,9 @@ class PlacerDock(QDockWidget):
     def __init__(self, main_window):
         super().__init__(_("Placer"), main_window)
         self._main_window = main_window
+        # The currently running long op (gui/worker.py) — held so the
+        # parent-less QThread isn't garbage-collected mid-run.
+        self._active_op: Optional[Any] = None
         self._cells_path: Optional[Path] = None
         self._placer_path: Optional[Path] = None
         self._selected_cell: Optional[str] = None
@@ -418,30 +422,39 @@ class PlacerDock(QDockWidget):
     # ── Redraw ────────────────────────────────────────────────────────────
 
     def _on_redraw(self) -> None:
-        """Redraw button handler — the pipeline run is long and blocking, so
-        it's wrapped in the busy cursor + button-disable context (see
-        gui/ui_utils.py): signals progress and stops a double-click from
-        starting a second ApplyPipeline against the same pynng REQ socket."""
+        """Redraw button handler — form collection (validation + widget
+        reads) runs on the UI thread; the ApplyPipeline run + cluster
+        tagging run on a worker thread (see gui/worker.py). The pipeline
+        opens its OWN kipy socket, but we still gate the shared connection
+        (long_op_active) for the duration so the GUI's polling timers don't
+        fire a second concurrent socket request — the same "one socket in
+        flight" the old blocked-UI behaviour guaranteed implicitly."""
         self._show_message("")
-        with busy((self.redraw_button, self.save_button)):
-            self._do_redraw()
+        payload = self._collect_redraw_inputs()
+        if payload is None:
+            return
+        self._start_redraw_op(payload)
 
-    def _do_redraw(self) -> None:
+    def _collect_redraw_inputs(self) -> Optional[Dict[str, Any]]:
+        """UI thread: read every widget + run every validation that can
+        reject the request up front (including loading + mutating the Placer
+        config). Returns a plain-data payload for the worker, or None after
+        showing the error."""
         entry = self._build_entry_dict()
         if entry is None:
-            return
+            return None
         if self._placer_path is None:
             self._show_message(_("Pick a Placer file in Files first."), _ERROR_STYLE)
-            return
+            return None
         if self._cells_path is None:
             self._show_message(_("Pick a Cells file in Files first."), _ERROR_STYLE)
-            return
+            return None
 
         try:
             clone_placement = load_clone_placement(entry)
         except ValidationError as e:
             self._show_message(str(e), _ERROR_STYLE)
-            return
+            return None
 
         try:
             if self._placer_path.exists():
@@ -450,42 +463,80 @@ class PlacerDock(QDockWidget):
                 cfg, ctx = Config(), RuntimeContext()
         except (ValidationError, OSError, yaml.YAMLError) as e:
             self._show_message(_("Failed to load Placer file: {error}").format(error=e), _ERROR_STYLE)
-            return
+            return None
 
         if self._selected_cell not in cfg.cells:
             self._show_message(
                 _("Cell {cell!r} isn't reachable from the Placer file's cell_files: — "
                   "extract/save it and make sure cell_files: is wired (see Extract).")
                 .format(cell=self._selected_cell), _ERROR_STYLE)
-            return
+            return None
 
         # Replace-by-name: previewing an already-saved placement's edits
         # must not create a second copy alongside the saved one.
         cfg.clone_placements = [c for c in cfg.clone_placements if c.name != clone_placement.name]
         cfg.clone_placements.append(clone_placement)
 
-        pipeline = ApplyPipeline(config_path=str(self._placer_path), preloaded_cfg=cfg, preloaded_ctx=ctx,
-                                  only=[clone_placement.name], dry_run=False)
+        return {
+            "placer_path": self._placer_path,
+            "cfg": cfg,
+            "ctx": ctx,
+            "name": clone_placement.name,
+        }
+
+    def _run_redraw(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Worker thread: ApplyPipeline run + cluster tagging — never touches
+        a widget. Returns {"name": ..., "tagged": ...} on success,
+        {"error": str} for placement failure, or {"warn": str} when the
+        placement itself succeeded but tagging didn't."""
+        pipeline = ApplyPipeline(config_path=str(payload["placer_path"]),
+                                 preloaded_cfg=payload["cfg"], preloaded_ctx=payload["ctx"],
+                                 only=[payload["name"]], dry_run=False)
         try:
             pipeline.run()
         except (PlacerError, ValidationError, ApiError) as e:
-            self._show_message(_("Placement failed: {error}").format(error=e), _ERROR_STYLE)
-            return
+            return {"error": _("Placement failed: {error}").format(error=e)}
         except Exception as e:
             logger.exception("Placer redraw failed")
-            self._show_message(_("Placement failed: {error}").format(error=e), _ERROR_STYLE)
-            return
+            return {"error": _("Placement failed: {error}").format(error=e)}
 
         try:
-            tagged = self._tag_cluster(pipeline, cfg, ctx, clone_placement.name)
+            tagged = self._tag_cluster(pipeline, payload["cfg"], payload["ctx"], payload["name"])
         except Exception as e:
             logger.exception("Cluster tagging after placement failed")
-            self._show_message(_("Placed, but tagging Cluster failed: {error}").format(error=e), _WARN_STYLE)
-            return
+            return {"warn": _("Placed, but tagging Cluster failed: {error}").format(error=e)}
 
+        return {"name": payload["name"], "tagged": tagged}
+
+    def _finish_redraw(self, result: Dict[str, Any]) -> None:
+        """UI thread: reflect the worker's result into the message label."""
+        if result.get("error"):
+            self._show_message(result["error"], _ERROR_STYLE)
+            return
+        if result.get("warn"):
+            self._show_message(result["warn"], _WARN_STYLE)
+            return
         self._show_message(
             _("Placed {name!r} ({count} component(s) tagged Cluster={name!r}).")
-            .format(name=clone_placement.name, count=tagged), _SUCCESS_STYLE)
+            .format(name=result["name"], count=result["tagged"]), _SUCCESS_STYLE)
+
+    def _start_redraw_op(self, payload: Dict[str, Any]) -> None:
+        self._active_op = start_long_op(
+            self._main_window.connection, (self.redraw_button, self.save_button),
+            self._run_redraw, self._finish_redraw, self._on_redraw_failed, payload)
+
+    def _on_redraw_failed(self, message: str) -> None:
+        self._show_message(_("Placement failed: {error}").format(error=message), _ERROR_STYLE)
+
+    def _do_redraw(self) -> None:
+        """Synchronous composition of collect + run + finish — the same
+        behaviour the async button path would produce, kept for tests and
+        any caller that must not return until the redraw is complete."""
+        payload = self._collect_redraw_inputs()
+        if payload is None:
+            return
+        result = self._run_redraw(payload)
+        self._finish_redraw(result)
 
     def _tag_cluster(self, pipeline: ApplyPipeline, cfg: Config, ctx: RuntimeContext, name: str) -> int:
         """Recovers which refs this specific clone_placement touched (see

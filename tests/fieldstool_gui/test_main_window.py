@@ -220,3 +220,33 @@ def test_injected_connection_disables_own_polling(qapp):
     finally:
         window._timer.stop()
         window._selection_timer.stop()
+
+
+def test_push_selection_to_board_gated_during_long_op(main_window):
+    """Phase 5.2 — while a background long op (Extract/Redraw) holds the
+    shared socket, a tree-pick must not fire select_items() into it (that
+    would interleave a second request into the op's in-flight REQ)."""
+    from types import SimpleNamespace
+    main_window._timer.stop()  # deterministic: no auto-tick can fire mid-test
+    main_window._selection_timer.stop()
+
+    select_calls = []
+
+    class _Adapter:
+        def get_footprint(self, ref):
+            return SimpleNamespace(ref=ref)
+
+        def select_items(self, footprints):
+            select_calls.append([fp.ref for fp in footprints])
+
+    main_window.connection.board = SimpleNamespace(adapter=_Adapter())
+    # is_connected is a property (board is not None) -> the pick would
+    # normally reach adapter.select_items(); only the long-op flag blocks it.
+
+    main_window.connection.long_op_active = True
+    main_window._push_selection_to_board(["R1"])
+    assert select_calls == []
+
+    main_window.connection.long_op_active = False
+    main_window._push_selection_to_board(["R1", "R2"])
+    assert select_calls == [["R1", "R2"]]
