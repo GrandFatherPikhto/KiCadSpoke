@@ -16,7 +16,7 @@ from kicadstamp.apply_pipeline import (
     drop_disabled_rules, drop_inactive_items, apply_only_filter, apply_cluster_filter,
 )
 from kicadstamp.cli_extract import load_profile, _EXTRACT_PROFILE_KNOWN_KEYS, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
-from kicadstamp.exceptions import ValidationError
+from kicadstamp.exceptions import PlacerError, ValidationError
 
 logger = logging.getLogger("test_cli_filters")
 
@@ -78,7 +78,7 @@ class TestDropDisabledRules:
             Rule(net="GND", spokes=[], anchor_role="FPGA", retired=True),
         ])
         drop_disabled_rules(cfg, logger)
-        with pytest.raises(SystemExit):
+        with pytest.raises(PlacerError):
             apply_only_filter(cfg, ["GND"], logger)
         assert cfg.rules == []
 
@@ -196,7 +196,7 @@ class TestApplyOnlyFilter:
 
     def test_unknown_name_exits_fatal(self):
         cfg = _cfg(rules=[Rule(net="GND", spokes=[], anchor_role="FPGA")])
-        with pytest.raises(SystemExit):
+        with pytest.raises(PlacerError):
             apply_only_filter(cfg, ["typo_name"], logger)
 
 
@@ -269,7 +269,7 @@ class TestApplyClusterFilter:
         cfg = _cfg(rules=[Rule(net="GND", spokes=[
             ManualSpoke(pad="1", cell="t", cluster="Channel_1"),
         ], anchor_role="FPGA")])
-        with pytest.raises(SystemExit):
+        with pytest.raises(PlacerError):
             apply_cluster_filter(cfg, ["Channel_9"], logger)
 
     def test_only_and_cluster_compose_as_and(self):

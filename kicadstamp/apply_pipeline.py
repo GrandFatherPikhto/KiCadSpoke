@@ -19,7 +19,6 @@ from CLI argument parsing.  The pipeline is:
 import dataclasses
 import difflib
 import logging
-import sys
 from typing import Dict, Any, List, Optional, Set
 
 from kipy.errors import ApiError, ApiStatusCode
@@ -120,7 +119,8 @@ def drop_inactive_items(cfg, _logger=None) -> None:
 
 def apply_only_filter(cfg, only_names: List[str], _logger=None) -> None:
     """--only: whole-block selection by identity (rule name-or-net, clone_placement
-    name, thermal_via_array name). sys.exit on unmatched names. Pure cfg mutation."""
+    name, thermal_via_array name). Raises PlacerError on unmatched names.
+    Pure cfg mutation."""
     l = _logger or logger
     if not only_names:
         return
@@ -151,8 +151,8 @@ def apply_only_filter(cfg, only_names: List[str], _logger=None) -> None:
             lines.append(_("  {name!r} — not found among rules, clone_placements, "
                            "or thermal_via_array{hint}")
                          .format(name=name, hint=hint))
-        sys.exit(_("[error] --only: names not found:\n{lines}\nAvailable: {all}")
-                 .format(lines="\n".join(lines), all=all_names))
+        raise PlacerError(_("[error] --only: names not found:\n{lines}\nAvailable: {all}")
+                          .format(lines="\n".join(lines), all=all_names))
 
     cfg.rules = matched_rules
     cfg.clone_placements = matched_clones
@@ -188,8 +188,8 @@ def apply_cluster_filter(cfg, cluster_paths: List[str], _logger=None) -> None:
                      .format(name=rule_effective_name(r), paths=cluster_paths))
 
     if not narrowed_rules and not matched_clones and not thermal_matches:
-        sys.exit(_("[error] --cluster {paths}: matched nothing among rules' spokes, "
-                   "clone_placements, or thermal_via_array").format(paths=cluster_paths))
+        raise PlacerError(_("[error] --cluster {paths}: matched nothing among rules' spokes, "
+                            "clone_placements, or thermal_via_array").format(paths=cluster_paths))
 
     cfg.rules = narrowed_rules
     cfg.clone_placements = matched_clones
