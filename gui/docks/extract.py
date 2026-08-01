@@ -93,14 +93,12 @@ time extraction has no existing key to match yet, but the Cluster name is
 already right there, so Cell name is never left blank purely because
 nothing's been extracted from it before.
 """
-import json
 import logging
 import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import yaml
 from kipy.board_types import Via
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QFormLayout,
@@ -114,14 +112,12 @@ from kicadstamp.i18n import _
 from kicadstamp.template_extraction import extract_template_from_selection
 
 from .. import yaml_io
-from ..docks.file_picker import PROJECT_ROOT
 from ..ui_utils import busy
+from ._common import (ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STYLE,
+                      WARN_STYLE as _WARN_STYLE, add_list_entry, display_path,
+                      merge_write, set_combo_items, show_message)
 
 logger = logging.getLogger(__name__)
-
-_ERROR_STYLE = "color: #a00;"
-_WARN_STYLE = "color: #a60;"
-_SUCCESS_STYLE = "color: #070;"
 
 
 class ExtractDock(QDockWidget):
@@ -284,20 +280,11 @@ class ExtractDock(QDockWidget):
         anyway: 'role not found in selection' / 'no such via in selection'),
         so there's no point offering it."""
         roles = sorted({s.role for s in self._selected_footprints if s.role})
-        self._set_combo_items(self.origin_role_combo, roles)
+        set_combo_items(self.origin_role_combo, roles)
 
         via_nets = sorted({item.net.name for item in self._raw_items
                             if isinstance(item, Via) and item.net and item.net.name})
-        self._set_combo_items(self.origin_via_net_combo, via_nets)
-
-    @staticmethod
-    def _set_combo_items(combo: QComboBox, items: List[str]) -> None:
-        current_text = combo.currentText()
-        combo.blockSignals(True)
-        combo.clear()
-        combo.addItems(items)
-        combo.setCurrentText(current_text)
-        combo.blockSignals(False)
+        set_combo_items(self.origin_via_net_combo, via_nets)
 
     def set_target_file(self, path: Optional[Path]) -> None:
         """Called by MainWindow whenever the Files dock's Cells-role file
@@ -331,13 +318,6 @@ class ExtractDock(QDockWidget):
         self.placer_target_label.setText(
             _("Placer file: {path}").format(path=path) if path is not None
             else _("No placer file picked (pick one in Files, optional)"))
-
-    @staticmethod
-    def _display_path(path: Path) -> str:
-        try:
-            return str(path.relative_to(PROJECT_ROOT))
-        except ValueError:
-            return str(path)
 
     @staticmethod
     def _slugify(text: str) -> str:
@@ -609,16 +589,7 @@ class ExtractDock(QDockWidget):
         warning messages survive after the label itself gets overwritten
         by the next action — requested live 2026-08-01 ("для списка
         ошибок сделать внизу отдельное окошко")."""
-        self.message_label.setStyleSheet(style)
-        self.message_label.setText(text)
-        if not text:
-            return
-        if style == _ERROR_STYLE:
-            logger.error(text)
-        elif style == _WARN_STYLE:
-            logger.warning(text)
-        else:
-            logger.info(text)
+        show_message(self.message_label, text, style, logger)
 
     def _on_extract(self) -> None:
         """Extract button handler — extraction does board IPC + file writes,
@@ -700,7 +671,7 @@ class ExtractDock(QDockWidget):
             return
 
         try:
-            cell_overwritten = self._write_merged(self._target_path, template_dict)
+            cell_overwritten = merge_write(self._target_path, template_dict)
         except OSError as e:
             self._show_message(_("Write failed: {error}").format(error=e), _ERROR_STYLE)
             return
@@ -710,7 +681,7 @@ class ExtractDock(QDockWidget):
 
         if save_profile:
             profile_key = self.profile_key_edit.text().strip() or name
-            entry: Dict[str, Any] = {"output": self._display_path(self._target_path)}
+            entry: Dict[str, Any] = {"output": display_path(self._target_path)}
             if profile_key != name:
                 entry["name"] = name
             if params:
@@ -723,7 +694,7 @@ class ExtractDock(QDockWidget):
                 # kicadstamp_cli.py's cmd_extract profile branch.
                 entry[f"origin_by_{key[len('origin_'):]}"] = value
             try:
-                profile_overwritten = self._write_merged(
+                profile_overwritten = merge_write(
                     self._profile_path, {"extract_profiles": {profile_key: entry}}, section="extract_profiles")
             except OSError as e:
                 self._show_message(
@@ -737,7 +708,7 @@ class ExtractDock(QDockWidget):
             try:
                 if self._target_path != self._placer_path:
                     rel = Path(os.path.relpath(self._target_path, self._placer_path.parent)).as_posix()
-                    if self._add_list_entry(self._placer_path, "cell_files", rel):
+                    if add_list_entry(self._placer_path, "cell_files", rel):
                         messages.append(_("added {rel!r} to cell_files: in {path}").format(
                             rel=rel, path=self._placer_path))
                 if save_profile and self._profile_path != self._placer_path:
@@ -747,10 +718,10 @@ class ExtractDock(QDockWidget):
                             _("skipped adding to include: — {path} has root-config-only key(s) "
                               "{keys} that include: can't merge (move them to the Placer file "
                               "itself, or point Placer at this same file)")
-                            .format(path=self._display_path(self._profile_path), keys=sorted(bad_keys)))
+                            .format(path=display_path(self._profile_path), keys=sorted(bad_keys)))
                     else:
                         rel = Path(os.path.relpath(self._profile_path, self._placer_path.parent)).as_posix()
-                        if self._add_list_entry(self._placer_path, "include", rel):
+                        if add_list_entry(self._placer_path, "include", rel):
                             messages.append(_("added {rel!r} to include: in {path}").format(
                                 rel=rel, path=self._placer_path))
             except OSError as e:
@@ -766,46 +737,6 @@ class ExtractDock(QDockWidget):
             self._show_message("; ".join(messages), _SUCCESS_STYLE)
         self._refresh_existing_lists()
 
-    @staticmethod
-    def _write_merged(path: Path, new_data: dict, section: Optional[str] = None) -> bool:
-        """Same read-merge-write shape as kicadstamp_cli.py's cmd_extract:
-        existing content in the target file is kept, only what's in
-        new_data is added/replaced — a target file is routinely home to
-        several cells/profiles accumulated over time, not exclusively owned
-        by this one write.
-
-        section=None: new_data is {cell_name: {...}} merged at the file's
-        top level (the flat cell_files/cells_file shape).
-        section='extract_profiles': new_data is
-        {'extract_profiles': {key: {...}}} — only that one nested dict gets
-        merged, every OTHER top-level key already in the file (clone_
-        placements:, include:, cells_file:, ...) is left untouched.
-        Returns whether the specific key being written already existed.
-        """
-        is_json = path.suffix.lower() == '.json'
-        existing: dict = {}
-        if path.exists():
-            with open(path, "r", encoding="utf-8") as f:
-                existing = (json.load(f) if is_json else yaml.safe_load(f)) or {}
-
-        if section is None:
-            key = next(iter(new_data))
-            overwritten = key in existing
-            existing.update(new_data)
-        else:
-            new_section = new_data[section]
-            key = next(iter(new_section))
-            target_section = existing.setdefault(section, {})
-            overwritten = key in target_section
-            target_section.update(new_section)
-
-        with open(path, "w", encoding="utf-8") as f:
-            if is_json:
-                json.dump(existing, f, indent=2, ensure_ascii=False, sort_keys=False)
-            else:
-                yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
-        return overwritten
-
     # include: only ever merges these top-level keys from an included file
     # (config/includes.py's _LIST_SECTIONS/_DICT_SECTIONS) — everything
     # else is fatal there (no defined multi-file merge behaviour). A file
@@ -820,40 +751,3 @@ class ExtractDock(QDockWidget):
     @classmethod
     def _non_includable_keys(cls, path: Path) -> set:
         return set(cls._load_data(path).keys()) - cls._INCLUDABLE_KEYS
-
-    @staticmethod
-    def _add_list_entry(path: Path, section: str, entry: str) -> bool:
-        """Appends `entry` (a path string, relative to `path`'s own
-        directory — the same resolution rule config/loader.py and
-        config/includes.py use for cell_files:/include: themselves) to
-        that list section in `path`, unless an entry already there
-        resolves to the same file. Read-merge-write like _write_merged(),
-        but for a list section (cell_files:/include:) instead of a dict
-        one — every other key in the file is left untouched. Returns
-        whether an entry was actually added."""
-        is_json = path.suffix.lower() == '.json'
-        existing: dict = {}
-        if path.exists():
-            with open(path, "r", encoding="utf-8") as f:
-                existing = (json.load(f) if is_json else yaml.safe_load(f)) or {}
-
-        items = existing.setdefault(section, [])
-        if not isinstance(items, list):
-            raise OSError(_("{section}: in {path} is not a list — refusing to touch it")
-                          .format(section=section, path=path))
-
-        base_dir = path.parent
-        target = (base_dir / entry).resolve()
-        for existing_entry in items:
-            existing_str = existing_entry if isinstance(existing_entry, str) \
-                else (existing_entry or {}).get('path')
-            if existing_str and (base_dir / existing_str).resolve() == target:
-                return False
-
-        items.append(entry)
-        with open(path, "w", encoding="utf-8") as f:
-            if is_json:
-                json.dump(existing, f, indent=2, ensure_ascii=False, sort_keys=False)
-            else:
-                yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
-        return True

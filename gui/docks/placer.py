@@ -79,7 +79,6 @@ _configure_searchable() — plain literal text is still accepted (editable
 combo, NoInsert policy), this is a picker, not a whitelist: "сети стоит
 сделать выпадашками (комбобоксами с поиском)" (2026-08-02).
 """
-import json
 import logging
 import re
 from pathlib import Path
@@ -87,8 +86,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import yaml
 from kipy.errors import ApiError
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QCompleter, QDockWidget,
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget,
                               QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                               QLineEdit, QPushButton, QVBoxLayout, QWidget)
 
@@ -100,14 +98,12 @@ from kicadstamp.i18n import _
 from kicadstamp.placement.planner import PlacementPlanner
 
 from .. import yaml_io
-from ..docks.file_picker import PROJECT_ROOT
 from ..ui_utils import busy
+from ._common import (ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STYLE,
+                      WARN_STYLE as _WARN_STYLE, configure_searchable, display_path,
+                      set_combo_items, show_message, upsert_clone_placement)
 
 logger = logging.getLogger(__name__)
-
-_ERROR_STYLE = "color: #a00;"
-_WARN_STYLE = "color: #a60;"
-_SUCCESS_STYLE = "color: #070;"
 
 _PLACEHOLDER_RE = re.compile(r"\{(\w+)\}")
 
@@ -172,13 +168,13 @@ class PlacerDock(QDockWidget):
         self.anchor_ref_edit.setPlaceholderText(_("e.g. U3 (refdes — mostly avoided in this project)"))
         anchor_form.addRow(_("Ref:"), self.anchor_ref_edit)
         self.anchor_role_edit = QComboBox()
-        self._configure_searchable(self.anchor_role_edit)
+        configure_searchable(self.anchor_role_edit)
         anchor_form.addRow(_("Role:"), self.anchor_role_edit)
         self.anchor_pad_edit = QLineEdit()
         self.anchor_pad_edit.setPlaceholderText(_("pad (optional)"))
         anchor_form.addRow(_("Pad:"), self.anchor_pad_edit)
         self.anchor_cluster_edit = QComboBox()
-        self._configure_searchable(self.anchor_cluster_edit)
+        configure_searchable(self.anchor_cluster_edit)
         anchor_form.addRow(_("Anchor cluster:"), self.anchor_cluster_edit)
         layout.addWidget(self._anchor_row)
 
@@ -265,8 +261,8 @@ class PlacerDock(QDockWidget):
         snapshot = board.select()
         roles = sorted({s.role for s in snapshot if s.role})
         clusters = sorted({s.cluster for s in snapshot if s.cluster})
-        self._set_combo_items(self.anchor_role_edit, roles)
-        self._set_combo_items(self.anchor_cluster_edit, clusters)
+        set_combo_items(self.anchor_role_edit, roles)
+        set_combo_items(self.anchor_cluster_edit, clusters)
 
     def refresh_known_nets(self, board) -> None:
         """Populates the Params comboboxes (placeholder -> literal net) with
@@ -277,33 +273,7 @@ class PlacerDock(QDockWidget):
         don't have to wait for the next poll tick to be populated."""
         self._known_nets = sorted({n.name for n in board.adapter.get_all_nets() if n.name})
         for combo in self._param_edits.values():
-            self._set_combo_items(combo, self._known_nets)
-
-    @staticmethod
-    def _configure_searchable(combo: QComboBox) -> None:
-        """Turns a plain editable QComboBox into a filter-as-you-type search
-        box. Qt's own default completer for an editable combo only matches
-        from the start of the string, which isn't enough once there are
-        dozens of nets/roles on a real board (2026-08-02: "сети стоит
-        сделать выпадашками (комбобоксами с поиском)"). NoInsert keeps this
-        a picker, not a whitelist — typed text that isn't in the list is
-        still accepted as the field's value, it just doesn't get added as a
-        new permanent entry."""
-        combo.setEditable(True)
-        combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        completer = combo.completer()
-        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        completer.setFilterMode(Qt.MatchFlag.MatchContains)
-        completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
-
-    @staticmethod
-    def _set_combo_items(combo: QComboBox, items: List[str]) -> None:
-        current_text = combo.currentText()
-        combo.blockSignals(True)
-        combo.clear()
-        combo.addItems(items)
-        combo.setCurrentText(current_text)
-        combo.blockSignals(False)
+            set_combo_items(combo, self._known_nets)
 
     def _rebuild_param_rows(self) -> None:
         cell_data = yaml_io.load_data(self._cells_path).get(self._selected_cell, {})
@@ -320,7 +290,7 @@ class PlacerDock(QDockWidget):
         for row, name in enumerate(placeholders):
             self._params_layout.addWidget(QLabel(name), row, 0)
             edit = QComboBox()
-            self._configure_searchable(edit)
+            configure_searchable(edit)
             edit.lineEdit().setPlaceholderText(_("literal net for {{{name}}}").format(name=name))
             edit.addItems(self._known_nets)
             edit.setCurrentText(previous.get(name, ""))
@@ -352,23 +322,7 @@ class PlacerDock(QDockWidget):
     # ── Message helper (same shape as ExtractDock's) ────────────────────────
 
     def _show_message(self, text: str, style: str = "") -> None:
-        self.message_label.setStyleSheet(style)
-        self.message_label.setText(text)
-        if not text:
-            return
-        if style == _ERROR_STYLE:
-            logger.error(text)
-        elif style == _WARN_STYLE:
-            logger.warning(text)
-        else:
-            logger.info(text)
-
-    @staticmethod
-    def _display_path(path: Path) -> str:
-        try:
-            return str(path.relative_to(PROJECT_ROOT))
-        except ValueError:
-            return str(path)
+        show_message(self.message_label, text, style, logger)
 
     # ── Building the clone_placement dict (shared by Redraw and Save) ──────
 
@@ -584,7 +538,7 @@ class PlacerDock(QDockWidget):
         self._show_message(
             _("{action} {name!r} in {path}").format(
                 action=_("Overwrote") if overwritten else _("Wrote"),
-                name=entry["name"], path=self._display_path(self._placer_path)),
+                name=entry["name"], path=display_path(self._placer_path)),
             _SUCCESS_STYLE)
         if self.on_saved is not None:
             self.on_saved()
@@ -633,35 +587,12 @@ class PlacerDock(QDockWidget):
 
     @staticmethod
     def _upsert_clone_placement(path: Path, entry: Dict[str, Any]) -> bool:
-        """Read-merge-write like ExtractDock's _write_merged()/
-        _add_list_entry(), but for clone_placements: — a list of dicts
-        matched by their own 'name' key, not by list membership: an entry
-        whose name already exists gets REPLACED in place (same position),
-        a new name gets appended. Every other key in the file (cells:,
-        cell_files:, include:, extract_profiles:, ...) is left untouched."""
-        is_json = path.suffix.lower() == '.json'
-        existing: dict = {}
-        if path.exists():
-            with open(path, "r", encoding="utf-8") as f:
-                existing = (json.load(f) if is_json else yaml.safe_load(f)) or {}
-
-        items = existing.setdefault("clone_placements", [])
-        if not isinstance(items, list):
-            raise OSError(_("clone_placements: in {path} is not a list — refusing to touch it")
-                          .format(path=path))
-
-        overwritten = False
-        for i, existing_entry in enumerate(items):
-            if isinstance(existing_entry, dict) and existing_entry.get("name") == entry["name"]:
-                items[i] = entry
-                overwritten = True
-                break
-        if not overwritten:
-            items.append(entry)
-
-        with open(path, "w", encoding="utf-8") as f:
-            if is_json:
-                json.dump(existing, f, indent=2, ensure_ascii=False, sort_keys=False)
-            else:
-                yaml.dump(existing, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
-        return overwritten
+        """Read-merge-write like merge_write()/add_list_entry(), but for
+        clone_placements: — a list of dicts matched by their own 'name' key,
+        not by list membership: an entry whose name already exists gets
+        REPLACED in place (same position), a new name gets appended. Every
+        other key in the file (cells:, cell_files:, include:,
+        extract_profiles:, ...) is left untouched. Delegates to
+        gui/docks/_common.upsert_clone_placement (kept as a thin wrapper
+        because the GUI tests call dock._upsert_clone_placement directly)."""
+        return upsert_clone_placement(path, entry)

@@ -44,10 +44,10 @@ from PyQt6.QtWidgets import (QDockWidget, QFileDialog, QHBoxLayout, QLabel,
 from kicadstamp.i18n import _
 
 from .. import settings
+from ._common import PROJECT_ROOT, display_path
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ROOT = PROJECT_ROOT / "boards"
 ROLE_KEYS = ("cells", "extractor", "placer")
 
@@ -133,7 +133,7 @@ class FilePickerDock(QDockWidget):
     def set_root(self, root: Path) -> None:
         self.model.setRootPath(str(root))
         self.tree.setRootIndex(self.model.index(str(root)))
-        self.root_label.setText(self._display_path(root))
+        self.root_label.setText(display_path(root))
 
     def _on_change_root(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
@@ -150,7 +150,7 @@ class FilePickerDock(QDockWidget):
         if path.is_dir():
             return
         self.picked_path = path
-        self.picked_label.setText(_("Selected: {path}").format(path=self._display_path(path)))
+        self.picked_label.setText(_("Selected: {path}").format(path=display_path(path)))
         data = settings.load()
         data["last_picked_path"] = str(path)
         settings.save(data)
@@ -182,7 +182,7 @@ class FilePickerDock(QDockWidget):
             self.role_warning_label.setText("")
 
     def _role_text(self, role_key: str, path: Optional[Path]) -> str:
-        value = self._display_path(path) if path is not None else _("not set")
+        value = display_path(path) if path is not None else _("not set")
         return f"{self._role_titles[role_key]} {value}"
 
     def _restore_roles(self) -> None:
@@ -192,13 +192,6 @@ class FilePickerDock(QDockWidget):
             path = Path(saved) if saved and Path(saved).is_file() else None
             self.assigned[role_key] = path
             self._role_labels[role_key].setText(self._role_text(role_key, path))
-
-    @staticmethod
-    def _display_path(path: Path) -> str:
-        try:
-            return str(path.relative_to(PROJECT_ROOT))
-        except ValueError:
-            return str(path)
 
     def _restore_last_pick(self) -> None:
         """Restores the last file picked in a previous session — skipped
@@ -212,7 +205,7 @@ class FilePickerDock(QDockWidget):
         if not path.is_file():
             return
         self.picked_path = path
-        self.picked_label.setText(_("Selected: {path}").format(path=self._display_path(path)))
+        self.picked_label.setText(_("Selected: {path}").format(path=display_path(path)))
         index = self.model.index(str(path))
         self.tree.setCurrentIndex(index)
         self.tree.scrollTo(index)

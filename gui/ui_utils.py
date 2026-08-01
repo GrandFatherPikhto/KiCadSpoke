@@ -1,11 +1,11 @@
 # gui/ui_utils.py
 """
 Shared UI helpers for the kicadstamp GUI docks. The busy-indicator context
-manager is the first one; the rest of the duplicated dock utilities
-(_show_message/_set_combo_items/read-merge-write helpers) are planned to
-grow into a dedicated dock-common module separately (see the gui/ cleanup
-roadmap) — this file lives at package level rather than under docks/ because
-gui/main_window.py may want it too, not just the docks.
+manager is the first one; the dock-level utilities (_show_message/
+_set_combo_items/read-merge-write helpers) now live in gui/docks/_common.py
+(see the gui/ cleanup roadmap, Phase 2). This file stays at package level
+rather than under docks/ because gui/main_window.py may want it too, not
+just the docks.
 """
 from contextlib import contextmanager
 from typing import Iterable
