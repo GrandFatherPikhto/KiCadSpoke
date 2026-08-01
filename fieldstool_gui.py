@@ -13,7 +13,13 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+# Project root isn't guaranteed to be importable when this file runs as a
+# bare script (python fieldstool_gui.py / python -m fieldstool_gui) from a
+# working directory outside the repo, so add it to sys.path in that case.
+# When this module is ever imported as part of a package, the package
+# machinery already provides the path and a manual insert would be wrong.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).parent))
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")

@@ -50,6 +50,36 @@ def test_second_instance_is_refused_and_pings_the_first(qapp):
     first.release()
 
 
+def _drain_events(qapp, timeout_s: float = 0.1) -> None:
+    """Pump the event loop a little longer so a delayed second readyRead
+    would be delivered before the caller asserts on the emit count."""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        qapp.processEvents()
+        time.sleep(0.01)
+
+
+def test_ping_surfaces_activation_exactly_once(qapp):
+    """Phase 5.3 — the readyRead slot must drain the socket and emit
+    activation_requested exactly once per ping (regression guard for the
+    tuple-lambda -> named-slot refactor in SingleInstanceGuard)."""
+    name = _unique_name()
+    first = SingleInstanceGuard(name)
+    assert first.try_acquire() is True
+
+    activated = []
+    first.activation_requested.connect(lambda: activated.append(True))
+
+    second = SingleInstanceGuard(name)
+    assert second.try_acquire() is False
+
+    assert _wait_until(lambda: activated, qapp)
+    _drain_events(qapp)
+    assert activated == [True]
+
+    first.release()
+
+
 def test_release_frees_the_name_for_reacquisition(qapp):
     name = _unique_name()
     first = SingleInstanceGuard(name)

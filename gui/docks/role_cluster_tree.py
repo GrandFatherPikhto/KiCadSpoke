@@ -36,8 +36,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
-from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtCore import QItemSelectionModel
+from PyQt6.QtCore import QItemSelectionModel, Qt, pyqtSignal
 from PyQt6.QtGui import QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QHBoxLayout,
                               QLineEdit, QPushButton, QTreeView, QVBoxLayout,

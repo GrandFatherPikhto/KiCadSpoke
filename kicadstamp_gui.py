@@ -17,7 +17,13 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+# Project root isn't guaranteed to be importable when this file runs as a
+# bare script (python kicadstamp_gui.py / python -m kicadstamp_gui) from a
+# working directory outside the repo, so add it to sys.path in that case.
+# When this module is ever imported as part of a package, the package
+# machinery already provides the path and a manual insert would be wrong.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).parent))
 
 # See kicadstamp_cli.py for why this is needed (UnicodeEncodeError on legacy
 # console codepages with translated/typographic text).

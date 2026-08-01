@@ -58,7 +58,20 @@ class SingleInstanceGuard(QObject):
         conn = self._server.nextPendingConnection()
         if conn is None:
             return
-        conn.readyRead.connect(lambda: (conn.readAll(), self.activation_requested.emit()))
+        conn.readyRead.connect(self._on_ready_read)
+
+    def _on_ready_read(self) -> None:
+        """Drain the ping bytes, then surface the activation request.
+
+        Connected to each accepted socket's readyRead; sender() is the
+        socket that wrote, so one named slot serves every inbound
+        connection (no tuple-lambda trick needed).
+        """
+        socket = self.sender()
+        if socket is None:
+            return
+        socket.readAll()
+        self.activation_requested.emit()
 
     def release(self) -> None:
         if self._server is not None:
