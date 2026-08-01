@@ -416,17 +416,68 @@ class ApplyPipeline:
 # ── Module-level convenience entry point ──────────────────────────────────
 
 
-def cmd_apply(args, cfg=None, ctx=None):
-    """Thin delegator from CLI/author to :class:`ApplyPipeline`.
+@dataclasses.dataclass
+class RunOptions:
+    """Typed replacement for the ad-hoc ``argparse.Namespace`` that
+    :func:`cmd_apply` used to read.
 
-    Accepts either CLI *args* (argparse.Namespace) or keyword equivalents so
-    both :mod:`kicadstamp_cli` and :mod:`kicadstamp.author` can call it without
-    late imports.
+    Carries every knob the :class:`ApplyPipeline` needs for one apply run, so
+    library callers (:mod:`kicadstamp.author`) can build a fully-typed option
+    object instead of synthesizing a fake ``argparse.Namespace``. Defaults
+    mirror :class:`ApplyPipeline`'s own keyword defaults (``timeout_ms=20000``,
+    ``batch_size=10``, ``collision_margin=0.2``).
+    """
+
+    config_path: str
+    timeout_ms: int = 20000
+    batch_size: int = 10
+    dry_run: bool = False
+    no_selection: bool = False
+    no_collision_check: bool = False
+    collision_margin: float = 0.2
+    only: Optional[List[str]] = None
+    cluster: Optional[List[str]] = None
+
+
+def run_apply(options: RunOptions, cfg=None, ctx=None) -> None:
+    """Run the apply pipeline for a fully-typed :class:`RunOptions`.
+
+    *options* — the typed run configuration (:class:`RunOptions`).
+    *cfg*     — pre-loaded :class:`~kicadstamp.config.Config` (skips config
+                load when given).
+    *ctx*     — pre-loaded :class:`RuntimeContext` paired with *cfg*.
+
+    This is the library-facing entry point; the CLI wrapper :func:`cmd_apply`
+    and :func:`kicadstamp.author.apply_config` both funnel into it.
+    """
+    pipeline = ApplyPipeline(
+        config_path=options.config_path,
+        timeout_ms=options.timeout_ms,
+        batch_size=options.batch_size,
+        dry_run=options.dry_run,
+        no_selection=options.no_selection,
+        no_collision_check=options.no_collision_check,
+        collision_margin=options.collision_margin,
+        only=options.only,
+        cluster=options.cluster,
+        preloaded_cfg=cfg,
+        preloaded_ctx=ctx,
+    )
+    pipeline.run()
+
+
+def cmd_apply(args, cfg=None, ctx=None):
+    """Thin shim: build a :class:`RunOptions` from an ``argparse.Namespace``
+    and hand it to :func:`run_apply`.
+
+    Kept only so :mod:`kicadstamp_cli` can keep calling the same name. New
+    callers should use :func:`run_apply` with a real :class:`RunOptions`
+    instead of going through a synthetic Namespace.
 
     Extracted from ``kicadstamp_cli.py`` to break the import cycle:
     ``author.py → kicadstamp_cli.py → author.py``.
     """
-    pipeline = ApplyPipeline(
+    options = RunOptions(
         config_path=args.config,
         timeout_ms=args.timeout_ms,
         batch_size=args.batch_size,
@@ -436,7 +487,5 @@ def cmd_apply(args, cfg=None, ctx=None):
         collision_margin=args.collision_margin,
         only=getattr(args, "only", None),
         cluster=getattr(args, "cluster", None),
-        preloaded_cfg=cfg,
-        preloaded_ctx=ctx,
     )
-    pipeline.run()
+    run_apply(options, cfg=cfg, ctx=ctx)

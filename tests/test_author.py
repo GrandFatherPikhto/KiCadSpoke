@@ -12,6 +12,7 @@ import yaml
 from kicadstamp.config import ClonePlacement, Config, ManualSpoke, Rule, load_config
 from kicadstamp.author import (_prune_defaults, apply_config, cli_main, dump_clone_placements,
                                dump_rules, dump_template)
+from kicadstamp.apply_pipeline import RunOptions
 
 
 class TestPruneDefaults:
@@ -99,59 +100,59 @@ class TestDumpRoundTrip:
 
 
 class TestApplyConfig:
-    def test_builds_namespace_with_every_field_cmd_apply_reads(self):
-        """Regression guard: if cmd_apply grows a new required args.* read,
-        this test must be updated too — otherwise apply_config would silently
-        stop forwarding it and fail at runtime with AttributeError."""
+    def test_builds_runoptions_with_every_field_run_apply_reads(self):
+        """Regression guard: if run_apply grows a new RunOptions field, this
+        test must be updated too — otherwise apply_config would silently
+        stop forwarding it and fail at runtime."""
         cfg = Config()
-        with patch("kicadstamp.author.cmd_apply") as mock_cmd_apply:
+        with patch("kicadstamp.author.run_apply") as mock_run_apply:
             apply_config(cfg, "my_run.yaml", dry_run=True, only=["a"], cluster=["b"],
                         timeout_ms=1234, batch_size=5, no_collision_check=True,
                         collision_margin=0.5)
 
-        mock_cmd_apply.assert_called_once()
-        call_args, call_kwargs = mock_cmd_apply.call_args
-        args = call_args[0]
-        assert call_kwargs["cfg"] is cfg
-        assert args.config == "my_run.yaml"
-        assert args.dry_run is True
-        assert args.only == ["a"]
-        assert args.cluster == ["b"]
-        assert args.timeout_ms == 1234
-        assert args.batch_size == 5
-        assert args.no_collision_check is True
-        assert args.collision_margin == 0.5
+        mock_run_apply.assert_called_once()
+        options = mock_run_apply.call_args.args[0]
+        assert isinstance(options, RunOptions)
+        assert mock_run_apply.call_args.kwargs["cfg"] is cfg
+        assert options.config_path == "my_run.yaml"
+        assert options.dry_run is True
+        assert options.only == ["a"]
+        assert options.cluster == ["b"]
+        assert options.timeout_ms == 1234
+        assert options.batch_size == 5
+        assert options.no_collision_check is True
+        assert options.collision_margin == 0.5
 
     def test_defaults_match_cli_defaults(self):
         cfg = Config()
-        with patch("kicadstamp.author.cmd_apply") as mock_cmd_apply:
+        with patch("kicadstamp.author.run_apply") as mock_run_apply:
             apply_config(cfg, "my_run.yaml")
 
-        args = mock_cmd_apply.call_args[0][0]
-        assert args.dry_run is False
-        assert args.only is None
-        assert args.cluster is None
-        assert args.no_collision_check is False
-        assert args.collision_margin == 0.2
+        options = mock_run_apply.call_args.args[0]
+        assert options.dry_run is False
+        assert options.only is None
+        assert options.cluster is None
+        assert options.no_collision_check is False
+        assert options.collision_margin == 0.2
 
-    def test_forwards_ctx_to_cmd_apply(self):
+    def test_forwards_ctx_to_run_apply(self):
         """Regression: ctx (RuntimeContext, carries sheet_names built from
-        schematic_dir) must reach cmd_apply — otherwise anchor_sheet-based
+        schematic_dir) must reach run_apply — otherwise anchor_sheet-based
         clone_placements fatal with "sheet name dictionary is empty" even
         though schematic_dir was set and parsed correctly."""
         cfg = Config()
         ctx = object()
-        with patch("kicadstamp.author.cmd_apply") as mock_cmd_apply:
+        with patch("kicadstamp.author.run_apply") as mock_run_apply:
             apply_config(cfg, "my_run.yaml", ctx=ctx)
 
-        assert mock_cmd_apply.call_args.kwargs["ctx"] is ctx
+        assert mock_run_apply.call_args.kwargs["ctx"] is ctx
 
     def test_ctx_defaults_to_none(self):
         cfg = Config()
-        with patch("kicadstamp.author.cmd_apply") as mock_cmd_apply:
+        with patch("kicadstamp.author.run_apply") as mock_run_apply:
             apply_config(cfg, "my_run.yaml")
 
-        assert mock_cmd_apply.call_args.kwargs["ctx"] is None
+        assert mock_run_apply.call_args.kwargs["ctx"] is None
 
 
 class TestCliMain:

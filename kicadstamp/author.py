@@ -8,7 +8,7 @@ are plain dataclasses already — this module adds nothing new to them, just
 two ways to get a built list somewhere useful:
 
   (a) apply_config() — straight into the existing apply pipeline
-      (kicadstamp_cli.cmd_apply already accepts a pre-built Config).
+      (run_apply() already accepts a pre-built Config).
   (b) dump_clone_placements()/dump_rules() — serialize back to YAML, so
       generated subsystem files stay diffable/reviewable in git even when
       authored by a script.
@@ -31,7 +31,7 @@ from kipy.errors import ApiError, ApiStatusCode
 from .config import ClonePlacement, Config, Rule, RuntimeContext, load_config
 from .constants import DEFAULT_BATCH_SIZE, DEFAULT_TIMEOUT_MS
 from .exceptions import PlacerError
-from .apply_pipeline import cmd_apply
+from .apply_pipeline import RunOptions, run_apply
 
 _MISSING = dataclasses.MISSING
 
@@ -111,11 +111,11 @@ def apply_config(cfg: Config, config_path: str, *, ctx: Optional[RuntimeContext]
                   timeout_ms: int = DEFAULT_TIMEOUT_MS, batch_size: int = DEFAULT_BATCH_SIZE,
                   no_collision_check: bool = False, collision_margin: float = 0.2) -> None:
     """Runs cfg through the exact same pipeline a YAML-driven `apply` run
-    uses (kicadstamp_cli.cmd_apply already accepts a pre-built Config — this
-    just builds the argparse.Namespace it expects).
+    uses (run_apply() already accepts a pre-built Config — this just builds
+    the typed :class:`~kicadstamp.apply_pipeline.RunOptions` it needs).
 
     config_path is NOT cosmetic: when cfg.registry_path/cfg.track_registry_path
-    are unset, cmd_apply derives them FROM IT (registry_path_for_config() /
+    are unset, run_apply derives them FROM IT (registry_path_for_config() /
     track_registry_path_for_config() in registry.py: '<config_path>.registry.json'
     next to it). A throwaway placeholder here would misfile or collide
     registries between unrelated scripted runs — exactly the class of bug
@@ -124,18 +124,22 @@ def apply_config(cfg: Config, config_path: str, *, ctx: Optional[RuntimeContext]
     nonexistent-on-disk) path that identifies this run, or set
     cfg.registry_path/cfg.track_registry_path explicitly yourself.
 
-    Deliberately does not re-run validation.run_all_checks() first: cmd_apply
+    Deliberately does not re-run validation.run_all_checks() first: run_apply
     already does, before resolve_execution_order and before any board
     mutation — a separate pre-check here would only duplicate that work.
     """
-    from argparse import Namespace
-
-    args = Namespace(
-        config=config_path, dry_run=dry_run, only=only, cluster=cluster,
-        timeout_ms=timeout_ms, batch_size=batch_size,
-        no_collision_check=no_collision_check, collision_margin=collision_margin,
+    options = RunOptions(
+        config_path=config_path,
+        timeout_ms=timeout_ms,
+        batch_size=batch_size,
+        dry_run=dry_run,
+        no_selection=False,
+        no_collision_check=no_collision_check,
+        collision_margin=collision_margin,
+        only=only,
+        cluster=cluster,
     )
-    cmd_apply(args, cfg=cfg, ctx=ctx)
+    run_apply(options, cfg=cfg, ctx=ctx)
 
 
 def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
