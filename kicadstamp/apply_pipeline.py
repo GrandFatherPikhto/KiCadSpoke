@@ -19,9 +19,6 @@ from CLI argument parsing.  The pipeline is:
 import dataclasses
 import difflib
 import logging
-from typing import Any
-
-from kipy.errors import ApiError, ApiStatusCode
 
 from .config import load_config, rule_effective_name, thermal_via_array_effective_name
 from .runtime_context import RuntimeContext

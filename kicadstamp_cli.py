@@ -26,8 +26,8 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
 from kicadstamp import __version__
-from kicadstamp.config import load_config, RuntimeContext
-from kicadstamp.apply_pipeline import ApplyPipeline, cmd_apply
+from kicadstamp.config import load_config
+from kicadstamp.apply_pipeline import cmd_apply
 from kicadstamp.cli import cmd_clone_extract, cmd_extract, cmd_undo
 from kicadstamp.cli_common import run_cli
 from kicadstamp.logging_setup import setup_logging
