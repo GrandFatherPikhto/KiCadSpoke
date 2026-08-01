@@ -57,6 +57,10 @@ def isolated_settings(tmp_path, monkeypatch):
 
 class _FakeConnection:
     board = None
+    # Phase 5.1 — the embedded fieldstool window now receives this connection
+    # directly (it checks connection.is_connected in _push_selection_to_board),
+    # so the fake needs the same attribute the real BoardConnection exposes.
+    is_connected = False
 
 
 @pytest.fixture

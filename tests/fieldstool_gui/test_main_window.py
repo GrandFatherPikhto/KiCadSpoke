@@ -182,3 +182,41 @@ def test_apply_succeeds_writes_file_and_clears_pending(main_window, tmp_path, mo
     assert main_window._pending_registry.entries() == []
     assert shown == ["info"]
     assert Path(str(root) + ".bak").exists()
+
+
+# ── Phase 5.1: shared-connection public hooks ───────────────────────────────
+
+def test_set_live_selection_sets_targets_and_enables_stage(main_window):
+    main_window.set_live_selection(["R1", "R2"])
+    assert main_window._current_targets == ["R1", "R2"]
+    assert main_window.stage_button.isEnabled()
+
+
+def test_set_live_selection_empty_is_noop(main_window):
+    main_window._set_targets(["R1"])
+    main_window.set_live_selection([])
+    assert main_window._current_targets == ["R1"]
+
+
+def test_set_connection_status_updates_label(main_window):
+    main_window.set_connection_status(None)
+    assert "Connected" in main_window.status_label.text()
+    main_window.set_connection_status("boom")
+    assert "boom" in main_window.status_label.text()
+
+
+def test_injected_connection_disables_own_polling(qapp):
+    """Phase 5.1 — when the embedding GUI injects its connection, this window
+    must NOT start its own connect/refresh/selection timers against it (one
+    REQ socket, one request in flight)."""
+    from fieldstool.gui.connection import BoardConnection
+    shared = BoardConnection(timeout_ms=50)
+    window = main_window_mod.MainWindow(timeout_ms=50, connection=shared)
+    try:
+        assert window.connection is shared
+        assert window._owns_connection is False
+        assert not window._timer.isActive()
+        assert not window._selection_timer.isActive()
+    finally:
+        window._timer.stop()
+        window._selection_timer.stop()

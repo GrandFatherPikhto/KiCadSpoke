@@ -45,7 +45,8 @@ class DockHub:
         main_window.tabifyDockWidget(self.cell_list_dock, self.placer_list_dock)
 
         # ── right group: fieldstool, Files, Extract-to-file, Placer ───────
-        self.fieldstool_dock = FieldsToolDock(main_window, timeout_ms=timeout_ms)
+        self.fieldstool_dock = FieldsToolDock(main_window, timeout_ms=timeout_ms,
+                                              connection=connection)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fieldstool_dock)
 
         self.file_picker_dock = FilePickerDock(main_window)
@@ -138,6 +139,19 @@ class DockHub:
         """Push the live selection into ExtractDock (its aliases/origin
         combos and button state depend on what's currently selected)."""
         self.extract_dock.set_board_selection(items, selected)
+
+    def push_fieldstool_selection(self, refs) -> None:
+        """Live board selection -> embedded fieldstool's target label (Phase
+        5.1 — the main GUI's single 400ms tick now feeds BOTH the tree/
+        ExtractDock and the embedded fieldstool, whose own selection timer is
+        stopped when it shares the main connection)."""
+        self.fieldstool_dock.push_live_selection(refs)
+
+    def push_fieldstool_connection_status(self, error) -> None:
+        """Mirror the shared connection's state into the embedded
+        fieldstool's status label (Phase 5.1 — its own connect/refresh poll
+        is stopped when it shares the main connection)."""
+        self.fieldstool_dock.set_connection_status(error)
 
     def open_fieldstool(self) -> None:
         """Bring the fieldstool tab to front even if another right-hand tab

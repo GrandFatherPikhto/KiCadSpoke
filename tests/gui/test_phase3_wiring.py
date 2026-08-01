@@ -298,13 +298,16 @@ def test_dock_hub_constructs_all_docks_and_wires_roles(main_window, tmp_path):
 
 
 def test_dock_hub_injects_connection_into_connection_docks(main_window):
-    """The connection passed to DockHub reaches the two docks that consume
-    it (RoleClusterTreeDock, ExtractDock) — never main_window.connection."""
+    """The connection passed to DockHub reaches the three docks that consume
+    it (RoleClusterTreeDock, ExtractDock, and — Phase 5.1 — the embedded
+    fieldstool window) — never main_window.connection."""
     hub = DockHub(main_window, connection=main_window.connection,
                   timeout_ms=10, verbose=False)
     try:
         assert hub.tree_dock._connection is main_window.connection
         assert hub.extract_dock._connection is main_window.connection
+        assert hub.fieldstool_dock.window.connection is main_window.connection
+        assert hub.fieldstool_dock.window._owns_connection is False
     finally:
         _teardown_hub(hub)
 

@@ -23,3 +23,44 @@ def test_open_fieldstool_shows_and_raises_the_dock(real_main_window):
     real_main_window.open_fieldstool()
     assert real_main_window.fieldstool_dock.isVisible()
     assert real_main_window.isVisible()
+
+
+# ── Phase 5.1: one connection, one polling loop ─────────────────────────────
+
+def test_embedded_window_shares_main_connection_and_stops_own_polling(real_main_window):
+    """Phase 5.1 — the embedded fieldstool reuses the main GUI's
+    BoardConnection (one kipy client, one REQ socket) and must NOT run its
+    own connect/refresh/selection timers against it (REQ single-in-flight)."""
+    window = real_main_window.fieldstool_dock.window
+    assert window.connection is real_main_window.connection
+    assert window._owns_connection is False
+    assert not window._timer.isActive()
+    assert not window._selection_timer.isActive()
+
+
+def test_embedded_window_live_selection_push_sets_targets(real_main_window):
+    """Phase 5.1 — the main GUI's single 400ms selection tick drives the
+    embedded window's target label through the dock delegate."""
+    window = real_main_window.fieldstool_dock.window
+    real_main_window._dock_hub.push_fieldstool_selection(["R2", "R1"])
+    assert window._current_targets == ["R1", "R2"]
+    assert window.stage_button.isEnabled()
+
+
+def test_embedded_window_empty_live_selection_is_noop(real_main_window):
+    """Phase 5.1 — an empty selection keeps the last targets (the
+    cross-probe's existing behavior), not clearing them."""
+    window = real_main_window.fieldstool_dock.window
+    window._set_targets(["R1"])
+    real_main_window._dock_hub.push_fieldstool_selection([])
+    assert window._current_targets == ["R1"]
+
+
+def test_embedded_window_connection_status_reaches_label(real_main_window):
+    """Phase 5.1 — the shared connection's state is mirrored into the
+    embedded window's status label (its own connect/refresh poll is off)."""
+    window = real_main_window.fieldstool_dock.window
+    real_main_window._dock_hub.push_fieldstool_connection_status(None)
+    assert "Connected" in window.status_label.text()
+    real_main_window._dock_hub.push_fieldstool_connection_status("boom")
+    assert "boom" in window.status_label.text()

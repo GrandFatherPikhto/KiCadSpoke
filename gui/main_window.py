@@ -292,6 +292,11 @@ class MainWindow(QMainWindow):
             self.status_label.setText(_("Connected — {count} components").format(count=len(snapshot)))
             self._dock_hub.push_snapshot(snapshot, self.connection.board)
 
+        # Phase 5.1 — the embedded fieldstool shares this connection and no
+        # longer runs its own connect/refresh poll, so mirror the status we
+        # just computed into its label instead of letting it go stale.
+        self._dock_hub.push_fieldstool_connection_status(error)
+
         self.action_button.setText(_("Refresh") if self.connection.is_connected else _("Reconnect"))
 
     def _poll_board_selection(self) -> None:
@@ -333,6 +338,10 @@ class MainWindow(QMainWindow):
         by_ref = {s.ref: s for s in self.connection.snapshot}
         selected = [by_ref[ref] for ref in refs if ref in by_ref]
         self._dock_hub.set_board_selection(items, selected)
+        # Phase 5.1 — the embedded fieldstool's live-selection cross-probe is
+        # fed from this single tick too (its own 400ms timer is stopped when
+        # it shares this connection).
+        self._dock_hub.push_fieldstool_selection(refs)
 
     @staticmethod
     def _raw_selection_signature(items) -> tuple:

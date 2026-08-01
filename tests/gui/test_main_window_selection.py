@@ -163,3 +163,17 @@ def test_selection_tick_updates_when_snapshot_refreshed_same_refs(real_main_wind
     assert len(calls) == 2
     assert calls[1][1][0].role == "EDITED_ROLE"
     assert board.select_calls == 1
+
+
+def test_selection_tick_feeds_embedded_fieldstool_targets(real_main_window, monkeypatch):
+    """Phase 5.1 — the single 400ms tick feeds the embedded fieldstool's
+    live-selection cross-probe too (its own timer is stopped when it shares
+    the main connection, so this is now the only path)."""
+    fp = _FakeFootprint("R1")
+    window, board = _connected_window(real_main_window, monkeypatch,
+                                      items=[fp], snapshot=[_selected("R1")])
+    fs_window = real_main_window.fieldstool_dock.window
+
+    window._poll_board_selection()
+
+    assert fs_window._current_targets == ["R1"]
