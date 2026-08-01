@@ -106,7 +106,7 @@ class RoleClusterTreeDock(QDockWidget):
         top_row = QHBoxLayout()
         self.group_by = QComboBox()
         self.group_by.addItems([_("Role"), _("Cluster")])
-        self.group_by.setCurrentIndex(settings.load().get("tree_group_by", 0))
+        self.group_by.setCurrentIndex(settings.state.get("tree_group_by", 0))
         self.group_by.currentIndexChanged.connect(self._on_group_by_changed)
         top_row.addWidget(self.group_by)
         self.collapse_all_button = QPushButton(_("Collapse all"))
@@ -145,7 +145,7 @@ class RoleClusterTreeDock(QDockWidget):
         triggers a rebuild that reads main_window.fieldstool_dock.window,
         which doesn't exist yet during this dock's own __init__ (tree_dock
         is built before fieldstool_dock there)."""
-        if settings.load().get("tree_schematic_mode"):
+        if settings.state.get("tree_schematic_mode"):
             self.mode_checkbox.setChecked(True)  # triggers _on_mode_changed via its signal
 
     def set_footprints(self, selected: List[Selected]) -> None:
@@ -205,15 +205,11 @@ class RoleClusterTreeDock(QDockWidget):
         self.tree.collapseAll()
 
     def _on_group_by_changed(self) -> None:
-        data = settings.load()
-        data["tree_group_by"] = self.group_by.currentIndex()
-        settings.save(data)
+        settings.state.set("tree_group_by", self.group_by.currentIndex())
         self._rebuild()
 
     def _on_mode_changed(self, checked: bool) -> None:
-        data = settings.load()
-        data["tree_schematic_mode"] = checked
-        settings.save(data)
+        settings.state.set("tree_schematic_mode", checked)
         self._rebuild()
 
     def _current_rows(self) -> List[_Row]:

@@ -173,23 +173,20 @@ class MainWindow(QMainWindow):
         this GUI's persistence is plain JSON: staying human-readable/
         inspectable in one place beats using the platform-native mechanism
         for just this one thing."""
-        data = settings.load()
-        geometry = data.get("window_geometry")
+        geometry = settings.state.get("window_geometry")
         if geometry and all(k in geometry for k in ("x", "y", "width", "height")):
             self.setGeometry(geometry["x"], geometry["y"], geometry["width"], geometry["height"])
-        if data.get("always_on_top"):
+        if settings.state.get("always_on_top"):
             self.always_on_top_checkbox.setChecked(True)  # triggers _set_always_on_top via its signal
-        if data.get("tray_enabled"):
+        if settings.state.get("tray_enabled"):
             self.tray_checkbox.setChecked(True)  # triggers _set_tray_enabled via its signal
 
     def _persist_settings(self) -> None:
         rect = self.geometry()
-        data = settings.load()
-        data["window_geometry"] = {"x": rect.x(), "y": rect.y(),
-                                    "width": rect.width(), "height": rect.height()}
-        data["always_on_top"] = self.always_on_top_checkbox.isChecked()
-        data["tray_enabled"] = self.tray_checkbox.isChecked()
-        settings.save(data)
+        settings.state.set("window_geometry", {"x": rect.x(), "y": rect.y(),
+                                               "width": rect.width(), "height": rect.height()})
+        settings.state.set("always_on_top", self.always_on_top_checkbox.isChecked())
+        settings.state.set("tray_enabled", self.tray_checkbox.isChecked())
 
     def closeEvent(self, event) -> None:
         """While the tray icon is enabled, the title-bar X hides instead of

@@ -123,7 +123,7 @@ class FilePickerDock(QDockWidget):
 
     @staticmethod
     def _load_root() -> Path:
-        saved = settings.load().get("root_dir")
+        saved = settings.state.get("root_dir")
         if saved:
             path = Path(saved)
             if path.is_dir():
@@ -142,9 +142,7 @@ class FilePickerDock(QDockWidget):
         if not chosen:
             return
         self.set_root(Path(chosen))
-        data = settings.load()
-        data["root_dir"] = chosen
-        settings.save(data)
+        settings.state.set("root_dir", chosen)
 
     def _on_clicked(self, index) -> None:
         path = Path(self.model.filePath(index))
@@ -152,9 +150,7 @@ class FilePickerDock(QDockWidget):
             return
         self.picked_path = path
         self.picked_label.setText(_("Selected: {path}").format(path=display_path(path)))
-        data = settings.load()
-        data["last_picked_path"] = str(path)
-        settings.save(data)
+        settings.state.set("last_picked_path", str(path))
 
     def _assign_role(self, role_key: str) -> None:
         """"Use selected" button for one of the three role rows — assigns
@@ -164,9 +160,7 @@ class FilePickerDock(QDockWidget):
             return
         self.assigned[role_key] = self.picked_path
         self._role_labels[role_key].setText(self._role_text(role_key, self.picked_path))
-        data = settings.load()
-        data[f"{role_key}_file"] = str(self.picked_path)
-        settings.save(data)
+        settings.state.set(f"{role_key}_file", str(self.picked_path))
         self._update_role_warning()
         getattr(self, f"{role_key}_file_changed").emit(self.picked_path)
 
@@ -204,7 +198,7 @@ class FilePickerDock(QDockWidget):
         (not an error) if it's gone since then (deleted, renamed, or the
         root directory changed since), since a stale remembered path is
         just not useful anymore, not a problem to report."""
-        last = settings.load().get("last_picked_path")
+        last = settings.state.get("last_picked_path")
         if not last:
             return
         path = Path(last)

@@ -65,6 +65,8 @@ fp-info-cache
 *.tar
 
 *.json
+# Атомарная запись gui_state.json: временный файл из os.replace (gui/settings.py)
+*.json.tmp
 *.log
 
 arch/
