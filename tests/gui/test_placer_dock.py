@@ -330,3 +330,26 @@ def test_rebuilt_param_rows_use_cached_known_nets(main_window, tmp_path):
 
     combo = dock._param_edits["PWR_IN"]
     assert [combo.itemText(i) for i in range(combo.count())] == ["+3V3", "GND"]
+
+
+def test_refresh_known_roles_populates_from_snapshot(main_window):
+    """1.2 — refresh_known_roles() takes the already-built snapshot (the
+    cached BoardConnection.snapshot) instead of calling board.select()
+    itself, so a manual refresh builds the full snapshot exactly once."""
+    class _Row:
+        def __init__(self, ref, role, cluster):
+            self.ref = ref
+            self.role = role
+            self.cluster = cluster
+
+    dock = PlacerDock(main_window)
+    snapshot = [_Row("R1", "ROLE_A", "C1"),
+                _Row("R2", "ROLE_A", "C2"),
+                _Row("R3", "", "C1")]  # blank role dropped, cluster kept
+
+    dock.refresh_known_roles(snapshot)
+
+    roles = [dock.anchor_role_edit.itemText(i) for i in range(dock.anchor_role_edit.count())]
+    clusters = [dock.anchor_cluster_edit.itemText(i) for i in range(dock.anchor_cluster_edit.count())]
+    assert roles == ["ROLE_A"]
+    assert clusters == ["C1", "C2"]

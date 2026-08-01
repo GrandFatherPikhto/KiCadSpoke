@@ -251,14 +251,16 @@ class PlacerDock(QDockWidget):
         кластера надо сразу автоматически заполнять поле кластер")."""
         self.cluster_edit.setText(name)
 
-    def refresh_known_roles(self, board) -> None:
+    def refresh_known_roles(self, snapshot) -> None:
         """Populates the anchor Role/Cluster combos with distinct values
         already used on the board — "если выбираем по роли то надо и
         поле anchor cluster да и лист" (2026-08-01). Called by MainWindow
         at the same ~2s full-poll cadence as the rest of the docks (not
         the 400ms selection-watch tick — the known-value list barely
-        changes tick to tick)."""
-        snapshot = board.select()
+        changes tick to tick). `snapshot` is the cached
+        BoardConnection.snapshot the caller already built — this used to
+        call board.select() itself, a second full snapshot build per
+        refresh (1.2 in techdocs/handoff/)."""
         roles = sorted({s.role for s in snapshot if s.role})
         clusters = sorted({s.cluster for s in snapshot if s.cluster})
         set_combo_items(self.anchor_role_edit, roles)

@@ -40,6 +40,15 @@ main thread (e.g. a "Refresh" click landing mid-poll) would race on that one
 socket. get_selected_items() is cheap enough (one get_selection() round
 trip against the already-cached footprint list, no per-footprint Role/
 Cluster field reads) that a short interval here doesn't need a thread.
+
+The fast tick deliberately does NOT call board.select() itself — the full
+snapshot is cached on BoardConnection (see connection.py) and rebuilt only
+by the ~2s poll / manual Refresh, and the tick builds its `selected` list by
+ref against that cache. Building it on every tick was the main perf bug of
+this timer (a full select() over every footprint, 2-3x a second). The tick
+also early-exits entirely when neither the raw selection nor the cached
+snapshot changed since the last tick, so ExtractDock's per-selection widget
+rebuilds (aliases, origin combos, button state) aren't churned for nothing.
 """
 import logging
 from typing import Optional
@@ -181,6 +190,10 @@ class MainWindow(QMainWindow):
         self._selection_timer = QTimer(self)
         self._selection_timer.timeout.connect(self._poll_board_selection)
         self._selection_timer.start(SELECTION_POLL_INTERVAL_MS)
+        # Last (raw-selection, snapshot-version) tuple the fast tick acted
+        # on — lets it early-exit when nothing changed (see
+        # _poll_board_selection). None until the first successful tick.
+        self._last_selection_signature = None
 
         self._restore_window_state()
 
@@ -307,10 +320,15 @@ class MainWindow(QMainWindow):
             self.status_label.setText(_("Not connected: {error}").format(error=error))
             self.tree_dock.set_footprints([])
         else:
-            snapshot = self.connection.board.select()
+            # connect()/refresh() already rebuilt BoardConnection.snapshot —
+            # this is the ONE place that snapshot is consumed, so the docks
+            # below never call board.select() themselves (PlacerDock's
+            # refresh_known_roles used to build a second full snapshot here;
+            # the fast selection-watch tick used to build one every 400ms).
+            snapshot = self.connection.snapshot
             self.status_label.setText(_("Connected — {count} components").format(count=len(snapshot)))
             self.tree_dock.set_footprints(snapshot)
-            self.placer_dock.refresh_known_roles(self.connection.board)
+            self.placer_dock.refresh_known_roles(snapshot)
             self.placer_dock.refresh_known_nets(self.connection.board)
 
         self.action_button.setText(_("Refresh") if self.connection.is_connected else _("Reconnect"))
@@ -334,8 +352,38 @@ class MainWindow(QMainWindow):
             return
         refs = {item.reference_field.text.value for item in items
                 if isinstance(item, FootprintInstance)}
-        self.tree_dock.highlight_board_selection(refs)
 
-        by_ref = {s.ref: s for s in self.connection.board.select()}
+        # Early-exit guard (same idea as RoleClusterTreeDock.
+        # highlight_board_selection()'s own): if neither the raw selection
+        # nor the cached snapshot changed since the last tick, there is
+        # nothing to repaint — skip both the tree highlight (which would
+        # self-bail anyway) and ExtractDock.set_board_selection(), which
+        # rebuilds its alias/role widgets on every call. The raw selection
+        # matters as much as the footprint refs (vias/tracks drive
+        # ExtractDock's via-net origin combo), so the signature covers the
+        # whole get_selected_items() list, not just refs.
+        signature = (refs, self._raw_selection_signature(items),
+                     self.connection.snapshot_version)
+        if signature == self._last_selection_signature:
+            return
+        self._last_selection_signature = signature
+
+        self.tree_dock.highlight_board_selection(refs)
+        by_ref = {s.ref: s for s in self.connection.snapshot}
         selected = [by_ref[ref] for ref in refs if ref in by_ref]
         self.extract_dock.set_board_selection(items, selected)
+
+    @staticmethod
+    def _raw_selection_signature(items) -> tuple:
+        """Cheap, stable identity for the raw get_selected_items() list —
+        just enough to tell "selection changed" from "same selection, new
+        tick", with no field reads or extra IPC. Footprints key on their
+        refdes, vias/tracks on (type, net name)."""
+        parts = []
+        for item in items:
+            if isinstance(item, FootprintInstance):
+                parts.append(("fp", item.reference_field.text.value))
+            else:
+                parts.append((type(item).__name__,
+                              getattr(getattr(item, "net", None), "name", None)))
+        return tuple(parts)

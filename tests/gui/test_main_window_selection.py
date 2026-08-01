@@ -1,0 +1,165 @@
+# tests/gui/test_main_window_selection.py
+"""MainWindow._poll_board_selection()'s perf contract (1.1 in
+techdocs/handoff/handoff_gui_optimization_2026_08_01.md): the 400ms
+selection-watch tick must NEVER call board.select() — it builds its
+`selected` list from the cached BoardConnection.snapshot (rebuilt only by
+the ~2s poll / manual Refresh) — and must early-exit when neither the raw
+selection nor the snapshot changed, so ExtractDock's per-selection widget
+rebuilds aren't churned for nothing.
+
+These tests use the real MainWindow (real_main_window fixture) with its
+real BoardConnection, but a fake board behind it: no live KiCad needed,
+exactly like the other tests/gui/ tests.
+"""
+import gui.main_window as main_window_mod
+from gui.connection import BoardConnection
+from kicadstamp.explore import Selected
+
+
+class _FakeFootprint:
+    """Looks like a FootprintInstance well enough for the tick — the test
+    monkeypatches main_window_mod.FootprintInstance to this class so the
+    isinstance() checks (refs comprehension + _raw_selection_signature)
+    treat it as a footprint."""
+
+    def __init__(self, ref):
+        text = type("_Text", (), {"value": ref})()
+        self.reference_field = type("_RefField", (), {"text": text})()
+
+
+class _FakeVia:
+    """A non-footprint item (vias/tracks shape the tick's signature too)."""
+
+    def __init__(self, net_name):
+        self.net = type("_Net", (), {"name": net_name})()
+
+
+class _FakeAdapter:
+    def __init__(self, items):
+        self._items = items
+        self.get_selected_items_calls = 0
+
+    def get_selected_items(self):
+        self.get_selected_items_calls += 1
+        return list(self._items)
+
+
+class _FakeBoard:
+    def __init__(self, items, snapshot):
+        self.adapter = _FakeAdapter(items)
+        self._snapshot = snapshot
+        self.select_calls = 0
+
+    def select(self):
+        self.select_calls += 1
+        return list(self._snapshot)
+
+
+def _selected(ref, role="ROLE_A", cluster="C1"):
+    return Selected(ref=ref, role=role, cluster=cluster, sheet=[], nets={}, fp=None)
+
+
+def _connected_window(real_main_window, monkeypatch, items, snapshot):
+    """Stops the real timers (the test drives the tick synchronously),
+    monkeypatches the module's FootprintInstance so the fakes count as
+    footprints, and wires a fake board into a real BoardConnection."""
+    real_main_window._timer.stop()
+    real_main_window._selection_timer.stop()
+    monkeypatch.setattr(main_window_mod, "FootprintInstance", _FakeFootprint)
+
+    board = _FakeBoard(items, snapshot)
+    connection = BoardConnection(timeout_ms=10)
+    connection.board = board
+    connection._rebuild_snapshot()
+    # The setup's own cache-build select() shouldn't count against the
+    # tick's "0 calls" contract — reset the counter so assertions below only
+    # see calls made from _poll_board_selection()/later manual refreshes.
+    board.select_calls = 0
+    real_main_window.connection = connection
+    return real_main_window, board
+
+
+def _record_set_board_selection(real_main_window, monkeypatch):
+    calls = []
+    monkeypatch.setattr(real_main_window.extract_dock, "set_board_selection",
+                        lambda raw, sel: calls.append((raw, list(sel))))
+    return calls
+
+
+def test_selection_tick_uses_cached_snapshot_not_board_select(real_main_window, monkeypatch):
+    """The headline acceptance of 1.1: zero board.select() calls from the
+    400ms tick — `selected` is built by ref against the cached snapshot."""
+    fp = _FakeFootprint("R1")
+    window, board = _connected_window(real_main_window, monkeypatch,
+                                      items=[fp], snapshot=[_selected("R1")])
+    calls = _record_set_board_selection(window, monkeypatch)
+
+    window._poll_board_selection()
+
+    assert board.select_calls == 0
+    assert board.adapter.get_selected_items_calls == 1  # the one cheap IPC, still polled
+    assert len(calls) == 1
+    raw, sel = calls[0]
+    assert raw == [fp]
+    assert [s.ref for s in sel] == ["R1"]
+
+
+def test_selection_tick_early_exits_when_nothing_changed(real_main_window, monkeypatch):
+    """Same selection + same snapshot version -> the second tick must not
+    touch ExtractDock at all (and must not call board.select() either)."""
+    fp = _FakeFootprint("R1")
+    window, board = _connected_window(real_main_window, monkeypatch,
+                                      items=[fp], snapshot=[_selected("R1")])
+    calls = _record_set_board_selection(window, monkeypatch)
+
+    window._poll_board_selection()
+    window._poll_board_selection()
+    window._poll_board_selection()
+
+    assert len(calls) == 1  # only the first tick pushed the selection
+    assert board.select_calls == 0
+
+
+def test_selection_tick_updates_when_selection_changes(real_main_window, monkeypatch):
+    """A different raw selection (new footprint + a via) must repush to
+    ExtractDock even though the snapshot version is unchanged — the guard
+    keys on the whole raw selection, not just footprint refs."""
+    fp1 = _FakeFootprint("R1")
+    window, board = _connected_window(real_main_window, monkeypatch,
+                                      items=[fp1], snapshot=[_selected("R1")])
+    calls = _record_set_board_selection(window, monkeypatch)
+
+    window._poll_board_selection()
+
+    board.adapter._items = [_FakeFootprint("R2"), _FakeVia("GND")]
+    board._snapshot = [_selected("R2", role="ROLE_B", cluster="C2")]
+    window.connection._rebuild_snapshot()  # a manual Refresh would do this
+
+    window._poll_board_selection()
+
+    assert len(calls) == 2
+    assert [s.ref for s in calls[1][1]] == ["R2"]
+    # The only select() is the one _rebuild_snapshot() did for the manual
+    # Refresh — the ticks themselves never call it.
+    assert board.select_calls == 1
+
+
+def test_selection_tick_updates_when_snapshot_refreshed_same_refs(real_main_window, monkeypatch):
+    """Same footprint refs but a refreshed snapshot (version bumped, e.g. a
+    Role/Cluster edit picked up by a manual Refresh) must re-push fresh
+    Selected objects to ExtractDock — not early-exit on the refs alone."""
+    fp = _FakeFootprint("R1")
+    window, board = _connected_window(real_main_window, monkeypatch,
+                                      items=[fp], snapshot=[_selected("R1")])
+    calls = _record_set_board_selection(window, monkeypatch)
+
+    window._poll_board_selection()
+
+    board._snapshot = [_selected("R1", role="EDITED_ROLE", cluster="EDITED")]
+    window.connection._rebuild_snapshot()
+
+    window._poll_board_selection()
+
+    assert len(calls) == 2
+    assert calls[1][1][0].role == "EDITED_ROLE"
+    assert board.select_calls == 1
