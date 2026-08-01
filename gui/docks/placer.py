@@ -42,11 +42,28 @@ Redraws idempotent (a second click recognizes vias/tracks the first
 click already created, via the SAME registry file a real
 `kicadstamp_cli.py apply` on this file would also use).
 
+Cell picking moved out to CellListDock (gui/docks/cell_list.py), tabified
+with the Components tree — feeds set_selected_cell() here. Cluster name
+similarly follows RoleClusterTreeDock.on_cluster_picked when a Cluster
+GROUP node is clicked there (set_cluster_name()) — both requested live
+2026-08-01 ("где выбирать cell? ...к дереву компонент надо добавить
+табик со списком cell", "раз уж у нас есть список Cluster то при выборе
+кластера надо сразу автоматически заполнять поле кластер"). Anchor
+Role/Cluster are editable QComboBoxes populated from the live board
+snapshot (refresh_known_roles(), called by MainWindow at the same ~2s
+cadence as BulkFieldEditorDock.refresh_known_values()) — "если выбираем
+по роли то надо и поле anchor cluster да и лист... якорить, так уж по
+полной". Ref stays a plain, unassisted text field — this project
+deliberately avoids relying on refdes elsewhere (Role survives
+re-annotation, Ref doesn't), the user confirmed live it's fine to leave
+as a minor/deprioritized option now that it exists, not worth the same
+treatment.
+
 Scope NOT covered by this first version (kept out deliberately, not by
-oversight): anchor_sheet/anchor_cluster narrowing, anchor_point Point-name
-autocomplete, refs: explicit role->ref override, by_selection mode. All
-still reachable by hand-editing the saved YAML; add UI for them if they
-turn out to be needed often.
+oversight): anchor_sheet narrowing, anchor_point Point-name autocomplete,
+refs: explicit role->ref override, by_selection mode. All still reachable
+by hand-editing the saved YAML; add UI for them if they turn out to be
+needed often.
 """
 import json
 import logging
@@ -58,7 +75,7 @@ import yaml
 from kipy.errors import ApiError
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QFormLayout,
                               QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-                              QListWidget, QPushButton, QVBoxLayout, QWidget)
+                              QPushButton, QVBoxLayout, QWidget)
 
 from kicadstamp.apply_pipeline import ApplyPipeline
 from kicadstamp.config import Config, RuntimeContext, _load_clone_placement, load_config
@@ -92,12 +109,7 @@ class PlacerDock(QDockWidget):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(4, 4, 4, 4)
 
-        layout.addWidget(QLabel(_("Cell:")))
-        self.cells_list = QListWidget()
-        self.cells_list.setMaximumHeight(90)
-        self.cells_list.itemClicked.connect(self._on_cell_clicked)
-        layout.addWidget(self.cells_list)
-        self.cell_label = QLabel(_("No cell picked"))
+        self.cell_label = QLabel(_("No cell picked — pick one in the Cells tab"))
         self.cell_label.setWordWrap(True)
         layout.addWidget(self.cell_label)
 
@@ -137,12 +149,17 @@ class PlacerDock(QDockWidget):
         anchor_form = QFormLayout(self._anchor_row)
         anchor_form.setContentsMargins(0, 0, 0, 0)
         self.anchor_ref_edit = QLineEdit()
+        self.anchor_ref_edit.setPlaceholderText(_("e.g. U3 (refdes — mostly avoided in this project)"))
         anchor_form.addRow(_("Ref:"), self.anchor_ref_edit)
-        self.anchor_role_edit = QLineEdit()
+        self.anchor_role_edit = QComboBox()
+        self.anchor_role_edit.setEditable(True)
         anchor_form.addRow(_("Role:"), self.anchor_role_edit)
         self.anchor_pad_edit = QLineEdit()
         self.anchor_pad_edit.setPlaceholderText(_("pad (optional)"))
         anchor_form.addRow(_("Pad:"), self.anchor_pad_edit)
+        self.anchor_cluster_edit = QComboBox()
+        self.anchor_cluster_edit.setEditable(True)
+        anchor_form.addRow(_("Anchor cluster:"), self.anchor_cluster_edit)
         layout.addWidget(self._anchor_row)
 
         self._point_row = QWidget()
@@ -193,23 +210,52 @@ class PlacerDock(QDockWidget):
         self.setWidget(container)
         self._on_origin_mode_changed()
 
-    # ── Wiring from the Files dock ───────────────────────────────────────
+    # ── Wiring from the Files dock / Cells tab / Components tree ──────────
 
     def set_cells_file(self, path: Optional[Path]) -> None:
         self._cells_path = path
-        self._refresh_cells_list()
 
     def set_placer_file(self, path: Optional[Path]) -> None:
         self._placer_path = path
 
-    def _refresh_cells_list(self) -> None:
-        self.cells_list.clear()
-        self.cells_list.addItems(sorted(yaml_io.existing_keys(self._cells_path)))
-
-    def _on_cell_clicked(self, item) -> None:
-        self._selected_cell = item.text()
-        self.cell_label.setText(_("Cell: {name}").format(name=self._selected_cell))
+    def set_selected_cell(self, name: str) -> None:
+        """Called by CellListDock (see gui/docks/cell_list.py) when a Cell
+        is clicked there — Cell picking used to live inside this dock, but
+        the user expected it alongside the Components tree instead
+        (2026-08-01: "где выбирать cell? ...к дереву компонент надо
+        добавить табик со списком cell")."""
+        self._selected_cell = name
+        self.cell_label.setText(_("Cell: {name}").format(name=name))
         self._rebuild_param_rows()
+
+    def set_cluster_name(self, name: str) -> None:
+        """Called by RoleClusterTreeDock.on_cluster_picked when a Cluster
+        group node is clicked there — requested alongside the Cell-list
+        move (2026-08-01: "раз уж у нас есть список Cluster то при выборе
+        кластера надо сразу автоматически заполнять поле кластер")."""
+        self.cluster_edit.setText(name)
+
+    def refresh_known_roles(self, board) -> None:
+        """Populates the anchor Role/Cluster combos with distinct values
+        already used on the board — "если выбираем по роли то надо и
+        поле anchor cluster да и лист" (2026-08-01). Called by MainWindow
+        alongside BulkFieldEditorDock.refresh_known_values(), same ~2s
+        cadence (a full poll, not the 400ms selection-watch tick — the
+        known-value list barely changes tick to tick)."""
+        snapshot = board.select()
+        roles = sorted({s.role for s in snapshot if s.role})
+        clusters = sorted({s.cluster for s in snapshot if s.cluster})
+        self._set_combo_items(self.anchor_role_edit, roles)
+        self._set_combo_items(self.anchor_cluster_edit, clusters)
+
+    @staticmethod
+    def _set_combo_items(combo: QComboBox, items: List[str]) -> None:
+        current_text = combo.currentText()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItems(items)
+        combo.setCurrentText(current_text)
+        combo.blockSignals(False)
 
     def _rebuild_param_rows(self) -> None:
         cell_data = yaml_io.load_data(self._cells_path).get(self._selected_cell, {})
@@ -312,8 +358,9 @@ class PlacerDock(QDockWidget):
             entry["xy"] = [shift_x, shift_y]
             if mode == 1:
                 ref = self.anchor_ref_edit.text().strip()
-                role = self.anchor_role_edit.text().strip()
+                role = self.anchor_role_edit.currentText().strip()
                 pad = self.anchor_pad_edit.text().strip()
+                cluster = self.anchor_cluster_edit.currentText().strip()
                 if not ref and not role:
                     self._show_message(_("Anchor: set Ref or Role."), _ERROR_STYLE)
                     return None
@@ -327,6 +374,8 @@ class PlacerDock(QDockWidget):
                     entry["anchor_role"] = role
                 if pad:
                     entry["anchor_pad"] = pad
+                if cluster:
+                    entry["anchor_cluster"] = cluster
             else:  # Point
                 point = self.point_edit.text().strip()
                 if not point:

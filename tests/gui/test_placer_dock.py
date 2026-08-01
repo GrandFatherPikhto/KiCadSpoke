@@ -39,7 +39,7 @@ def _make_cell_and_dock(main_window, tmp_path):
     dock = PlacerDock(main_window)
     dock.set_cells_file(cells_file)
     dock.set_placer_file(placer_file)
-    dock.cells_list.itemClicked.emit(dock.cells_list.item(0))
+    dock.set_selected_cell("pi_filter")  # Cell picking now lives in CellListDock, see test_cell_list.py
     return dock, cells_file, placer_file
 
 
@@ -72,7 +72,7 @@ def test_anchor_ref_and_role_together_is_blocked(main_window, tmp_path):
     dock.cluster_edit.setText("X")
     dock.origin_mode_combo.setCurrentIndex(1)
     dock.anchor_ref_edit.setText("U1")
-    dock.anchor_role_edit.setText("SOME_ROLE")
+    dock.anchor_role_edit.setCurrentText("SOME_ROLE")
 
     assert dock._build_entry_dict() is None
     assert "mutually exclusive" in dock.message_label.text()
@@ -82,7 +82,7 @@ def test_anchor_role_with_pad_and_shift(main_window, tmp_path):
     dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
     dock.cluster_edit.setText("X")
     dock.origin_mode_combo.setCurrentIndex(1)
-    dock.anchor_role_edit.setText("SOME_ROLE")
+    dock.anchor_role_edit.setCurrentText("SOME_ROLE")
     dock.anchor_pad_edit.setText("1")
     dock.shift_x_edit.setText("2")
     dock.shift_y_edit.setText("0")

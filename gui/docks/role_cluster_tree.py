@@ -43,6 +43,13 @@ class RoleClusterTreeDock(QDockWidget):
         super().__init__(_("Components"), main_window)
         self._main_window = main_window
         self._selected: List[Selected] = []
+        # Fired when a Cluster GROUP node is clicked while grouped by
+        # Cluster (see _on_clicked) — PlacerDock listens, so picking a
+        # cluster here fills its Cluster field the same way picking a
+        # cell elsewhere fills the Cell field. Not fired for Role-mode or
+        # leaf clicks (see PlacerDock module docstring for the rest of
+        # this "pick from a list, don't retype" pattern).
+        self.on_cluster_picked: Optional[Callable[[str], None]] = None
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -268,11 +275,34 @@ class RoleClusterTreeDock(QDockWidget):
     def _on_clicked(self, index) -> None:
         item = self.tree.model().itemFromIndex(index)
         refs = set(self._collect_refs(item))
+
+        if (self.group_by.currentIndex() == 1  # Cluster grouping
+                and item.data(_REF_ROLE) is None  # a group node, not a leaf component
+                and self.on_cluster_picked is not None):
+            self.on_cluster_picked(self._cluster_path_for_item(item))
+
         board = self._main_window.connection.board
         if board is None or not refs:
             return
         footprints = [s.fp for s in self._selected if s.ref in refs]
         board.adapter.select_items(footprints)
+
+    @staticmethod
+    def _cluster_path_for_item(item: QStandardItem) -> str:
+        """Rebuilds the full '/'-joined Cluster path for a group node in
+        the hierarchical (Cluster) tree — _build_hierarchical() gives each
+        intermediate node just its OWN segment as text() (unlike
+        _build_flat()'s '(count)'-suffixed group items), so the full path
+        has to be walked back up through .parent() (None once past the
+        top-level items — QStandardItem's own root sentinel, not a real
+        node) and reassembled root-to-leaf."""
+        segments = []
+        node = item
+        while node is not None:
+            segments.append(node.text())
+            node = node.parent()
+        segments.reverse()
+        return "/".join(segments)
 
     def _collect_refs(self, item: QStandardItem) -> List[str]:
         """Leaf items answer with their own refdes; group items answer with

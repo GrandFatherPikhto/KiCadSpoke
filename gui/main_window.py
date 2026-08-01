@@ -47,6 +47,7 @@ from kicadstamp.i18n import _
 from . import settings
 from .connection import BoardConnection
 from .docks.bulk_field_editor import BulkFieldEditorDock
+from .docks.cell_list import CellListDock
 from .docks.extract import ExtractDock
 from .docks.file_picker import FilePickerDock
 from .docks.log_panel import LogDock
@@ -80,6 +81,10 @@ class MainWindow(QMainWindow):
         self.tree_dock = RoleClusterTreeDock(self)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.tree_dock)
 
+        self.cell_list_dock = CellListDock(self)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.cell_list_dock)
+        self.tabifyDockWidget(self.tree_dock, self.cell_list_dock)
+
         self.bulk_edit_dock = BulkFieldEditorDock(self)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.bulk_edit_dock)
 
@@ -98,8 +103,9 @@ class MainWindow(QMainWindow):
         self.log_dock = LogDock(self, verbose=verbose)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock)
 
-        # Files -> Extract/Placer wiring: ExtractDock's cell-output file and
-        # PlacerDock's cell list both follow the Cells role; ExtractDock's
+        # Files -> Extract/Placer/Cells-tab wiring: ExtractDock's cell-
+        # output file, PlacerDock's placeholder discovery, and the Cells
+        # tab's own list all follow the Cells role; ExtractDock's
         # extract_profiles file follows the Extractor role; ExtractDock's
         # and PlacerDock's Placer-file each follow the Placer role (both
         # assigned via "Use selected" in the Files dock — one role can have
@@ -113,6 +119,7 @@ class MainWindow(QMainWindow):
         def _on_cells_file_changed(path):
             self.extract_dock.set_target_file(path)
             self.placer_dock.set_cells_file(path)
+            self.cell_list_dock.set_cells_file(path)
 
         def _on_placer_file_changed(path):
             self.extract_dock.set_placer_file(path)
@@ -124,6 +131,14 @@ class MainWindow(QMainWindow):
         _on_cells_file_changed(self.file_picker_dock.assigned["cells"])
         self.extract_dock.set_profile_file(self.file_picker_dock.assigned["extractor"])
         _on_placer_file_changed(self.file_picker_dock.assigned["placer"])
+
+        # Components tree -> Placer: clicking a Cluster group node in the
+        # tree fills PlacerDock's Cluster field; Cells tab -> Placer:
+        # clicking a Cell fills PlacerDock's Cell field (both requested
+        # live 2026-08-01 as the natural place to pick from, instead of a
+        # picker embedded in PlacerDock itself).
+        self.tree_dock.on_cluster_picked = self.placer_dock.set_cluster_name
+        self.cell_list_dock.on_cell_picked = self.placer_dock.set_selected_cell
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
@@ -187,6 +202,7 @@ class MainWindow(QMainWindow):
             self.status_label.setText(_("Connected — {count} components").format(count=len(snapshot)))
             self.tree_dock.set_footprints(snapshot)
             self.bulk_edit_dock.refresh_known_values(self.connection.board)
+            self.placer_dock.refresh_known_roles(self.connection.board)
 
         self.action_button.setText(_("Refresh") if self.connection.is_connected else _("Reconnect"))
 
