@@ -199,6 +199,16 @@ class MainWindow(QMainWindow):
         if self.on_components_changed:
             self.on_components_changed()
 
+    @property
+    def components(self) -> List[SchematicComponent]:
+        """Public read-only access to the latest parsed schematic components
+        (self._components, refreshed by _rescan()). The main GUI's Components
+        tree reads this when embedded (gui/docks/role_cluster_tree.py's
+        "Not yet applied" mode) instead of reaching into the private
+        attribute — a stable public interface for a value that is refreshed
+        wholesale on every rescan and never mutated in place."""
+        return self._components
+
     @staticmethod
     def _set_combo_items(combo: QComboBox, items: List[str]) -> None:
         current = combo.currentText()

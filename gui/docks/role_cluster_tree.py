@@ -216,7 +216,10 @@ class RoleClusterTreeDock(QDockWidget):
     def _current_rows(self) -> List[_Row]:
         if not self.mode_checkbox.isChecked():
             return [_Row(s.ref, s.role, s.cluster) for s in self._selected]
-        components = self._main_window.fieldstool_dock.window._components
+        # Public accessor on fieldstool's MainWindow (see fieldstool/gui/
+        # main_window.py's components property) — not the private
+        # `_components`, which is refreshed wholesale and owned by that window.
+        components = self._main_window.fieldstool_dock.window.components
         return [_Row(c.ref, c.role, c.cluster, divergent=c.divergent) for c in components]
 
     def _rebuild(self) -> None:

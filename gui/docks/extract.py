@@ -115,6 +115,7 @@ from kicadstamp.template_extraction import extract_template_from_selection
 
 from .. import yaml_io
 from ..docks.file_picker import PROJECT_ROOT
+from ..ui_utils import busy
 
 logger = logging.getLogger(__name__)
 
@@ -620,7 +621,15 @@ class ExtractDock(QDockWidget):
             logger.info(text)
 
     def _on_extract(self) -> None:
+        """Extract button handler — extraction does board IPC + file writes,
+        so it's wrapped in the busy cursor + button-disable context (see
+        gui/ui_utils.py) to signal progress and stop a double-click from
+        queueing a second concurrent extract."""
         self._show_message("")
+        with busy((self.extract_button,)):
+            self._do_extract()
+
+    def _do_extract(self) -> None:
         name = self.name_edit.text().strip()
         if not name:
             self._show_message(_("Cell name is required."), _ERROR_STYLE)

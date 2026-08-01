@@ -101,6 +101,7 @@ from kicadstamp.placement.planner import PlacementPlanner
 
 from .. import yaml_io
 from ..docks.file_picker import PROJECT_ROOT
+from ..ui_utils import busy
 
 logger = logging.getLogger(__name__)
 
@@ -457,7 +458,15 @@ class PlacerDock(QDockWidget):
     # ── Redraw ────────────────────────────────────────────────────────────
 
     def _on_redraw(self) -> None:
+        """Redraw button handler — the pipeline run is long and blocking, so
+        it's wrapped in the busy cursor + button-disable context (see
+        gui/ui_utils.py): signals progress and stops a double-click from
+        starting a second ApplyPipeline against the same pynng REQ socket."""
         self._show_message("")
+        with busy((self.redraw_button, self.save_button)):
+            self._do_redraw()
+
+    def _do_redraw(self) -> None:
         entry = self._build_entry_dict()
         if entry is None:
             return
@@ -550,6 +559,10 @@ class PlacerDock(QDockWidget):
     # ── Save ──────────────────────────────────────────────────────────────
 
     def _on_save(self) -> None:
+        with busy((self.redraw_button, self.save_button)):
+            self._do_save()
+
+    def _do_save(self) -> None:
         entry = self._build_entry_dict()
         if entry is None:
             return
