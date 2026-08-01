@@ -36,6 +36,10 @@ from .loader import (
     _check_layer_value,
 )
 
+# Public alias for the loader entry point the GUI uses to validate/rebuild
+# clone placements (Phase 4.2 — gui/ must not import the private name).
+load_clone_placement = _load_clone_placement
+
 __all__ = [
     "ThermalViaArrayConfig",
     "TemplateVia",
@@ -50,6 +54,7 @@ __all__ = [
     "Config",
     "RuntimeContext",
     "load_config",
+    "load_clone_placement",
     "rule_effective_name",
     "thermal_via_array_effective_name",
 ]

@@ -14,7 +14,7 @@ import yaml
 
 import gui.docks.placer as placer_mod
 from gui.docks.placer import PlacerDock
-from kicadstamp.config import Cell, Config, RuntimeContext, TemplateComponentSlot, _load_clone_placement
+from kicadstamp.config import Cell, Config, RuntimeContext, TemplateComponentSlot, load_clone_placement
 
 
 def _write_yaml(path, data) -> None:
@@ -62,7 +62,7 @@ def test_build_entry_dict_absolute_xy_round_trips_through_loader(main_window, tm
         "name": "Channel_2_PI_Filter", "cell": "pi_filter", "xy": [10.5, -3.2],
         "params": {"PWR_IN": "+3V3_CH2", "PWR_OUT": "+3V3_CH2_DIRTY"},
     }
-    cp = _load_clone_placement(entry)  # must validate against the real backend loader
+    cp = load_clone_placement(entry)  # must validate against the real backend loader
     assert cp.name == "Channel_2_PI_Filter"
     assert cp.xy == (10.5, -3.2)
 
@@ -91,7 +91,7 @@ def test_anchor_role_with_pad_and_shift(main_window, tmp_path):
     assert entry["anchor_role"] == "SOME_ROLE"
     assert entry["anchor_pad"] == "1"
     assert entry["xy"] == [2.0, 0.0]
-    cp = _load_clone_placement(entry)  # validates anchor_role/anchor_pad combination
+    cp = load_clone_placement(entry)  # validates anchor_role/anchor_pad combination
     assert cp.anchor_role == "SOME_ROLE"
     assert cp.anchor_pad == "1"
 
@@ -164,7 +164,7 @@ def test_redraw_preserves_other_placements_for_registry_safety(main_window, tmp_
     dock._param_edits["PWR_IN"].setCurrentText("+3V3_CH2")
     dock._param_edits["PWR_OUT"].setCurrentText("+3V3_CH2_DIRTY")
 
-    pre_existing = _load_clone_placement({"name": "OTHER_PLACEMENT", "cell": "pi_filter", "xy": [0, 0]})
+    pre_existing = load_clone_placement({"name": "OTHER_PLACEMENT", "cell": "pi_filter", "xy": [0, 0]})
     fake_cfg = Config(
         cells={"pi_filter": Cell(name="pi_filter", vias=[], tracks=[], clone_placements=[], components=[
             TemplateComponentSlot(role="C_IN", offset_along_mm=0, offset_across_mm=0, angle_deg=0),

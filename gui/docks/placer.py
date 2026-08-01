@@ -93,7 +93,7 @@ from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget,
                               QLineEdit, QPushButton, QVBoxLayout, QWidget)
 
 from kicadstamp.apply_pipeline import ApplyPipeline
-from kicadstamp.config import Config, RuntimeContext, _load_clone_placement, load_config
+from kicadstamp.config import Config, RuntimeContext, load_clone_placement, load_config
 from kicadstamp.constants import CLUSTER_FIELD_NAME
 from kicadstamp.exceptions import PlacerError, ValidationError
 from kicadstamp.i18n import _
@@ -438,7 +438,7 @@ class PlacerDock(QDockWidget):
             return
 
         try:
-            clone_placement = _load_clone_placement(entry)
+            clone_placement = load_clone_placement(entry)
         except ValidationError as e:
             self._show_message(str(e), _ERROR_STYLE)
             return
@@ -530,7 +530,7 @@ class PlacerDock(QDockWidget):
             self._show_message(_("Pick a Placer file in Files first."), _ERROR_STYLE)
             return
         try:
-            _load_clone_placement(entry)  # validate before writing anything
+            load_clone_placement(entry)  # validate before writing anything
         except ValidationError as e:
             self._show_message(str(e), _ERROR_STYLE)
             return

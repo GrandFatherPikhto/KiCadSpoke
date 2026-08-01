@@ -35,6 +35,17 @@ clone_placements:
 """
 
 
+def test_load_clone_placement_is_a_public_alias():
+    """Phase 4.2 — gui/docks/placer.py must use a public entry point, not the
+    private _load_clone_placement; the alias lives in kicadstamp.config.__all__."""
+    import kicadstamp.config as config
+
+    assert "load_clone_placement" in config.__all__
+    cp = config.load_clone_placement({"name": "p", "cell": "c", "xy": [0.0, 0.0]})
+    assert cp.name == "p"
+    assert isinstance(cp, config.ClonePlacement)
+
+
 def test_clone_placements_loaded_with_all_fields(tmp_path):
     config_file = tmp_path / "test.yaml"
     config_file.write_text(YAML_TEXT, encoding="utf-8")
