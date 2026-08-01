@@ -31,7 +31,8 @@ if hasattr(sys.stderr, "reconfigure"):
 from kicadstamp import __version__
 from kicadstamp.config import load_config, RuntimeContext
 from kicadstamp.apply_pipeline import ApplyPipeline, cmd_apply
-from kicadstamp.cli_extract import cmd_extract, load_profile, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
+from kicadstamp.cli import cmd_extract
+from kicadstamp.cli_extract import load_profile, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
 from kicadstamp.exceptions import PlacerError
 from kicadstamp.logging_setup import setup_logging
 from kicadstamp.undo import undo_last_operation

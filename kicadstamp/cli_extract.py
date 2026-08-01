@@ -1,13 +1,16 @@
 # kicadstamp/cli_extract.py
 """
-extract / clone-extract CLI commands.
+Library core of the `extract` / `clone-extract` commands.
 
-Extracted from kicadstamp_cli.py so the CLI entry point stays thin.
+Pure logic only — deliberately free of CLI idioms (no sys.exit / input /
+print / argparse.Namespace). Callers that need exit codes or interactive
+prompts live in the thin CLI wrappers (kicadstamp/cli.py and the entry
+point kicadstamp_cli.py), which translate the raised PlacerError /
+ValidationError into process exit codes.
 """
 
 import json
 import logging
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -18,6 +21,8 @@ from kicadstamp.exceptions import PlacerError, check_unknown_keys
 from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from kicadstamp.template_extraction import extract_template_from_selection, render_uncertain_comments
 from kicadstamp.i18n import _
+
+logger = logging.getLogger(__name__)
 
 
 # extract_profiles: / clone_profiles: known keys — see load_profile's
@@ -55,18 +60,22 @@ def load_profile(profiles_path: str, top_key: str, profile_name: str,
     'origin-by-via-net' instead of 'origin_by_via_net') was previously
     silently ignored: found live on boards/3ch-awg-tia, the origin quietly
     fell back to the selection bbox instead of the intended via.
+
+    Raises PlacerError if the profiles file does not exist or does not contain
+    the named profile — the CLI layer maps that to exit code 1.
     """
     p = Path(profiles_path)
     if not p.exists():
-        sys.exit(_("[error] profiles file {path!r} not found").format(path=profiles_path))
+        raise PlacerError(_("[error] profiles file {path!r} not found").format(path=profiles_path))
     with open(p, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     data = resolve_includes(str(p), data)
     profiles = data.get(top_key, {})
     if profile_name not in profiles:
         available = list(profiles.keys())
-        sys.exit(_("[error] profile {name!r} not found in {top_key!r} of file {path!r}. Available: {avail}")
-                 .format(name=profile_name, top_key=top_key, path=profiles_path, avail=available))
+        raise PlacerError(_("[error] profile {name!r} not found in {top_key!r} of file {path!r}. "
+                            "Available: {avail}")
+                          .format(name=profile_name, top_key=top_key, path=profiles_path, avail=available))
     prof = dict(profiles[profile_name])
     for field in (root_defaults or []):
         if field not in prof and field in data:
@@ -78,91 +87,32 @@ def load_profile(profiles_path: str, top_key: str, profile_name: str,
     return prof
 
 
-def cmd_extract(args) -> None:
-    """Extract a spoke cell from the current selection on the board."""
-    logger = logging.getLogger(__name__)
-    logger.info(_("Connecting to KiCad (timeout {timeout} ms)").format(timeout=args.timeout_ms))
-    adapter = KiCadBoardAdapter(timeout_ms=args.timeout_ms)
-    adapter.refresh_board()
+def extract_template(adapter: KiCadBoardAdapter, *, name: str, output: str,
+                     params: Optional[Dict[str, Any]] = None,
+                     net_template_map: Optional[Dict[str, str]] = None,
+                     net_template_role: Optional[Dict[str, str]] = None,
+                     origin_via_net: Optional[str] = None,
+                     origin_component_role: Optional[str] = None,
+                     origin_component_pad: Optional[str] = None) -> Dict[str, Any]:
+    """Extract a spoke cell template from the current board selection and
+    merge-write it into `output` (YAML/JSON), preserving any existing entries.
 
-    direct_args_given = bool(args.name or args.output or args.param or args.net_template
-                             or args.net_template_role
-                             or args.origin_by_via_net or args.origin_by_component_role
-                             or args.origin_by_component_pad)
-    if args.profile and direct_args_given:
-        sys.exit(_("[error] --profile cannot be combined with --name/--output/--param/--net-template/"
-                   "--net-template-role/--origin-by-*: either all from profile or all as explicit flags, "
-                   "not mixed."))
-
-    if args.profile:
-        if not args.profiles:
-            sys.exit(_("[error] --profile given without --profiles (profiles file)"))
-        prof = load_profile(args.profiles, "extract_profiles", args.profile, root_defaults=["output"],
-                            known_keys=_EXTRACT_PROFILE_KNOWN_KEYS)
-        if "output" not in prof:
-            sys.exit(_("[error] profile {profile!r} missing required field {field!r}")
-                     .format(profile=args.profile, field="output"))
-        # name: defaults to the profile's own key — only set it explicitly when
-        # the cell name must differ from the profile name (e.g. several
-        # profiles feeding the same shared cell, like cap_pair_standard).
-        name = prof.get("name", args.profile)
-        output = prof["output"]
-        params = dict(prof.get("params", {}) or {})
-        net_template_map = dict(prof.get("net_template", {}) or {})
-        net_template_role = dict(prof.get("net_template_role", {}) or {})
-        origin_via_net = prof.get("origin_by_via_net")
-        origin_component_role = prof.get("origin_by_component_role")
-        origin_component_pad = prof.get("origin_by_component_pad")
-        logger.info(_("Profile {profile!r} from {profiles}: name={name}, output={output}")
-                    .format(profile=args.profile, profiles=args.profiles, name=name, output=output))
-    else:
-        name = args.name
-        output = args.output
-        if not name:
-            try:
-                name = input(_("Cell name (key under cells:): ")).strip()
-            except EOFError:
-                name = ""
-        if not name or not output:
-            sys.exit(_("[error] need --name and --output (or --profiles/--profile instead)"))
-        params = {}
-        for item in (args.param or []):
-            if "=" not in item:
-                logger.error(_("--param {item!r} — need format KEY=VALUE").format(item=item))
-                sys.exit(1)
-            k, v = item.split("=", 1)
-            params[k] = v
-
-        net_template_map = {}
-        for item in (args.net_template or []):
-            if "=" not in item:
-                logger.error(_("--net-template {item!r} — need format LITERAL=PATTERN").format(item=item))
-                sys.exit(1)
-            literal, pattern = item.split("=", 1)
-            net_template_map[literal] = pattern
-
-        net_template_role = {}
-        for item in (args.net_template_role or []):
-            if "=" not in item:
-                logger.error(_("--net-template-role {item!r} — need format ROLE=LITERAL").format(item=item))
-                sys.exit(1)
-            role_key, literal = item.split("=", 1)
-            net_template_role[role_key] = literal
-        origin_via_net = args.origin_by_via_net
-        origin_component_role = args.origin_by_component_role
-        origin_component_pad = args.origin_by_component_pad
-
+    Library core of the `extract` command — no CLI idioms: raises PlacerError
+    on invalid arguments, never touches stdin/stdout/process exit codes.
+    `adapter` must already be connected and refreshed (the CLI wrapper does
+    that). Returns the written template dict.
+    """
     if origin_component_pad and not origin_component_role:
-        sys.exit(_("[error] --origin-by-component-pad without --origin-by-component-role — "
-                   "you can only refine a pad for a role that you first specify"))
+        raise PlacerError(_("[error] --origin-by-component-pad without --origin-by-component-role — "
+                            "you can only refine a pad for a role that you first specify"))
 
     annotations: List[Tuple[str, str, str]] = []
     template_dict = extract_template_from_selection(
-        adapter, name, params=params, net_template_map=net_template_map,
+        adapter, name, params=params or {}, net_template_map=net_template_map or {},
         origin_via_net=origin_via_net,
         origin_component_role=origin_component_role,
         origin_component_pad=origin_component_pad,
-        net_template_role=net_template_role,
+        net_template_role=net_template_role or {},
         annotations=annotations,
     )
 
@@ -189,3 +139,4 @@ def cmd_extract(args) -> None:
             f.write(text)
 
     logger.info(_("✅ Template {name!r} written to {output}").format(name=name, output=output_path))
+    return template_dict

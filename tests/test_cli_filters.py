@@ -349,6 +349,23 @@ class TestLoadProfileIncludes:
         assert prof["name"] == "b"
 
 
+class TestLoadProfileErrors:
+    """load_profile() must raise PlacerError (not sys.exit) when the profiles
+    file or the named profile is missing — library functions report failure via
+    exceptions, the CLI layer maps them to exit codes."""
+
+    def test_missing_profiles_file_raises_placer_error(self):
+        with pytest.raises(PlacerError, match="not found"):
+            load_profile("no_such_profiles.yaml", "extract_profiles", "a")
+
+    def test_missing_profile_raises_placer_error(self, tmp_path):
+        path = tmp_path / "profiles.yaml"
+        path.write_text(yaml.safe_dump({"extract_profiles": {"a": {"name": "a"}}}),
+                        encoding="utf-8")
+        with pytest.raises(PlacerError, match="profile 'b' not found"):
+            load_profile(str(path), "extract_profiles", "b")
+
+
 class TestLoadProfileKnownKeys:
     """known_keys param on load_profile() — regression coverage for the exact
     bug that motivated it (see check_unknown_keys/_EXTRACT_PROFILE_KNOWN_KEYS
