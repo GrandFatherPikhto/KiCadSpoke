@@ -6,7 +6,7 @@ is a gamble). Coordinates are in mm, as everywhere in the project.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+
 
 
 @dataclass
@@ -20,7 +20,7 @@ class NetlistComponent:
     uuid: str             # in‑schematic uuid of the symbol (tail of tstamps)
 
     @property
-    def channel(self) -> Optional[str]:
+    def channel(self) -> str | None:
         parts = self.sheet_names.strip("/").split("/")
         return parts[0] if parts and parts[0].startswith("Channel") else None
 
@@ -41,8 +41,8 @@ class ChannelInfo:
     """Channel instance: name, root sheet uuid, template file."""
     name: str             # "Channel_0"
     sheet_uuid: str       # first segment of sheet_tstamps
-    components: Dict[str, NetlistComponent] = field(default_factory=dict)  # inner_key -> comp
-    local_nets: List[str] = field(default_factory=list)
+    components: dict[str, NetlistComponent] = field(default_factory=dict)  # inner_key -> comp
+    local_nets: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -51,10 +51,10 @@ class TwinMap:
     Component and net mapping between channels.
     components[inner_key][channel_name] -> ref
     """
-    channels: Dict[str, ChannelInfo]
-    components: Dict[str, Dict[str, str]]
+    channels: dict[str, ChannelInfo]
+    components: dict[str, dict[str, str]]
 
-    def twin_ref(self, ref: str, src_ch: str, dst_ch: str) -> Optional[str]:
+    def twin_ref(self, ref: str, src_ch: str, dst_ch: str) -> str | None:
         for _, by_ch in self.components.items():
             if by_ch.get(src_ch) == ref:
                 return by_ch.get(dst_ch)
@@ -80,7 +80,7 @@ class PcbFootprint:
     layer: str
 
     @property
-    def channel_uuid(self) -> Optional[str]:
+    def channel_uuid(self) -> str | None:
         parts = self.path.strip("/").split("/")
         return parts[0] if parts and parts[0] else None
 
@@ -105,7 +105,7 @@ class PcbVia:
     y_mm: float
     size_mm: float
     drill_mm: float
-    layers: List[str]
+    layers: list[str]
     net_id: int
     net_name: str
 
@@ -115,13 +115,13 @@ class ChannelPcbSnapshot:
     """Snapshot of a channel on the board: what will be cloned."""
     channel: str
     channel_uuid: str
-    footprints: List[PcbFootprint] = field(default_factory=list)
-    segments: List[PcbSegment] = field(default_factory=list)
-    vias: List[PcbVia] = field(default_factory=list)
+    footprints: list[PcbFootprint] = field(default_factory=list)
+    segments: list[PcbSegment] = field(default_factory=list)
+    vias: list[PcbVia] = field(default_factory=list)
     # Global (non‑channel) segments/vias inside the channel bbox — candidates
     # for manual resolution (GND stitching, etc.), not included in clone v1:
-    foreign_segments: List[PcbSegment] = field(default_factory=list)
-    foreign_vias: List[PcbVia] = field(default_factory=list)
+    foreign_segments: list[PcbSegment] = field(default_factory=list)
+    foreign_vias: list[PcbVia] = field(default_factory=list)
 
     def bbox_mm(self):
         xs, ys = [], []

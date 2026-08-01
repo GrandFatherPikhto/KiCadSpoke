@@ -8,12 +8,12 @@ then rotate and mirror relative to the new origin.
 import argparse
 import math
 import yaml
-from typing import Dict, Any, Optional, Tuple
+from typing import Any
 
 from kicadstamp.i18n import _
 
 
-def load_template(input_path: str) -> Dict[str, Any]:
+def load_template(input_path: str) -> dict[str, Any]:
     with open(input_path, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f)
     if 'templates' in data:
@@ -23,19 +23,19 @@ def load_template(input_path: str) -> Dict[str, Any]:
         return {'name': 'template', 'template': data}
 
 
-def save_template(output_path: str, name: str, template: Dict[str, Any]):
+def save_template(output_path: str, name: str, template: dict[str, Any]):
     with open(output_path, 'w', encoding='utf-8') as f:
         yaml.dump({'templates': {name: template}}, f,
                   allow_unicode=True, sort_keys=False, default_flow_style=False)
 
 
-def rotate_coords(along: float, across: float, angle_deg: float) -> Tuple[float, float]:
+def rotate_coords(along: float, across: float, angle_deg: float) -> tuple[float, float]:
     rad = math.radians(angle_deg)
     c, s = math.cos(rad), math.sin(rad)
     return along*c - across*s, along*s + across*c
 
 
-def find_element(template: Dict[str, Any], spec: Dict[str, Any]) -> Optional[Tuple[float, float]]:
+def find_element(template: dict[str, Any], spec: dict[str, Any]) -> tuple[float, float] | None:
     typ = spec.get('type')
     if typ == 'via':
         if 'index' in spec:
@@ -64,13 +64,13 @@ def find_element(template: Dict[str, Any], spec: Dict[str, Any]) -> Optional[Tup
     return None
 
 
-def apply_transform(template: Dict[str, Any],
+def apply_transform(template: dict[str, Any],
                     rotate_deg: float = 0.0,
                     mirror_x: bool = False,
                     mirror_y: bool = False,
-                    origin_element: Optional[Dict[str, Any]] = None,
-                    origin_x: Optional[float] = None,
-                    origin_y: Optional[float] = None) -> Dict[str, Any]:
+                    origin_element: dict[str, Any] | None = None,
+                    origin_x: float | None = None,
+                    origin_y: float | None = None) -> dict[str, Any]:
     # Determine the offset (origin_along, origin_across) in the original template
     if origin_element is not None:
         coords = find_element(template, origin_element)

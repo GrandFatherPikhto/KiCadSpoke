@@ -32,7 +32,7 @@ extraction time, not only during later cell loading.
 """
 import logging
 import re
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any
 from kipy.board_types import FootprintInstance, Via, Track
 from kipy.geometry import Vector2
 
@@ -51,7 +51,7 @@ def _points_match(p1: Vector2, p2: Vector2, tol_mm: float = POSITION_TOLERANCE_M
     return abs(p1.x - p2.x) / MM <= tol_mm and abs(p1.y - p2.y) / MM <= tol_mm
 
 
-def _point_matches_any(point: Vector2, anchors: List[Vector2]) -> bool:
+def _point_matches_any(point: Vector2, anchors: list[Vector2]) -> bool:
     return any(_points_match(point, a) for a in anchors)
 
 
@@ -64,7 +64,7 @@ _BBOX_EPSILON_MM = 0.001  # NOT a routing tolerance (the real bbox of via/pad
                           # attached" tolerance.
 
 
-def _inflated_boxes(adapter: KiCadBoardAdapter, items: List[Any]) -> List[Any]:
+def _inflated_boxes(adapter: KiCadBoardAdapter, items: list[Any]) -> list[Any]:
     boxes = adapter.get_bounding_boxes(items)
     for b in boxes:
         if b is not None:
@@ -80,9 +80,9 @@ def _point_in_box(point: Vector2, box) -> bool:
 
 
 def _filter_tracks_within_selection(
-    tracks: List[Track], footprints: List[FootprintInstance], vias: List[Via],
+    tracks: list[Track], footprints: list[FootprintInstance], vias: list[Via],
     adapter: KiCadBoardAdapter,
-) -> List[Track]:
+) -> list[Track]:
     """
     Keeps only tracks whose BOTH ends match something else in the selection.
     "Match" is not exact coordinate equality (KiCad does not require exact
@@ -129,16 +129,16 @@ def _filter_tracks_within_selection(
     return kept
 
 
-def _bbox_origin(footprints: List[FootprintInstance], vias: List[Via]) -> Vector2:
+def _bbox_origin(footprints: list[FootprintInstance], vias: list[Via]) -> Vector2:
     """(min_x, max_y) — lower‑left corner of the selection bounding box."""
     xs = [fp.position.x for fp in footprints] + [v.position.x for v in vias]
     ys = [fp.position.y for fp in footprints] + [v.position.y for v in vias]
     return Vector2.from_xy(min(xs), max(ys))
 
 
-def _find_origin(footprints: List[FootprintInstance], vias: List[Via],
-                 origin_via_net: Optional[str], origin_component_role: Optional[str],
-                 origin_component_pad: Optional[str],
+def _find_origin(footprints: list[FootprintInstance], vias: list[Via],
+                 origin_via_net: str | None, origin_component_role: str | None,
+                 origin_component_pad: str | None,
                  adapter: KiCadBoardAdapter) -> Vector2:
     """
     Default origin is bbox (see _bbox_origin). If origin_via_net or
@@ -197,15 +197,15 @@ def _find_origin(footprints: List[FootprintInstance], vias: List[Via],
 def extract_template_from_selection(
     adapter: KiCadBoardAdapter,
     name: str,
-    params: Optional[Dict[str, Any]] = None,
-    net_template_map: Optional[Dict[str, str]] = None,
-    origin_via_net: Optional[str] = None,
-    origin_component_role: Optional[str] = None,
-    origin_component_pad: Optional[str] = None,
-    net_template_role: Optional[Dict[str, str]] = None,
-    items: Optional[List[Any]] = None,
-    annotations: Optional[List[Tuple[str, str, str]]] = None,
-) -> Dict[str, Any]:
+    params: dict[str, Any] | None = None,
+    net_template_map: dict[str, str] | None = None,
+    origin_via_net: str | None = None,
+    origin_component_role: str | None = None,
+    origin_component_pad: str | None = None,
+    net_template_role: dict[str, str] | None = None,
+    items: list[Any] | None = None,
+    annotations: list[tuple[str, str, str]] | None = None,
+) -> dict[str, Any]:
     """
     Builds a dict {name: {vias: [...], components: [...], tracks: [...]}}
     ready to be written to YAML under the 'cells' key. Fatal (ValidationError)
@@ -290,8 +290,8 @@ def extract_template_from_selection(
                "select the desired board area in KiCad before running")]
         ))
 
-    problems: List[str] = []
-    roles_seen: Dict[str, str] = {}
+    problems: list[str] = []
+    roles_seen: dict[str, str] = {}
     for fp in footprints:
         ref = fp.reference_field.text.value
         role = adapter.get_field_value(fp, ROLE_FIELD_NAME)
@@ -441,7 +441,7 @@ def extract_template_from_selection(
 
 
 def render_uncertain_comments(yaml_text: str, name: str,
-                               annotations: List[Tuple[str, str, str]]) -> str:
+                               annotations: list[tuple[str, str, str]]) -> str:
     """
     Post-processes yaml.dump() output for cmd_extract: for every
     (role, field, hint) in annotations, inserts a commented-out placeholder

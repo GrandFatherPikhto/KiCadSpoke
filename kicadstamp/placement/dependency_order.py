@@ -31,7 +31,7 @@ single-snapshot behaviour.
 """
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Union
+
 
 from ..config import Config, Rule, ClonePlacement, Cell, TemplateComponentSlot, Point
 from ..kicad.adapter import KiCadBoardAdapter
@@ -49,16 +49,16 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Item:
     kind: str  # 'rule' | 'clone' | 'point'
-    obj: Union[Rule, ClonePlacement, Point]
+    obj: Rule | ClonePlacement | Point
     label: str
     # For 'point' items this is possibly a "point:<name>" token, not a bare
     # ref — see resolve_point_anchor_ref. producer_of/the Kahn loop below are
     # fully generic over the token string, no special-casing needed.
-    anchor_ref: Optional[str]
-    produces: Set[str]
+    anchor_ref: str | None
+    produces: set[str]
 
 
-def _resolve_rule_produces(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) -> Set[str]:
+def _resolve_rule_produces(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) -> set[str]:
     """
     Lightweight equivalent of ManualPositionCalculator.compute_raw_positions()
     that returns ONLY the set of refs this rule will produce — without resolving
@@ -72,10 +72,10 @@ def _resolve_rule_produces(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) 
     criteria. What we skip is all the geometry computation (apply_spoke_geometry,
     pad lookups, via/track command creation).
     """
-    produces: Set[str] = set()
+    produces: set[str] = set()
 
     # --- Collect all roles needed across non-retired spokes ---
-    roles_needed: Set[str] = set()
+    roles_needed: set[str] = set()
     for spoke in rule.spokes:
         if spoke.retired:
             continue
@@ -84,10 +84,10 @@ def _resolve_rule_produces(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) 
             roles_needed.update(slot.role for slot in cell.components)
 
     # --- Collect unique clusters used in non-retired spokes ---
-    clusters_needed: Set[Optional[str]] = {spoke.cluster for spoke in rule.spokes if not spoke.retired}
+    clusters_needed: set[str | None] = {spoke.cluster for spoke in rule.spokes if not spoke.retired}
 
     # --- Build ComponentPools per cluster (same as ManualPositionCalculator) ---
-    pools_by_cluster: Dict[Optional[str], ComponentPool] = {}
+    pools_by_cluster: dict[str | None, ComponentPool] = {}
     for cluster in clusters_needed:
         pools_by_cluster[cluster] = ComponentPool(
             adapter,
@@ -112,7 +112,7 @@ def _resolve_rule_produces(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule) 
 
 
 def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: ClonePlacement,
-                            sheet_names=None) -> Set[str]:
+                            sheet_names=None) -> set[str]:
     """
     Lightweight equivalent of ClonePositionCalculator.compute_raw_positions()
     that returns ONLY the set of refs this clone will produce — without
@@ -162,13 +162,13 @@ def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: Clon
     return set(role_to_ref.values())
 
 
-def _build_items(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> List[Item]:
+def _build_items(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> list[Item]:
     """Read-only: resolves every non-retired rule/clone_placement's anchor ref and
     produced refs against the board as it is RIGHT NOW. No board mutation —
     lightweight ref-resolution only, no geometry computation (see
     _resolve_rule_produces / _resolve_clone_produces for what is skipped)."""
     _sn = sheet_names or {}
-    items: List[Item] = []
+    items: list[Item] = []
 
     for point in cfg.points.values():
         anchor_ref = resolve_point_anchor_ref(adapter, point, sheet_names=_sn)
@@ -204,7 +204,7 @@ def _build_items(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> L
     return items
 
 
-def resolve_execution_order(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> List[Item]:
+def resolve_execution_order(adapter: KiCadBoardAdapter, cfg: Config, sheet_names=None) -> list[Item]:
     """
     Read-only: resolves cfg.rules + cfg.clone_placements (already filtered by
     drop_disabled_rules/apply_only_filter/apply_cluster_filter) into
@@ -220,7 +220,7 @@ def resolve_execution_order(adapter: KiCadBoardAdapter, cfg: Config, sheet_names
             producer_of[ref] = item
 
     remaining = list(items)
-    ordered: List[Item] = []
+    ordered: list[Item] = []
     placed_ids = set()
 
     while remaining:

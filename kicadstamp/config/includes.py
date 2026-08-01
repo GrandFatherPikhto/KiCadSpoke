@@ -19,7 +19,7 @@ load_config() and load_profile(), and everything downstream is unchanged.
 """
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any
 
 import yaml
 
@@ -41,7 +41,7 @@ _LIST_SECTIONS = ('rules', 'clone_placements')
 _DICT_SECTIONS = ('cells', 'points', 'extract_profiles', 'clone_profiles')
 
 
-def _parse_include_entry(entry: Any, source_path: str) -> Tuple[str, bool]:
+def _parse_include_entry(entry: Any, source_path: str) -> tuple[str, bool]:
     if isinstance(entry, str):
         return entry, True
     if isinstance(entry, dict) and 'path' in entry:
@@ -53,7 +53,7 @@ def _parse_include_entry(entry: Any, source_path: str) -> Tuple[str, bool]:
     ))
 
 
-def _resolve(path: str, data: Dict[str, Any], seen: Set[Path], is_root: bool = True) -> Dict[str, Any]:
+def _resolve(path: str, data: dict[str, Any], seen: set[Path], is_root: bool = True) -> dict[str, Any]:
     base_dir = Path(path).parent
     if not isinstance(data, dict):
         raise ValidationError(format_fatal_error(
@@ -107,7 +107,7 @@ def _resolve(path: str, data: Dict[str, Any], seen: Set[Path], is_root: bool = T
                  .format(list_sections=_LIST_SECTIONS, dict_sections=_DICT_SECTIONS, keys=keys_str)]
             ))
 
-    merged: Dict[str, Any] = {}
+    merged: dict[str, Any] = {}
 
     for section in _LIST_SECTIONS:
         merged[section] = list(data.get(section) or [])
@@ -162,7 +162,7 @@ def _resolve(path: str, data: Dict[str, Any], seen: Set[Path], is_root: bool = T
     return merged
 
 
-def resolve_includes(path: str, data: Dict[str, Any]) -> Dict[str, Any]:
+def resolve_includes(path: str, data: dict[str, Any]) -> dict[str, Any]:
     """
     Recursively resolves data['include'] (if present), merging list sections
     (rules/clone_placements — concatenated) and dict sections (cells/
@@ -172,5 +172,5 @@ def resolve_includes(path: str, data: Dict[str, Any]) -> Dict[str, Any]:
     path — the file data was loaded from (used to resolve relative include
     paths, and to seed cycle/diamond detection with the root itself).
     """
-    seen: Set[Path] = {Path(path).resolve()}
+    seen: set[Path] = {Path(path).resolve()}
     return _resolve(path, data, seen)

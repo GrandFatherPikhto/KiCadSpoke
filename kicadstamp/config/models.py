@@ -10,7 +10,7 @@ from here and from loader.py, so `from kicadstamp.config import Config, ClonePla
 continues to work exactly as before.
 """
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Any
 
 from ..i18n import _
 from .points import Point
@@ -36,17 +36,17 @@ class ThermalViaArrayConfig:
     (re)planned this run. See drop_inactive_items in kicadstamp/apply_pipeline.py.
     """
     retired: bool = False
-    anchor_ref: Optional[str] = None
-    anchor_role: Optional[str] = None
-    anchor_sheet: Optional[str] = None
-    anchor_cluster: Optional[str] = None
+    anchor_ref: str | None = None
+    anchor_role: str | None = None
+    anchor_sheet: str | None = None
+    anchor_cluster: str | None = None
     # Alternative to anchor_ref/anchor_role — name of a points: entry (see
     # config/points.py). Mutually exclusive with anchor_ref/anchor_role
     # (fatal if combined — see config/loader.py). MUST resolve to a
     # footprint (the referenced Point may not have a shift or be xy-literal
     # — thermal_via_array needs a live component to look up `pad` from, a
     # bare coordinate is not enough; checked at load time, see loader.py).
-    anchor_point: Optional[str] = None
+    anchor_point: str | None = None
     pad: str = ""
     net: str = "GND"
     rows: int = 4
@@ -55,11 +55,11 @@ class ThermalViaArrayConfig:
     pattern: str = "grid"
     drill_mm: float = 0.3
     diameter_mm: float = 0.5
-    name: Optional[str] = None
+    name: str | None = None
     skip: bool = False
 
 
-def thermal_via_array_effective_name(tva: "ThermalViaArrayConfig") -> Optional[str]:
+def thermal_via_array_effective_name(tva: "ThermalViaArrayConfig") -> str | None:
     """Single point for reading the name for --only. Just tva.name — the loader
     guarantees it is set for any thermal_via_array that actually came from YAML;
     None only for manually constructed in tests."""
@@ -83,7 +83,7 @@ class TemplateVia:
     """
     offset_along_mm: float = 0.0
     offset_across_mm: float = 0.0
-    net: Optional[str] = None
+    net: str | None = None
     drill_mm: float = 0.3
     diameter_mm: float = 0.6
 
@@ -110,12 +110,12 @@ class TemplateComponentSlot:
     offset_along_mm: float = 0.0
     offset_across_mm: float = 0.0
     angle_deg: float = 0.0
-    vias: List[TemplateVia] = field(default_factory=list)
-    net_template: Optional[str] = None
+    vias: list[TemplateVia] = field(default_factory=list)
+    net_template: str | None = None
     # Layer of the slot — FACT, absolute: 'F.Cu' | 'B.Cu'. None = inherit from
     # cell layer. Written by extract only for components that deviate from
     # the cell layer.
-    layer: Optional[str] = None
+    layer: str | None = None
 
 
 @dataclass
@@ -142,10 +142,10 @@ class TemplateTrack:
     end_along_mm: float = 0.0
     end_across_mm: float = 0.0
     width_mm: float = 0.25
-    net: Optional[str] = None
+    net: str | None = None
     # Layer — same pattern as TemplateComponentSlot.layer: None = inherit from
     # cell layer, when mirroring it is inverted by the same rule.
-    layer: Optional[str] = None
+    layer: str | None = None
 
 
 @dataclass
@@ -170,16 +170,16 @@ class CellPlacement:
     as ClonePlacement.cell/role.
     """
     name: str
-    cell: Optional[str] = None
-    role: Optional[str] = None
-    xy: Tuple[float, float] = (0.0, 0.0)
+    cell: str | None = None
+    role: str | None = None
+    xy: tuple[float, float] = (0.0, 0.0)
     rotation_deg: float = 0.0
     mirror: bool = False
-    layer: Optional[str] = None
-    nets: Dict[str, str] = field(default_factory=dict)
-    params: Dict[str, Any] = field(default_factory=dict)
-    net_overrides: Dict[str, str] = field(default_factory=dict)
-    refs: Dict[str, str] = field(default_factory=dict)
+    layer: str | None = None
+    nets: dict[str, str] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
+    net_overrides: dict[str, str] = field(default_factory=dict)
+    refs: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -198,10 +198,10 @@ class Cell:
     exclusive.
     """
     name: str
-    vias: List[TemplateVia] = field(default_factory=list)
-    components: List[TemplateComponentSlot] = field(default_factory=list)
-    tracks: List[TemplateTrack] = field(default_factory=list)
-    clone_placements: List[CellPlacement] = field(default_factory=list)
+    vias: list[TemplateVia] = field(default_factory=list)
+    components: list[TemplateComponentSlot] = field(default_factory=list)
+    tracks: list[TemplateTrack] = field(default_factory=list)
+    clone_placements: list[CellPlacement] = field(default_factory=list)
     # Cell layer — FACT, absolute: 'F.Cu' | 'B.Cu', as extracted
     # (written automatically). Components without their own layer inherit it.
     # No automatic guesswork: the cell is placed verbatim; to flip the whole
@@ -233,7 +233,7 @@ class ManualSpoke:
     shift_y_mm: float = 0.0
     rotation_deg: float = 0.0
     retired: bool = False
-    cluster: Optional[str] = None
+    cluster: str | None = None
     skip: bool = False
 
 
@@ -266,16 +266,16 @@ class Rule:
     drop_inactive_items in kicadstamp/apply_pipeline.py, added 2026-07-29).
     """
     net: str
-    spokes: List[ManualSpoke]
-    anchor_ref: Optional[str] = None
-    anchor_role: Optional[str] = None
-    anchor_sheet: Optional[str] = None
-    anchor_cluster: Optional[str] = None
+    spokes: list[ManualSpoke]
+    anchor_ref: str | None = None
+    anchor_role: str | None = None
+    anchor_sheet: str | None = None
+    anchor_cluster: str | None = None
     # Alternative to anchor_ref/anchor_role — see ThermalViaArrayConfig.anchor_point
     # for the mutual-exclusion/footprint-required rules, same here (Rule looks
     # up spoke.pad on the resolved component, a bare coordinate isn't enough).
-    anchor_point: Optional[str] = None
-    name: Optional[str] = None
+    anchor_point: str | None = None
+    name: str | None = None
     retired: bool = False
     skip: bool = False
 
@@ -328,18 +328,18 @@ class ClonePlacement:
     clone_role_resolver.py).
     """
     name: str
-    xy: Tuple[float, float]
+    xy: tuple[float, float]
     rotation_deg: float = 0.0
-    cell: Optional[str] = None
-    role: Optional[str] = None
-    nets: Dict[str, str] = field(default_factory=dict)      # role -> net (literal)
-    params: Dict[str, Any] = field(default_factory=dict)    # for {placeholder} in net cells
-    net_overrides: Dict[str, str] = field(default_factory=dict)  # final override of resolved name
+    cell: str | None = None
+    role: str | None = None
+    nets: dict[str, str] = field(default_factory=dict)      # role -> net (literal)
+    params: dict[str, Any] = field(default_factory=dict)    # for {placeholder} in net cells
+    net_overrides: dict[str, str] = field(default_factory=dict)  # final override of resolved name
     retired: bool = False
     skip: bool = False
     ignore_selection: bool = False
-    anchor_ref: Optional[str] = None
-    anchor_pad: Optional[str] = None
+    anchor_ref: str | None = None
+    anchor_pad: str | None = None
     # Alternative to anchor_ref — anchor by the Role field on the board, not by
     # refdes (survives re‑annotation). Mutually exclusive with anchor_ref (fatal
     # if both are set — see _load_clone_placement). anchor_sheet — ONLY narrows
@@ -347,8 +347,8 @@ class ClonePlacement:
     # (comparison by prefix of LOCAL hierarchical net name, e.g. '/Channel_0/...' —
     # NOT via sheet_path/UUID, which was empirically broken — see chat scripts).
     # Meaningless without anchor_role.
-    anchor_role: Optional[str] = None
-    anchor_sheet: Optional[str] = None
+    anchor_role: str | None = None
+    anchor_sheet: str | None = None
     # Cluster — second custom field (see constants.CLUSTER_FIELD_NAME),
     # physical instance/cluster, independent of anchor_ref/anchor_role.
     # Used in TWO places: (1) narrowing search for anchor_role (like anchor_sheet,
@@ -358,24 +358,24 @@ class ClonePlacement:
     # because they share a common power rail). Comparison is by PREFIX segments
     # ('Channel_1' matches both 'Channel_1' and 'Channel_1/1V2_PLL_PI_FILTER'),
     # not by exact equality — hierarchy and flat names work with the same code.
-    anchor_cluster: Optional[str] = None
+    anchor_cluster: str | None = None
     # Alternative to anchor_ref/anchor_role — name of a points: entry (see
     # config/points.py). Mutually exclusive with anchor_ref/anchor_role
     # (fatal if combined — see config/loader.py). Unlike Rule/
     # ThermalViaArrayConfig, ClonePlacement only ever needs a coordinate
     # (not a footprint) — a shifted or xy-literal Point works fine here.
-    anchor_point: Optional[str] = None
+    anchor_point: str | None = None
     # Placement layer — FACT: None = cell layer (place verbatim).
     # mirror — OPERATION, always manual: flip the whole construction
     # (geometry mirrored, angles 180°−φ, all layers inverted).
     # Contradiction between the two is fatal at load: mirror without layer change
     # or layer change without mirror is physically meaningless.
-    layer: Optional[str] = None
+    layer: str | None = None
     mirror: bool = False
     # Explicit override role -> ref (highest priority, bypassing net‑based search):
     # last resort when candidates are electrically indistinguishable
     # (e.g. three identical filters in one sheet).
-    refs: Dict[str, str] = field(default_factory=dict)
+    refs: dict[str, str] = field(default_factory=dict)
     # Explicit request for selection mode — NOT inferred from absence of nets/params
     # (that implicit behaviour remains the default for backward compatibility,
     # see clone_uses_selection_mode). Needed separately from implicit because
@@ -394,11 +394,11 @@ class Config:
     # Spoke layer (ManualSpoke path): 'F.Cu' | 'B.Cu'. clone_placements have
     # their own layer/mirror per placement; this field does not affect them.
     layer: str = 'F.Cu'
-    cells: Dict[str, Cell] = field(default_factory=dict)
-    points: Dict[str, Point] = field(default_factory=dict)
+    cells: dict[str, Cell] = field(default_factory=dict)
+    points: dict[str, Point] = field(default_factory=dict)
     thermal_via_array: ThermalViaArrayConfig = field(default_factory=ThermalViaArrayConfig)
-    rules: List[Rule] = field(default_factory=list)
-    clone_placements: List[ClonePlacement] = field(default_factory=list)
+    rules: list[Rule] = field(default_factory=list)
+    clone_placements: list[ClonePlacement] = field(default_factory=list)
     place_components: bool = True
     skip_existing_components: bool = False
     # Free‑space search parameters — currently used only for thermal vias
@@ -415,24 +415,24 @@ class Config:
     # *.kicad_sch of the project (path relative to the YAML config itself,
     # like cells_file); schematic_files — extra files for sheets outside
     # schematic_dir.
-    schematic_dir: Optional[str] = None
-    schematic_files: List[str] = field(default_factory=list)
+    schematic_dir: str | None = None
+    schematic_files: list[str] = field(default_factory=list)
     # Explicit override for registry file paths — by default they are derived
     # from the CONFIG file name itself (registry_path_for_config), which changes
     # when the config is renamed. Paths are relative to this YAML, like cells_file.
-    registry_path: Optional[str] = None
-    track_registry_path: Optional[str] = None
+    registry_path: str | None = None
+    track_registry_path: str | None = None
     # Path to log file for `apply` of this config (relative to this YAML,
     # like registry_path) — useful to avoid passing --log-file manually each time
     # for the same board profile. CLI flag --log-file, if given, TAKES PRIORITY
     # over this field (see main() in kicadstamp_cli.py).
-    log_file: Optional[str] = None
+    log_file: str | None = None
     # Directory for undo operation logs (operation_*.json), relative to this
     # YAML like registry_path/log_file — the single source of truth for where
     # `apply` writes and `undo` reads, instead of both silently depending on the
     # process CWD. When unset, OperationLogger/cmd_undo fall back to
     # DEFAULT_LOG_DIR ("logs" next to the CWD) for backward compatibility.
-    operation_log_dir: Optional[str] = None
+    operation_log_dir: str | None = None
     @property
     def anchor_refs(self) -> set:
         """All anchor refs in the config: spoke rules + thermal via array."""

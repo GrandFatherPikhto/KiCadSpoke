@@ -13,7 +13,7 @@ FB602->FB1102->FB1602 while C602->C1602->C1102).
 import logging
 import re
 from collections import defaultdict
-from typing import Dict, List, Tuple
+
 
 from .sexp import load_file, children, child, atom
 from .models import NetlistComponent, ChannelInfo, TwinMap
@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 CHANNEL_RE = re.compile(r'^/(?P<ch>Channel_\d+)(?:/|$)')
 
 
-def parse_netlist(net_path: str) -> Tuple[List[NetlistComponent], Dict[str, List[str]], List[str]]:
+def parse_netlist(net_path: str) -> tuple[list[NetlistComponent], dict[str, list[str]], list[str]]:
     """
     -> (components, local nets by channel, global nets).
     unconnected‑* are filtered out.
     """
     root = load_file(net_path)
     comps_node = child(root, 'components') or []
-    comps: List[NetlistComponent] = []
+    comps: list[NetlistComponent] = []
     for c in children(comps_node, 'comp'):
         sp = child(c, 'sheetpath')
         tstamps = atom(c, 'tstamps', '') or ''
@@ -45,8 +45,8 @@ def parse_netlist(net_path: str) -> Tuple[List[NetlistComponent], Dict[str, List
         ))
 
     nets_node = child(root, 'nets') or []
-    local_by_ch: Dict[str, List[str]] = defaultdict(list)
-    global_nets: List[str] = []
+    local_by_ch: dict[str, list[str]] = defaultdict(list)
+    global_nets: list[str] = []
     for n in children(nets_node, 'net'):
         name = atom(n, 'name', '')
         if not name or name.startswith('unconnected'):
@@ -59,11 +59,11 @@ def parse_netlist(net_path: str) -> Tuple[List[NetlistComponent], Dict[str, List
     return comps, dict(local_by_ch), global_nets
 
 
-def build_twin_map(comps: List[NetlistComponent],
-                   local_by_ch: Dict[str, List[str]]) -> TwinMap:
+def build_twin_map(comps: list[NetlistComponent],
+                   local_by_ch: dict[str, list[str]]) -> TwinMap:
     """Channels + twin map. Incomplete groups (not present in all channels) are warned."""
-    channels: Dict[str, ChannelInfo] = {}
-    twin: Dict[str, Dict[str, str]] = defaultdict(dict)
+    channels: dict[str, ChannelInfo] = {}
+    twin: dict[str, dict[str, str]] = defaultdict(dict)
 
     for c in comps:
         ch = c.channel

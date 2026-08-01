@@ -1,5 +1,5 @@
 # kicadstamp/config/loader.py
-from typing import Tuple
+
 """
 config/loader.py — all YAML loading/validation logic for dataclasses
 from config/models.py: load_config() (entry point) and all _load_* functions.
@@ -9,7 +9,7 @@ import difflib
 import logging
 import json
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Any
 import yaml
 
 from ..exceptions import ValidationError, format_fatal_error, check_unknown_keys
@@ -25,7 +25,7 @@ from ..i18n import _
 
 logger = logging.getLogger(__name__)
 
-def _load_template_via(data: Dict[str, Any]) -> TemplateVia:
+def _load_template_via(data: dict[str, Any]) -> TemplateVia:
     net = data.get('net')
     if net is not None and not isinstance(net, str):
         raise ValidationError(format_fatal_error(
@@ -45,7 +45,7 @@ def _load_template_via(data: Dict[str, Any]) -> TemplateVia:
     )
 
 
-def _load_template_track(data: Dict[str, Any]) -> TemplateTrack:
+def _load_template_track(data: dict[str, Any]) -> TemplateTrack:
     net = data.get('net')
     if net is not None and not isinstance(net, str):
         raise ValidationError(format_fatal_error(
@@ -76,7 +76,7 @@ def _check_layer_value(value, where: str):
         ))
 
 
-def _load_template_component_slot(data: Dict[str, Any]) -> TemplateComponentSlot:
+def _load_template_component_slot(data: dict[str, Any]) -> TemplateComponentSlot:
     if 'side' in data:
         raise ValidationError(format_fatal_error(
             _("deprecated field 'side' in slot {role!r}").format(role=data.get('role')),
@@ -97,7 +97,7 @@ def _load_template_component_slot(data: Dict[str, Any]) -> TemplateComponentSlot
     )
 
 
-def _load_cell(name: str, data: Dict[str, Any]) -> Cell:
+def _load_cell(name: str, data: dict[str, Any]) -> Cell:
     components = [_load_template_component_slot(c) for c in data.get('components', [])]
 
     roles = [c.role for c in components]
@@ -147,7 +147,7 @@ _CELL_PLACEMENT_KNOWN_KEYS = {
 }
 
 
-def _load_cell_placement(cell_name: str, data: Dict[str, Any]) -> CellPlacement:
+def _load_cell_placement(cell_name: str, data: dict[str, Any]) -> CellPlacement:
     """Loads one entry of a Cell's own clone_placements: — a nested,
     closed-boundary reference to another cell/role. See CellPlacement's
     docstring (config/models.py) for why anchor_*/by_selection/
@@ -221,7 +221,7 @@ _POINT_KNOWN_KEYS = {
 }
 
 
-def _load_point(name: str, data: Dict[str, Any]) -> Point:
+def _load_point(name: str, data: dict[str, Any]) -> Point:
     check_unknown_keys(data, _POINT_KNOWN_KEYS,
                        _("unknown fields in point {name!r}").format(name=name))
 
@@ -299,7 +299,7 @@ def _load_point(name: str, data: Dict[str, Any]) -> Point:
     )
 
 
-def _point_is_footprint_eligible(points: Dict[str, Point], name: str, _visited=None) -> bool:
+def _point_is_footprint_eligible(points: dict[str, Point], name: str, _visited=None) -> bool:
     """True if the point named `name` (transitively, through any anchor_point
     chain) resolves to a live footprint with no shift applied anywhere along
     the way — the requirement for Rule/ThermalViaArrayConfig's anchor_point,
@@ -333,7 +333,7 @@ _MANUAL_SPOKE_KNOWN_KEYS = {
 }
 
 
-def _load_manual_spoke(data: Dict[str, Any], rule_label: str) -> ManualSpoke:
+def _load_manual_spoke(data: dict[str, Any], rule_label: str) -> ManualSpoke:
     check_unknown_keys(data, _MANUAL_SPOKE_KNOWN_KEYS,
                        _("unknown fields in spoke (pad {pad!r}) of rule (net {net!r})")
                        .format(pad=data.get('pad', '?'), net=rule_label))
@@ -372,7 +372,7 @@ _CLONE_PLACEMENT_KNOWN_KEYS = {
 }
 
 
-def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
+def _load_clone_placement(data: dict[str, Any]) -> ClonePlacement:
     name = data.get('name', '?')
     if not data.get('name'):
         raise ValidationError(format_fatal_error(
@@ -517,7 +517,7 @@ def _load_clone_placement(data: Dict[str, Any]) -> ClonePlacement:
     )
 
 
-def load_config(path: str) -> Tuple[Config, RuntimeContext]:
+def load_config(path: str) -> tuple[Config, RuntimeContext]:
     logger.info(_("Loading configuration from {path}").format(path=path))
     with open(path, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f) or {}
@@ -621,7 +621,7 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
     # intentional override, same philosophy as include:'s _DICT_SECTIONS).
     # Inline cells: in this config file still overrides silently on top
     # of all of them, unchanged from cells_file's original behaviour.
-    external_cells: Dict[str, Any] = {}
+    external_cells: dict[str, Any] = {}
     for ext_file in external_files:
         cells_path = Path(path).parent / ext_file
         if not cells_path.exists():
@@ -707,7 +707,7 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
     # (same net, neither disambiguated with an explicit name) would silently
     # both match the same --only call — catch it at load time, not at --only
     # time, and point at exactly which rules collided.
-    seen_names: Dict[str, List[str]] = {}
+    seen_names: dict[str, list[str]] = {}
     for rule in rules:
         seen_names.setdefault(rule_effective_name(rule), []).append(
             rule.anchor_ref or rule.anchor_role or "?"
@@ -757,7 +757,7 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
     # (spoke.pad/tva.pad) — a bare coordinate doesn't work for them.
     # ClonePlacement and Point-to-Point chains only ever need a coordinate,
     # so any point (shifted, xy-literal, or not) is fine there.
-    def _check_anchor_point(owner_label: str, anchor_point: Optional[str], needs_footprint: bool):
+    def _check_anchor_point(owner_label: str, anchor_point: str | None, needs_footprint: bool):
         if anchor_point is None:
             return
         if anchor_point not in points:

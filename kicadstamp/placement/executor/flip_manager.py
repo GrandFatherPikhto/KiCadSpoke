@@ -1,7 +1,7 @@
 # kicadstamp/placement/executor/flip_manager.py
 import logging
 import time
-from typing import List, Dict
+
 from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from ..commands import MoveCommand
 from .base import layer_to_str
@@ -14,7 +14,7 @@ class FlipManager:
         self.adapter = adapter
         self.batch_size = batch_size
 
-    def flip_if_needed(self, moves: List[MoveCommand]) -> Dict[str, object]:
+    def flip_if_needed(self, moves: list[MoveCommand]) -> dict[str, object]:
         """Return ref->footprint dict after possibly flipping components."""
         all_fps = self.adapter.get_footprints()
         fp_by_ref = {fp.reference_field.text.value: fp for fp in all_fps}
@@ -29,13 +29,13 @@ class FlipManager:
             fp_by_ref = {fp.reference_field.text.value: fp for fp in all_fps}
         return fp_by_ref
 
-    def _needs_flip(self, cmd: MoveCommand, fp_by_ref: Dict[str, object]) -> bool:
+    def _needs_flip(self, cmd: MoveCommand, fp_by_ref: dict[str, object]) -> bool:
         fp = fp_by_ref.get(cmd.ref)
         if fp is None:
             return False
         return fp.layer != cmd.layer
 
-    def _flip_in_batches(self, refs: List[str], fp_by_ref: Dict[str, object]):
+    def _flip_in_batches(self, refs: list[str], fp_by_ref: dict[str, object]):
         for i in range(0, len(refs), self.batch_size):
             batch_refs = refs[i:i+self.batch_size]
             fps = [fp_by_ref[ref] for ref in batch_refs if ref in fp_by_ref]

@@ -13,7 +13,7 @@ at the first spoke.
 """
 import logging
 import difflib
-from typing import List, Dict, Optional
+
 
 from .config import Config
 from .kicad.adapter import KiCadBoardAdapter
@@ -120,7 +120,7 @@ def check_role_pool_sufficiency(adapter: KiCadBoardAdapter, cfg: Config) -> None
             clusters_needed.add(spoke.cluster)  # None is allowed
 
         # Initialise requirement dictionary per cluster
-        needed_by_cluster: Dict[Optional[str], Dict[str, int]] = {
+        needed_by_cluster: dict[str | None, dict[str, int]] = {
             cluster: {role: 0 for role in roles_needed}
             for cluster in clusters_needed
         }
@@ -215,8 +215,8 @@ def check_no_cell_definition_cycles(cfg: Config) -> None:
     board is even connected to.
     """
     WHITE, GREY, BLACK = 0, 1, 2
-    color: Dict[str, int] = {name: WHITE for name in cfg.cells}
-    path: List[str] = []
+    color: dict[str, int] = {name: WHITE for name in cfg.cells}
+    path: list[str] = []
 
     def visit(name: str) -> None:
         color[name] = GREY

@@ -14,7 +14,7 @@ are made deliberately after cloning.
 """
 
 import logging
-from typing import Dict, List, Tuple
+
 
 from .sexp import load_file, children, child, atom, sval, is_node
 from .models import PcbFootprint, PcbSegment, PcbVia, ChannelPcbSnapshot
@@ -34,7 +34,7 @@ class PcbDocument:
     def __init__(self, pcb_path: str):
         logger.info(_("Reading board: {path}").format(path=pcb_path))
         self.root = load_file(pcb_path)
-        self.net_names: Dict[int, str] = {}
+        self.net_names: dict[int, str] = {}
         for n in children(self.root, 'net'):
             # (net 42 "name") — top‑level declarations only
             if len(n) >= 3:
@@ -52,7 +52,7 @@ class PcbDocument:
 
     # --- low‑level parsers ---
 
-    def _parse_footprints(self) -> List[PcbFootprint]:
+    def _parse_footprints(self) -> list[PcbFootprint]:
         out = []
         for fp in children(self.root, 'footprint'):
             at = child(fp, 'at') or [None, 0, 0]
@@ -73,7 +73,7 @@ class PcbDocument:
             ))
         return out
 
-    def _net_ref(self, node) -> Tuple[int, str]:
+    def _net_ref(self, node) -> tuple[int, str]:
         """
         (net X): in KiCad 10 X can be a numeric id OR a string name
         (observed on real boards 10.0.4). Return (id, name); the missing half
@@ -87,7 +87,7 @@ class PcbDocument:
         name = str(raw)
         return self._net_ids_by_name.get(name, 0), name
 
-    def _parse_segments(self) -> List[PcbSegment]:
+    def _parse_segments(self) -> list[PcbSegment]:
         out = []
         for s in children(self.root, 'segment'):
             st = child(s, 'start') or [None, 0, 0]
@@ -104,7 +104,7 @@ class PcbDocument:
             ))
         return out
 
-    def _parse_vias(self) -> List[PcbVia]:
+    def _parse_vias(self) -> list[PcbVia]:
         out = []
         for v in children(self.root, 'via'):
             at = child(v, 'at') or [None, 0, 0]

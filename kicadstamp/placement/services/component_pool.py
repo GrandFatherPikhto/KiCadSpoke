@@ -10,7 +10,7 @@ not silent shortage.
 """
 import re
 import logging
-from typing import Dict, List, Optional
+
 
 from ...kicad.adapter import KiCadBoardAdapter
 from ...exceptions import ValidationError
@@ -47,12 +47,12 @@ class ComponentPool:
     Built once; spokes of this net consume it in order via pop().
     """
 
-    def __init__(self, adapter: KiCadBoardAdapter, net_name: str, roles: List[str],
-                 cluster: Optional[str] = None):
+    def __init__(self, adapter: KiCadBoardAdapter, net_name: str, roles: list[str],
+                 cluster: str | None = None):
         self.adapter = adapter
         self.net_name = net_name
         self.cluster = cluster
-        self._pools: Dict[str, List[str]] = {role: [] for role in roles}
+        self._pools: dict[str, list[str]] = {role: [] for role in roles}
         self._build()
 
     def _build(self):

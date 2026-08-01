@@ -7,7 +7,7 @@ recording it shows exactly what will be cloned and what will be left behind
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any
 
 import yaml
 
@@ -19,14 +19,14 @@ from ..i18n import _
 logger = logging.getLogger(__name__)
 
 
-def snapshot_to_dict(snap: ChannelPcbSnapshot, twin: TwinMap) -> Dict[str, Any]:
+def snapshot_to_dict(snap: ChannelPcbSnapshot, twin: TwinMap) -> dict[str, Any]:
     ch = snap.channel
     others = [c for c in sorted(twin.channels) if c != ch]
 
     def twins_of(ref):
         return {o: twin.twin_ref(ref, ch, o) for o in others}
 
-    d: Dict[str, Any] = {
+    d: dict[str, Any] = {
         'channel': ch,
         'channel_sheet_uuid': snap.channel_uuid,
         'summary': {
@@ -82,7 +82,7 @@ def snapshot_to_dict(snap: ChannelPcbSnapshot, twin: TwinMap) -> Dict[str, Any]:
 
 
 def extract_channel(net_path: str, pcb_path: str, channel: str,
-                    output_yaml: str) -> Dict[str, Any]:
+                    output_yaml: str) -> dict[str, Any]:
     comps, local_by_ch, _ = parse_netlist(net_path)
     twin = build_twin_map(comps, local_by_ch)
     if channel not in twin.channels:

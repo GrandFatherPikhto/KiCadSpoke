@@ -1,7 +1,7 @@
 # kicadstamp/placement/services/manual_position_calculator.py
 
 import logging
-from typing import List, Optional, Set, Tuple
+
 from kipy.board_types import FootprintInstance, BoardLayer
 
 from ...config import Config, Rule
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule,
-                            sheet_names=None) -> Optional[str]:
+                            sheet_names=None) -> str | None:
     """
     Resolves rule's anchor to a concrete ref — see
     component_resolver.resolve_anchor_identity for the shared dispatch (used
@@ -34,7 +34,7 @@ def resolve_rule_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, rule: Rule,
     )
 
 
-def rule_anchor_ids(rule: Rule) -> Set[str]:
+def rule_anchor_ids(rule: Rule) -> set[str]:
     """
     Registry identity/identities of a rule — one 'pad:{pad}' per non-retired
     spoke (see compute_raw_positions below: anchor_id = f"pad:{spoke.pad}",
@@ -75,11 +75,11 @@ class ManualPositionCalculator:
 
     def compute_raw_positions(
         self,
-        rules: List[Rule],
-    ) -> Tuple[List[PlacedComponentInfo], List[ViaCommand], List[TrackCommand]]:
-        components_result: List[PlacedComponentInfo] = []
-        vias_result: List[ViaCommand] = []
-        tracks_result: List[TrackCommand] = []
+        rules: list[Rule],
+    ) -> tuple[list[PlacedComponentInfo], list[ViaCommand], list[TrackCommand]]:
+        components_result: list[PlacedComponentInfo] = []
+        vias_result: list[ViaCommand] = []
+        tracks_result: list[TrackCommand] = []
 
         for rule in rules:
             # --- Resolve anchor (anchor_ref / anchor_role / anchor_point) ---

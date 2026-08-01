@@ -10,7 +10,7 @@ into process exit codes. No sys.exit / print here.
 
 import logging
 from pathlib import Path
-from typing import Optional
+
 
 from kicadstamp.cli_extract import (load_profile, extract_template,
                                     _EXTRACT_PROFILE_KNOWN_KEYS,
@@ -141,7 +141,7 @@ def cmd_clone_extract(args) -> None:
                         vias=s['vias'], output=output))
 
 
-def cmd_undo(args, log_dir: Optional[str] = None) -> None:
+def cmd_undo(args, log_dir: str | None = None) -> None:
     """Undo the last operation.
 
     Thin CLI wrapper: finds the newest operation_*.json in the operation-log

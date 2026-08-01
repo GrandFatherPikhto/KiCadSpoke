@@ -14,7 +14,7 @@ ClonePlacement (clone_position_calculator.py):
 """
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional
+
 
 from kipy.board_types import FootprintInstance
 from kipy.geometry import Vector2
@@ -48,10 +48,10 @@ class ResolvedPoint:
     actually produced.
     """
     position: Vector2
-    footprint: Optional[FootprintInstance]
+    footprint: FootprintInstance | None
 
 
-def resolve_point_anchor_ref(adapter: KiCadBoardAdapter, point: Point, sheet_names=None) -> Optional[str]:
+def resolve_point_anchor_ref(adapter: KiCadBoardAdapter, point: Point, sheet_names=None) -> str | None:
     """Lightweight, identity-only anchor resolution for a Point — mirrors
     resolve_rule_anchor_ref (manual_position_calculator.py) /
     resolve_clone_anchor_ref (clone_position_calculator.py). Used ONLY to
@@ -70,7 +70,7 @@ def resolve_point_anchor_ref(adapter: KiCadBoardAdapter, point: Point, sheet_nam
 
 
 def resolve_point(adapter: KiCadBoardAdapter, point: Point,
-                  resolved_points: Dict[str, ResolvedPoint], sheet_names=None) -> ResolvedPoint:
+                  resolved_points: dict[str, ResolvedPoint], sheet_names=None) -> ResolvedPoint:
     """
     Resolves ONE Point's own definition into an absolute position (+
     footprint, when eligible). Called once per Point, in dependency order

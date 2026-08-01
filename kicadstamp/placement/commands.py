@@ -1,7 +1,7 @@
 # kicadstamp/placement/commands.py
 
 from dataclasses import dataclass
-from typing import Optional
+
 
 from kipy.board_types import BoardLayer
 from kipy.geometry import Vector2, Angle
@@ -24,7 +24,7 @@ class ViaCommand:
     diameter_mm: float
     net_name: str
     owner_ref: str
-    registry_key: Optional[str] = None  # see registry.py — None means "not participating in the registry"
+    registry_key: str | None = None  # see registry.py — None means "not participating in the registry"
 
 
 @dataclass
@@ -35,7 +35,7 @@ class TrackCommand:
     net_name: str
     layer: BoardLayer
     owner_ref: str
-    registry_key: Optional[str] = None  # see registry.py — None means "not participating in the registry"
+    registry_key: str | None = None  # see registry.py — None means "not participating in the registry"
 
 
 @dataclass
@@ -53,10 +53,10 @@ class PlacedComponentInfo:
     angle_deg: float
     # Layer of THIS component (per-placement side of ClonePlacement).
     # None = inherit the planner's global target_layer.
-    layer: Optional[BoardLayer] = None
+    layer: BoardLayer | None = None
 
 
-def make_registry_key(anchor_id: str, template_name: str, role: Optional[str], index: int) -> str:
+def make_registry_key(anchor_id: str, template_name: str, role: str | None, index: int) -> str:
     """Build a composite registry key for vias/tracks.
 
     ``anchor_id`` — e.g. ``"pad:{pad}"`` or ``"thermal:{name}"``.

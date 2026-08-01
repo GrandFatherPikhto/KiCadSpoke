@@ -1,7 +1,8 @@
+from collections.abc import Callable
 # kicadstamp/placement/services/component_resolver.py
 
 import logging
-from typing import Callable, Dict, List, Optional, Set
+
 
 from kipy.board_types import FootprintInstance
 from kipy.geometry import Vector2
@@ -16,9 +17,9 @@ from ...i18n import _
 logger = logging.getLogger(__name__)
 
 
-def resolve_anchor_identity(anchor_ref: Optional[str], anchor_role: Optional[str],
-                            anchor_point: Optional[str],
-                            resolve_role_fp: Callable[[], FootprintInstance]) -> Optional[str]:
+def resolve_anchor_identity(anchor_ref: str | None, anchor_role: str | None,
+                            anchor_point: str | None,
+                            resolve_role_fp: Callable[[], FootprintInstance]) -> str | None:
     """Shared ref-or-role-or-point-or-none identity dispatch, used by the
     three lightweight "identity only" resolvers (resolve_rule_anchor_ref /
     resolve_clone_anchor_ref / resolve_point_anchor_ref) that
@@ -90,7 +91,7 @@ def resolve_anchor_pad_position(adapter: KiCadBoardAdapter, fp: FootprintInstanc
 
 
 def resolve_footprint_by_ref(adapter: KiCadBoardAdapter, anchor_ref: str, label: str,
-                             not_found_hint: Optional[str] = None) -> FootprintInstance:
+                             not_found_hint: str | None = None) -> FootprintInstance:
     """Look up a footprint by exact ref, or raise a fatal ValidationError.
 
     Was written three times near-identically (Rule via ComponentResolver
@@ -130,16 +131,16 @@ class ComponentResolver:
     """
 
     def __init__(self, adapter: KiCadBoardAdapter, config: Config,
-                 sheet_names: Dict[str, str]):
+                 sheet_names: dict[str, str]):
         self.adapter = adapter
         self.cfg = config
         self.sheet_names = sheet_names
 
     def resolve_anchor_fp(self,
-                          anchor_ref: Optional[str],
-                          anchor_role: Optional[str],
-                          anchor_sheet: Optional[str],
-                          anchor_cluster: Optional[str],
+                          anchor_ref: str | None,
+                          anchor_role: str | None,
+                          anchor_sheet: str | None,
+                          anchor_cluster: str | None,
                           label: str = "") -> FootprintInstance:
         """Resolve a footprint by ref **or** by role/sheet/cluster.
 
@@ -155,9 +156,9 @@ class ComponentResolver:
 
     @staticmethod
     def build_pools(adapter: KiCadBoardAdapter, net: str,
-                    roles_needed: Set[str],
-                    clusters_needed: Set[Optional[str]]
-                    ) -> Dict[Optional[str], ComponentPool]:
+                    roles_needed: set[str],
+                    clusters_needed: set[str | None]
+                    ) -> dict[str | None, ComponentPool]:
         """Build a :class:`ComponentPool` for each cluster in
         *clusters_needed*.
 

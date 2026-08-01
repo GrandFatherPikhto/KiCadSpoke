@@ -1,7 +1,7 @@
 # kicadstamp/placement/services/position_tracker.py
 
 import logging
-from typing import List
+
 
 from kipy.board_types import BoardLayer
 from kipy.geometry import Angle
@@ -49,11 +49,11 @@ class PositionTracker:
         return angle_diff <= ANGLE_TOLERANCE_DEG
 
     def moves_from_placed(self,
-                          placed: List[PlacedComponentInfo]
-                          ) -> List[MoveCommand]:
+                          placed: list[PlacedComponentInfo]
+                          ) -> list[MoveCommand]:
         """Convert a list of placement results to move commands, skipping
         components whose current board position matches the target."""
-        moves: List[MoveCommand] = []
+        moves: list[MoveCommand] = []
         skipped = 0
         for info in placed:
             layer = info.layer if info.layer is not None else self.target_layer

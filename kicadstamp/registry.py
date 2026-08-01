@@ -35,7 +35,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Dict, List, Optional, TypeVar, Generic
+from typing import TypeVar, Generic
 
 from kipy.board_types import BoardLayer
 
@@ -92,7 +92,7 @@ class TrackRegistryEntry:
     layer: str
 
 
-def load_registry(path: str) -> Dict[str, RegistryEntry]:
+def load_registry(path: str) -> dict[str, RegistryEntry]:
     p = Path(path)
     if not p.exists():
         return {}
@@ -106,14 +106,14 @@ def load_registry(path: str) -> Dict[str, RegistryEntry]:
         return {}
 
 
-def save_registry(path: str, entries: Dict[str, RegistryEntry]) -> None:
+def save_registry(path: str, entries: dict[str, RegistryEntry]) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     data = {k: asdict(v) for k, v in entries.items()}
     p.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def load_track_registry(path: str) -> Dict[str, TrackRegistryEntry]:
+def load_track_registry(path: str) -> dict[str, TrackRegistryEntry]:
     p = Path(path)
     if not p.exists():
         return {}
@@ -127,7 +127,7 @@ def load_track_registry(path: str) -> Dict[str, TrackRegistryEntry]:
         return {}
 
 
-def save_track_registry(path: str, entries: Dict[str, TrackRegistryEntry]) -> None:
+def save_track_registry(path: str, entries: dict[str, TrackRegistryEntry]) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     data = {k: asdict(v) for k, v in entries.items()}
@@ -148,16 +148,16 @@ class BaseRegistry(ABC, Generic[TEntry]):
     def __init__(self, adapter, path: str):
         self.adapter = adapter
         self.path = path
-        self.entries: Dict[str, TEntry] = self._load_entries()
+        self.entries: dict[str, TEntry] = self._load_entries()
 
     # ── Abstract hooks ──────────────────────────────────────────────────────
 
     @abstractmethod
-    def _load_entries(self) -> Dict[str, TEntry]:
+    def _load_entries(self) -> dict[str, TEntry]:
         """Load persisted entries from disk."""
 
     @abstractmethod
-    def _save_entries(self, entries: Dict[str, TEntry]) -> None:
+    def _save_entries(self, entries: dict[str, TEntry]) -> None:
         """Persist entries to disk."""
 
     @abstractmethod
@@ -175,7 +175,7 @@ class BaseRegistry(ABC, Generic[TEntry]):
     # ── Shared logic ────────────────────────────────────────────────────────
 
     def reconcile(self, planned_cmds,
-                  known_anchor_ids: Optional[set] = None) -> list:
+                  known_anchor_ids: set | None = None) -> list:
         """
         Returns the subset of planned_cmds that actually need to be created
         (already correctly placed ones are excluded). Deletes stale ones by
@@ -295,10 +295,10 @@ class PlacementRegistry(BaseRegistry[RegistryEntry]):
     record_created() as each specific via is successfully created.
     """
 
-    def _load_entries(self) -> Dict[str, RegistryEntry]:
+    def _load_entries(self) -> dict[str, RegistryEntry]:
         return load_registry(self.path)
 
-    def _save_entries(self, entries: Dict[str, RegistryEntry]) -> None:
+    def _save_entries(self, entries: dict[str, RegistryEntry]) -> None:
         save_registry(self.path, entries)
 
     def _get_live_items(self):
@@ -340,10 +340,10 @@ class TrackRegistry(BaseRegistry[TrackRegistryEntry]):
     instead of position+drill+diameter.
     """
 
-    def _load_entries(self) -> Dict[str, TrackRegistryEntry]:
+    def _load_entries(self) -> dict[str, TrackRegistryEntry]:
         return load_track_registry(self.path)
 
-    def _save_entries(self, entries: Dict[str, TrackRegistryEntry]) -> None:
+    def _save_entries(self, entries: dict[str, TrackRegistryEntry]) -> None:
         save_track_registry(self.path, entries)
 
     def _get_live_items(self):

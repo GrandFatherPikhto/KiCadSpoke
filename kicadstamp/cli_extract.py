@@ -12,7 +12,7 @@ ValidationError into process exit codes.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import yaml
 
@@ -38,8 +38,8 @@ _CLONE_EXTRACT_PROFILE_KNOWN_KEYS = {'net', 'pcb', 'channel', 'output'}
 
 
 def load_profile(profiles_path: str, top_key: str, profile_name: str,
-                  root_defaults: Optional[List[str]] = None,
-                  known_keys: Optional[set] = None) -> Dict[str, Any]:
+                  root_defaults: list[str] | None = None,
+                  known_keys: set | None = None) -> dict[str, Any]:
     """
     Common loader for named CLI profiles (for extract and clone-extract).
     top_key is different for each command (extract_profiles / clone_profiles).
@@ -88,12 +88,12 @@ def load_profile(profiles_path: str, top_key: str, profile_name: str,
 
 
 def extract_template(adapter: KiCadBoardAdapter, *, name: str, output: str,
-                     params: Optional[Dict[str, Any]] = None,
-                     net_template_map: Optional[Dict[str, str]] = None,
-                     net_template_role: Optional[Dict[str, str]] = None,
-                     origin_via_net: Optional[str] = None,
-                     origin_component_role: Optional[str] = None,
-                     origin_component_pad: Optional[str] = None) -> Dict[str, Any]:
+                     params: dict[str, Any] | None = None,
+                     net_template_map: dict[str, str] | None = None,
+                     net_template_role: dict[str, str] | None = None,
+                     origin_via_net: str | None = None,
+                     origin_component_role: str | None = None,
+                     origin_component_pad: str | None = None) -> dict[str, Any]:
     """Extract a spoke cell template from the current board selection and
     merge-write it into `output` (YAML/JSON), preserving any existing entries.
 
@@ -106,7 +106,7 @@ def extract_template(adapter: KiCadBoardAdapter, *, name: str, output: str,
         raise PlacerError(_("[error] --origin-by-component-pad without --origin-by-component-role — "
                             "you can only refine a pad for a role that you first specify"))
 
-    annotations: List[Tuple[str, str, str]] = []
+    annotations: list[tuple[str, str, str]] = []
     template_dict = extract_template_from_selection(
         adapter, name, params=params or {}, net_template_map=net_template_map or {},
         origin_via_net=origin_via_net,

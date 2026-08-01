@@ -12,7 +12,7 @@ for ClonePlacement (TemplatePlacer), unlike spoke_layout.py:
     unlike in spoke_layout.py.
 """
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+
 from kipy.geometry import Vector2, Angle
 
 from ..config import ClonePlacement, Cell, TemplateVia, TemplateTrack
@@ -83,8 +83,8 @@ def _mirror_x(origin: Vector2, p: Vector2) -> Vector2:
 def apply_clone_geometry(
     clone: ClonePlacement,
     cell: Cell,
-    role_to_ref: Dict[str, str],
-    anchor_position: Optional[Vector2] = None,
+    role_to_ref: dict[str, str],
+    anchor_position: Vector2 | None = None,
     mirror: bool = False,
     parent_rotation_deg: float = 0.0,
 ) -> SpokeLayout:

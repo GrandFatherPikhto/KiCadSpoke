@@ -9,7 +9,7 @@
 
 import logging
 import math
-from typing import List, Tuple, Set, Dict, Optional
+
 from kipy.board_types import FootprintInstance
 from kipy.geometry import Vector2
 
@@ -29,7 +29,7 @@ def _radius_from_bbox(bbox) -> float:
     return 0.5 * math.hypot(bbox.size.x, bbox.size.y)
 
 
-def compute_radii(footprints: List[FootprintInstance], adapter) -> Dict[str, float]:
+def compute_radii(footprints: list[FootprintInstance], adapter) -> dict[str, float]:
     """
     Computes radii (nm) for a list of footprints with ONE batch request through
     adapter.get_bounding_boxes(), instead of calling the non-existent
@@ -64,11 +64,11 @@ def footprints_overlap(pos1: Vector2, r1: float, pos2: Vector2, r2: float,
     return dist < (r1 + r2 + margin_mm * MM)
 
 
-def check_collisions(moves: List[MoveCommand],
-                     all_footprints: List[FootprintInstance],
+def check_collisions(moves: list[MoveCommand],
+                     all_footprints: list[FootprintInstance],
                      adapter,
-                     ignore_refs: Set[str] = None,
-                     margin_mm: float = 0.2) -> List[Tuple[str, str, float]]:
+                     ignore_refs: set[str] = None,
+                     margin_mm: float = 0.2) -> list[tuple[str, str, float]]:
     """
     Checks collisions between moving capacitors and other
     components, using REAL sizes (via adapter.get_bounding_boxes),

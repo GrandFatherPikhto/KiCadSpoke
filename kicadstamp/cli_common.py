@@ -1,3 +1,4 @@
+from collections.abc import Callable
 # kicadstamp/cli_common.py
 """
 cli_common.py — the single owner of CLI exit codes.
@@ -14,7 +15,7 @@ never ``sys.exit()`` — it should raise ``PlacerError``/``ValidationError``/
 exit code and the message.
 """
 import logging
-from typing import Callable
+
 
 from kipy.errors import ApiError, ApiStatusCode
 

@@ -12,7 +12,7 @@ carries none of the duplicate-via/track risk that mutating code has to guard
 against (see registry.py).
 """
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from kipy.board_types import FootprintInstance
 
@@ -27,10 +27,10 @@ class Selected:
     """One footprint matched by Board.select() — plus the raw fp handle as
     an escape hatch to call any KiCadBoardAdapter method directly."""
     ref: str
-    role: Optional[str]
-    cluster: Optional[str]
-    sheet: List[Optional[str]]     # full resolve_sheet_path_names() chain
-    nets: Dict[str, str]           # pad number -> net name
+    role: str | None
+    cluster: str | None
+    sheet: list[str | None]     # full resolve_sheet_path_names() chain
+    nets: dict[str, str]           # pad number -> net name
     fp: FootprintInstance = field(repr=False)
 
 
@@ -69,19 +69,19 @@ class Board:
     lifetime of the object (same discipline as dependency_order.py: never
     guess staleness, make refresh a deliberate step)."""
 
-    def __init__(self, adapter: KiCadBoardAdapter, sheet_names: Dict[str, str]):
+    def __init__(self, adapter: KiCadBoardAdapter, sheet_names: dict[str, str]):
         self.adapter = adapter
         self.sheet_names = sheet_names
-        self._footprints: List[FootprintInstance] = []
-        self._role_cache: Dict[str, Optional[str]] = {}
-        self._cluster_cache: Dict[str, Optional[str]] = {}
-        self._nets_cache: Dict[str, Dict[str, str]] = {}
-        self._sheet_cache: Dict[str, List[Optional[str]]] = {}
+        self._footprints: list[FootprintInstance] = []
+        self._role_cache: dict[str, str | None] = {}
+        self._cluster_cache: dict[str, str | None] = {}
+        self._nets_cache: dict[str, dict[str, str]] = {}
+        self._sheet_cache: dict[str, list[str | None]] = {}
 
     @classmethod
     def connect(cls, timeout_ms: int = DEFAULT_TIMEOUT_MS,
-                schematic_dir: Optional[str] = None,
-                schematic_files: Optional[List[str]] = None,
+                schematic_dir: str | None = None,
+                schematic_files: list[str] | None = None,
                 config_path: str = ".") -> "Board":
         """config_path anchors schematic_dir/schematic_files resolution —
         build_sheet_name_map resolves both relative to Path(config_path).parent
@@ -113,34 +113,34 @@ class Board:
     def _ref(fp: FootprintInstance) -> str:
         return fp.reference_field.text.value
 
-    def _role(self, fp: FootprintInstance) -> Optional[str]:
+    def _role(self, fp: FootprintInstance) -> str | None:
         ref = self._ref(fp)
         if ref not in self._role_cache:
             self._role_cache[ref] = self.adapter.get_field_value(fp, ROLE_FIELD_NAME)
         return self._role_cache[ref]
 
-    def _cluster(self, fp: FootprintInstance) -> Optional[str]:
+    def _cluster(self, fp: FootprintInstance) -> str | None:
         ref = self._ref(fp)
         if ref not in self._cluster_cache:
             self._cluster_cache[ref] = self.adapter.get_field_value(fp, CLUSTER_FIELD_NAME)
         return self._cluster_cache[ref]
 
-    def _nets(self, fp: FootprintInstance) -> Dict[str, str]:
+    def _nets(self, fp: FootprintInstance) -> dict[str, str]:
         ref = self._ref(fp)
         if ref not in self._nets_cache:
             pads = self.adapter.get_footprint_pads(fp)
             self._nets_cache[ref] = {p.number: p.net.name for p in pads if p.net and p.net.name}
         return self._nets_cache[ref]
 
-    def _sheet(self, fp: FootprintInstance) -> List[Optional[str]]:
+    def _sheet(self, fp: FootprintInstance) -> list[str | None]:
         ref = self._ref(fp)
         if ref not in self._sheet_cache:
             self._sheet_cache[ref] = resolve_sheet_path_names(fp, self.sheet_names)
         return self._sheet_cache[ref]
 
-    def select(self, ref: Optional[str] = None, role: Optional[str] = None,
-               cluster: Optional[str] = None, sheet: Optional[str] = None,
-               net: Optional[str] = None) -> Selection:
+    def select(self, ref: str | None = None, role: str | None = None,
+               cluster: str | None = None, sheet: str | None = None,
+               net: str | None = None) -> Selection:
         """Every argument is an optional, AND-combined filter over the
         current snapshot:
           - ref: exact refdes match.
@@ -173,8 +173,8 @@ class Board:
                                     sheet=fp_sheet, nets=fp_nets, fp=fp))
         return result
 
-    def select_items(self, net: Optional[str] = None, role: Optional[str] = None,
-                      cluster: Optional[str] = None, sheet: Optional[str] = None) -> List[Any]:
+    def select_items(self, net: str | None = None, role: str | None = None,
+                      cluster: str | None = None, sheet: str | None = None) -> list[Any]:
         """Raw mixed list (FootprintInstance/Via/Track) — the same shape
         adapter.get_selected_items() returns, ready to pass to
         template_extraction.extract_template_from_selection(items=...)
@@ -189,7 +189,7 @@ class Board:
         that particular subsystem. Not a regression versus today — there is
         currently no way to do this without a mouse at all, this only covers
         the (common) case where the net name itself is already unambiguous."""
-        items: List[Any] = [s.fp for s in self.select(role=role, cluster=cluster, sheet=sheet, net=net)]
+        items: list[Any] = [s.fp for s in self.select(role=role, cluster=cluster, sheet=sheet, net=net)]
         if net is not None:
             items.extend(v for v in self.adapter.get_vias() if v.net and v.net.name == net)
             items.extend(t for t in self.adapter.get_tracks() if t.net and t.net.name == net)

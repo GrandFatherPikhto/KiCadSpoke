@@ -3,7 +3,7 @@
 import time
 import logging
 from contextlib import contextmanager
-from typing import List, Optional, Any
+from typing import Any
 import kipy
 from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, Track, BoardLayer, Pad, Field, Group
 from kipy.geometry import Vector2, Box2, Angle
@@ -25,7 +25,7 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug(_("kipy.KiCad instance created"))
         self._board = None
         self._write_risk_checked = False
-        self._footprints_cache: Optional[List[FootprintInstance]] = None
+        self._footprints_cache: list[FootprintInstance] | None = None
         # Settable by the caller (see kicadstamp_cli.py's --no-selection) —
         # makes get_selected_items() always report "nothing selected",
         # regardless of what's actually highlighted in the PCB editor GUI.
@@ -71,7 +71,7 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.info(_("Board obtained"))
 
     # --- Search ---
-    def get_footprint(self, ref: str) -> Optional[FootprintInstance]:
+    def get_footprint(self, ref: str) -> FootprintInstance | None:
         for fp in self.get_footprints():
             if fp.reference_field.text.value == ref:
                 logger.debug(_("Found footprint {ref}").format(ref=ref))
@@ -79,7 +79,7 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug(_("Footprint {ref} not found").format(ref=ref))
         return None
 
-    def get_footprints(self) -> List[FootprintInstance]:
+    def get_footprints(self) -> list[FootprintInstance]:
         """
         Cached per board generation (cleared by refresh_board()). Anchor/role
         resolution (clone_role_resolver.py), ComponentPool, dependency_order.py
@@ -101,17 +101,17 @@ class KiCadBoardAdapter(IBoardAdapter):
             logger.debug(_("Retrieved {count} footprints").format(count=len(self._footprints_cache)))
         return list(self._footprints_cache)
 
-    def get_vias(self) -> List[Via]:
+    def get_vias(self) -> list[Via]:
         vias = list(self._board.get_vias())
         logger.debug(_("Retrieved {count} vias").format(count=len(vias)))
         return vias
 
-    def get_tracks(self) -> List[Track]:
+    def get_tracks(self) -> list[Track]:
         tracks = list(self._board.get_tracks())
         logger.debug(_("Retrieved {count} tracks").format(count=len(tracks)))
         return tracks
 
-    def get_selected_items(self) -> List[Any]:
+    def get_selected_items(self) -> list[Any]:
         """
         Current selection in PCB editor, taking Groups into account — Group's
         .items property as received from the server is ALWAYS EMPTY (just a
@@ -143,7 +143,7 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug(_("Selected items (including groups expanded): {count}").format(count=len(direct_items)))
         return direct_items
 
-    def select_items(self, items: List[Any]):
+    def select_items(self, items: list[Any]):
         """
         Sets the PCB editor's GUI selection to exactly `items` (replacing
         whatever was selected before) — the write counterpart of
@@ -159,7 +159,7 @@ class KiCadBoardAdapter(IBoardAdapter):
         if items:
             self._board.add_to_selection(items)
 
-    def get_field_value(self, footprint: FootprintInstance, field_name: str) -> Optional[str]:
+    def get_field_value(self, footprint: FootprintInstance, field_name: str) -> str | None:
         """
         Value of a custom component field (e.g., Role for KiCadStamp 4.0).
         IMPORTANT: texts_and_fields contains a mix of actual Field objects
@@ -211,7 +211,7 @@ class KiCadBoardAdapter(IBoardAdapter):
              .format(ref=ref, field=field_name)]
         ))
 
-    def set_field_values_bulk(self, updates: List[Any], description: str) -> bool:
+    def set_field_values_bulk(self, updates: list[Any], description: str) -> bool:
         """
         updates: list of (footprint, field_name, value) triples. Sets them
         all, then pushes every touched footprint in ONE update_items() call
@@ -236,7 +236,7 @@ class KiCadBoardAdapter(IBoardAdapter):
 
         return self.commit_with_retry(description, work)
 
-    def get_footprint_pads(self, footprint: FootprintInstance) -> List[Pad]:
+    def get_footprint_pads(self, footprint: FootprintInstance) -> list[Pad]:
         """
         Returns the list of pads of this footprint. Does not go to the API
         separately — pads are already in footprint.definition.items together
@@ -245,14 +245,14 @@ class KiCadBoardAdapter(IBoardAdapter):
         """
         return [item for item in footprint.definition.items if isinstance(item, Pad)]
 
-    def get_pad_by_number(self, footprint: FootprintInstance, pad_number: str) -> Optional[Pad]:
+    def get_pad_by_number(self, footprint: FootprintInstance, pad_number: str) -> Pad | None:
         """Finds a specific pad of a footprint by number (e.g., '1', '145')."""
         for pad in self.get_footprint_pads(footprint):
             if pad.number == pad_number:
                 return pad
         return None
 
-    def get_zone_by_name(self, name: str) -> Optional[Zone]:
+    def get_zone_by_name(self, name: str) -> Zone | None:
         for z in self._board.get_zones():
             if z.name == name:
                 logger.debug(_("Found zone {name}").format(name=name))
@@ -260,7 +260,7 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug(_("Zone {name} not found").format(name=name))
         return None
 
-    def get_net_by_name(self, name: str) -> Optional[Net]:
+    def get_net_by_name(self, name: str) -> Net | None:
         for n in self._board.get_nets():
             if n.name == name:
                 logger.debug(_("Found net {name}").format(name=name))
@@ -268,13 +268,13 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug(_("Net {name} not found").format(name=name))
         return None
 
-    def get_all_nets(self) -> List[Net]:
+    def get_all_nets(self) -> list[Net]:
         nets = list(self._board.get_nets())
         logger.debug(_("Retrieved {count} nets").format(count=len(nets)))
         return nets
 
     # --- Bounding boxes (for collisions — see collision.py) ---
-    def get_bounding_boxes(self, items) -> List[Optional[Box2]]:
+    def get_bounding_boxes(self, items) -> list[Box2 | None]:
         """
         Returns bounding boxes (Box2 | None) for a list of items in ONE request.
         Board.get_item_bounding_box(list) returns List[Optional[Box2]] for a
@@ -378,7 +378,7 @@ class KiCadBoardAdapter(IBoardAdapter):
         return created
 
     # --- Specialised actions ---
-    def flip_selected(self, footprints: List[FootprintInstance]):
+    def flip_selected(self, footprints: list[FootprintInstance]):
         logger.info(_("Flipping {count} footprints via GUI action").format(count=len(footprints)))
         self._board.clear_selection()
         self._board.add_to_selection(footprints)

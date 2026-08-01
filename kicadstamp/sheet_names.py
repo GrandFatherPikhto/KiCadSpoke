@@ -18,7 +18,7 @@ import glob
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+
 
 import sexpdata
 
@@ -28,13 +28,13 @@ from .i18n import _
 logger = logging.getLogger(__name__)
 
 
-def _children(node, tag: str) -> List[list]:
+def _children(node, tag: str) -> list[list]:
     if not isinstance(node, list):
         return []
     return [n for n in node[1:] if isinstance(n, list) and n and str(n[0]) == tag]
 
 
-def _parse_sheet_uuids(path: str) -> Dict[str, str]:
+def _parse_sheet_uuids(path: str) -> dict[str, str]:
     """{uuid: Sheetname} from all (sheet ...) blocks of ONE .kicad_sch file."""
     result = {}
     try:
@@ -57,8 +57,8 @@ def _parse_sheet_uuids(path: str) -> Dict[str, str]:
     return result
 
 
-def build_sheet_name_map(config_path: str, schematic_dir: Optional[str],
-                         schematic_files: List[str]) -> Dict[str, str]:
+def build_sheet_name_map(config_path: str, schematic_dir: str | None,
+                         schematic_files: list[str]) -> dict[str, str]:
     """
     Builds {uuid: Sheetname} from schematic_dir (all *.kicad_sch inside,
     non‑recursively — same as netexp's watchdog) + schematic_files (point
@@ -92,7 +92,7 @@ def build_sheet_name_map(config_path: str, schematic_dir: Optional[str],
             ))
         files.append(str(p))
 
-    result: Dict[str, str] = {}
+    result: dict[str, str] = {}
     for f in files:
         result.update(_parse_sheet_uuids(f))
 
@@ -103,7 +103,7 @@ def build_sheet_name_map(config_path: str, schematic_dir: Optional[str],
     return result
 
 
-def resolve_sheet_path_names(fp, sheet_names: Dict[str, str]) -> List[Optional[str]]:
+def resolve_sheet_path_names(fp, sheet_names: dict[str, str]) -> list[str | None]:
     """
     fp.sheet_path.path[:-1] (without the last — the component's own uuid),
     translated via the dictionary into human‑readable names. None at a position

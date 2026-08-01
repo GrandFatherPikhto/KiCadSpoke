@@ -1,6 +1,6 @@
 # kicadstamp/placement/executor/track_executor.py
 import logging
-from typing import List, Tuple, Dict, Optional
+
 from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from ...config import Config
 from ..commands import TrackCommand
@@ -16,8 +16,8 @@ class TrackExecutor:
         self.cfg = config
         self.batch_size = batch_size
 
-    def execute_tracks(self, tracks: List[TrackCommand],
-                       registry: Optional[TrackRegistry] = None) -> Tuple[List[str], List[Dict]]:
+    def execute_tracks(self, tracks: list[TrackCommand],
+                       registry: TrackRegistry | None = None) -> tuple[list[str], list[dict]]:
         failed_track_owners = []
         created_track_log = []
 

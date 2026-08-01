@@ -1,3 +1,4 @@
+from collections.abc import Callable
 # kicadstamp/author.py
 """
 author.py — build ClonePlacement/Rule in real Python (loops, computed
@@ -22,7 +23,7 @@ format — both are strictly additive.
 import dataclasses
 import sys
 from pathlib import Path
-from typing import Any, Callable, List, Optional
+from typing import Any
 
 import yaml
 
@@ -74,7 +75,7 @@ def _prune_defaults(obj: Any) -> Any:
     return obj
 
 
-def dump_clone_placements(clones: List[ClonePlacement], path: str) -> None:
+def dump_clone_placements(clones: list[ClonePlacement], path: str) -> None:
     """Writes {'clone_placements': [...]} to path — a file directly usable
     via include: (see kicadstamp/config/includes.py) or as a whole profile."""
     data = {"clone_placements": [_prune_defaults(c) for c in clones]}
@@ -82,7 +83,7 @@ def dump_clone_placements(clones: List[ClonePlacement], path: str) -> None:
         yaml.dump(data, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
 
-def dump_rules(rules: List[Rule], path: str) -> None:
+def dump_rules(rules: list[Rule], path: str) -> None:
     """Writes {'rules': [...]} to path — same include:-ready shape as
     dump_clone_placements."""
     data = {"rules": [_prune_defaults(r) for r in rules]}
@@ -103,12 +104,12 @@ def dump_template(template_dict: dict, path: str) -> None:
         yaml.dump(template_dict, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
 
-def apply_config(cfg: Config, config_path: str, *, ctx: Optional[RuntimeContext] = None,
+def apply_config(cfg: Config, config_path: str, *, ctx: RuntimeContext | None = None,
                  dry_run: bool = False,
-                 only: Optional[List[str]] = None, cluster: Optional[List[str]] = None,
+                 only: list[str] | None = None, cluster: list[str] | None = None,
                  timeout_ms: int = DEFAULT_TIMEOUT_MS, batch_size: int = DEFAULT_BATCH_SIZE,
                  no_collision_check: bool = False, collision_margin: float = 0.2
-                 ) -> Optional[List[str]]:
+                 ) -> list[str] | None:
     """Runs cfg through the exact same pipeline a YAML-driven `apply` run
     uses (run_apply() already accepts a pre-built Config — this just builds
     the typed :class:`~kicadstamp.apply_pipeline.RunOptions` it needs).
@@ -141,9 +142,9 @@ def apply_config(cfg: Config, config_path: str, *, ctx: Optional[RuntimeContext]
     return run_apply(options, cfg=cfg, ctx=ctx)
 
 
-def cli_main(build_fn: Callable[[], List[ClonePlacement]], output_path: str,
-             root_config_path: str, *, description: Optional[str] = None,
-             argv: Optional[List[str]] = None) -> None:
+def cli_main(build_fn: Callable[[], list[ClonePlacement]], output_path: str,
+             root_config_path: str, *, description: str | None = None,
+             argv: list[str] | None = None) -> None:
     """Standard `if __name__ == "__main__":` body for a
     boards/<board>/scripts/*.py generator: parses --apply/--dry-run, writes
     build_fn()'s ClonePlacements to output_path via dump_clone_placements(),

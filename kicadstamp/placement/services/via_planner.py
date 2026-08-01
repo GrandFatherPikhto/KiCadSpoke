@@ -1,7 +1,7 @@
 # kicadstamp/placement/services/via_planner.py
 
 import logging
-from typing import List, Optional, Set, Tuple
+
 from kipy.board_types import FootprintInstance, BoardLayer
 from kipy.geometry import Vector2
 
@@ -51,7 +51,7 @@ class ViaPlanner:
                 return True
         return False
 
-    def _resolve_thermal_anchor(self) -> Optional[FootprintInstance]:
+    def _resolve_thermal_anchor(self) -> FootprintInstance | None:
         """
         Resolves the anchor for thermal vias by anchor_ref, anchor_role
         (with anchor_sheet and anchor_cluster), or anchor_point. Returns a
@@ -101,11 +101,11 @@ class ViaPlanner:
 
     def plan_vias(
         self,
-        planned_components: List[PlacedComponentInfo],
-        planned_vias: List[ViaCommand],
-        target_fp: Optional[FootprintInstance] = None,
+        planned_components: list[PlacedComponentInfo],
+        planned_vias: list[ViaCommand],
+        target_fp: FootprintInstance | None = None,
         target_layer: BoardLayer = BoardLayer.BL_F_Cu
-    ) -> List[ViaCommand]:
+    ) -> list[ViaCommand]:
         """
         Filters planned_vias through skip_existing_components, then adds
         thermal vias. If target_fp is not passed (or None), the anchor is
@@ -114,7 +114,7 @@ class ViaPlanner:
         existing_vias = self.adapter.get_vias() if self.cfg.skip_existing_components else []
 
         # --- filter existing vias ---
-        vias: List[ViaCommand] = []
+        vias: list[ViaCommand] = []
         skipped = 0
         for via in planned_vias:
             if self.cfg.skip_existing_components and self._via_already_exists(
@@ -147,10 +147,10 @@ class ViaPlanner:
     def _build_keepout(
         self,
         target_fp: FootprintInstance,
-        planned: List[PlacedComponentInfo],
-        exclude: Optional[Set[Tuple[str, str]]] = None,
-        planned_vias: Optional[List[ViaCommand]] = None,
-    ) -> List[Rect]:
+        planned: list[PlacedComponentInfo],
+        exclude: set[tuple[str, str]] | None = None,
+        planned_vias: list[ViaCommand] | None = None,
+    ) -> list[Rect]:
         pad_items = []
         target_ref_name = target_fp.reference_field.text.value
         for pad in self.adapter.get_footprint_pads(target_fp):
@@ -179,12 +179,12 @@ class ViaPlanner:
 
     def _plan_thermal_vias(
         self,
-        planned: List[PlacedComponentInfo],
+        planned: list[PlacedComponentInfo],
         target_fp: FootprintInstance,
-        keepout: List[Rect],
-        existing_vias: Optional[List] = None,
-        planned_vias: Optional[List[ViaCommand]] = None,
-    ) -> List[ViaCommand]:
+        keepout: list[Rect],
+        existing_vias: list | None = None,
+        planned_vias: list[ViaCommand] | None = None,
+    ) -> list[ViaCommand]:
         existing_vias = existing_vias or []
         tva = self.cfg.thermal_via_array
         if tva.retired:

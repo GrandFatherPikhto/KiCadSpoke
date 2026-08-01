@@ -26,7 +26,7 @@ origin, using the same formula as the component position itself. No more
 dependency on the live board for vias.
 """
 from dataclasses import dataclass, field
-from typing import List, Dict
+
 from kipy.geometry import Vector2, Angle
 
 from ..config import ManualSpoke, Cell, TemplateVia, TemplateTrack
@@ -98,16 +98,16 @@ class ComponentLayout:
     role: str
     position: Vector2
     angle_deg: float
-    vias: List[ResolvedVia] = field(default_factory=list)
+    vias: list[ResolvedVia] = field(default_factory=list)
     slot_layer: str = None     # absolute slot layer ('F.Cu'/'B.Cu'), None = cell layer
 
 
 @dataclass
 class SpokeLayout:
     origin: Vector2                                  # spoke origin (after shift, before rotation)
-    vias: List[ResolvedVia] = field(default_factory=list)     # spoke‑level vias (formerly power_via)
-    components: List[ComponentLayout] = field(default_factory=list)
-    tracks: List[ResolvedTrack] = field(default_factory=list)  # filled by both ClonePlacement (clone_geometry.py) and ManualSpoke (below)
+    vias: list[ResolvedVia] = field(default_factory=list)     # spoke‑level vias (formerly power_via)
+    components: list[ComponentLayout] = field(default_factory=list)
+    tracks: list[ResolvedTrack] = field(default_factory=list)  # filled by both ClonePlacement (clone_geometry.py) and ManualSpoke (below)
 
 
 def apply_spoke_geometry(
@@ -115,7 +115,7 @@ def apply_spoke_geometry(
     spoke: ManualSpoke,
     cell: Cell,
     rule_net: str,
-    role_to_ref: Dict[str, str],
+    role_to_ref: dict[str, str],
 ) -> SpokeLayout:
     """
     Computes absolute positions of EVERYTHING in the cell for this spoke,

@@ -1,7 +1,7 @@
 # kicadstamp/placement/planner.py
 
 import logging
-from typing import Dict, List, Tuple, Optional
+
 
 from kipy.board_types import BoardLayer
 from kipy.geometry import Angle, Vector2
@@ -32,7 +32,7 @@ class PlacementPlanner:
         # on Rule/ClonePlacement/ThermalViaArrayConfig. Passed BY REFERENCE
         # into the calculators below so they see it live-updated as the run
         # progresses, same freshness discipline as everything else here.
-        self.resolved_points: Dict[str, ResolvedPoint] = {}
+        self.resolved_points: dict[str, ResolvedPoint] = {}
         self.position_calc = ManualPositionCalculator(adapter, config, sheet_names=_sn,
                                                        resolved_points=self.resolved_points)
         self.clone_calc = ClonePositionCalculator(adapter, config, sheet_names=_sn,
@@ -59,7 +59,7 @@ class PlacementPlanner:
         self._planned_vias = []
         self._planned_tracks = []
 
-    def plan_item(self, item) -> List[MoveCommand]:
+    def plan_item(self, item) -> list[MoveCommand]:
         """
         Plans ONE dependency_order.Item (rule or clone_placement) against the
         board as it is RIGHT NOW — the caller is responsible for calling
@@ -90,23 +90,23 @@ class PlacementPlanner:
         self._planned_tracks.extend(tracks)
         return self._tracker.moves_from_placed(placed)
 
-    def moves_from_placed(self, placed: List) -> List[MoveCommand]:
+    def moves_from_placed(self, placed: list) -> list[MoveCommand]:
         """Convenience wrapper — delegates to PositionTracker."""
         return self._tracker.moves_from_placed(placed)
 
-    def plan_items(self, items) -> List[MoveCommand]:
+    def plan_items(self, items) -> list[MoveCommand]:
         """Convenience for dry-run: plan_item() for every item in dependency
         order, from a single unchanged board snapshot (no execution/refresh
         between items — see the caveat cmd_apply prints in --dry-run output),
         returning the combined move list. Real apply uses plan_item() directly,
         one at a time, interleaved with execution and adapter.refresh_board()."""
         self.begin_planning()
-        moves: List[MoveCommand] = []
+        moves: list[MoveCommand] = []
         for item in items:
             moves.extend(self.plan_item(item))
         return moves
 
-    def plan_moves(self) -> List[MoveCommand]:
+    def plan_moves(self) -> list[MoveCommand]:
         self.begin_planning()
 
         if self.cfg.place_components and self.cfg.rules:
@@ -137,7 +137,7 @@ class PlacementPlanner:
         logger.info(_("plan_moves completed: {count} moves").format(count=len(moves)))
         return moves
 
-    def plan_vias(self) -> List[ViaCommand]:
+    def plan_vias(self) -> list[ViaCommand]:
         # Thermal via anchor resolution (anchor_ref/anchor_role/anchor_sheet/
         # anchor_cluster) is entirely inside via_planner.py (_resolve_thermal_anchor)
         # — we do not duplicate that logic here; target_fp=None means "resolve
@@ -149,7 +149,7 @@ class PlacementPlanner:
             target_layer=self._target_layer
         )
 
-    def plan_tracks(self) -> List[TrackCommand]:
+    def plan_tracks(self) -> list[TrackCommand]:
         """
         Tracks are planned for both ClonePlacement and ManualSpoke (net=None in
         TemplateTrack inherits rule.net — see spoke_layout._resolve_track).
@@ -160,7 +160,7 @@ class PlacementPlanner:
         """
         return list(self._planned_tracks or [])
 
-    def plan(self) -> Tuple[List[MoveCommand], List[ViaCommand], List[TrackCommand]]:
+    def plan(self) -> tuple[list[MoveCommand], list[ViaCommand], list[TrackCommand]]:
         moves = self.plan_moves()
         vias = self.plan_vias()
         tracks = self.plan_tracks()

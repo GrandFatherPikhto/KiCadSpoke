@@ -1,6 +1,6 @@
 # kicadstamp/placement/executor/batch_executor.py
 import logging
-from typing import List, Tuple, Dict, Optional
+
 from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from ...config import Config
 from ..commands import MoveCommand, ViaCommand, TrackCommand
@@ -26,9 +26,9 @@ class BatchExecutor:
         self._pending_move_log = []
         self._pending_via_log = []
 
-    def execute_moves(self, moves: List[MoveCommand],
+    def execute_moves(self, moves: list[MoveCommand],
                        check_collisions: bool = True,
-                       collision_margin_mm: float = 0.2) -> List[str]:
+                       collision_margin_mm: float = 0.2) -> list[str]:
         failed_refs, move_log = self.move_executor.execute_moves(moves, check_collisions, collision_margin_mm)
         # extend, not overwrite: cmd_apply's per-item loop calls execute_moves
         # once per dependency-order item, all before the single execute_tracks()
@@ -37,12 +37,12 @@ class BatchExecutor:
         self._pending_move_log.extend(move_log)
         return failed_refs
 
-    def execute_vias(self, vias: List[ViaCommand], registry: Optional[PlacementRegistry] = None) -> List[str]:
+    def execute_vias(self, vias: list[ViaCommand], registry: PlacementRegistry | None = None) -> list[str]:
         failed_via_owners, via_log = self.via_executor.execute_vias(vias, registry)
         self._pending_via_log = via_log
         return failed_via_owners
 
-    def execute_tracks(self, tracks: List[TrackCommand], registry: Optional[TrackRegistry] = None) -> List[str]:
+    def execute_tracks(self, tracks: list[TrackCommand], registry: TrackRegistry | None = None) -> list[str]:
         failed_track_owners, track_log = self.track_executor.execute_tracks(tracks, registry)
         if self._pending_move_log or self._pending_via_log or track_log:
             self.logger.write_operation_log(self._pending_move_log, self._pending_via_log, track_log)
@@ -50,10 +50,10 @@ class BatchExecutor:
         self._pending_via_log = []
         return failed_track_owners
 
-    def execute(self, moves: List[MoveCommand], vias: List[ViaCommand],
-                tracks: Optional[List[TrackCommand]] = None,
+    def execute(self, moves: list[MoveCommand], vias: list[ViaCommand],
+                tracks: list[TrackCommand] | None = None,
                 check_collisions: bool = True,
-                collision_margin_mm: float = 0.2) -> Tuple[List[str], List[str], List[str]]:
+                collision_margin_mm: float = 0.2) -> tuple[list[str], list[str], list[str]]:
         failed_refs = self.execute_moves(moves, check_collisions, collision_margin_mm)
         failed_vias = self.execute_vias(vias)
         failed_tracks = self.execute_tracks(tracks or [])

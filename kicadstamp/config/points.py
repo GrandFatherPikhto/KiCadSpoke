@@ -10,7 +10,7 @@ No validation logic here — same split as the rest of config/ (loader.py
 validates, models.py only describes shape).
 """
 from dataclasses import dataclass
-from typing import Optional, Tuple
+
 
 
 @dataclass
@@ -34,12 +34,12 @@ class Point:
     shift_y_mm (not relative to any anchor rotation, there is none here).
     """
     name: str
-    anchor_ref: Optional[str] = None
-    anchor_role: Optional[str] = None
-    anchor_sheet: Optional[str] = None
-    anchor_cluster: Optional[str] = None
-    anchor_pad: Optional[str] = None
-    anchor_point: Optional[str] = None
-    xy: Optional[Tuple[float, float]] = None
+    anchor_ref: str | None = None
+    anchor_role: str | None = None
+    anchor_sheet: str | None = None
+    anchor_cluster: str | None = None
+    anchor_pad: str | None = None
+    anchor_point: str | None = None
+    xy: tuple[float, float] | None = None
     shift_x_mm: float = 0.0
     shift_y_mm: float = 0.0

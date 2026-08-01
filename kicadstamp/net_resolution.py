@@ -15,12 +15,12 @@ net_resolution.py — three‑layer net name resolution for cloned cells
 No automatic guessing anywhere — both mechanisms (params and net_overrides)
 require explicit, hand‑written configuration.
 """
-from typing import Dict, Any
+from typing import Any
 from .exceptions import ValidationError, format_fatal_error
 from .i18n import _
 
 
-def resolve_placeholder(template: str, params: Dict[str, Any], what: str = "value") -> str:
+def resolve_placeholder(template: str, params: dict[str, Any], what: str = "value") -> str:
     """
     Generic {placeholder} substitution from params (str.format) — the engine
     underneath resolve_net, also reused as-is for ClonePlacement.anchor_sheet
@@ -42,7 +42,7 @@ def resolve_placeholder(template: str, params: Dict[str, Any], what: str = "valu
         ))
 
 
-def resolve_net(net_template: str, params: Dict[str, Any], net_overrides: Dict[str, str]) -> str:
+def resolve_net(net_template: str, params: dict[str, Any], net_overrides: dict[str, str]) -> str:
     """
     net_template — net name as written in the cell (TemplateVia.net),
     possibly with {placeholder}. params — substitution values (from
@@ -53,8 +53,8 @@ def resolve_net(net_template: str, params: Dict[str, Any], net_overrides: Dict[s
     return net_overrides.get(resolved, resolved)
 
 
-def parametrize_net(literal_net: str, net_template_map: Dict[str, str],
-                     params: Dict[str, Any]) -> str:
+def parametrize_net(literal_net: str, net_template_map: dict[str, str],
+                     params: dict[str, Any]) -> str:
     """
     Reverse operation of resolve_net — for extract, not for apply.
 

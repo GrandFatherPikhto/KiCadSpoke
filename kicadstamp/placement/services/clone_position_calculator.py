@@ -15,7 +15,7 @@ mode, a rare case) — we have no choice but to use clone.name, the only
 available identifier.
 """
 import logging
-from typing import List, Tuple, Optional, Union
+
 from kipy.geometry import Vector2
 from kipy.board_types import BoardLayer
 
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_clone_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, clone: ClonePlacement,
-                             sheet_names=None) -> Optional[str]:
+                             sheet_names=None) -> str | None:
     """
     Resolves clone's anchor to a concrete ref, WITHOUT resolving anchor_pad
     position — used by dependency_order.py to build the producer/consumer
@@ -108,7 +108,7 @@ class ClonePositionCalculator:
         # PlacementPlanner.resolved_points (owns/shares this dict).
         self.resolved_points = resolved_points if resolved_points is not None else {}
 
-    def _resolve_anchor(self, clone: ClonePlacement) -> Optional[Vector2]:
+    def _resolve_anchor(self, clone: ClonePlacement) -> Vector2 | None:
         """
         anchor_ref/anchor_pad OR anchor_role(+anchor_sheet)/anchor_pad ->
         absolute anchor point. None if no anchor is set (absolute coordinate mode).
@@ -143,8 +143,8 @@ class ClonePositionCalculator:
                              x=position.x/1e6, y=position.y/1e6))
         return position
 
-    def _resolve_cell_or_role(self, cell_ref: Optional[str], role_ref: Optional[str],
-                              label: str) -> Tuple[Optional[Cell], str]:
+    def _resolve_cell_or_role(self, cell_ref: str | None, role_ref: str | None,
+                              label: str) -> tuple[Cell | None, str]:
         """Shared by top-level ClonePlacement and nested CellPlacement: cell:
         looks up cfg.cells, role: synthesises a temporary one-component Cell
         on the fly (cheap, no caching needed — see discussion: a separate
@@ -168,13 +168,13 @@ class ClonePositionCalculator:
 
     def _resolve_one_level(
         self,
-        placement: Union[ClonePlacement, CellPlacement],
+        placement: ClonePlacement | CellPlacement,
         cell: Cell,
         cell_name: str,
-        anchor_position: Optional[Vector2],
+        anchor_position: Vector2 | None,
         parent_rotation_deg: float,
         anchor_id: str,
-    ) -> Tuple[List[PlacedComponentInfo], List[ViaCommand], List[TrackCommand]]:
+    ) -> tuple[list[PlacedComponentInfo], list[ViaCommand], list[TrackCommand]]:
         """
         Resolves ONE placement (top-level ClonePlacement or a nested
         CellPlacement — same shape of work either way, see CellPlacement's
@@ -234,9 +234,9 @@ class ClonePositionCalculator:
                     .format(name=placement.name, tpl=cell.name, layer=cell.layer,
                             mirror_suffix=_(" -> mirrored as a whole") if mirror else _(" -> as written")))
 
-        components_result: List[PlacedComponentInfo] = []
-        vias_result: List[ViaCommand] = []
-        tracks_result: List[TrackCommand] = []
+        components_result: list[PlacedComponentInfo] = []
+        vias_result: list[ViaCommand] = []
+        tracks_result: list[TrackCommand] = []
 
         for via_index, via in enumerate(layout.vias):
             vias_result.append(ViaCommand(
@@ -311,11 +311,11 @@ class ClonePositionCalculator:
 
     def compute_raw_positions(
         self,
-        clone_placements: List[ClonePlacement],
-    ) -> Tuple[List[PlacedComponentInfo], List[ViaCommand], List[TrackCommand]]:
-        components_result: List[PlacedComponentInfo] = []
-        vias_result: List[ViaCommand] = []
-        tracks_result: List[TrackCommand] = []
+        clone_placements: list[ClonePlacement],
+    ) -> tuple[list[PlacedComponentInfo], list[ViaCommand], list[TrackCommand]]:
+        components_result: list[PlacedComponentInfo] = []
+        vias_result: list[ViaCommand] = []
+        tracks_result: list[TrackCommand] = []
 
         for clone in clone_placements:
             if clone.retired:

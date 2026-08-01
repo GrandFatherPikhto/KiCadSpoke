@@ -19,7 +19,7 @@ from CLI argument parsing.  The pipeline is:
 import dataclasses
 import difflib
 import logging
-from typing import Dict, Any, List, Optional, Set
+from typing import Any
 
 from kipy.errors import ApiError, ApiStatusCode
 
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 # ── Filtering helpers (pure cfg mutation, no adapter) ─────────────────────────
 
 
-def _split_comma_values(raw: Optional[List[str]]) -> List[str]:
+def _split_comma_values(raw: list[str] | None) -> list[str]:
     """--only/--cluster accept both repeating the flag and comma‑separated
     values within one occurrence (e.g. --only a,b --only c -> [a, b, c])."""
     if not raw:
@@ -56,7 +56,7 @@ def _split_comma_values(raw: Optional[List[str]]) -> List[str]:
     return result
 
 
-def _matches_any_cluster(candidate: Optional[str], wanted: List[str]) -> bool:
+def _matches_any_cluster(candidate: str | None, wanted: list[str]) -> bool:
     if candidate is None:
         return False
     return any(cluster_prefix_match(candidate, w) for w in wanted)
@@ -117,7 +117,7 @@ def drop_inactive_items(cfg, _logger=None) -> None:
         cfg.thermal_via_array.retired = True
 
 
-def apply_only_filter(cfg, only_names: List[str], _logger=None) -> None:
+def apply_only_filter(cfg, only_names: list[str], _logger=None) -> None:
     """--only: whole-block selection by identity (rule name-or-net, clone_placement
     name, thermal_via_array name). Raises PlacerError on unmatched names.
     Pure cfg mutation."""
@@ -166,7 +166,7 @@ def apply_only_filter(cfg, only_names: List[str], _logger=None) -> None:
                     thermal=_("yes") if thermal_matches else _("no")))
 
 
-def apply_cluster_filter(cfg, cluster_paths: List[str], _logger=None) -> None:
+def apply_cluster_filter(cfg, cluster_paths: list[str], _logger=None) -> None:
     """--cluster — a second, independent selection axis (physical instance /
     Cluster field, not name). Composes with --only via AND only, never OR.
     Pure cfg mutation, no adapter."""
@@ -205,7 +205,7 @@ def apply_cluster_filter(cfg, cluster_paths: List[str], _logger=None) -> None:
 
 # ── Compute helper ────────────────────────────────────────────────────────────
 
-def _compute_all_anchor_ids(cfg) -> Set[str]:
+def _compute_all_anchor_ids(cfg) -> set[str]:
     """Build the FULL set of anchor IDs (before --only/--cluster narrow)
     for registry.reconcile()'s known_anchor_ids protection."""
     ids = {clone_anchor_id(c) for c in cfg.clone_placements if not c.retired}
@@ -236,8 +236,8 @@ class ApplyPipeline:
         no_selection: bool = False,
         no_collision_check: bool = False,
         collision_margin: float = 0.2,
-        only: Optional[List[str]] = None,
-        cluster: Optional[List[str]] = None,
+        only: list[str] | None = None,
+        cluster: list[str] | None = None,
         preloaded_cfg=None,
         preloaded_ctx=None,
     ):
@@ -253,15 +253,15 @@ class ApplyPipeline:
 
         # Internal state
         self.cfg = preloaded_cfg
-        self.ctx: Optional[RuntimeContext] = preloaded_ctx
-        self.adapter: Optional[KiCadBoardAdapter] = None
-        self.planner: Optional[PlacementPlanner] = None
+        self.ctx: RuntimeContext | None = preloaded_ctx
+        self.adapter: KiCadBoardAdapter | None = None
+        self.planner: PlacementPlanner | None = None
         self.items = None
-        self.all_anchor_ids: Set[str] = set()
+        self.all_anchor_ids: set[str] = set()
         # П.8: populated by _dry_run() — a structured, printable report that
         # the CLI layer prints and a future GUI panel could render. The
         # library itself never prints to stdout; it only produces this.
-        self.dry_run_report: Optional[List[str]] = None
+        self.dry_run_report: list[str] | None = None
 
     # ── Pipeline steps ──────────────────────────────────────────────────────
 
@@ -301,7 +301,7 @@ class ApplyPipeline:
 
     # ── Dry‑run ─────────────────────────────────────────────────────────────
 
-    def _dry_run(self) -> List[str]:
+    def _dry_run(self) -> list[str]:
         """Plan without touching the board and return a printable report.
 
         Builds a structured list of lines instead of printing to stdout
@@ -313,7 +313,7 @@ class ApplyPipeline:
         moves = self.planner.plan_items(self.items)
         vias = self.planner.plan_vias()
         tracks = self.planner.plan_tracks()
-        lines: List[str] = []
+        lines: list[str] = []
         lines.append("\n=== DRY RUN ===")
         lines.append(_("Order: {order}").format(order=" -> ".join(it.label for it in self.items)))
         lines.append(_("Moves:"))
@@ -357,7 +357,7 @@ class ApplyPipeline:
 
         # --- Phase 1: moves, one dependency-order item at a time ---
         self.planner.begin_planning()
-        failed_refs: List[str] = []
+        failed_refs: list[str] = []
         for idx, item in enumerate(self.items):
             if idx > 0:
                 self.adapter.refresh_board()
@@ -413,7 +413,7 @@ class ApplyPipeline:
 
     # ── Public entry point ──────────────────────────────────────────────────
 
-    def run(self) -> Optional[List[str]]:
+    def run(self) -> list[str] | None:
         """Run the full pipeline.
 
         Returns the dry-run report (list of lines) when dry_run is set,
@@ -455,11 +455,11 @@ class RunOptions:
     no_selection: bool = False
     no_collision_check: bool = False
     collision_margin: float = 0.2
-    only: Optional[List[str]] = None
-    cluster: Optional[List[str]] = None
+    only: list[str] | None = None
+    cluster: list[str] | None = None
 
 
-def run_apply(options: RunOptions, cfg=None, ctx=None) -> Optional[List[str]]:
+def run_apply(options: RunOptions, cfg=None, ctx=None) -> list[str] | None:
     """Run the apply pipeline for a fully-typed :class:`RunOptions`.
 
     *options* — the typed run configuration (:class:`RunOptions`).

@@ -1,7 +1,7 @@
 # kicadstamp/geometry/thermal_grid.py
 
 import math
-from typing import List
+
 from kipy.board_types import Pad
 from kipy.geometry import Vector2
 from ..utils.units import MM
@@ -16,7 +16,7 @@ def get_pad_size(pad: Pad) -> tuple:
     size = layers[0].size
     return size.x, size.y
 
-def compute_thermal_via_grid(pad: Pad, rows: int, cols: int, margin_mm: float, stagger: bool = False) -> List[Vector2]:
+def compute_thermal_via_grid(pad: Pad, rows: int, cols: int, margin_mm: float, stagger: bool = False) -> list[Vector2]:
     """Returns a list of absolute via positions."""
     if rows < 1 or cols < 1:
         raise GeometryError(_("rows and cols must be >= 1"))

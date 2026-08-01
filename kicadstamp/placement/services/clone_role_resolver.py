@@ -21,7 +21,7 @@ selection". This is final, no automatic mode switching inside the resolver.
 """
 import logging
 import math
-from typing import Dict, List, Optional
+
 from kipy.board_types import FootprintInstance
 from kipy.geometry import Vector2
 
@@ -57,8 +57,8 @@ def clone_uses_selection_mode(clone: ClonePlacement) -> bool:
 
 
 def _narrow_ambiguous_candidates(candidates, clone: ClonePlacement, adapter, selected_refs: set,
-                                 anchor_position: Optional[Vector2], clone_name: str, role: str,
-                                 sheet_names: Dict[str, str]):
+                                 anchor_position: Vector2 | None, clone_name: str, role: str,
+                                 sheet_names: dict[str, str]):
     """
     Common narrowing cascade for ambiguous candidates: anchor_sheet -> Cluster
     -> current selection -> physical proximity to anchor. Used both in
@@ -127,9 +127,9 @@ def _narrow_by_sheet_cluster_selection(
     candidates,
     adapter,
     selected_refs: set,
-    anchor_sheet: Optional[str],
-    anchor_cluster: Optional[str],
-    sheet_names: Dict[str, str],
+    anchor_sheet: str | None,
+    anchor_cluster: str | None,
+    sheet_names: dict[str, str],
     label: str,
     role_str: str,
 ) -> list:
@@ -176,8 +176,8 @@ def _narrow_by_sheet_cluster_selection(
 
 
 def resolve_roles_by_selection(adapter, cell: Cell, clone: ClonePlacement,
-                               anchor_position: Optional[Vector2] = None,
-                               sheet_names: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+                               anchor_position: Vector2 | None = None,
+                               sheet_names: dict[str, str] | None = None) -> dict[str, str]:
     """
     Mapping by current selection — but selection is MANDATORY ONLY when the role
     is truly ambiguous:
@@ -198,8 +198,8 @@ def resolve_roles_by_selection(adapter, cell: Cell, clone: ClonePlacement,
 
     cell_roles = {slot.role for slot in cell.components}
 
-    role_to_ref: Dict[str, str] = {}
-    problems: List[str] = []
+    role_to_ref: dict[str, str] = {}
+    problems: list[str] = []
 
     for fp in footprints:
         ref = fp.reference_field.text.value
@@ -220,7 +220,7 @@ def resolve_roles_by_selection(adapter, cell: Cell, clone: ClonePlacement,
 
     missing = cell_roles - set(role_to_ref.keys())
     if missing:
-        all_fps_by_role: Dict[str, list] = {}
+        all_fps_by_role: dict[str, list] = {}
         for fp in adapter.get_footprints():
             role = adapter.get_field_value(fp, ROLE_FIELD_NAME)
             if role in missing:
@@ -262,8 +262,8 @@ def resolve_roles_by_selection(adapter, cell: Cell, clone: ClonePlacement,
 
 
 def resolve_roles_by_nets(adapter, cell: Cell, clone: ClonePlacement,
-                          anchor_position: Optional[Vector2] = None,
-                          sheet_names: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+                          anchor_position: Vector2 | None = None,
+                          sheet_names: dict[str, str] | None = None) -> dict[str, str]:
     """
     Mapping by explicit/parameterised nets (without mouse selection as the
     PRIMARY mechanism — but current selection, if any, participates as a
@@ -308,7 +308,7 @@ def resolve_roles_by_nets(adapter, cell: Cell, clone: ClonePlacement,
                      if isinstance(i, FootprintInstance)}
 
     all_fps = adapter.get_footprints()
-    fps_by_role: Dict[str, list] = {}
+    fps_by_role: dict[str, list] = {}
     fps_by_ref = {}
     for fp in all_fps:
         fps_by_ref[fp.reference_field.text.value] = fp
@@ -316,9 +316,9 @@ def resolve_roles_by_nets(adapter, cell: Cell, clone: ClonePlacement,
         if role is not None:
             fps_by_role.setdefault(role, []).append(fp)
 
-    role_to_ref: Dict[str, str] = {}
-    problems: List[str] = []
-    ambiguous: List = []   # (role, expected_net, matched) for second pass
+    role_to_ref: dict[str, str] = {}
+    problems: list[str] = []
+    ambiguous: list = []   # (role, expected_net, matched) for second pass
 
     # --- step 0: explicit refs ---
     for role, ref in clone.refs.items():
@@ -420,7 +420,7 @@ def resolve_roles_by_nets(adapter, cell: Cell, clone: ClonePlacement,
     return role_to_ref
 
 
-def _fp_on_sheet(fp, anchor_sheet: str, sheet_names: Dict[str, str]) -> bool:
+def _fp_on_sheet(fp, anchor_sheet: str, sheet_names: dict[str, str]) -> bool:
     """
     anchor_sheet appears as ONE OF THE SEGMENTS of the human‑readable path of fp
     (not necessarily the last one — the component may be deeper than the specified
@@ -434,8 +434,8 @@ def _fp_on_sheet(fp, anchor_sheet: str, sheet_names: Dict[str, str]) -> bool:
     return anchor_sheet in names
 
 
-def resolve_footprint_by_role(adapter, anchor_role: str, anchor_sheet: Optional[str],
-                              anchor_cluster: Optional[str], sheet_names: Dict[str, str],
+def resolve_footprint_by_role(adapter, anchor_role: str, anchor_sheet: str | None,
+                              anchor_cluster: str | None, sheet_names: dict[str, str],
                               label: str) -> FootprintInstance:
     """
     Resolves ANY anchor component by anchor_role (Role field on the board,
@@ -497,7 +497,7 @@ def resolve_footprint_by_role(adapter, anchor_role: str, anchor_sheet: Optional[
     ))
 
 
-def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: Dict[str, str]) -> FootprintInstance:
+def resolve_anchor_by_role(adapter, clone: ClonePlacement, sheet_names: dict[str, str]) -> FootprintInstance:
     """Thin wrapper of resolve_footprint_by_role for ClonePlacement — backward
     compatibility for calling code (clone_position_calculator.py).
 

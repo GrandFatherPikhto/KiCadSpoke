@@ -1,7 +1,7 @@
 # kicadstamp/geometry/keepout.py
 
 import math
-from typing import List, Tuple, Optional
+
 from kipy.geometry import Vector2
 
 """
@@ -45,13 +45,13 @@ class Rect:
         return f"Rect({self.min_x}, {self.min_y}, {self.max_x}, {self.max_y})"
 
 
-def point_is_clear(point: Vector2, via_radius: float, keepout: List[Rect]) -> bool:
+def point_is_clear(point: Vector2, via_radius: float, keepout: list[Rect]) -> bool:
     """True if the via circle of radius via_radius around point does not intersect any keepout rectangle."""
     via_box = Rect.from_circle(point, via_radius)
     return not any(via_box.intersects(r) for r in keepout)
 
 
-def build_keepout(bboxes, clearance_mm: float, mm_per_unit: int = 1_000_000) -> List[Rect]:
+def build_keepout(bboxes, clearance_mm: float, mm_per_unit: int = 1_000_000) -> list[Rect]:
     """
     Builds a list of Rects from bounding boxes (see adapter.get_bounding_boxes),
     with clearance_mm on each side. None elements (bbox unavailable for a particular
@@ -68,14 +68,14 @@ def build_keepout(bboxes, clearance_mm: float, mm_per_unit: int = 1_000_000) -> 
 
 def find_free_point(
     ideal: Vector2,
-    keepout: List[Rect],
+    keepout: list[Rect],
     via_radius: float,
-    preferred_direction: Optional[Tuple[float, float]] = None,
+    preferred_direction: tuple[float, float] | None = None,
     step_mm: float = 0.1,
     max_radius_mm: float = 3.0,
     mm_per_unit: int = 1_000_000,
     n_directions: int = 8,
-) -> Optional[Vector2]:
+) -> Vector2 | None:
     """
     Searches for the nearest free point (not intersecting keepout) around ideal
     in expanding rings: first ideal itself, then rings of radius step_mm, 2*step_mm,
@@ -97,7 +97,7 @@ def find_free_point(
 
     ring = step
     while ring <= max_radius + 1e-6:
-        candidates_deg: List[float] = []
+        candidates_deg: list[float] = []
         if preferred_direction is not None:
             pdx, pdy = preferred_direction
             candidates_deg.append(math.degrees(math.atan2(pdy, pdx)))
@@ -120,13 +120,13 @@ def find_free_point(
 
 def find_free_point_along_line(
     ideal: Vector2,
-    keepout: List[Rect],
+    keepout: list[Rect],
     via_radius: float,
-    line_direction: Tuple[float, float],
+    line_direction: tuple[float, float],
     step_mm: float = 0.1,
     max_radius_mm: float = 3.0,
     mm_per_unit: int = 1_000_000,
-) -> Optional[Vector2]:
+) -> Vector2 | None:
     """
     Searches for a free point along a straight line through ideal,
     with direction line_direction (unit vector).

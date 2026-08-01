@@ -1,6 +1,6 @@
 # kicadstamp/placement/executor/via_executor.py
 import logging
-from typing import List, Tuple, Dict, Optional
+
 from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from ...config import Config
 from ..commands import ViaCommand
@@ -16,7 +16,7 @@ class ViaExecutor:
         self.cfg = config
         self.batch_size = batch_size
 
-    def execute_vias(self, vias: List[ViaCommand], registry: Optional[PlacementRegistry] = None) -> Tuple[List[str], List[Dict]]:
+    def execute_vias(self, vias: list[ViaCommand], registry: PlacementRegistry | None = None) -> tuple[list[str], list[dict]]:
         failed_via_owners = []
         created_via_log = []
 

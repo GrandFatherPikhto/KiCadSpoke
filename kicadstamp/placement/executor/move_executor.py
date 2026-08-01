@@ -1,6 +1,6 @@
 # kicadstamp/placement/executor/move_executor.py
 import logging
-from typing import List, Tuple, Dict
+
 from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from ...config import Config
 from ..commands import MoveCommand
@@ -19,9 +19,9 @@ class MoveExecutor:
         self.batch_size = batch_size
         self.flip_manager = FlipManager(adapter, batch_size)
 
-    def execute_moves(self, moves: List[MoveCommand],
+    def execute_moves(self, moves: list[MoveCommand],
                        check_collisions: bool = True,
-                       collision_margin_mm: float = 0.2) -> Tuple[List[str], List[Dict]]:
+                       collision_margin_mm: float = 0.2) -> tuple[list[str], list[dict]]:
         failed_refs = []
         all_fps = self.adapter.get_footprints()
         fp_by_ref = {fp.reference_field.text.value: fp for fp in all_fps}
