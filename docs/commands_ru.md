@@ -430,25 +430,36 @@ python tools/generate_config.py
 
 Используйте его как отправную точку: скопируйте, замените `TEMPLATE` на реальный шаблон (например, полученный через `extract`), заполните список `FILTERS` своими `CloneParams` (`anchor_ref`/`anchor_pad`/`origin_x`/`origin_y`/`rotation_deg`/`params`/`nets`) — и только тогда запускайте.
 
-### `apply_role_cluster.py` – массовая простановка Role/Cluster в схему
+### `fieldstool_cli.py` – массовая простановка/переименование Role/Cluster в схеме
 
-Правит `.kicad_sch` напрямую (без KiCad), по YAML-конфигу `refdes -> {Role, Cluster}` — альтернатива багованному
-Bulk Edit в Eeschema для массовой разметки. **Единственный писатель `.kicad_sch` во всём проекте** — до
-2026-07-26 KiCadStamp не писал в схему вообще ни разу, поэтому у скрипта усиленные страховки: dry-run по
-умолчанию, `.bak` перед записью, самопроверка результата через `sexpdata`, отказ при не-ASCII в значениях
-(тот же класс опечатки, что нашёлся в `Role` живьём — кириллическая «С» вместо латинской, см.
-`diagnostic_charset.py` выше) и отказ при запущенном KiCad (файл может быть открыт в Eeschema).
+Правит `.kicad_sch` напрямую (без KiCad), два подкоманды: `set` (`refdes -> {Role, Cluster}`,
+бывший `tools/apply_role_cluster.py`, перенесён и обобщён 2026-08-01, старый скрипт удалён) и
+`rename` (переименование значения ПОВСЮДУ, без перечисления refdes: `old_value -> new_value`).
+Альтернатива багованному Bulk Edit в Eeschema для массовой разметки. **Единственный писатель
+`.kicad_sch` во всём проекте** — до 2026-07-26 KiCadStamp не писал в схему вообще ни разу, поэтому
+у инструмента усиленные страховки: dry-run по умолчанию, `.bak` перед записью, самопроверка
+результата через `sexpdata`, отказ при не-ASCII в значениях (тот же класс опечатки, что нашёлся в
+`Role` живьём — кириллическая «С» вместо латинской, см. `diagnostic_charset.py` выше) и отказ при
+запущенном KiCad (файл может быть открыт в Eeschema).
+
+Библиотека — `fieldstool/` (отдельный, независимый от `kicadstamp/` пакет — см.
+`fieldstool/__init__.py`), GUI (`fieldstool_gui.py`) на 2026-08-01 ещё не реализован — см.
+`techdocs/handoff/handoff_2026_08_01_fieldstool.md` (внутренний, не в git).
 
 #### Синтаксис
 
 ```bash
-python tools/apply_role_cluster.py <config.yaml> [--write] [--allow-non-ascii] [--force-with-kicad-running] [--verbose]
+python fieldstool_cli.py set <config.yaml> [--write] [--allow-non-ascii] [--force-with-kicad-running] [--verbose]
+python fieldstool_cli.py rename <config.yaml> [--write] [--allow-non-ascii] [--force-with-kicad-running] [--verbose]
 ```
 
 #### Формат конфига
 
+`set` (`root_sheet:` — путь к КОРНЕВОМУ листу проекта, а не к папке: остальные `.kicad_sch`
+находятся обходом иерархии `(sheet (property "Sheetfile" ...))`, не плоским glob'ом директории):
+
 ```yaml
-schematic_dir: ../test_boards/3CH-AWG-TIA   # относительно этого YAML, как schematic_dir в основном конфиге
+root_sheet: ../test_boards/3CH-AWG-TIA/3CH-AWG-TIA.kicad_sch   # относительно этого YAML
 fields:
   C51:
     Role: C_OUT_BULK
@@ -456,6 +467,18 @@ fields:
   C52:
     Role: C_OUT_BULK
     Cluster: FPGA_PWR_BANK/26
+```
+
+`rename` (значение меняется у ЛЮБОГО символа, где оно СЕЙЧАС совпадает — refdes перечислять не
+нужно):
+
+```yaml
+root_sheet: ../test_boards/3CH-AWG-TIA/3CH-AWG-TIA.kicad_sch
+renames:
+  Role:
+    OLD_ROLE_A: NEW_ROLE_A
+  Cluster:
+    Old_Cluster_Name: New_Cluster_Name
 ```
 
 #### Опции
@@ -469,11 +492,16 @@ fields:
 
 #### Что важно знать перед использованием
 
-- **Многоюнитовые символы** (сдвоенные ОУ и т.п.) — правятся ВСЕ units этого refdes.
-- **Многократный инстанс одного листа** (например, три одинаковых `Channel_N`) — Role/Cluster в формате
-  `.kicad_sch` общие на весь физический символ, не per-instance. Если конфиг просит разные значения для двух
-  refdes, которые физически являются одним и тем же размещённым символом на разных инстансах листа — скрипт
-  фатально откажется писать, а не молча применит одно из двух.
+- **Многоюнитовые символы** (сдвоенные ОУ и т.п.) — правятся ВСЕ units этого refdes (`set`) / ВСЕ
+  units, где значение сейчас совпадает (`rename`).
+- **Многократный инстанс одного листа** (например, три одинаковых `Channel_N`) — Role/Cluster в
+  формате `.kicad_sch` общие на весь физический символ, не per-instance. `set`: если конфиг просит
+  разные значения для двух refdes, которые физически являются одним и тем же размещённым символом
+  на разных инстансах листа — фатальный отказ, а не молчаливое применение одного из двух. `rename`
+  этой проблемы в принципе не имеет — всегда пишет одно и то же новое значение всем совпадениям.
+  - `rename`: значение из `renames:`, не найденное НИГДЕ — не фатал, а предупреждение (это либо
+    опечатка, либо просто повторный запуск после уже применённого переименования — операция
+    идемпотентна).
 - Правки — точечная подстановка текста (regex + баланс скобок), не полный parse→dump цикл: меняются только
   байты внутри нужного значения (или точка вставки нового `property`), остальной файл побайтово не
   затрагивается — проверено `diff` на реальном файле, диф в одну строку.
@@ -483,8 +511,9 @@ fields:
 #### Пример
 
 ```bash
-python tools/apply_role_cluster.py roles.yaml --verbose         # сначала dry-run
-python tools/apply_role_cluster.py roles.yaml --write            # затем реально записать
+python fieldstool_cli.py set roles.yaml --verbose         # сначала dry-run
+python fieldstool_cli.py set roles.yaml --write            # затем реально записать
+python fieldstool_cli.py rename renames.yaml --write
 ```
 
 ### `update_i18n.py` – пересборка каталогов переводов (gettext)
