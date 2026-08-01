@@ -427,6 +427,12 @@ class Config:
     # for the same board profile. CLI flag --log-file, if given, TAKES PRIORITY
     # over this field (see main() in kicadstamp_cli.py).
     log_file: Optional[str] = None
+    # Directory for undo operation logs (operation_*.json), relative to this
+    # YAML like registry_path/log_file — the single source of truth for where
+    # `apply` writes and `undo` reads, instead of both silently depending on the
+    # process CWD. When unset, OperationLogger/cmd_undo fall back to
+    # DEFAULT_LOG_DIR ("logs" next to the CWD) for backward compatibility.
+    operation_log_dir: Optional[str] = None
     @property
     def anchor_refs(self) -> set:
         """All anchor refs in the config: spoke rules + thermal via array."""

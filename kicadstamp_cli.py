@@ -82,6 +82,9 @@ def main() -> int:
     undo_parser = subparsers.add_parser("undo", help=_("Undo last operation"))
     undo_parser.add_argument("--verbose", action="store_true", help=_("Verbose output"))
     undo_parser.add_argument("--log-file", help=_("File to save logs"))
+    undo_parser.add_argument("--operation-log-dir", metavar="DIR",
+                             help=_("Directory with operation_*.json undo logs "
+                                    "(default: logs/ next to the current working directory)"))
 
     clone_extract = subparsers.add_parser(
         "clone-extract",

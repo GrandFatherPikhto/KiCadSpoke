@@ -24,8 +24,10 @@ def _clone_args(**kw):
     return SimpleNamespace(**defaults)
 
 
-def _undo_args():
-    return SimpleNamespace()
+def _undo_args(**kw):
+    defaults = dict(operation_log_dir=None)
+    defaults.update(kw)
+    return SimpleNamespace(**defaults)
 
 
 class TestCmdCloneExtractValidation:
@@ -87,3 +89,21 @@ class TestCmdUndoValidation:
         monkeypatch.chdir(tmp_path)
         with pytest.raises(PlacerError, match="No operation files"):
             cmd_undo(_undo_args())
+
+    def test_operation_log_dir_override_used(self, monkeypatch, tmp_path):
+        """--operation-log-dir must point cmd_undo at the config-bound dir
+        instead of the CWD-relative logs/ (П.7)."""
+        import kicadstamp.cli as cli_mod
+        undone = []
+        monkeypatch.setattr(cli_mod, "undo_last_operation",
+                            lambda json_path: undone.append(json_path) or True)
+        custom = tmp_path / "custom_logs"
+        custom.mkdir()
+        (custom / "operation_20260801_120000.json").write_text("{}", encoding="utf-8")
+        cmd_undo(_undo_args(operation_log_dir=str(custom)))
+        assert len(undone) == 1
+        assert undone[0].parent == custom
+
+    def test_operation_log_dir_not_found_raises(self, tmp_path):
+        with pytest.raises(PlacerError, match="logs directory not found"):
+            cmd_undo(_undo_args(operation_log_dir=str(tmp_path / "nope")))

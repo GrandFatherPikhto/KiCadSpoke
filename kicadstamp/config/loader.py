@@ -806,6 +806,10 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
     if log_file:
         log_file = str(Path(path).parent / log_file)
 
+    operation_log_dir = data.get('operation_log_dir')
+    if operation_log_dir:
+        operation_log_dir = str(Path(path).parent / operation_log_dir)
+
     ctx = RuntimeContext(sheet_names=sheet_names)
 
     cfg = Config(
@@ -826,6 +830,7 @@ def load_config(path: str) -> Tuple[Config, RuntimeContext]:
         registry_path=registry_path,
         track_registry_path=track_registry_path,
         log_file=log_file,
+        operation_log_dir=operation_log_dir,
     )
     total_spokes = sum(len(r.spokes) for r in cfg.rules)
     logger.debug(_("Config loaded: layer={layer}, cells={cells}, points={points}, rules={rules}, "

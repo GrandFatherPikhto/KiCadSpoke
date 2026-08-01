@@ -9,7 +9,7 @@ from .via_executor import ViaExecutor
 from .track_executor import TrackExecutor
 from .operation_logger import OperationLogger
 from ...registry import PlacementRegistry, TrackRegistry
-from ...constants import DEFAULT_BATCH_SIZE
+from ...constants import DEFAULT_BATCH_SIZE, DEFAULT_LOG_DIR
 from ...i18n import _
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class BatchExecutor:
         self.move_executor = MoveExecutor(adapter, config, batch_size)
         self.via_executor = ViaExecutor(adapter, config, batch_size)
         self.track_executor = TrackExecutor(adapter, config, batch_size)
-        self.logger = OperationLogger()
+        self.logger = OperationLogger(config.operation_log_dir or DEFAULT_LOG_DIR)
         self._pending_move_log = []
         self._pending_via_log = []
 

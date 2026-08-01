@@ -10,10 +10,12 @@ into process exit codes. No sys.exit / print here.
 
 import logging
 from pathlib import Path
+from typing import Optional
 
 from kicadstamp.cli_extract import (load_profile, extract_template,
                                     _EXTRACT_PROFILE_KNOWN_KEYS,
                                     _CLONE_EXTRACT_PROFILE_KNOWN_KEYS)
+from kicadstamp.constants import DEFAULT_LOG_DIR
 from kicadstamp.exceptions import PlacerError
 from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from kicadstamp.i18n import _
@@ -139,21 +141,27 @@ def cmd_clone_extract(args) -> None:
                         vias=s['vias'], output=output))
 
 
-def cmd_undo(args) -> None:
+def cmd_undo(args, log_dir: Optional[str] = None) -> None:
     """Undo the last operation.
 
-    Thin CLI wrapper: finds the newest operation_*.json in the CWD logs/
-    directory and undoes it via kicadstamp.undo.undo_last_operation. Raises
-    PlacerError when there is nothing to undo (the entry point maps it to
-    exit code 1) — an error that used to silently exit 0. `args` is accepted
-    for a uniform Namespace signature across cmd_* wrappers (--log-file is
-    wired up by the entry point's setup_logging, not here).
+    Thin CLI wrapper: finds the newest operation_*.json in the operation-log
+    directory and undoes it via kicadstamp.undo.undo_last_operation. The log
+    directory comes from, in priority order: the explicit log_dir argument,
+    args.operation_log_dir, or DEFAULT_LOG_DIR — never a hard-coded CWD "logs"
+    path. This is the reading side of П.7: the config's operation_log_dir
+    (resolved relative to the config file, like registry_path/log_file) is
+    where `apply` writes, so `undo` must be told the same directory instead of
+    assuming CWD. Raises PlacerError when there is nothing to undo (the entry
+    point maps it to exit code 1) — an error that used to silently exit 0.
+    `args` is accepted for a uniform Namespace signature across cmd_* wrappers
+    (--log-file is wired up by the entry point's setup_logging, not here).
     """
-    log_dir = Path("logs")
-    if not log_dir.exists():
+    resolved = log_dir or getattr(args, "operation_log_dir", None) or DEFAULT_LOG_DIR
+    log_path = Path(resolved)
+    if not log_path.exists():
         raise PlacerError(_("logs directory not found."))
 
-    files = sorted(log_dir.glob("operation_*.json"), key=lambda p: p.stat().st_ctime)
+    files = sorted(log_path.glob("operation_*.json"), key=lambda p: p.stat().st_ctime)
     if not files:
         raise PlacerError(_("No operation files to undo."))
 
