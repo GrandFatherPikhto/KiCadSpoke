@@ -2,7 +2,7 @@ registry_path: registries/test.json
 track_registry_path: registries/test.tracks.registry.json
 log_file: ../logs/test.log
 schematic_dir: ../../../test_boards/3CH-AWG-TIA
-cell_files:
+include:
 - templates/test.yaml
 extract_profiles:
   n2v5_adj_pi_filter:

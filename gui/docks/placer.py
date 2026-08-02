@@ -286,7 +286,7 @@ class PlacerDock(QDockWidget):
             set_combo_items(combo, self._known_nets)
 
     def _rebuild_param_rows(self) -> None:
-        cell_data = yaml_io.load_data(self._cells_path).get(self._selected_cell, {})
+        cell_data = yaml_io.load_data(self._cells_path).get("cells", {}).get(self._selected_cell, {})
         placeholders = sorted(self._discover_placeholders(cell_data))
         previous = {name: edit.currentText() for name, edit in self._param_edits.items()}
 
@@ -467,8 +467,8 @@ class PlacerDock(QDockWidget):
 
         if self._selected_cell not in cfg.cells:
             self._show_message(
-                _("Cell {cell!r} isn't reachable from the Placer file's cell_files: — "
-                  "extract/save it and make sure cell_files: is wired (see Extract).")
+                _("Cell {cell!r} isn't reachable from the Placer file's include: — "
+                  "extract/save it and make sure include: is wired (see Extract).")
                 .format(cell=self._selected_cell), _ERROR_STYLE)
             return None
 
@@ -647,8 +647,8 @@ class PlacerDock(QDockWidget):
         clone_placements: — a list of dicts matched by their own 'name' key,
         not by list membership: an entry whose name already exists gets
         REPLACED in place (same position), a new name gets appended. Every
-        other key in the file (cells:, cell_files:, include:,
-        extract_profiles:, ...) is left untouched. Delegates to
+        other key in the file (cells:, include:, extract_profiles:, ...) is
+        left untouched. Delegates to
         gui/docks/_common.upsert_clone_placement (kept as a thin wrapper
         because the GUI tests call dock._upsert_clone_placement directly)."""
         return upsert_clone_placement(path, entry)

@@ -47,7 +47,7 @@ class CellListDock(QDockWidget):
 
     def _refresh(self) -> None:
         self.list.clear()
-        self.list.addItems(sorted(yaml_io.existing_keys(self._cells_path)))
+        self.list.addItems(sorted(yaml_io.existing_keys(self._cells_path, section="cells")))
 
     def _on_clicked(self, item) -> None:
         self.cell_picked.emit(item.text())

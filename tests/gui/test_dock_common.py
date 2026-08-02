@@ -79,22 +79,22 @@ def test_merge_write_creates_missing_file(config_path):
 
 def test_add_list_entry_appends_and_dedupes(config_path):
     config_path.write_text(
-        json.dumps({"cell_files": ["sub/a.yaml"]}) if config_path.suffix == ".json"
-        else "cell_files:\n  - sub/a.yaml\n",
+        json.dumps({"include": ["sub/a.yaml"]}) if config_path.suffix == ".json"
+        else "include:\n  - sub/a.yaml\n",
         encoding="utf-8")
     # a different relative spelling resolving to the same file is a no-op
-    assert add_list_entry(config_path, "cell_files", "sub/./a.yaml") is False
-    assert add_list_entry(config_path, "cell_files", "other.yaml") is True
-    assert _load(config_path)["cell_files"] == ["sub/a.yaml", "other.yaml"]
+    assert add_list_entry(config_path, "include", "sub/./a.yaml") is False
+    assert add_list_entry(config_path, "include", "other.yaml") is True
+    assert _load(config_path)["include"] == ["sub/a.yaml", "other.yaml"]
 
 
 def test_add_list_entry_refuses_non_list_section(config_path):
     config_path.write_text(
-        json.dumps({"cell_files": "not-a-list"}) if config_path.suffix == ".json"
-        else "cell_files: not-a-list\n",
+        json.dumps({"include": "not-a-list"}) if config_path.suffix == ".json"
+        else "include: not-a-list\n",
         encoding="utf-8")
     with pytest.raises(OSError):
-        add_list_entry(config_path, "cell_files", "x.yaml")
+        add_list_entry(config_path, "include", "x.yaml")
 
 
 # ── upsert_clone_placement ──────────────────────────────────────────────

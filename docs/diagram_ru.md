@@ -11,7 +11,7 @@ graph TD
     CLI --> Constants[constants.py]
 
     Config --> Exceptions[exceptions.py]
-    Config --> CellsFile[cells_file (external JSON/YAML)]
+    Config --> Includes[config/includes.py: include: (external cells:/rules:/etc.)]
 
     Validation --> Config
     Validation --> ComponentPool[placement/services/component_pool.py]

@@ -89,7 +89,7 @@ class Board:
                 config_path: str = ".") -> "Board":
         """config_path anchors schematic_dir/schematic_files resolution —
         build_sheet_name_map resolves both relative to Path(config_path).parent
-        (same convention as cells_file/registry_path in config/loader.py).
+        (same convention as registry_path in config/loader.py).
         Pass your actual profile path (e.g. "profiles/3ch-awg-tia.yaml") so a
         schematic_dir copied straight out of that profile resolves the same
         way it does for `apply`/`extract` — the default "." anchors to the

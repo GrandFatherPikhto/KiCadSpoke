@@ -22,8 +22,12 @@ def _write_yaml(path, data) -> None:
 
 
 def _make_cell_and_dock(main_window, tmp_path):
+    # Content here is never actually parsed via the real cells: mechanism —
+    # every test that checks cfg.cells monkeypatches load_config with its
+    # own fake Config below; this file only exists to give set_cells_file()
+    # a path. Still written in the real (wrapped) on-disk shape for realism.
     cells_file = tmp_path / "cells.yaml"
-    _write_yaml(cells_file, {
+    _write_yaml(cells_file, {"cells": {
         "pi_filter": {
             "components": [{"role": "C_IN", "offset_along_mm": 0, "offset_across_mm": 0,
                              "angle_deg": 0, "net_template": "{PWR_IN}"}],
@@ -32,7 +36,7 @@ def _make_cell_and_dock(main_window, tmp_path):
             "tracks": [],
             "layer": "F.Cu",
         }
-    })
+    }})
     placer_file = tmp_path / "root.yaml"
     _write_yaml(placer_file, {"clone_placements": []})
 
@@ -135,8 +139,8 @@ def test_save_upserts_by_name_without_duplicating(main_window, tmp_path):
 
 def test_redraw_requires_cell_reachable_via_placer_config(main_window, tmp_path, monkeypatch):
     """The Cell must actually be loadable FROM the Placer file's own
-    cell_files: wiring (load_config's cfg.cells) — picking a cell name in
-    the list alone isn't enough if cell_files: was never pointed at it."""
+    include: wiring (load_config's cfg.cells) — picking a cell name in
+    the list alone isn't enough if include: was never pointed at it."""
     dock, cells_file, placer_file = _make_cell_and_dock(main_window, tmp_path)
     dock.cluster_edit.setText("Channel_2_PI_Filter")
     dock.x_edit.setText("1")
@@ -146,7 +150,7 @@ def test_redraw_requires_cell_reachable_via_placer_config(main_window, tmp_path,
                          lambda path: (Config(), RuntimeContext()))  # cells: empty -> cell unreachable
 
     dock._on_redraw()
-    assert "cell_files" in dock.message_label.text()
+    assert "include" in dock.message_label.text()
 
 
 def test_redraw_preserves_other_placements_for_registry_safety(main_window, tmp_path, monkeypatch):
@@ -369,7 +373,7 @@ def test_on_redraw_dispatches_to_worker(main_window, tmp_path, monkeypatch):
     dock.y_edit.setText("2")
 
     # _collect_redraw_inputs loads the Placer file to verify the cell is
-    # reachable via its cell_files: — fake the load with a config that has it.
+    # reachable via its include: — fake the load with a config that has it.
     fake_cfg = Config(
         cells={"pi_filter": Cell(name="pi_filter", vias=[], tracks=[],
                                  clone_placements=[], components=[])})

@@ -69,7 +69,7 @@ def _make_cfg():
     return Config(
         layer='B.Cu',
         cells={},
-        thermal_via_array=tva,
+        thermal_via_arrays=[tva],
         rules=[],
         clone_placements=[],
         skip_existing_components=False,
@@ -128,3 +128,77 @@ class TestViaPlannerPlannedViaKeepout:
         assert len(thermal) == 1
         assert abs(thermal[0].position.x) > ViaPlanner._VIA_POSITION_TOLERANCE_NM or \
                abs(thermal[0].position.y) > ViaPlanner._VIA_POSITION_TOLERANCE_NM
+
+
+class TestMultipleThermalViaArrays:
+    """2026-08-02: thermal_via_arrays generalized from a single field to a
+    real list (the AD9707-per-channel motivating case) — plan_vias() must
+    plan every active entry, not just the first/only one, and each entry's
+    keepout must see vias already planned by an EARLIER entry in the same
+    call (same discipline test_thermal_via_not_placed_on_planned_sibling_via
+    above already proves for a plain sibling via)."""
+
+    def _cfg_two_targets(self, tva1, tva2):
+        return Config(
+            layer='B.Cu', cells={}, thermal_via_arrays=[tva1, tva2],
+            rules=[], clone_placements=[], skip_existing_components=False,
+            via_keepout_clearance_mm=0.2, via_search_step_mm=0.1,
+            via_search_max_radius_mm=5.0, via_search_n_directions=8,
+        )
+
+    def test_both_active_arrays_get_a_thermal_via_each(self):
+        pad1 = _make_thermal_pad(x_mm=0.0)
+        pad2 = _make_thermal_pad(x_mm=20.0)
+        fp1, fp2 = MagicMock(), MagicMock()
+        fp1.reference_field.text.value = "Q1"
+        fp2.reference_field.text.value = "Q2"
+        adapter = MagicMock()
+        adapter.get_footprint.side_effect = lambda ref: {"Q1": fp1, "Q2": fp2}.get(ref)
+        adapter.get_footprint_pads.side_effect = lambda fp: (
+            [pad1] if fp is fp1 else [pad2])
+        adapter.get_pad_by_number.side_effect = lambda fp, num: (
+            pad1 if fp is fp1 and num == "1" else pad2 if fp is fp2 and num == "1" else None)
+        adapter.get_bounding_boxes.return_value = []
+
+        tva1 = ThermalViaArrayConfig(name="q1_thermal", pad="1", anchor_ref="Q1", net="GND",
+                                     rows=1, cols=1, margin_mm=0.0, pattern="grid",
+                                     drill_mm=0.3, diameter_mm=0.6)
+        tva2 = ThermalViaArrayConfig(name="q2_thermal", pad="1", anchor_ref="Q2", net="GND",
+                                     rows=1, cols=1, margin_mm=0.0, pattern="grid",
+                                     drill_mm=0.3, diameter_mm=0.6)
+        planner = ViaPlanner(adapter, self._cfg_two_targets(tva1, tva2))
+
+        vias = planner.plan_vias(planned_components=[], planned_vias=[])
+        thermal = _thermal_vias(vias)
+
+        assert len(thermal) == 2
+        registry_names = {v.registry_key.split("|")[0] for v in thermal}
+        assert registry_names == {"thermal:q1_thermal", "thermal:q2_thermal"}
+
+    def test_retired_array_contributes_no_via_the_other_still_does(self):
+        pad1 = _make_thermal_pad(x_mm=0.0)
+        pad2 = _make_thermal_pad(x_mm=20.0)
+        fp1, fp2 = MagicMock(), MagicMock()
+        fp1.reference_field.text.value = "Q1"
+        fp2.reference_field.text.value = "Q2"
+        adapter = MagicMock()
+        adapter.get_footprint.side_effect = lambda ref: {"Q1": fp1, "Q2": fp2}.get(ref)
+        adapter.get_footprint_pads.side_effect = lambda fp: (
+            [pad1] if fp is fp1 else [pad2])
+        adapter.get_pad_by_number.side_effect = lambda fp, num: (
+            pad1 if fp is fp1 and num == "1" else pad2 if fp is fp2 and num == "1" else None)
+        adapter.get_bounding_boxes.return_value = []
+
+        tva1 = ThermalViaArrayConfig(name="q1_thermal", pad="1", anchor_ref="Q1", net="GND",
+                                     rows=1, cols=1, margin_mm=0.0, pattern="grid",
+                                     drill_mm=0.3, diameter_mm=0.6, retired=True)
+        tva2 = ThermalViaArrayConfig(name="q2_thermal", pad="1", anchor_ref="Q2", net="GND",
+                                     rows=1, cols=1, margin_mm=0.0, pattern="grid",
+                                     drill_mm=0.3, diameter_mm=0.6)
+        planner = ViaPlanner(adapter, self._cfg_two_targets(tva1, tva2))
+
+        vias = planner.plan_vias(planned_components=[], planned_vias=[])
+        thermal = _thermal_vias(vias)
+
+        assert len(thermal) == 1
+        assert thermal[0].registry_key.startswith("thermal:q2_thermal")

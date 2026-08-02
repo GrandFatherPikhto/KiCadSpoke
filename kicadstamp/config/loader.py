@@ -7,7 +7,6 @@ Split from monolithic config.py by the same refactoring as models.py.
 """
 import difflib
 import logging
-import json
 from pathlib import Path
 from typing import Any
 import yaml
@@ -528,7 +527,7 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
             _("deprecated field 'target_ref' at root of config"),
             [_("global target_ref has been removed (see discussion v117): each spoke "
                "rule now has its own anchor – write anchor_ref: <ref> inside the rule "
-               "in rules; thermal_via_array has its own anchor_ref field")]
+               "in rules; each thermal_via_arrays entry has its own anchor_ref field")]
         ))
     if 'side' in data:
         raise ValidationError(format_fatal_error(
@@ -539,55 +538,79 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
     root_layer = data.get('layer', 'F.Cu')
     _check_layer_value(root_layer, _("at root of config"))
 
-    tva_data = data.get('thermal_via_array', {})
-    if 'target_ref' in tva_data:
+    if 'thermal_via_array' in data:
         raise ValidationError(format_fatal_error(
-            _("deprecated field 'target_ref' in thermal_via_array"),
-            [_("renamed for consistency: use anchor_ref")]
+            _("deprecated field 'thermal_via_array' at root of config"),
+            [_("generalized to a list 2026-08-02 (a second IC needing thermal vias — AD9707 — "
+               "showed up): rename to 'thermal_via_arrays:' and wrap the single block in a "
+               "YAML list ('- name: ...'), e.g.\n"
+               "thermal_via_arrays:\n"
+               "  - name: {name}\n"
+               "    ...")
+             .format(name=data['thermal_via_array'].get('name', '<name>')
+                     if isinstance(data['thermal_via_array'], dict) else '<name>')]
         ))
-    if tva_data and not tva_data.get('name'):
+
+    thermal_vias: list[ThermalViaArrayConfig] = []
+    for tva_data in data.get('thermal_via_arrays', []):
+        if 'target_ref' in tva_data:
+            raise ValidationError(format_fatal_error(
+                _("deprecated field 'target_ref' in thermal_via_arrays"),
+                [_("renamed for consistency: use anchor_ref")]
+            ))
+        if not tva_data.get('name'):
+            raise ValidationError(format_fatal_error(
+                _("thermal_via_arrays entry without name"),
+                [_("every thermal_via_arrays entry must have a name – used in --only "
+                   "(kicadstamp_cli.py) for isolated runs, and to tell entries apart; write "
+                   "name: <any understandable string>, e.g. name: fpga_thermal")]
+            ))
+        check_unknown_keys(tva_data, _THERMAL_VIA_ARRAY_KNOWN_KEYS,
+                           _("unknown fields in thermal_via_arrays entry {name!r}")
+                           .format(name=tva_data.get('name')))
+        if tva_data.get('anchor_point') is not None and (
+                tva_data.get('anchor_ref') is not None or tva_data.get('anchor_role') is not None):
+            raise ValidationError(format_fatal_error(
+                _("anchor_point together with anchor_ref/anchor_role in thermal_via_arrays "
+                  "entry {name!r}").format(name=tva_data.get('name')),
+                [_("anchor_point={point!r} names a points: entry that already carries its own "
+                   "anchor — mutually exclusive with anchor_ref/anchor_role")
+                 .format(point=tva_data.get('anchor_point'))]
+            ))
+        thermal_vias.append(ThermalViaArrayConfig(
+            retired=tva_data.get('retired', False),
+            anchor_ref=tva_data.get('anchor_ref'),
+            anchor_role=tva_data.get('anchor_role'),
+            anchor_sheet=tva_data.get('anchor_sheet'),
+            anchor_cluster=tva_data.get('anchor_cluster'),
+            anchor_point=tva_data.get('anchor_point'),
+            pad=tva_data.get('pad', ''),
+            net=tva_data.get('net', 'GND'),
+            rows=tva_data.get('rows', 4),
+            cols=tva_data.get('cols', 4),
+            margin_mm=tva_data.get('margin_mm', 0.5),
+            pattern=tva_data.get('pattern', 'grid'),
+            drill_mm=tva_data.get('drill_mm', 0.3),
+            diameter_mm=tva_data.get('diameter_mm', 0.5),
+            name=tva_data.get('name'),
+            skip=tva_data.get('skip', False),
+        ))
+
+    # Fatal on collision: two entries with the same name would silently
+    # collide under --only, same reasoning/shape as the rules' --only
+    # collision check just below where this used to live (see the rules
+    # loop) — unlike rules, name here is always explicit (required above),
+    # so this is a plain duplicate check, no derived-name fallback involved.
+    seen_tva_names: dict[str, int] = {}
+    for tva in thermal_vias:
+        seen_tva_names[tva.name] = seen_tva_names.get(tva.name, 0) + 1
+    dup_tva_names = sorted(name for name, count in seen_tva_names.items() if count > 1)
+    if dup_tva_names:
         raise ValidationError(format_fatal_error(
-            _("thermal_via_array without name"),
-            [_("thermal_via_array must have a name – used in --only "
-               "(kicadstamp_cli.py) for isolated runs; write name: <any understandable string>, "
-               "e.g. name: fpga_thermal")]
+            _("duplicate name(s) in thermal_via_arrays: {names}").format(names=dup_tva_names),
+            [_("every thermal_via_arrays entry needs a unique name: — --only cannot tell "
+               "same-named entries apart otherwise")]
         ))
-    check_unknown_keys(tva_data, _THERMAL_VIA_ARRAY_KNOWN_KEYS,
-                       _("unknown fields in thermal_via_array"))
-    if tva_data.get('anchor_point') is not None and (
-            tva_data.get('anchor_ref') is not None or tva_data.get('anchor_role') is not None):
-        raise ValidationError(format_fatal_error(
-            _("anchor_point together with anchor_ref/anchor_role in thermal_via_array"),
-            [_("anchor_point={point!r} names a points: entry that already carries its own "
-               "anchor — mutually exclusive with anchor_ref/anchor_role")
-             .format(point=tva_data.get('anchor_point'))]
-        ))
-    thermal_via = ThermalViaArrayConfig(
-        # Absent thermal_via_array: section (tva_data == {}) must keep meaning
-        # "nothing configured, do nothing" — same sentinel convention as the
-        # name-check above, not the class-level default (which is False,
-        # unified with Rule/ManualSpoke/ClonePlacement for the case where the
-        # section IS present). See handoff_2026_07_31_consolidated.md §5 —
-        # found 2026-07-31: naive `tva_data.get('retired', False)` made every
-        # config without this section fatal on apply (no anchor_ref/anchor_role
-        # either, since those default to None too).
-        retired=tva_data.get('retired', not tva_data),
-        anchor_ref=tva_data.get('anchor_ref'),
-        anchor_role=tva_data.get('anchor_role'),
-        anchor_sheet=tva_data.get('anchor_sheet'),
-        anchor_cluster=tva_data.get('anchor_cluster'),
-        anchor_point=tva_data.get('anchor_point'),
-        pad=tva_data.get('pad', ''),
-        net=tva_data.get('net', 'GND'),
-        rows=tva_data.get('rows', 4),
-        cols=tva_data.get('cols', 4),
-        margin_mm=tva_data.get('margin_mm', 0.5),
-        pattern=tva_data.get('pattern', 'grid'),
-        drill_mm=tva_data.get('drill_mm', 0.3),
-        diameter_mm=tva_data.get('diameter_mm', 0.5),
-        name=tva_data.get('name'),
-        skip=tva_data.get('skip', False),
-    )
 
     cells_data = dict(data.get('cells', {}) or {})
 
@@ -599,61 +622,28 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
     if 'templates_file' in data or 'template_files' in data:
         raise ValidationError(format_fatal_error(
             _("deprecated fields 'templates_file'/'template_files'"),
-            [_("renamed to cells_file: <path> / cell_files: [...] — the class became "
-               "Cell (was SpokeTemplate), these were the one place the file-list keys "
-               "were left behind")]
+            [_("renamed to cells_file:/cell_files: (the class became Cell, was "
+               "SpokeTemplate), and those were themselves folded into include: on "
+               "2026-08-02 — see the 'cells_file'/'cell_files' error below for the "
+               "current way to do this")]
         ))
 
-    cells_file = data.get('cells_file')
-    cell_files = data.get('cell_files') or []
-    if not isinstance(cell_files, list):
+    if 'cells_file' in data or 'cell_files' in data:
         raise ValidationError(format_fatal_error(
-            _("cell_files must be a list, got {type}").format(type=type(cell_files).__name__),
-            [_("cell_files: is a YAML list of paths ('- templates/a.yaml'); "
-               "for a single file use cells_file: <path> instead")]
+            _("deprecated field(s) 'cells_file'/'cell_files' at root of config"),
+            [_("folded into include: 2026-08-02 (one mechanism for splitting ANY "
+               "section across files — rules:/clone_placements:/thermal_via_arrays:/"
+               "cells:/points:/extract_profiles:/clone_profiles: — instead of cells "
+               "having its own separate, differently-shaped mechanism): list the "
+               "external file(s) under include: instead, and add a 'cells:' key "
+               "wrapping what used to be that file's whole content, e.g.\n"
+               "include:\n"
+               "  - templates/a.yaml\n"
+               "  - templates/b.yaml\n"
+               "(each of those files needs 'cells:' at its own top level now, same "
+               "shape as an inline cells: block here)")]
         ))
-    external_files = ([cells_file] if cells_file else []) + list(cell_files)
 
-    # Each external file is the RAW extract() shape ({name: {...}}, no
-    # 'cells:' wrapper — unlike include:, which expects one). Merged
-    # among THEMSELVES with fatal on a repeated name (independent files —
-    # a collision is far more likely a copy-paste mistake than an
-    # intentional override, same philosophy as include:'s _DICT_SECTIONS).
-    # Inline cells: in this config file still overrides silently on top
-    # of all of them, unchanged from cells_file's original behaviour.
-    external_cells: dict[str, Any] = {}
-    for ext_file in external_files:
-        cells_path = Path(path).parent / ext_file
-        if not cells_path.exists():
-            raise ValidationError(format_fatal_error(
-                _("templates file {file!r} not found").format(file=ext_file),
-                [_("expected at {path} (relative to the config file itself, "
-                   "not the current working directory)").format(path=cells_path)]
-            ))
-        with open(cells_path, 'r', encoding='utf-8') as f:
-            if cells_path.suffix.lower() == '.json':
-                file_cells = json.load(f)
-            else:
-                file_cells = yaml.safe_load(f) or {}
-        for name, cdata in (file_cells or {}).items():
-            if name in external_cells:
-                raise ValidationError(format_fatal_error(
-                    _("duplicate cell {name!r} across cells_file/cell_files").format(name=name),
-                    [_("defined in more than one external cells file (cells_file "
-                       "and/or an entry of cell_files) — external files are meant to "
-                       "be independent, a repeated name is far more likely a mistake than "
-                       "an intentional override; inline cells: in the config itself "
-                       "CAN still override an external one, that is unaffected")]
-                ))
-            external_cells[name] = cdata
-
-    merged = dict(external_cells)
-    merged.update(cells_data)
-    cells_data = merged
-    if external_files:
-        logger.info(_("Cells from {files}: {count_ext}, plus inline: {count_inline}")
-                    .format(files=external_files, count_ext=len(external_cells),
-                            count_inline=len(data.get('cells', {}) or {})))
     cells = {name: _load_cell(name, cdata) for name, cdata in cells_data.items()}
 
     points_data = dict(data.get('points', {}) or {})
@@ -789,7 +779,9 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
     for cp in clone_placements:
         _check_anchor_point(_("clone_placement {name!r}").format(name=cp.name), cp.anchor_point,
                             needs_footprint=False)
-    _check_anchor_point(_("thermal_via_array"), thermal_via.anchor_point, needs_footprint=True)
+    for tva in thermal_vias:
+        _check_anchor_point(_("thermal_via_arrays entry {name!r}").format(name=tva.name),
+                            tva.anchor_point, needs_footprint=True)
 
     schematic_dir = data.get('schematic_dir')
     schematic_files = data.get('schematic_files', []) or []
@@ -816,7 +808,7 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
         layer=root_layer,
         cells=cells,
         points=points,
-        thermal_via_array=thermal_via,
+        thermal_via_arrays=thermal_vias,
         rules=rules,
         clone_placements=clone_placements,
         place_components=data.get('place_components', True),

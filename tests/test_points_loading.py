@@ -341,15 +341,15 @@ rules:
 points:
   fpga_center:
     anchor_role: FPGA
-thermal_via_array:
-  name: fpga_thermal
+thermal_via_arrays:
+- name: fpga_thermal
   anchor_point: fpga_center
   pad: "145"
 """
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.thermal_via_array.anchor_point == "fpga_center"
+        assert cfg.thermal_via_arrays[0].anchor_point == "fpga_center"
 
     def test_thermal_via_array_anchor_point_with_shifted_point_is_fatal(self, tmp_path):
         text = MINIMAL + """
@@ -357,8 +357,8 @@ points:
   shifted:
     anchor_role: FPGA
     shift_x_mm: 5.0
-thermal_via_array:
-  name: fpga_thermal
+thermal_via_arrays:
+- name: fpga_thermal
   anchor_point: shifted
   pad: "145"
 """

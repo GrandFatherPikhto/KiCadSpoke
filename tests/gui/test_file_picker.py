@@ -47,24 +47,20 @@ def test_role_signal_fires_on_assignment(main_window, tmp_path):
     assert received == [cells_file]
 
 
-def test_cells_sharing_a_file_with_extractor_warns(main_window, tmp_path):
+def test_cells_sharing_a_file_with_extractor_is_not_a_conflict(main_window, tmp_path):
+    # cells_file:/cell_files: were folded into include: 2026-08-02 — cells:
+    # is now just another include:-mergeable dict section, same as
+    # extract_profiles:, so all three roles can point at one file with no
+    # special-casing (see file_picker.py's module docstring).
     shared = tmp_path / "shared.yaml"
     shared.write_text("{}\n", encoding="utf-8")
 
     dock = FilePickerDock(main_window)
     dock.picked_path = shared
     dock._assign_role("cells")
-    assert dock.role_warning_label.text() == ""
-
     dock._assign_role("extractor")
-    assert "top-level key" in dock.role_warning_label.text()
-
-    # Reassigning Extractor elsewhere clears the warning again.
-    other = tmp_path / "other.yaml"
-    other.write_text("{}\n", encoding="utf-8")
-    dock.picked_path = other
-    dock._assign_role("extractor")
-    assert dock.role_warning_label.text() == ""
+    assert dock.assigned["cells"] == shared
+    assert dock.assigned["extractor"] == shared
 
 
 def test_extractor_and_placer_sharing_a_file_is_not_a_conflict(main_window, tmp_path):
@@ -75,4 +71,5 @@ def test_extractor_and_placer_sharing_a_file_is_not_a_conflict(main_window, tmp_
     dock.picked_path = shared
     dock._assign_role("extractor")
     dock._assign_role("placer")
-    assert dock.role_warning_label.text() == ""
+    assert dock.assigned["extractor"] == shared
+    assert dock.assigned["placer"] == shared

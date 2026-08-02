@@ -40,7 +40,7 @@ tests/
 ├── test_registry_rule_protection.py  # Registry rule protection (known_anchor_ids)
 ├── test_spoke_layout.py              # Local‑to‑global template coordinate transformation (spoke_layout)
 ├── test_template_extraction.py       # Template extraction from selection (logic, tracks)
-├── test_cell_files.py            # cells_file / cell_files merging
+├── test_cell_files.py            # deprecated cells_file/cell_files/templates_file/template_files → fatal
 ├── test_two_phase_execution.py       # Two‑phase execution (moves → refresh → vias) with mocks
 ├── test_undo_layer.py                # Layer saving/restoring in undo
 ├── test_unique_roles.py              # Role uniqueness inside templates
@@ -145,7 +145,7 @@ pytest tests/integration_tests/ -v -s -m integration
 | `test_i18n.py` | `_()` function availability, gettext setup, and import verification across all source files. |
 | `test_kicad.py` | Presence of all `IBoardAdapter` methods in `KiCadBoardAdapter`, import, and constructor (without real IPC). |
 | `test_manual_position_calculator.py` | `ManualPositionCalculator` logic: pool building, position calculation, via planning for `rules`. |
-| `test_naming.py` | `rule_effective_name`/`thermal_via_array_effective_name` accessors, `name:` loading from YAML, required name validation (fatality on missing name), optional Rule.name, Rule.enabled/active defaults. |
+| `test_naming.py` | `rule_effective_name`/`thermal_via_array_effective_name` accessors, `name:` loading from YAML, required name validation (fatality on missing name, and on a duplicate name within `thermal_via_arrays:`), optional Rule.name, Rule.enabled/active defaults. |
 | `test_net_resolution.py` | Net resolution with placeholders: substitution from `params`, application of `net_overrides`, errors on missing parameters. |
 | `test_pad_projection.py` | Pad position prediction after move/rotate (without and with flip), invariance of `local_pad_offset` to angle. |
 | `test_registry_integration.py` | Full registry cycle (create, update, prune) with mocks, including reconciliation with real vias. |
@@ -153,11 +153,11 @@ pytest tests/integration_tests/ -v -s -m integration
 | `test_registry_rule_protection.py` | Registry rule protection via `known_anchor_ids`: vias/tracks of non‑`--only` clones are not pruned. |
 | `test_spoke_layout.py` | Local‑to‑global coordinate transformation for spoke templates (`spoke_layout`), including spoke‑level and component‑level vias, arbitrary number of roles. |
 | `test_template_extraction.py` | Template extraction from selection: role checks, uniqueness, origin computation, track filtering, net parametrisation (`--net-template`), origin selection by via/role. |
-| `test_cell_files.py` | `cells_file` / `cell_files` merging: single file, multiple files, inline+external combination, duplicate detection, missing file handling. |
+| `test_cell_files.py` | Deprecated `cells_file`/`cell_files`/`templates_file`/`template_files` keys are all fatal at load with a rename hint (folded into `include:` 2026-08-02 — see `test_config_includes.py` for the current mechanism). |
 | `test_two_phase_execution.py` | Two‑phase execution (moves → refresh → vias) with mocks – ensures that vias are planned after moves and have the correct `registry_key`. |
 | `test_undo_layer.py` | Saving and restoring the component layer in undo (`original_layer` in JSON log). |
 | `test_unique_roles.py` | Uniqueness of roles inside a template (fatal error on duplicates). |
-| `test_unknown_keys_validation.py` | `check_unknown_keys` validation for config sections: unknown top‑level keys, unknown keys inside `clone_placements`, `rules`, `thermal_via_array`, `templates`. |
+| `test_unknown_keys_validation.py` | `check_unknown_keys` validation for config sections: unknown top‑level keys, unknown keys inside `clone_placements`, `rules`, `thermal_via_arrays`, `templates`. |
 | `test_validation.py` | Pre‑validation checks: template/pad existence, component pool sufficiency, uniqueness of clone anchors, net resolution for via/tracks, selection mode for clones. |
 
 ---

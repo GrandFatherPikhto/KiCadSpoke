@@ -95,7 +95,12 @@ def extract_template(adapter: KiCadBoardAdapter, *, name: str, output: str,
                      origin_component_role: str | None = None,
                      origin_component_pad: str | None = None) -> dict[str, Any]:
     """Extract a spoke cell template from the current board selection and
-    merge-write it into `output` (YAML/JSON), preserving any existing entries.
+    merge-write it, wrapped under a 'cells:' key, into `output` (YAML/JSON),
+    preserving any existing entries (including any OTHER top-level key the
+    file already owns, e.g. extract_profiles: if `output` is also the
+    Extractor file — cells_file:/cell_files: were folded into include: on
+    2026-08-02, so the on-disk shape here now matches an inline cells:
+    block, and this file can be include:'d directly).
 
     Library core of the `extract` command — no CLI idioms: raises PlacerError
     on invalid arguments, never touches stdin/stdout/process exit codes.
@@ -122,11 +127,12 @@ def extract_template(adapter: KiCadBoardAdapter, *, name: str, output: str,
     if output_path.exists():
         with open(output_path, "r", encoding="utf-8") as f:
             existing = (json.load(f) if is_json else yaml.safe_load(f)) or {}
-        if name in existing:
-            logger.warning(_("Template {name!r} already exists in {output} — will be overwritten")
-                           .format(name=name, output=output_path))
+    existing_cells = existing.setdefault('cells', {})
+    if name in existing_cells:
+        logger.warning(_("Template {name!r} already exists in {output} — will be overwritten")
+                       .format(name=name, output=output_path))
 
-    existing.update(template_dict)
+    existing_cells.update(template_dict)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
@@ -135,7 +141,7 @@ def extract_template(adapter: KiCadBoardAdapter, *, name: str, output: str,
         else:
             text = yaml.dump(existing, allow_unicode=True, sort_keys=False, default_flow_style=False)
             if annotations:
-                text = render_uncertain_comments(text, name, annotations)
+                text = render_uncertain_comments(text, name, annotations, indent=2)
             f.write(text)
 
     logger.info(_("✅ Template {name!r} written to {output}").format(name=name, output=output_path))

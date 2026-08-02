@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadstamp.config import Config, ClonePlacement, ThermalViaArrayConfig, Cell
+from kicadstamp.config import Config, ClonePlacement, Cell
 from kicadstamp.validation import check_single_selection_based_clone, check_clone_cells_exist
 from kicadstamp.exceptions import ValidationError
 from kicadstamp.placement.services.clone_role_resolver import clone_uses_selection_mode
@@ -18,7 +18,6 @@ def _cfg(clones, cells=None):
     return Config(
         layer='B.Cu',
         cells=cells or {"t": Cell(name="t")},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[], clone_placements=clones,
     )
 

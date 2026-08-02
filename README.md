@@ -1,4 +1,4 @@
-# KiCadStamp v1.6.1
+# KiCadStamp v1.8.0
 
 **KiCadStamp** is a command‑line **PCB cloning and layout automation** tool for **KiCad 10**, designed as an advanced script‑based alternative to the traditional **KiCad Replicate Layout** plugin. It enables automated **block replication**, component placement, and routing of complex multi‑channel designs using **templates**, **roles**, and the IPC API.
 
@@ -34,8 +34,8 @@
 - **Diagnostics** – scripts for debugging IPC, geometry, and field reading.
 - **File‑based cloner** (`clone-extract`) – parses `.net` and `.kicad_pcb` without IPC, builds a twin map of channels for hierarchical projects.
 - **Tracks in templates** – templates can include straight track segments (polylines are supported as a sequence of segments). Track collisions are not automatically checked (rely on KiCad DRC).
-- **External template files** – templates can be stored separately as JSON or YAML and referenced via `cells_file:` in the main config, keeping the main file clean and diff‑friendly.
-- **Splitting a profile into subsystem files** – `include:` at the root of a profile merges in one or more other YAML files (each carrying any mix of `extract_profiles`/`clone_placements`/`rules`/`cells`), recursively, with a per‑entry `enabled: false` on the include itself to switch a whole subsystem file off without touching every item inside it. Independent of `cells_file` (see [docs/config.md](docs/config.md) for merge semantics and duplicate/cycle handling).
+- **External template files** – templates can be stored separately as JSON or YAML (wrapped in a `cells:` key) and listed under `include:` in the main config, keeping the main file clean and diff‑friendly.
+- **Splitting a profile into subsystem files** – `include:` at the root of a profile merges in one or more other YAML files (each carrying any mix of `extract_profiles`/`clone_placements`/`rules`/`cells`), recursively, with a per‑entry `enabled: false` on the include itself to switch a whole subsystem file off without touching every item inside it (see [docs/config.md](docs/config.md) for merge semantics and duplicate/cycle handling).
 - **Scripting API** – `kicadstamp.explore.Board` for ad‑hoc read‑only querying (`board.select(role=..., cluster=..., sheet=..., net=...)`), and `kicadstamp.author` for building `ClonePlacement`/`Rule` in real Python instead of hand‑writing repetitive YAML, either applied directly or dumped back to an `include:`‑ready YAML file (see [docs/python.md](docs/python.md)).
 
 ---
@@ -135,7 +135,7 @@ During extraction, the reverse operation (`--net-template`) is available, turnin
 ## Configuration File Format (YAML)
 
 Full field-by-field reference for every section (`cells`/`rules`/`clone_placements`/
-`thermal_via_array`/`points`/`include`/`extract_profiles`) with real, currently-loading examples now
+`thermal_via_arrays`/`points`/`include`/`extract_profiles`) with real, currently-loading examples now
 lives in its own page: [docs/config.md](docs/config.md).
 
 ---
@@ -158,7 +158,7 @@ Options:
 - `--log-file` – save logs to a file.
 - `--no-collision-check` – disable collision checking.
 - `--collision-margin` – margin in mm (default 0.2).
-- `--only NAME` – process only the `rules`/`clone_placements`/`thermal_via_array` with this name (repeatable); everything else is skipped entirely. `name:` is mandatory on every such entry.
+- `--only NAME` – process only the `rules`/`clone_placements`/`thermal_via_arrays` with this name (repeatable); everything else is skipped entirely. `name:` is mandatory on every such entry.
 
 ### `extract` – extract template from selection (enhanced)
 
@@ -172,7 +172,7 @@ New options:
 - `--origin-by-via-net NET` – set origin to the position of a via on the specified net (instead of bbox). Fatal if the net is missing or ambiguous.
 - `--origin-by-component-role ROLE` – set origin to the position of a component with the specified role.
 
-**Important:** The `--output` extension determines format: `.json` → JSON (plain dictionary), otherwise YAML. The file is written **without a `templates:` wrapper**, making it easy to use as a `cells_file`.
+**Important:** The `--output` extension determines format: `.json` → JSON, otherwise YAML. The file is written wrapped under a `cells:` key, ready to be listed directly under `include:`.
 
 ### `undo` – undo the last operation
 

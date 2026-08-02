@@ -21,7 +21,7 @@ from kipy.board_types import BoardLayer
 
 from kicadstamp.apply_pipeline import ApplyPipeline, RunOptions, cmd_apply, run_apply
 from kicadstamp.author import apply_config, cli_main
-from kicadstamp.config import Config, ThermalViaArrayConfig
+from kicadstamp.config import Config
 from kicadstamp.placement.commands import MoveCommand, TrackCommand, ViaCommand
 
 MM = 1_000_000
@@ -49,7 +49,6 @@ class _FakePlanner:
 
 def _pipeline(dry_run=True):
     cfg = Config(layer='F.Cu', cells={},
-                 thermal_via_array=ThermalViaArrayConfig(retired=True),
                  rules=[], clone_placements=[])
     pipeline = ApplyPipeline("board.yaml", dry_run=dry_run, preloaded_cfg=cfg)
     pipeline.items = [SimpleNamespace(label="rule_A"), SimpleNamespace(label="rule_B")]

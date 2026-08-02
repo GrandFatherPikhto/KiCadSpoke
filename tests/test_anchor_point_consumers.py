@@ -136,11 +136,11 @@ class TestThermalViaArrayAnchorPoint:
         anchor_fp = _make_fp("FPGA")
         resolved_points = {"fpga_center": ResolvedPoint(position=anchor_fp_position(), footprint=anchor_fp)}
         tva = ThermalViaArrayConfig(name="fpga_thermal", anchor_point="fpga_center", pad="145")
-        cfg = Config(layer="F.Cu", cells={}, thermal_via_array=tva)
+        cfg = Config(layer="F.Cu", cells={}, thermal_via_arrays=[tva])
         adapter = MagicMock()
 
         planner = ViaPlanner(adapter, cfg, resolved_points=resolved_points)
-        result = planner._resolve_thermal_anchor()
+        result = planner._resolve_thermal_anchor(tva)
 
         assert result is anchor_fp
         adapter.get_footprint.assert_not_called()
@@ -150,18 +150,18 @@ class TestThermalViaArrayAnchorPoint:
                                                          footprint=_make_fp("FPGA"))}
         tva = ThermalViaArrayConfig(name="fpga_thermal", anchor_point="fpga_center",
                                     pad="145", retired=True)
-        cfg = Config(layer="F.Cu", cells={}, thermal_via_array=tva)
+        cfg = Config(layer="F.Cu", cells={}, thermal_via_arrays=[tva])
         adapter = MagicMock()
 
         planner = ViaPlanner(adapter, cfg, resolved_points=resolved_points)
-        assert planner._resolve_thermal_anchor() is None
+        assert planner._resolve_thermal_anchor(tva) is None
 
     def test_point_with_no_footprint_is_a_defensive_fatal(self):
         resolved_points = {"shifted": ResolvedPoint(position=Vector2.from_xy(0, 0), footprint=None)}
         tva = ThermalViaArrayConfig(name="fpga_thermal", anchor_point="shifted", pad="145")
-        cfg = Config(layer="F.Cu", cells={}, thermal_via_array=tva)
+        cfg = Config(layer="F.Cu", cells={}, thermal_via_arrays=[tva])
         adapter = MagicMock()
 
         planner = ViaPlanner(adapter, cfg, resolved_points=resolved_points)
         with pytest.raises(ValidationError, match="has no footprint"):
-            planner._resolve_thermal_anchor()
+            planner._resolve_thermal_anchor(tva)

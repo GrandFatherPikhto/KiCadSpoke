@@ -164,7 +164,7 @@ Replaced the old monolithic `config.py`. Now a package with separate modules for
 |--------|-------------|
 | `__init__.py` | Exports all config types and `load_config()`. |
 | `models.py` | Dataclasses: `Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `Rule`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, `ThermalViaArrayConfig`. |
-| `loader.py` | `load_config()` and `_load_*` helper functions for each config section. Handles `cells_file` merging and role uniqueness checks. |
+| `loader.py` | `load_config()` and `_load_*` helper functions for each config section. Handles role uniqueness checks. |
 | `includes.py` | Handles `include:` directives — loads and merges configs from multiple files with cycle detection and duplicate key checks. |
 
 **Main dataclasses:**
@@ -185,7 +185,7 @@ Replaced the old monolithic `config.py`. Now a package with separate modules for
 
 | Function | Description |
 |----------|-------------|
-| `load_config(path)` | Reads YAML, loads external template file (`cells_file`) if specified, merges with inline `templates` (inline take precedence). Parses all sections, returns a `Config` object and `RuntimeContext`. |
+| `load_config(path)` | Reads YAML, resolves `include:` (merges external `cells:`/`rules:`/etc. from other files). Parses all sections, returns a `Config` object and `RuntimeContext`. |
 | `_load_template_via(data)` | Loads `TemplateVia`. Checks that `net` is a string. |
 | `_load_template_track(data)` | Loads `TemplateTrack`. Checks that `net` is a string. |
 | `_load_template_component_slot(data)` | Loads `TemplateComponentSlot`. |
@@ -194,8 +194,7 @@ Replaced the old monolithic `config.py`. Now a package with separate modules for
 | `_load_clone_placement(data)` | Loads `ClonePlacement`. Checks anchor and coordinate constraints. |
 
 **Features:**  
-- **`cells_file`** – path to external template file (JSON or YAML). Inline `templates` complement/override external ones.
-- **`include:`** – multiple config files with merging and cycle detection.
+- **`include:`** – multiple config files with merging and cycle detection, including external `cells:` files (wrapped in a `cells:` key — `cells_file:`/`cell_files:`, a separate older mechanism, were folded into `include:` on 2026-08-02).
 - Role uniqueness check inside a template.
 - `net_template` for cloning (placeholders for nets).
 - Two role resolution modes: "by selection" and "by nets".
@@ -372,8 +371,7 @@ graph TD
     ConfigPkg --> Exceptions[exceptions.py]
     ConfigPkg --> Models[config/models.py]
     ConfigPkg --> Loader[config/loader.py]
-    ConfigPkg --> Includes[config/includes.py]
-    ConfigPkg --> CellsFile[cells_file (external JSON/YAML)]
+    ConfigPkg --> Includes[config/includes.py: include: (external cells:/rules:/etc.)]
 
     Validation --> ConfigPkg
     Validation --> ComponentPool[placement/services/component_pool.py]

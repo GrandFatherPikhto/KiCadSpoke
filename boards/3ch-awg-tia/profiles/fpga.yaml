@@ -11,31 +11,31 @@ schematic_dir: ../../../test_boards/3CH-AWG-TIA
 # F.Cu (the Config.layer default) without this.
 layer: B.Cu
 
-# Same reason as layer: above — thermal_via_array: inside the included
-# fpga_thermal_vias.yaml is silently dropped by include: (not a list/dict
-# section), so it must live here at the root instead.
-thermal_via_array:
-  name: fpga_thermal
-  retired: false
-  skip: false
-  anchor_role: FPGA
-  pad: '145'
-  net: GND
-  rows: 4
-  cols: 4
-  margin_mm: 0.5
-  pattern: grid
-  drill_mm: 0.3
-  diameter_mm: 0.5
+# thermal_via_arrays: is now a real list section (2026-08-02) and CAN be
+# split into an included file like rules:/clone_placements: — kept here at
+# the root for now since this is the only entry so far; move it into its
+# own file (or rules/fpga_spokes.yaml) if/when a second IC on this board
+# needs thermal vias too (see handoff_2026_08_02_thermal_via_arrays_list.md).
+thermal_via_arrays:
+  - name: fpga_thermal
+    retired: false
+    skip: false
+    anchor_role: FPGA
+    pad: '145'
+    net: GND
+    rows: 4
+    cols: 4
+    margin_mm: 0.5
+    pattern: grid
+    drill_mm: 0.3
+    diameter_mm: 0.5
 
-cell_files:
+include:
   - templates/fpga_pi_filters.yaml
   - templates/fpga_cap_pair_spoke.yaml
   - templates/fpga_r_pi_filters.yaml
   - templates/fpga_oscill.yaml
   - templates/fpga_flash.yaml
-
-include:
   - fpga_extracts.yaml  # Коллекция экстраторов
   - rules/fpga_spokes.yaml
 

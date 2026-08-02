@@ -214,7 +214,7 @@ def main():
 
     rules_config = {
         "layer": "B.Cu",
-        "thermal_via_array": asdict(thermal_via),
+        "thermal_via_arrays": [asdict(thermal_via)],
         "templates": templates,
         "rules": [asdict(r) for r in build_rules()],
     }

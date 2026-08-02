@@ -23,7 +23,7 @@ The core concept is a **spoke** – a set of components, vias, and tracks that b
 | Principle | Description |
 |-----------|-------------|
 | **Separation of concerns** | Clear layering: CLI, configuration, validation, geometry, KiCad adapter, business logic, registry, logging, undo. |
-| **Separation of data and logic** | Templates (geometry) are machine‑generated data (only via `extract`); placement (cloning logic) is human‑written Python or YAML. Templates are stored separately (`cells_file`). |
+| **Separation of data and logic** | Templates (geometry) are machine‑generated data (only via `extract`); placement (cloning logic) is human‑written Python or YAML. Templates are stored separately (external files listed under `include:`, wrapped in a `cells:` key). |
 | **Encapsulation of IPC complexity** | All KiCad calls are concentrated in the adapter, which exposes a uniform `IBoardAdapter` interface. |
 | **Extensibility** | New via types, roles, templates, and tracks can be added easily thanks to the modular structure. |
 | **Safety** | Three‑phase execution (moves → vias → tracks) with intermediate board reload; pre‑validation before any modifications; logging and undo. |
@@ -143,7 +143,7 @@ Modules that work with coordinates, independent of KiCad:
 
 ### 4.4. Configuration and Validation
 
-- **`config/` package** (`__init__.py`, `loader.py`, `models.py`, `includes.py`) – defines dataclasses for all config structures (`Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, etc.) and the `load_config()` function. Supports **`cells_file`** – an external JSON/YAML template file that is loaded and merged with inline `templates`. The `includes.py` module handles `include:` directives for splitting configs across multiple files. This allows moving heavy geometry out of the main config.
+- **`config/` package** (`__init__.py`, `loader.py`, `models.py`, `includes.py`) – defines dataclasses for all config structures (`Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, etc.) and the `load_config()` function. The `includes.py` module handles `include:` directives for splitting configs across multiple files, including external template files (wrapped in a `cells:` key, merged with any inline `cells:`) – this allows moving heavy geometry out of the main config.
 - **`validation.py`** – pre‑validation checks: template/pad existence, component pool sufficiency, clone correctness (no more than one selection‑based clone per run), **resolution of via/track nets against actual board nets**, uniqueness of clone names/physical anchors, validity of `layer`/`mirror` combinations. Throws `ValidationError` with a clear list of issues.
 
 ### 4.5. Placement Registry (`registry.py`)
@@ -162,7 +162,7 @@ Modules that work with coordinates, independent of KiCad:
 ### 4.7. Template Extraction (`template_extraction.py`)
 
 - Implements the `extract` command: from the current PCB selection, extracts a spoke template (components, vias, and **tracks**) and builds a structure ready for serialisation.
-- Supports **JSON output** (when extension is `.json`) – writes a flat dictionary `{template_name: {...}}` without the `templates:` wrapper, making it convenient for use as `cells_file`.
+- Supports **JSON output** (when extension is `.json`) – writes `{cells: {template_name: {...}}}`, ready to be listed directly under `include:`.
 - Supports **net parametrisation** via `--net-template` and `--param`: replaces literal net names with placeholder patterns.
 - Supports **choosing origin** not by bbox but by a specific via or component (`--origin-by-via-net`, `--origin-by-component-role`).
 - Automatically determines the template layer and sets explicit layers for elements lying on other layers.
@@ -178,7 +178,7 @@ Modules that work with coordinates, independent of KiCad:
 
 ### 4.10. User Interface (CLI)
 
-- **`kicadstamp_cli.py`** – the main executable, handling argument parsing, config loading, KiCad connection, validation, planning, and execution (three phases: moves → vias → tracks), plus `undo`, `extract`, `clone-extract`, and the optional `--only` flag for processing only the named `rules`/`clone_placements`/`thermal_via_array`.
+- **`kicadstamp_cli.py`** – the main executable, handling argument parsing, config loading, KiCad connection, validation, planning, and execution (three phases: moves → vias → tracks), plus `undo`, `extract`, `clone-extract`, and the optional `--only` flag for processing only the named `rules`/`clone_placements`/`thermal_via_arrays`.
 
 ---
 
@@ -193,7 +193,7 @@ Modules that work with coordinates, independent of KiCad:
 2. Config loading (load_config)
    │
    ├── Read YAML
-   ├── Load external template file (cells_file) if specified
+   ├── Resolve include: (merges external cells:/rules:/clone_placements:/etc.)
    ├── Merge with inline templates
    ├── Check role uniqueness in templates
    ├── Build Config object
@@ -273,7 +273,7 @@ Modules that work with coordinates, independent of KiCad:
 | **Automatic refdes selection by roles** | Eliminates the need to write component names in the config, making it compact and resilient to re‑annotation. |
 | **Disambiguation by anchor proximity** | In net mode, if multiple candidates exist for a role, the closest to the anchor is chosen (if the distance margin is sufficient). Solves the common issue of power filters sharing a common rail. |
 | **Template cloning with tracks** | Copies not only components and vias but also routing segments, preserving connectivity and reducing manual rerouting. |
-| **External template files (`cells_file`)** | Heavy geometry (especially tracks) is moved out of the main config, keeping it readable. Templates are generated by `extract` and never edited manually. |
+| **External template files (via `include:`)** | Heavy geometry (especially tracks) is moved out of the main config, keeping it readable. Templates are generated by `extract` and never edited manually. |
 | **JSON format for templates** | Simplifies serialisation and eliminates YAML quoting/indentation issues. |
 | **Template transformation** | Allows adapting a template to different orientations without re‑extracting. |
 | **Logging and undo** | Every operation is saved as JSON, enabling rollback (including deletion of tracks). |
@@ -330,7 +330,7 @@ During the architectural discussions (May–July 2026), the following decisions 
 3. **Physical IR** – the internal model stores only coordinates and geometry; semantics (roles, banks) are stored as tags/metadata.
 4. **Support for tracks** – added as part of templates to preserve connectivity when cloning (v1.22.0).
 5. **Disambiguation by anchor proximity** – implemented in `clone_role_resolver`.
-6. **JSON for templates** – `extract` can save templates in JSON, simplifying serialisation and integration with `cells_file`.
+6. **JSON for templates** – `extract` can save templates in JSON, simplifying serialisation and integration via `include:`.
 7. **Live‑board reconciliation** – `PlacementRegistry` and `TrackRegistry` now check against real objects on the board.
 8. **Explicit `by_selection`, `anchor_role`, `refs`** – improved control for cloning.
 

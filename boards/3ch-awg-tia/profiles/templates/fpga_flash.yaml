@@ -1,32 +1,33 @@
-fpga_flash:
-  vias: []
-  components:
-  - role: FPGA_FLASH
-    offset_along_mm: 0.0
-    offset_across_mm: 0.0
-    angle_deg: 90.0
-    net_template: '{PWR_IN}'
-  - role: R_FL_HOLD_PU
-    offset_along_mm: -1.2325
-    offset_across_mm: -6.06
-    angle_deg: 180.0
-    net_template: '{PWR_IN}'
-  - role: R_FL_WP_PU
-    offset_along_mm: 0.0375
-    offset_across_mm: 5.69
-    angle_deg: 180.0
-    net_template: '{PWR_IN}'
-  tracks:
-  - start_along_mm: -0.635
-    start_across_mm: -3.5875
-    end_along_mm: -0.635
-    end_across_mm: -6.06
-    width_mm: 0.65
-    net: /FPGA/FL_HOLD
-  - start_along_mm: 0.635
-    start_across_mm: 3.5875
-    end_along_mm: 0.635
-    end_across_mm: 5.69
-    width_mm: 0.65
-    net: /FPGA/FL_WP
-  layer: F.Cu
+cells:
+  fpga_flash:
+    vias: []
+    components:
+    - role: FPGA_FLASH
+      offset_along_mm: 0.0
+      offset_across_mm: 0.0
+      angle_deg: 90.0
+      net_template: '{PWR_IN}'
+    - role: R_FL_HOLD_PU
+      offset_along_mm: -1.2325
+      offset_across_mm: -6.06
+      angle_deg: 180.0
+      net_template: '{PWR_IN}'
+    - role: R_FL_WP_PU
+      offset_along_mm: 0.0375
+      offset_across_mm: 5.69
+      angle_deg: 180.0
+      net_template: '{PWR_IN}'
+    tracks:
+    - start_along_mm: -0.635
+      start_across_mm: -3.5875
+      end_along_mm: -0.635
+      end_across_mm: -6.06
+      width_mm: 0.65
+      net: /FPGA/FL_HOLD
+    - start_along_mm: 0.635
+      start_across_mm: 3.5875
+      end_along_mm: 0.635
+      end_across_mm: 5.69
+      width_mm: 0.65
+      net: /FPGA/FL_WP
+    layer: F.Cu

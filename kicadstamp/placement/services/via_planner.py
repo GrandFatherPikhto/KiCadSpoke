@@ -51,22 +51,23 @@ class ViaPlanner:
                 return True
         return False
 
-    def _resolve_thermal_anchor(self) -> FootprintInstance | None:
+    def _resolve_thermal_anchor(self, tva: ThermalViaArrayConfig) -> FootprintInstance | None:
         """
-        Resolves the anchor for thermal vias by anchor_ref, anchor_role
-        (with anchor_sheet and anchor_cluster), or anchor_point. Returns a
-        FootprintInstance or None if thermal vias are disabled.
+        Resolves the anchor for one thermal_via_arrays entry by anchor_ref,
+        anchor_role (with anchor_sheet and anchor_cluster), or anchor_point.
+        Returns a FootprintInstance or None if this entry is retired.
 
         Called strictly after ApplyPipeline's Phase 1 (all rules/
         clone_placements/points) has fully committed — see
         planner.py's plan_vias() — so self.resolved_points is always fully
-        populated by the time anchor_point is read here; thermal_via_array
-        does not need to join the dependency_order.py graph itself to get
-        that freshness.
+        populated by the time anchor_point is read here; thermal_via_arrays
+        entries do not need to join the dependency_order.py graph themselves
+        to get that freshness.
         """
-        tva = self.cfg.thermal_via_array
         if tva.retired:
             return None
+
+        label = _("thermal_via_arrays entry {name!r}").format(name=tva.name)
 
         if tva.anchor_point is not None:
             # footprint is guaranteed not None — config/loader.py's
@@ -76,14 +77,14 @@ class ViaPlanner:
             resolved = self.resolved_points[tva.anchor_point]
             if resolved.footprint is None:
                 raise ValidationError(
-                    _("thermal_via_array: anchor_point {point!r} has no footprint — "
+                    _("{label}: anchor_point {point!r} has no footprint — "
                       "this should have been caught at load time (config/loader.py)")
-                    .format(point=tva.anchor_point)
+                    .format(label=label, point=tva.anchor_point)
                 )
             return resolved.footprint
 
         if tva.anchor_ref is not None:
-            return resolve_footprint_by_ref(self.adapter, tva.anchor_ref, _("thermal_via_array"))
+            return resolve_footprint_by_ref(self.adapter, tva.anchor_ref, label)
 
         if tva.anchor_role is not None:
             return resolve_footprint_by_role(
@@ -92,24 +93,26 @@ class ViaPlanner:
                 tva.anchor_sheet,
                 tva.anchor_cluster,
                 self.sheet_names,
-                label="thermal_via_array"
+                label=label
             )
 
-        raise ValidationError(
-            _("thermal_via_array: neither anchor_ref nor anchor_role set")
-        )
+        raise ValidationError(_("{label}: neither anchor_ref nor anchor_role set").format(label=label))
 
     def plan_vias(
         self,
         planned_components: list[PlacedComponentInfo],
         planned_vias: list[ViaCommand],
-        target_fp: FootprintInstance | None = None,
         target_layer: BoardLayer = BoardLayer.BL_F_Cu
     ) -> list[ViaCommand]:
         """
         Filters planned_vias through skip_existing_components, then adds
-        thermal vias. If target_fp is not passed (or None), the anchor is
-        resolved from cfg.thermal_via_array (supports anchor_role).
+        thermal vias for every active (non-retired) cfg.thermal_via_arrays
+        entry in turn. Each entry's keepout includes every via already
+        accumulated in `vias` so far this call — planned_vias/other spoke
+        vias AND thermal vias from an earlier entry in this same loop — so
+        two thermal arrays can never land vias on top of each other either
+        (same discipline that already protected against a sibling regular
+        via, see _build_keepout's docstring).
         """
         existing_vias = self.adapter.get_vias() if self.cfg.skip_existing_components else []
 
@@ -128,18 +131,20 @@ class ViaPlanner:
             logger.info(_("Skipped {count} spoke/component vias already present on the board")
                         .format(count=skipped))
 
-        # --- thermal vias ---
-        if target_fp is None:
-            # resolve ourselves
-            target_fp = self._resolve_thermal_anchor()
-
-        if target_fp is not None:
+        # --- thermal vias, one thermal_via_arrays entry at a time ---
+        if not self.cfg.thermal_via_arrays:
+            logger.debug(_("No thermal_via_arrays entries — thermal planning skipped"))
+        for tva in self.cfg.thermal_via_arrays:
+            target_fp = self._resolve_thermal_anchor(tva)
+            if target_fp is None:
+                logger.debug(_("thermal_via_arrays entry {name!r}: retired, skipped")
+                             .format(name=tva.name))
+                continue
             keepout = self._build_keepout(target_fp, planned_components, planned_vias=vias)
-            logger.debug(_("Keepout for thermal vias: {count} rectangles").format(count=len(keepout)))
+            logger.debug(_("Keepout for {name!r}: {count} rectangles")
+                         .format(name=tva.name, count=len(keepout)))
             vias.extend(self._plan_thermal_vias(
-                planned_components, target_fp, keepout, existing_vias, planned_vias=vias))
-        else:
-            logger.debug(_("Thermal vias disabled or no anchor set — keepout/thermal planning skipped"))
+                planned_components, target_fp, keepout, existing_vias, tva, planned_vias=vias))
 
         logger.info(_("plan_vias completed: {count} vias").format(count=len(vias)))
         return vias
@@ -182,13 +187,11 @@ class ViaPlanner:
         planned: list[PlacedComponentInfo],
         target_fp: FootprintInstance,
         keepout: list[Rect],
-        existing_vias: list | None = None,
+        existing_vias: list | None,
+        tva: ThermalViaArrayConfig,
         planned_vias: list[ViaCommand] | None = None,
     ) -> list[ViaCommand]:
         existing_vias = existing_vias or []
-        tva = self.cfg.thermal_via_array
-        if tva.retired:
-            return []
 
         # target_fp should already be resolved (passed from plan_vias)
         logger.debug(_("Planning thermal vias for {ref}, pad {pad}")
@@ -242,6 +245,16 @@ class ViaPlanner:
                 continue
             result.append(ViaCommand(free_p, tva.drill_mm, tva.diameter_mm, tva.net,
                                      target_fp.reference_field.text.value,
+                                     # "thermal_via_array" (singular, literal) is a fixed
+                                     # registry-key tag persisted in real registries/*.json
+                                     # on disk — NOT the config field name, must not be
+                                     # renamed just because the config field became plural
+                                     # (2026-08-02). Multiple thermal_via_arrays entries are
+                                     # already disambiguated via anchor_id (thermal:<name>),
+                                     # this tag only marks "a thermal via, not a clone/rule
+                                     # via" — renaming it would silently orphan every
+                                     # already-placed thermal via's registry entry on any
+                                     # real board (they'd read as "new" and duplicate).
                                      registry_key=make_registry_key(anchor_id, "thermal_via_array", None, index)))
         if skipped:
             logger.info(_("Skipped {count} thermal vias already present on the board").format(count=skipped))

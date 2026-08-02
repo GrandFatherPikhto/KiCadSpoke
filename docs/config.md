@@ -1,7 +1,7 @@
 # YAML Configuration Reference
 
 Everything about **writing** a KiCadStamp config from scratch: root fields, every section
-(`cells:`/`rules:`/`clone_placements:`/`thermal_via_array:`/`points:`), `include:`, and
+(`cells:`/`rules:`/`clone_placements:`/`thermal_via_arrays:`/`points:`), `include:`, and
 `extract_profiles:`/`clone_profiles:`. For running commands against a config, see
 [docs/commands.md](commands.md); for coding placement in Python instead of hand-writing YAML, see
 [docs/python.md](python.md); for the module/class architecture behind all of this, see
@@ -23,13 +23,11 @@ log_file: ../logs/fpga.log
 schematic_dir: ../../../test_boards/3CH-AWG-TIA
 layer: B.Cu
 
-thermal_via_array:
-  ...
-
-cell_files:
-  - templates/fpga_pi_filters.yaml
+thermal_via_arrays:
+  - ...
 
 include:
+  - templates/fpga_pi_filters.yaml
   - fpga_extracts.yaml
   - rules/fpga_spokes.yaml
 
@@ -40,28 +38,28 @@ clone_placements:
 | Field | Type | Meaning |
 |---|---|---|
 | `layer` | string | `F.Cu`\|`B.Cu` — default layer for the `rules:`/ManualSpoke path only. `clone_placements:` each carry their own `layer:`, unaffected by this. |
-| `cells` | mapping | Inline `Cell` definitions (see below). Rare to write by hand — usually populated by `extract`. |
-| `cells_file` | string | One external file of `Cell` definitions (raw `{name: {...}}` shape, no `cells:` wrapper — the shape `extract --output` writes). |
-| `cell_files` | list of strings | Several external `Cell`-definition files, merged together (fatal on a name repeated across files). `cells_file`/`cell_files` can both be set at once. Inline `cells:` silently overrides an external definition of the same name. |
+| `cells` | mapping | Inline `Cell` definitions (see below). Rare to write by hand — usually populated by `extract`; can be split across files via `include:` (see below). |
 | `points` | mapping | Named, reusable anchors (see **Points** below). |
 | `include` | list | Other YAML files to merge in — see **`include:`** below. |
 | `rules` | list | ManualSpoke rules — see **`rules:`** below. |
 | `clone_placements` | list | TemplatePlacer placements — see **`clone_placements:`** below. |
-| `thermal_via_array` | mapping | One thermal via grid — see **`thermal_via_array:`** below. |
+| `thermal_via_arrays` | list | Any number of thermal via grids, each independently named/anchored — see **`thermal_via_arrays:`** below. |
 | `place_components` | bool | Default `true`. `false` moves/creates vias and tracks but leaves component positions untouched. |
 | `skip_existing_components` | bool | Default `false`. Skip components (and their vias/tracks) already at the target position — cheap idempotency for re-runs. |
 | `via_keepout_clearance_mm`, `via_search_step_mm`, `via_search_max_radius_mm`, `via_search_n_directions` | numbers | Free-space search parameters, used only by thermal via placement. |
-| `schematic_dir` | string | Folder with the project's `*.kicad_sch` files, for `anchor_sheet` resolution. Relative to this YAML file's own location, like `cells_file`/`registry_path`. |
+| `schematic_dir` | string | Folder with the project's `*.kicad_sch` files, for `anchor_sheet` resolution. Relative to this YAML file's own location, like `registry_path`. |
 | `schematic_files` | list of strings | Extra `.kicad_sch` files outside `schematic_dir` (e.g. the root sheet, if it lives elsewhere). |
 | `registry_path`, `track_registry_path` | strings | Explicit paths for the placement/track registries (see [docs/placement.md](placement.md)). Default: derived from the config file's own name/path if unset. |
 | `log_file` | string | Log file for `apply` runs against this config — avoids retyping `--log-file` every time. The CLI's own `--log-file` flag wins if both are given. |
 
 **Deprecated, fatal on load (no silent fallback):** `templates_file`/`template_files` (renamed to
-`cells_file`/`cell_files`), `target_ref`/`side` at the root.
+`cells_file`/`cell_files`, themselves folded into `include:` on 2026-08-02 — see next), `cells_file`/
+`cell_files` (external `Cell` files are now just listed under `include:`, same as any other split-off
+section — wrap the external file's content in a `cells:` key), `target_ref`/`side` at the root.
 
 ---
 
-## `cells:` / `cells_file:` / `cell_files:` — defining reusable geometry
+## `cells:` — defining reusable geometry
 
 A `Cell` (until 2026-07-31, `SpokeTemplate`) is a piece of geometry described **once**, in its own
 local coordinate system (`along`/`across`, rotation-invariant — always described at `rotation_deg=0`),
@@ -74,33 +72,37 @@ nesting other cells), or both at once.
 ### Leaf cell
 
 ```yaml
-# boards/3ch-awg-tia/profiles/templates/ldo_3v3.yaml
-p3v3_ldo:
-  layer: F.Cu
-  vias:
-    - offset_along_mm: -7.415
-      offset_across_mm: -2.28
-      net: GND
-      drill_mm: 0.5
-      diameter_mm: 1.0
-    - offset_along_mm: -7.415
-      offset_across_mm: 2.28
-      net: '{PWR_IN}'          # {placeholder} — resolved from params: at placement time
-      drill_mm: 0.5
-      diameter_mm: 1.0
-  components:
-    - role: LDO_3V3             # matched by the Role custom field, not a specific ref
-      offset_along_mm: 0.0
-      offset_across_mm: 0.0
-      angle_deg: 0.0
-      net_template: '{PWR_OUT}' # for ClonePlacement's by-nets role matching only
-  tracks:
-    - start_along_mm: -5.04
-      start_across_mm: -2.28
-      end_along_mm: -7.415
-      end_across_mm: -2.28
-      width_mm: 0.8
-      net: GND
+# boards/3ch-awg-tia/profiles/templates/ldo_3v3.yaml — a file listed under
+# power.yaml's include: (external Cell files are wrapped in cells:, same
+# shape as an inline block, since cells_file:/cell_files: were folded into
+# include: on 2026-08-02)
+cells:
+  p3v3_ldo:
+    layer: F.Cu
+    vias:
+      - offset_along_mm: -7.415
+        offset_across_mm: -2.28
+        net: GND
+        drill_mm: 0.5
+        diameter_mm: 1.0
+      - offset_along_mm: -7.415
+        offset_across_mm: 2.28
+        net: '{PWR_IN}'          # {placeholder} — resolved from params: at placement time
+        drill_mm: 0.5
+        diameter_mm: 1.0
+    components:
+      - role: LDO_3V3             # matched by the Role custom field, not a specific ref
+        offset_along_mm: 0.0
+        offset_across_mm: 0.0
+        angle_deg: 0.0
+        net_template: '{PWR_OUT}' # for ClonePlacement's by-nets role matching only
+    tracks:
+      - start_along_mm: -5.04
+        start_across_mm: -2.28
+        end_along_mm: -7.415
+        end_across_mm: -2.28
+        width_mm: 0.8
+        net: GND
 ```
 
 - `vias:` — `offset_along_mm`/`offset_across_mm` (local), `net:` (`null`/omitted means "inherit the
@@ -267,7 +269,7 @@ absence (by-selection):
 |---|---|
 | `name` | Required — registry identity fallback, `--only` target, shows up in every diagnostic message. |
 | `xy` | Required. See the anchored/absolute modes above and the `xy:` note. |
-| `cell` **or** `role` | Exactly one. `cell:` references `cells:`/`cells_file:`. `role:` synthesises a temporary one-component cell on the fly (for a placement not worth a whole cell file). |
+| `cell` **or** `role` | Exactly one. `cell:` references `cells:` (inline or `include:`d). `role:` synthesises a temporary one-component cell on the fly (for a placement not worth a whole cell file). |
 | `rotation_deg` | Default `0.0`. Rotates the cell's contents (anchored mode) or the whole thing (absolute mode). |
 | `anchor_ref` / `anchor_role`(+`anchor_sheet`+`anchor_cluster`) / `anchor_point` | Optional, mutually exclusive — see **Positioning** above. |
 | `anchor_pad` | Optional, only meaningful with an anchor set — narrows the anchor to a specific pad rather than the footprint's centre. |
@@ -286,29 +288,31 @@ by explicit `layer:`+`mirror:`).
 
 ---
 
-## `thermal_via_array:` — one thermal via grid
+## `thermal_via_arrays:` — thermal via grids
 
 ```yaml
 # boards/3ch-awg-tia/profiles/fpga.yaml
-thermal_via_array:
-  name: fpga_thermal
-  retired: false
-  skip: false
-  anchor_role: FPGA
-  pad: '145'
-  net: GND
-  rows: 4
-  cols: 4
-  margin_mm: 0.5
-  pattern: grid
-  drill_mm: 0.3
-  diameter_mm: 0.5
+thermal_via_arrays:
+  - name: fpga_thermal
+    retired: false
+    skip: false
+    anchor_role: FPGA
+    pad: '145'
+    net: GND
+    rows: 4
+    cols: 4
+    margin_mm: 0.5
+    pattern: grid
+    drill_mm: 0.3
+    diameter_mm: 0.5
 ```
 
-Only **one** `thermal_via_array:` per config (unlike `rules:`/`clone_placements:`, it's not a list —
-if a board needs more than one thermal pad handled, split across `include:`d files, each with its own
-root-level `thermal_via_array:`). `name` is **required** if the section is present at all (used for
-`--only` and the registry identity `f"thermal:{name}"`).
+A real list (2026-08-02, generalized once a second IC needing thermal vias — AD9707, one per channel —
+showed up) — same shape as `rules:`/`clone_placements:`: any number of entries, each independently
+named/anchored/retired/skipped, and each can live in a different file via `include:` (`thermal_via_arrays`
+is a merged list section, same as `rules`/`clone_placements`). `name:` is **required** on every entry (used
+for `--only` and the registry identity `f"thermal:{name}"`) and must be **unique across the whole list**
+(fatal at load otherwise — `--only` couldn't tell same-named entries apart).
 
 | Field | Meaning |
 |---|---|
@@ -319,12 +323,13 @@ root-level `thermal_via_array:`). `name` is **required** if the section is prese
 | `margin_mm` | Clearance from the pad edge to the first via. |
 | `pattern` | `grid` or `staggered`. |
 | `drill_mm`/`diameter_mm` | Via dimensions. |
-| `retired` | Default `false`. Same "does not exist" meaning as elsewhere. Unified to default `false` across all four `retired`-bearing types on 2026-07-31 — before that, `thermal_via_array` alone defaulted its old `enabled` field to `False` (opt-in), an inconsistency now resolved. |
+| `retired` | Default `false`. Same "does not exist" meaning as elsewhere. |
 | `skip` | Default `false`. Same "leave alone this run" meaning as elsewhere. |
 
-**Deprecated, fatal on load:** `target_ref` (renamed to `anchor_ref`), the old `enabled:` (renamed and
-inverted to `retired:` — `enabled: true` ≠ `retired: true`, don't do a literal find-and-replace on an
-old config, re-check the intended sense).
+**Deprecated, fatal on load:** the old singular `thermal_via_array:` (a mapping, not a list — rename to
+`thermal_via_arrays:` and wrap the block in a YAML list), `target_ref` (renamed to `anchor_ref`), the old
+`enabled:` (renamed and inverted to `retired:` — `enabled: true` ≠ `retired: true`, don't do a literal
+find-and-replace on an old config, re-check the intended sense).
 
 ---
 
@@ -384,23 +389,25 @@ include:
 Each entry is either a bare path string, or `{path: <str>, enabled: <bool>}` to switch a whole
 included file off without deleting or commenting it out.
 
-- **List sections** (`rules`, `clone_placements`) — concatenated: this file's own entries first, then
-  each included file's, in listed order. (Real placement order at `apply` time is decided separately,
-  by actual anchor dependencies, not YAML order — see [docs/placement.md](placement.md).)
+- **List sections** (`rules`, `clone_placements`, `thermal_via_arrays`) — concatenated: this file's own
+  entries first, then each included file's, in listed order. (Real placement order at `apply` time is
+  decided separately, by actual anchor dependencies, not YAML order — see [docs/placement.md](placement.md).)
 - **Dict sections** (`cells`, `points`, `extract_profiles`, `clone_profiles`) — merged key-by-key,
-  **fatal** on a key defined in two different files (deliberately stricter than `cells_file:`'s silent
-  inline-overrides-external — included files are meant to be genuinely independent subsystems, so a
-  repeated name is far more likely a copy-paste mistake than an intentional override).
-- **Any other top-level key** (`layer:`, `thermal_via_array:`, `schematic_dir:`, `registry_path:`, …)
+  **fatal** on a key defined in two different files — included files are meant to be genuinely
+  independent subsystems, so a repeated name is far more likely a copy-paste mistake than an
+  intentional override.
+- **Any other top-level key** (`layer:`, `schematic_dir:`, `registry_path:`, …)
   inside an *included* (non-root) file has no defined multi-file merge rule and is a **fatal** error —
   move it to the root config instead. (This used to be silently dropped — a real, repeatedly-hit bug
   class on `boards/3ch-awg-tia`, now caught at load time.)
 - Cycles and diamond-includes (the same file reachable twice) are both fatal.
 
-Independent of `cells_file:`/`cell_files:` (a narrower, single-purpose mechanism for external `Cell`
-definitions only) — `include:` is general-purpose and used by both `load_config()` (`rules`/
-`clone_placements`/`cells`/`points`) and the CLI's own profile loader (`extract_profiles`/
-`clone_profiles`), so one subsystem file can carry a mix of everything it needs.
+`include:` is general-purpose and used by both `load_config()` (`rules`/`clone_placements`/
+`thermal_via_arrays`/`cells`/`points`) and the CLI's own profile loader (`extract_profiles`/
+`clone_profiles`), so one subsystem file can carry a mix of everything it needs — this is also how
+external `Cell` files work now: list the file under `include:` and wrap its content in a `cells:` key
+(`cells_file:`/`cell_files:`, a separate, differently-shaped mechanism, were folded into `include:` on
+2026-08-02 — one way to split ANY section across files instead of two incompatible ones).
 
 ---
 

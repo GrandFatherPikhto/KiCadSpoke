@@ -1,7 +1,7 @@
 # Справочник по YAML-конфигу
 
 Всё про то, как **писать** конфиг KiCadStamp с нуля: корневые поля, каждая секция (`cells:`/`rules:`/
-`clone_placements:`/`thermal_via_array:`/`points:`), `include:`, `extract_profiles:`/`clone_profiles:`.
+`clone_placements:`/`thermal_via_arrays:`/`points:`), `include:`, `extract_profiles:`/`clone_profiles:`.
 Про запуск команд над конфигом — [docs/commands_ru.md](commands_ru.md); про написание расстановки на
 Python вместо ручного YAML — [docs/python_ru.md](python_ru.md); про архитектуру модулей/классов за этой
 схемой — [docs/architect_ru.md](architect_ru.md).
@@ -22,13 +22,11 @@ log_file: ../logs/fpga.log
 schematic_dir: ../../../test_boards/3CH-AWG-TIA
 layer: B.Cu
 
-thermal_via_array:
-  ...
-
-cell_files:
-  - templates/fpga_pi_filters.yaml
+thermal_via_arrays:
+  - ...
 
 include:
+  - templates/fpga_pi_filters.yaml
   - fpga_extracts.yaml
   - rules/fpga_spokes.yaml
 
@@ -39,28 +37,29 @@ clone_placements:
 | Поле | Тип | Смысл |
 |---|---|---|
 | `layer` | строка | `F.Cu`\|`B.Cu` — слой по умолчанию только для пути `rules:`/ManualSpoke. У `clone_placements:` свой `layer:` на каждой записи, этим полем не затрагивается. |
-| `cells` | словарь | Инлайн-определения `Cell` (см. ниже). Руками пишутся редко — обычно заполняются `extract`. |
-| `cells_file` | строка | Один внешний файл с определениями `Cell` (сырая форма `{имя: {...}}`, без обёртки `cells:` — та же форма, что пишет `extract --output`). |
-| `cell_files` | список строк | Несколько внешних файлов с `Cell`, объединяются (фатал при повторе имени между файлами). `cells_file`/`cell_files` можно задать одновременно. Инлайн `cells:` тихо перекрывает внешнее определение с тем же именем. |
+| `cells` | словарь | Инлайн-определения `Cell` (см. ниже). Руками пишутся редко — обычно заполняются `extract`; можно разнести по файлам через `include:` (см. ниже). |
 | `points` | словарь | Именованные переиспользуемые якоря (см. **Points** ниже). |
 | `include` | список | Другие YAML-файлы для подключения — см. **`include:`** ниже. |
 | `rules` | список | Правила ManualSpoke — см. **`rules:`** ниже. |
 | `clone_placements` | список | Размещения TemplatePlacer — см. **`clone_placements:`** ниже. |
-| `thermal_via_array` | словарь | Одна термо-via-сетка — см. **`thermal_via_array:`** ниже. |
+| `thermal_via_arrays` | список | Любое число термо-via-сеток, каждая с собственным именем/якорем — см. **`thermal_via_arrays:`** ниже. |
 | `place_components` | булево | По умолчанию `true`. `false` — перемещать/создавать via и треки, но не трогать позиции компонентов. |
 | `skip_existing_components` | булево | По умолчанию `false`. Пропускать компоненты (и их via/треки), уже стоящие в целевой позиции — дешёвая идемпотентность для повторных прогонов. |
 | `via_keepout_clearance_mm`, `via_search_step_mm`, `via_search_max_radius_mm`, `via_search_n_directions` | числа | Параметры поиска свободного места, используются только термо-via. |
-| `schematic_dir` | строка | Папка с `*.kicad_sch` проекта, для резолва `anchor_sheet`. Относительно расположения самого этого YAML, как `cells_file`/`registry_path`. |
+| `schematic_dir` | строка | Папка с `*.kicad_sch` проекта, для резолва `anchor_sheet`. Относительно расположения самого этого YAML, как `registry_path`. |
 | `schematic_files` | список строк | Дополнительные `.kicad_sch`-файлы вне `schematic_dir` (например, корневой лист, если он лежит отдельно). |
 | `registry_path`, `track_registry_path` | строки | Явные пути к реестрам расстановки/треков (см. [docs/placement_ru.md](placement_ru.md)). По умолчанию — выводятся из имени/пути самого конфига. |
 | `log_file` | строка | Лог-файл для `apply` этого конфига — не нужно каждый раз указывать `--log-file`. Флаг CLI `--log-file`, если задан, побеждает. |
 
 **Устарело, фатал при загрузке (без тихого фолбэка):** `templates_file`/`template_files` (переименованы
-в `cells_file`/`cell_files`), `target_ref`/`side` в корне.
+в `cells_file`/`cell_files`, которые сами были слиты в `include:` 2026-08-02 — см. ниже), `cells_file`/
+`cell_files` (внешние файлы `Cell` теперь просто перечисляются в `include:`, как и любая другая
+разносимая секция — содержимое внешнего файла оборачивается в ключ `cells:`), `target_ref`/`side` в
+корне.
 
 ---
 
-## `cells:` / `cells_file:` / `cell_files:` — определение переиспользуемой геометрии
+## `cells:` — определение переиспользуемой геометрии
 
 `Cell` (до 2026-07-31 — `SpokeTemplate`) — кусок геометрии, описанный **один раз**, в своей локальной
 системе координат (`along`/`across`, инвариантной к повороту — всегда описывается при
@@ -73,33 +72,37 @@ clone_placements:
 ### Лист-ячейка
 
 ```yaml
-# boards/3ch-awg-tia/profiles/templates/ldo_3v3.yaml
-p3v3_ldo:
-  layer: F.Cu
-  vias:
-    - offset_along_mm: -7.415
-      offset_across_mm: -2.28
-      net: GND
-      drill_mm: 0.5
-      diameter_mm: 1.0
-    - offset_along_mm: -7.415
-      offset_across_mm: 2.28
-      net: '{PWR_IN}'          # {placeholder} — резолвится из params: в момент размещения
-      drill_mm: 0.5
-      diameter_mm: 1.0
-  components:
-    - role: LDO_3V3             # матчится по кастомному полю Role, не по конкретному ref
-      offset_along_mm: 0.0
-      offset_across_mm: 0.0
-      angle_deg: 0.0
-      net_template: '{PWR_OUT}' # только для матчинга ролей по сетям у ClonePlacement
-  tracks:
-    - start_along_mm: -5.04
-      start_across_mm: -2.28
-      end_along_mm: -7.415
-      end_across_mm: -2.28
-      width_mm: 0.8
-      net: GND
+# boards/3ch-awg-tia/profiles/templates/ldo_3v3.yaml — файл, перечисленный
+# в include: у power.yaml (внешние файлы Cell оборачиваются в cells:, та
+# же форма, что инлайн-блок — cells_file:/cell_files: слиты в include:
+# 2026-08-02)
+cells:
+  p3v3_ldo:
+    layer: F.Cu
+    vias:
+      - offset_along_mm: -7.415
+        offset_across_mm: -2.28
+        net: GND
+        drill_mm: 0.5
+        diameter_mm: 1.0
+      - offset_along_mm: -7.415
+        offset_across_mm: 2.28
+        net: '{PWR_IN}'          # {placeholder} — резолвится из params: в момент размещения
+        drill_mm: 0.5
+        diameter_mm: 1.0
+    components:
+      - role: LDO_3V3             # матчится по кастомному полю Role, не по конкретному ref
+        offset_along_mm: 0.0
+        offset_across_mm: 0.0
+        angle_deg: 0.0
+        net_template: '{PWR_OUT}' # только для матчинга ролей по сетям у ClonePlacement
+    tracks:
+      - start_along_mm: -5.04
+        start_across_mm: -2.28
+        end_along_mm: -7.415
+        end_across_mm: -2.28
+        width_mm: 0.8
+        net: GND
 ```
 
 - `vias:` — `offset_along_mm`/`offset_across_mm` (локальные), `net:` (`null`/пусто означает
@@ -268,7 +271,7 @@ clone_placements:
 |---|---|
 | `name` | Обязательно — фолбэк-идентичность в реестре, цель для `--only`, фигурирует в каждом диагностическом сообщении. |
 | `xy` | Обязательно. См. режимы «с якорем»/«абсолютный» выше и примечание про `xy:`. |
-| `cell` **или** `role` | Ровно один. `cell:` — ссылка на `cells:`/`cells_file:`. `role:` синтезирует временную одно-компонентную ячейку на лету (для размещения, не стоящего отдельного файла ячейки). |
+| `cell` **или** `role` | Ровно один. `cell:` — ссылка на `cells:` (инлайн или через `include:`). `role:` синтезирует временную одно-компонентную ячейку на лету (для размещения, не стоящего отдельного файла ячейки). |
 | `rotation_deg` | По умолчанию `0.0`. Поворачивает содержимое ячейки (режим с якорем) или всё целиком (абсолютный режим). |
 | `anchor_ref` / `anchor_role`(+`anchor_sheet`+`anchor_cluster`) / `anchor_point` | Опционально, взаимоисключающие — см. **Позиционирование** выше. |
 | `anchor_pad` | Опционально, имеет смысл только с заданным якорем — сужает якорь до конкретного пада вместо центра футпринта. |
@@ -287,29 +290,31 @@ clone_placements:
 
 ---
 
-## `thermal_via_array:` — одна термо-via-сетка
+## `thermal_via_arrays:` — термо-via-сетки
 
 ```yaml
 # boards/3ch-awg-tia/profiles/fpga.yaml
-thermal_via_array:
-  name: fpga_thermal
-  retired: false
-  skip: false
-  anchor_role: FPGA
-  pad: '145'
-  net: GND
-  rows: 4
-  cols: 4
-  margin_mm: 0.5
-  pattern: grid
-  drill_mm: 0.3
-  diameter_mm: 0.5
+thermal_via_arrays:
+  - name: fpga_thermal
+    retired: false
+    skip: false
+    anchor_role: FPGA
+    pad: '145'
+    net: GND
+    rows: 4
+    cols: 4
+    margin_mm: 0.5
+    pattern: grid
+    drill_mm: 0.3
+    diameter_mm: 0.5
 ```
 
-Только **одна** `thermal_via_array:` на конфиг (в отличие от `rules:`/`clone_placements:`, это не
-список — если плате нужно больше одной термо-площадки, разбивайте по `include:`-файлам, у каждого свой
-корневой `thermal_via_array:`). `name` **обязателен**, если секция вообще присутствует (используется
-для `--only` и идентичности в реестре `f"thermal:{name}"`).
+Настоящий список (2026-08-02, обобщено, когда появилась вторая ИС с термо-via — AD9707, по одной на
+канал) — та же форма, что `rules:`/`clone_placements:`: любое число записей, каждая со своим именем/
+якорем/`retired`/`skip`, и каждая может жить в своём файле через `include:` (`thermal_via_arrays` —
+объединяемая списочная секция, как `rules`/`clone_placements`). `name:` **обязателен** у каждой записи
+(используется для `--only` и идентичности в реестре `f"thermal:{name}"`) и должен быть **уникален по
+всему списку** (иначе фатал при загрузке — `--only` не сможет различить одноимённые записи).
 
 | Поле | Смысл |
 |---|---|
@@ -320,10 +325,12 @@ thermal_via_array:
 | `margin_mm` | Отступ от края пада до первой via. |
 | `pattern` | `grid` или `staggered`. |
 | `drill_mm`/`diameter_mm` | Размеры via. |
-| `retired` | По умолчанию `false`. Тот же смысл «не существует», что и везде. Унифицировано под дефолт `false` у всех четырёх retired-несущих типов 2026-07-31 — до этого только `thermal_via_array` дефолтил старый `enabled` в `False` (opt-in), несоответствие теперь устранено. |
+| `retired` | По умолчанию `false`. Тот же смысл «не существует», что и везде. |
 | `skip` | По умолчанию `false`. Тот же смысл «не трогать в этом прогоне», что и везде. |
 
-**Устарело, фатал при загрузке:** `target_ref` (переименован в `anchor_ref`), старый `enabled:`
+**Устарело, фатал при загрузке:** старый одиночный `thermal_via_array:` (словарь, не список —
+переименуй в `thermal_via_arrays:` и оберни блок в YAML-список), `target_ref` (переименован в
+`anchor_ref`), старый `enabled:`
 (переименован и обратен по смыслу `retired:` — `enabled: true` ≠ `retired: true`, не делай буквальный
 find-and-replace в старом конфиге, перепроверь исходный смысл).
 
@@ -385,27 +392,27 @@ include:
 Каждая запись — либо строка-путь, либо `{path: <строка>, enabled: <булево>}`, чтобы выключить целый
 подключаемый файл, не удаляя и не закомментировав его.
 
-- **Списочные секции** (`rules`, `clone_placements`) — конкатенируются: сначала записи этого файла,
-  затем каждого подключённого, в порядке перечисления. (Реальный порядок размещения при `apply`
+- **Списочные секции** (`rules`, `clone_placements`, `thermal_via_arrays`) — конкатенируются: сначала
+  записи этого файла, затем каждого подключённого, в порядке перечисления. (Реальный порядок размещения при `apply`
   решается отдельно, по настоящим якорным зависимостям, не по порядку в YAML — см.
   [docs/placement_ru.md](placement_ru.md).)
 - **Словарные секции** (`cells`, `points`, `extract_profiles`, `clone_profiles`) — объединяются
-  ключ-за-ключом, **фатал** при повторе ключа в двух разных файлах (сознательно строже, чем тихое
-  «инлайн перекрывает внешнее» у `cells_file:` — подключаемые файлы задуманы как по-настоящему
-  независимые подсистемы, так что повтор имени куда вероятнее ошибка копипаста, чем намеренное
-  перекрытие).
-- **Любой другой top-level ключ** (`layer:`, `thermal_via_array:`, `schematic_dir:`, `registry_path:`,
+  ключ-за-ключом, **фатал** при повторе ключа в двух разных файлах — подключаемые файлы задуманы как
+  по-настоящему независимые подсистемы, так что повтор имени куда вероятнее ошибка копипаста, чем
+  намеренное перекрытие.
+- **Любой другой top-level ключ** (`layer:`, `schematic_dir:`, `registry_path:`,
   …) внутри *подключаемого* (не корневого) файла не имеет определённого правила слияния между файлами
   и является **фатальной** ошибкой — перенеси его в корневой конфиг. (Раньше это тихо отбрасывалось —
   реальный, неоднократно встречавшийся класс багов на `boards/3ch-awg-tia`, теперь ловится при
   загрузке.)
 - Циклы и diamond-инклюды (один и тот же файл достижим дважды) — оба фатальны.
 
-Независим от `cells_file:`/`cell_files:` (более узкого, специализированного механизма только для
-внешних определений `Cell`) — `include:` общего назначения, используется и `load_config()`
-(`rules`/`clone_placements`/`cells`/`points`), и собственным загрузчиком профилей CLI
-(`extract_profiles`/`clone_profiles`), так что один файл подсистемы может нести смесь всего, что ему
-нужно.
+`include:` общего назначения, используется и `load_config()` (`rules`/`clone_placements`/
+`thermal_via_arrays`/`cells`/`points`), и собственным загрузчиком профилей CLI (`extract_profiles`/
+`clone_profiles`), так что один файл подсистемы может нести смесь всего, что ему нужно — так же теперь
+устроены и внешние файлы `Cell`: перечисли файл в `include:` и оберни его содержимое в ключ `cells:`
+(`cells_file:`/`cell_files:`, отдельный механизм другой формы, были слиты в `include:` 2026-08-02 —
+один способ разнести ЛЮБУЮ секцию по файлам вместо двух несовместимых).
 
 ---
 

@@ -75,12 +75,11 @@ def merge_write(path: Path, new_data: dict, section: Optional[str] = None) -> bo
     cells/profiles accumulated over time, not exclusively owned by this
     one write.
 
-    section=None: new_data is {cell_name: {...}} merged at the file's
-    top level (the flat cell_files/cells_file shape).
-    section='extract_profiles': new_data is
-    {'extract_profiles': {key: {...}}} — only that one nested dict gets
-    merged, every OTHER top-level key already in the file (clone_
-    placements:, include:, cells_file:, ...) is left untouched.
+    section=None: new_data is merged directly at the file's top level.
+    section='cells'/'extract_profiles'/etc.: new_data is
+    {section: {key: {...}}} — only that one nested dict gets merged,
+    every OTHER top-level key already in the file (clone_placements:,
+    include:, ...) is left untouched.
     Returns whether the specific key being written already existed.
     """
     existing = _read_data(path)
@@ -100,13 +99,12 @@ def merge_write(path: Path, new_data: dict, section: Optional[str] = None) -> bo
 
 def add_list_entry(path: Path, section: str, entry: str) -> bool:
     """Appends `entry` (a path string, relative to `path`'s own
-    directory — the same resolution rule config/loader.py and
-    config/includes.py use for cell_files:/include: themselves) to that
-    list section in `path`, unless an entry already there resolves to
-    the same file. Read-merge-write like merge_write(), but for a list
-    section (cell_files:/include:) instead of a dict one — every other
-    key in the file is left untouched. Returns whether an entry was
-    actually added."""
+    directory — the same resolution rule config/includes.py uses for
+    include: itself) to that list section in `path`, unless an entry
+    already there resolves to the same file. Read-merge-write like
+    merge_write(), but for a list section (include:) instead of a dict
+    one — every other key in the file is left untouched. Returns whether
+    an entry was actually added."""
     existing = _read_data(path)
     items = existing.setdefault(section, [])
     if not isinstance(items, list):
@@ -129,8 +127,8 @@ def upsert_clone_placement(path: Path, entry: Dict[str, Any]) -> bool:
     clone_placements: — a list of dicts matched by their own 'name' key,
     not by list membership: an entry whose name already exists gets
     REPLACED in place (same position), a new name gets appended. Every
-    other key in the file (cells:, cell_files:, include:,
-    extract_profiles:, ...) is left untouched."""
+    other key in the file (cells:, include:, extract_profiles:, ...) is
+    left untouched."""
     existing = _read_data(path)
     items = existing.setdefault("clone_placements", [])
     if not isinstance(items, list):
@@ -146,6 +144,7 @@ def upsert_clone_placement(path: Path, entry: Dict[str, Any]) -> bool:
         items.append(entry)
     _write_data(path, existing)
     return overwritten
+
 
 
 def display_path(path: Path) -> str:

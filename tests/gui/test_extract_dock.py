@@ -50,9 +50,9 @@ def test_cluster_slug_does_not_stomp_manual_typing(main_window, tmp_path):
 
 def test_existing_cell_key_beats_raw_cluster_slug(main_window, tmp_path):
     cells_file = tmp_path / "cells.yaml"
-    _write_yaml(cells_file, {
+    _write_yaml(cells_file, {"cells": {
         "existing_manual_name": {"vias": [], "components": [], "tracks": [], "layer": "F.Cu"},
-    })
+    }})
     dock = ExtractDock(main_window)
     dock.set_target_file(cells_file)
 
@@ -69,7 +69,7 @@ def test_clicking_profile_pulls_aliases_role_and_origin(main_window, tmp_path):
     cells_dir = tmp_path / "templates"
     cells_dir.mkdir()
     cells_file = cells_dir / "test.yaml"
-    _write_yaml(cells_file, {"2v5_adj_pi_filter": {"vias": [], "components": [], "tracks": [], "layer": "F.Cu"}})
+    _write_yaml(cells_file, {"cells": {"2v5_adj_pi_filter": {"vias": [], "components": [], "tracks": [], "layer": "F.Cu"}}})
 
     extractor_file = tmp_path / "test_extract.yaml"
     _write_yaml(extractor_file, {
@@ -124,7 +124,7 @@ def test_clicking_cell_cross_references_matching_profile(main_window, tmp_path):
     cells_dir = tmp_path / "templates"
     cells_dir.mkdir()
     cells_file = cells_dir / "test.yaml"
-    _write_yaml(cells_file, {"2v5_adj_pi_filter": {"vias": [], "components": [], "tracks": [], "layer": "F.Cu"}})
+    _write_yaml(cells_file, {"cells": {"2v5_adj_pi_filter": {"vias": [], "components": [], "tracks": [], "layer": "F.Cu"}}})
 
     extractor_file = tmp_path / "test_extract.yaml"
     _write_yaml(extractor_file, {
@@ -206,10 +206,10 @@ def test_net_template_role_blocks_extraction_until_resolved(main_window, tmp_pat
     # (the async _on_extract() path would race the read on the next line).
     dock._do_extract()
     saved = yaml.safe_load(cells_file.read_text())
-    assert "n2v5_adj_pi_filter" in saved
+    assert "n2v5_adj_pi_filter" in saved["cells"]
 
 
-def test_placer_gets_cell_files_and_include_entries_deduped(main_window, tmp_path, monkeypatch):
+def test_placer_gets_include_entries_deduped(main_window, tmp_path, monkeypatch):
     templates_dir = tmp_path / "templates"
     templates_dir.mkdir()
     cells_file = templates_dir / "test.yaml"
@@ -234,8 +234,9 @@ def test_placer_gets_cell_files_and_include_entries_deduped(main_window, tmp_pat
     dock._do_extract()
 
     placer_data = yaml.safe_load(placer_file.read_text())
-    assert placer_data["cell_files"] == ["templates/test.yaml"]
-    assert placer_data["include"] == ["extracts.yaml"]
+    # cells_file:/cell_files: were folded into include: 2026-08-02 — both the
+    # Cells file and the Extractor file are now wired the same way.
+    assert placer_data["include"] == ["templates/test.yaml", "extracts.yaml"]
     assert placer_data["clone_placements"] == []  # untouched, not overwritten
 
     # A second extraction under a different name must not duplicate entries.
@@ -245,13 +246,12 @@ def test_placer_gets_cell_files_and_include_entries_deduped(main_window, tmp_pat
     dock._do_extract()
 
     placer_data2 = yaml.safe_load(placer_file.read_text())
-    assert placer_data2["cell_files"] == ["templates/test.yaml"]
-    assert placer_data2["include"] == ["extracts.yaml"]
+    assert placer_data2["include"] == ["templates/test.yaml", "extracts.yaml"]
 
 
 def test_placer_wiring_skips_include_for_a_root_shaped_extractor_file(main_window, tmp_path, monkeypatch):
     """Reproduces the real failure found live 2026-08-01: an Extractor
-    file that's ALSO a full root config (registry_path/cell_files/...,
+    file that's ALSO a full root config (registry_path/schematic_dir/...,
     e.g. because it predates being assigned this role, or is reused as a
     standalone config too) can't be include:'d — config/includes.py only
     merges rules/clone_placements/cells/points/extract_profiles/
@@ -261,7 +261,7 @@ def test_placer_wiring_skips_include_for_a_root_shaped_extractor_file(main_windo
     cells_file = tmp_path / "cells.yaml"
     _write_yaml(cells_file, {})
     extractor_file = tmp_path / "extractor.yaml"
-    _write_yaml(extractor_file, {"registry_path": "registries/x.json", "cell_files": ["templates/x.yaml"]})
+    _write_yaml(extractor_file, {"registry_path": "registries/x.json", "schematic_dir": "../sch"})
     placer_file = tmp_path / "root.yaml"
     _write_yaml(placer_file, {"clone_placements": []})
 
@@ -281,8 +281,10 @@ def test_placer_wiring_skips_include_for_a_root_shaped_extractor_file(main_windo
 
     assert "root-config-only" in dock.message_label.text()
     placer_data = yaml.safe_load(placer_file.read_text())
-    assert "include" not in placer_data  # skipped, not written
-    assert placer_data["cell_files"] == ["cells.yaml"]  # unaffected, still added
+    # cells_file:/cell_files: were folded into include: 2026-08-02 — the
+    # Cells file is still wired via include:, only the root-shaped Extractor
+    # file's entry is skipped.
+    assert placer_data["include"] == ["cells.yaml"]  # unaffected, still added
 
     # The written extractor file must still actually load_config() cleanly
     # via include: once it stops carrying root-only keys — confirms the
@@ -290,9 +292,9 @@ def test_placer_wiring_skips_include_for_a_root_shaped_extractor_file(main_windo
     from kicadstamp.config import load_config
     extractor_data = yaml.safe_load(extractor_file.read_text())
     del extractor_data["registry_path"]
-    del extractor_data["cell_files"]
+    del extractor_data["schematic_dir"]
     _write_yaml(extractor_file, extractor_data)
-    _write_yaml(placer_file, {**yaml.safe_load(placer_file.read_text()), "include": ["extractor.yaml"]})
+    _write_yaml(placer_file, {**yaml.safe_load(placer_file.read_text()), "include": ["cells.yaml", "extractor.yaml"]})
     load_config(str(placer_file))  # must not raise, now that extractor.yaml is include:-safe
 
 
