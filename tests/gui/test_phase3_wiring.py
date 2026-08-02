@@ -134,6 +134,59 @@ def test_tree_cluster_picked_fills_placer_cluster_field(real_main_window):
     assert real_main_window.placer_dock.cluster_edit.text() == "Channel_1"
 
 
+def test_cell_picked_fills_placer_selected_cell(real_main_window):
+    """CellListDock -> PlacerDock wiring (cell_picked -> set_selected_cell,
+    see gui/docks/cell_list.py's cell_picked docstring) — clicking a Cell in
+    the real Cells list must reach PlacerDock's Cell field end-to-end, not
+    just via a direct set_selected_cell() call (already covered elsewhere,
+    but never through the actual signal)."""
+    real_main_window.cell_list_dock.cell_picked.emit("ldo_adj")
+
+    assert real_main_window.placer_dock._selected_cell == "ldo_adj"
+    assert "ldo_adj" in real_main_window.placer_dock.cell_label.text()
+
+
+def test_placement_picked_loads_into_placer_form(real_main_window):
+    """PlacerListDock -> PlacerDock wiring (placement_picked -> load_placement,
+    see gui/docks/placer_list.py's placement_picked docstring) — clicking an
+    already-saved placement in the real Placements list must reach
+    PlacerDock's form end-to-end, not just via a direct load_placement()
+    call (already covered elsewhere, but never through the actual signal)."""
+    entry = {"name": "spoke_1", "cell": "ldo_adj", "xy": [1.5, 2.5]}
+    real_main_window.placer_list_dock.placement_picked.emit(entry)
+
+    assert real_main_window.placer_dock.cluster_edit.text() == "spoke_1"
+    assert real_main_window.placer_dock._selected_cell == "ldo_adj"
+    assert real_main_window.placer_dock.x_edit.text() == "1.5"
+    assert real_main_window.placer_dock.y_edit.text() == "2.5"
+
+
+def test_placer_saved_refreshes_placer_list(real_main_window, tmp_path):
+    """PlacerDock -> PlacerListDock wiring (saved -> refresh, see
+    gui/docks/placer_list.py's module docstring) — a successful Save must
+    reach PlacerListDock's refresh() end-to-end, not just via a direct call
+    (the list would otherwise go stale after Save without a file reassign,
+    exactly the bug the module docstring says this wiring prevents).
+
+    Asserts on real widget state (the list picking up a change made on disk
+    after the fact) rather than monkeypatching refresh() — a PyQt signal
+    connection captures the bound method at connect() time, so patching the
+    instance attribute afterwards would not be intercepted (same caveat as
+    test_fieldstool_components_changed_refreshes_tree above)."""
+    placer_file = tmp_path / "placer.yaml"
+    _write(placer_file)
+    real_main_window.placer_list_dock.set_placer_file(placer_file)
+    assert real_main_window.placer_list_dock.list.count() == 0
+
+    placer_file.write_text(
+        "clone_placements:\n  - name: spoke_1\n    cell: ldo_adj\n    xy: [0, 0]\n",
+        encoding="utf-8")
+    real_main_window.placer_dock.saved.emit()
+
+    assert real_main_window.placer_list_dock.list.count() == 1
+    assert real_main_window.placer_list_dock.list.item(0).text() == "spoke_1"
+
+
 # ── 3.2: docks use the injected BoardConnection, not main_window.connection ──
 
 def test_extract_dock_uses_injected_connection_when_given(main_window):
