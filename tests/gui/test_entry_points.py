@@ -1,11 +1,14 @@
 # tests/gui/test_entry_points.py
 """
-Phase 5.3 — the GUI entry points (kicadstamp_gui.py / fieldstool_gui.py)
-must stay importable as plain modules after the sys.path cleanup: loading
-one defines a callable main() without spawning an event loop, and the
-`if __package__` guard (a bare module import has __package__ == "") still
-puts the project root on sys.path so the internal `gui`/`kicadstamp`
-imports resolve.
+Phase 5.3 — the GUI entry point (kicadstamp_gui.py) must stay importable as
+a plain module after the sys.path cleanup: loading it defines a callable
+main() without spawning an event loop, and the `if __package__` guard (a
+bare module import has __package__ == "") still puts the project root on
+sys.path so the internal `gui`/`kicadstamp` imports resolve.
+
+fieldstool_gui.py (the standalone fieldstool entry point) was retired
+2026-08-02 — fieldstool is now only ever embedded, see gui/docks/
+fieldstool_dock.py.
 """
 import importlib.util
 from pathlib import Path
@@ -24,7 +27,7 @@ def _load_entry_point(name: str):
     return module
 
 
-@pytest.mark.parametrize("name", ["kicadstamp_gui", "fieldstool_gui"])
+@pytest.mark.parametrize("name", ["kicadstamp_gui"])
 def test_gui_entry_point_imports_and_exposes_main(name):
     module = _load_entry_point(name)
     assert callable(module.main), f"{name}.main should be callable"

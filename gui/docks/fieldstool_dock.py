@@ -1,21 +1,21 @@
 # gui/docks/fieldstool_dock.py
 """
 FieldsToolDock — embeds fieldstool.gui.main_window.MainWindow (fieldstool's
-own standalone QMainWindow, with its own internal PendingChangesDock)
-whole, as-is, inside one QDockWidget via setWidget(). QDockWidget.setWidget()
-accepts any QWidget and QMainWindow is one, so fieldstool's own internal
-docking keeps working nested here exactly like it does standalone
-(fieldstool_gui.py) — no restructuring of fieldstool/gui/ needed, it stays
+own QMainWindow, with its own internal PendingChangesDock) whole, as-is,
+inside one QDockWidget via setWidget(). QDockWidget.setWidget() accepts any
+QWidget and QMainWindow is one, so fieldstool's own internal docking keeps
+working nested here — no restructuring of fieldstool/gui/ needed, it stays
 dependency-free of gui/.
 
-Phase 5.1 (gui-optimization roadmap): this dock embeds fieldstool's window
-with the main GUI's OWN BoardConnection, and the embedded window does NOT
-start its own two QTimers in that case — kipy's REQ socket allows exactly
-one request in flight, so two timers driving the same connection would
-interleave requests mid-flight. One connection, one polling loop: the main
+This dock embeds fieldstool's window with the main GUI's OWN BoardConnection
+(one kipy client, one REQ socket) — the embedded window never creates or
+polls a connection of its own (kipy's REQ socket allows exactly one request
+in flight, so a second independent timer on the same connection would
+interleave requests mid-flight). One connection, one polling loop: the main
 GUI's single 2s/400ms poll feeds the embedded window through
-push_live_selection()/set_connection_status(). Standalone
-(fieldstool_gui.py) passes no connection and keeps its own timers.
+push_live_selection()/set_connection_status(). A standalone entry point
+(fieldstool_gui.py, its own connection + timers) existed until 2026-08-02,
+retired as pure duplication of this tab.
 
 fieldstool's own Components tree (fieldstool/gui/tree.py) was retired
 2026-08-01 — the main GUI's own Components tree (gui/docks/
@@ -41,14 +41,12 @@ class FieldsToolDock(QDockWidget):
     # to refresh its "Not yet applied" view (see gui/main_window.py).
     components_changed = pyqtSignal()
 
-    def __init__(self, main_window, timeout_ms: int, connection=None):
+    def __init__(self, main_window, connection):
         super().__init__(_("fieldstool"), main_window)
-        # Phase 5.1 — embed with the main GUI's OWN BoardConnection (one
-        # kipy client, one REQ socket): one connection + one polling loop
-        # instead of two independent ones. The embedded window stops its own
-        # timers in that case (see fieldstool/gui/main_window.py); standalone
-        # fieldstool_gui.py keeps its own connection and timers.
-        self.window = FieldsToolMainWindow(timeout_ms=timeout_ms, connection=connection)
+        # The main GUI's OWN BoardConnection (one kipy client, one REQ
+        # socket): one connection + one polling loop instead of two
+        # independent ones (see module docstring).
+        self.window = FieldsToolMainWindow(connection=connection)
         self.window.on_components_changed = self.components_changed.emit
         self.setWidget(self.window)
 

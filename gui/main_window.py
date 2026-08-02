@@ -105,8 +105,7 @@ class MainWindow(QMainWindow):
         # All docks + their layout and inter-dock signal wiring live in
         # DockHub (Phase 3.3) — MainWindow keeps ownership of the window and
         # the BoardConnection, and drives its docks through this controller.
-        self._dock_hub = DockHub(self, connection=self.connection,
-                                 timeout_ms=timeout_ms, verbose=verbose)
+        self._dock_hub = DockHub(self, connection=self.connection, verbose=verbose)
         # Restoring "schematic mode" rebuilds the Components tree, and that
         # rebuild resolves main_window.fieldstool_dock through the tree
         # dock's lazy lookup — only possible now that _dock_hub is bound

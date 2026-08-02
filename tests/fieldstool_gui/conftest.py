@@ -33,8 +33,19 @@ def isolated_settings(tmp_path, monkeypatch):
 
 
 class _FakeConnection:
-    board = None
-    is_connected = False
+    """Mirrors the shape of gui/connection.py's BoardConnection (the only
+    connection MainWindow ever receives — always injected by the embedding
+    main GUI). is_connected is a property, not a static attribute, so tests
+    that set .board after construction see it flip automatically, matching
+    the real class."""
+
+    def __init__(self):
+        self.board = None
+        self.long_op_active = False
+
+    @property
+    def is_connected(self) -> bool:
+        return self.board is not None
 
 
 @pytest.fixture
@@ -42,10 +53,9 @@ def main_window(qapp):
     """A real MainWindow, constructed for real (not a QMainWindow stub —
     unlike tests/gui/conftest.py's main_window fixture, fieldstool's docks
     are simple enough to build the whole window rather than faking a
-    parent), with timeout_ms kept tiny since nothing here ever actually
-    connects."""
+    parent), with a fake connection since MainWindow never creates its own
+    (always injected by the embedding main GUI, see
+    fieldstool/gui/main_window.py)."""
     from fieldstool.gui.main_window import MainWindow
-    window = MainWindow(timeout_ms=50)
+    window = MainWindow(connection=_FakeConnection())
     yield window
-    window._timer.stop()
-    window._selection_timer.stop()

@@ -87,17 +87,15 @@ def real_main_window(qapp):
     tray/closeEvent/single-instance/fieldstool-dock-embedding logic, all of
     which live on the real class. A tiny timeout_ms keeps construction fast
     (no live KiCad here — Board.connect() fails quickly and _poll() just
-    records "not connected"). Stops all four QTimers on teardown (this
-    window's own two, plus the two the embedded fieldstool MainWindow
-    starts in its own __init__) so a torn-down window doesn't keep polling
-    (and writing MockLogRecords /touching connections) in the background
-    across the rest of the test session."""
+    records "not connected"). Stops this window's own two QTimers on
+    teardown so a torn-down window doesn't keep polling (and writing
+    MockLogRecords/touching connections) in the background across the rest
+    of the test session — the embedded fieldstool MainWindow has none of
+    its own to stop, it's driven entirely through this window's poll."""
     window = MainWindow(timeout_ms=10, verbose=False)
     yield window
     window._timer.stop()
     window._selection_timer.stop()
-    window.fieldstool_dock.window._timer.stop()
-    window.fieldstool_dock.window._selection_timer.stop()
     # Phase 4.3 — the embedded LogDock attaches its handler to the ROOT
     # logger; detach it so a session with several windows doesn't accumulate
     # handlers that keep every torn-down dock alive / keep logging forever.

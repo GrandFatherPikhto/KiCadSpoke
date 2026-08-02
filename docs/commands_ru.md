@@ -443,9 +443,10 @@ python tools/generate_config.py
 запущенном KiCad (файл может быть открыт в Eeschema).
 
 Библиотека — `fieldstool/` (отдельный, независимый от `kicadstamp/` пакет — см.
-`fieldstool/__init__.py`). Есть и GUI (`python fieldstool_gui.py`) — дерево Role/Cluster по схеме,
-отложенная (staged) простановка/переименование, пока KiCad открыт, и явный Apply, когда KiCad
-закрыт (см. `techdocs/handoff/handoff_2026_08_01_fieldstool.md`, внутренний, не в git).
+`fieldstool/__init__.py`). Есть и GUI — первый правый таб `kicadstamp_gui.py` (см.
+`docs/gui_ru.md#таб-fieldstool`) — дерево Role/Cluster по схеме, отложенная (staged)
+простановка/переименование, пока KiCad открыт, и явный Apply, когда KiCad закрыт (см.
+`techdocs/handoff/handoff_2026_08_01_fieldstool.md`, внутренний, не в git).
 
 #### Синтаксис
 

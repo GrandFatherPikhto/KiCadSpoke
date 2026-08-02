@@ -108,8 +108,6 @@ def test_restore_roles_reaches_all_listeners_after_restart(qapp, tmp_path):
     finally:
         window._timer.stop()
         window._selection_timer.stop()
-        window.fieldstool_dock.window._timer.stop()
-        window.fieldstool_dock.window._selection_timer.stop()
 
 
 def test_tree_cluster_picked_fills_placer_cluster_field(real_main_window):
@@ -247,10 +245,8 @@ def test_fieldstool_pick_delegates_reach_the_window(real_main_window):
 
 def _teardown_hub(hub):
     """A DockHub constructed on the bare `main_window` fixture embeds a real
-    fieldstool MainWindow (two QTimers) and a LogDock (root-logger handler)
-    that would otherwise leak across tests."""
-    hub.fieldstool_dock.window._timer.stop()
-    hub.fieldstool_dock.window._selection_timer.stop()
+    fieldstool MainWindow and a LogDock (root-logger handler) that would
+    otherwise leak across tests."""
     hub.log_dock.remove_handler()
 
 
@@ -278,8 +274,7 @@ def test_dock_hub_constructs_all_docks_and_wires_roles(main_window, tmp_path):
     cells_file = tmp_path / "cells.yaml"
     _write(cells_file)
 
-    hub = DockHub(main_window, connection=main_window.connection,
-                  timeout_ms=10, verbose=False)
+    hub = DockHub(main_window, connection=main_window.connection, verbose=False)
     try:
         assert hub.tree_dock is not None
         assert hub.cell_list_dock is not None
@@ -303,13 +298,11 @@ def test_dock_hub_injects_connection_into_connection_docks(main_window):
     """The connection passed to DockHub reaches the three docks that consume
     it (RoleClusterTreeDock, ExtractDock, and — Phase 5.1 — the embedded
     fieldstool window) — never main_window.connection."""
-    hub = DockHub(main_window, connection=main_window.connection,
-                  timeout_ms=10, verbose=False)
+    hub = DockHub(main_window, connection=main_window.connection, verbose=False)
     try:
         assert hub.tree_dock._connection is main_window.connection
         assert hub.extract_dock._connection is main_window.connection
         assert hub.fieldstool_dock.window.connection is main_window.connection
-        assert hub.fieldstool_dock.window._owns_connection is False
     finally:
         _teardown_hub(hub)
 

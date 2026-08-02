@@ -27,15 +27,12 @@ def test_open_fieldstool_shows_and_raises_the_dock(real_main_window):
 
 # ── Phase 5.1: one connection, one polling loop ─────────────────────────────
 
-def test_embedded_window_shares_main_connection_and_stops_own_polling(real_main_window):
-    """Phase 5.1 — the embedded fieldstool reuses the main GUI's
-    BoardConnection (one kipy client, one REQ socket) and must NOT run its
-    own connect/refresh/selection timers against it (REQ single-in-flight)."""
+def test_embedded_window_shares_main_connection(real_main_window):
+    """The embedded fieldstool window always receives the main GUI's own
+    BoardConnection (one kipy client, one REQ socket) — it never creates or
+    polls a connection of its own (REQ single-in-flight)."""
     window = real_main_window.fieldstool_dock.window
     assert window.connection is real_main_window.connection
-    assert window._owns_connection is False
-    assert not window._timer.isActive()
-    assert not window._selection_timer.isActive()
 
 
 def test_embedded_window_live_selection_push_sets_targets(real_main_window):

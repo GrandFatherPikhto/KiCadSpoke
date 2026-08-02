@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import fieldstool.gui.main_window as main_window_mod
 from tests.fieldstool_fixtures import sch_file, symbol_block
+from tests.fieldstool_gui.conftest import _FakeConnection
 
 
 def _write_root(tmp_path, *blocks):
@@ -205,21 +206,14 @@ def test_set_connection_status_updates_label(main_window):
     assert "boom" in main_window.status_label.text()
 
 
-def test_injected_connection_disables_own_polling(qapp):
-    """Phase 5.1 — when the embedding GUI injects its connection, this window
-    must NOT start its own connect/refresh/selection timers against it (one
-    REQ socket, one request in flight)."""
-    from fieldstool.gui.connection import BoardConnection
-    shared = BoardConnection(timeout_ms=50)
-    window = main_window_mod.MainWindow(timeout_ms=50, connection=shared)
-    try:
-        assert window.connection is shared
-        assert window._owns_connection is False
-        assert not window._timer.isActive()
-        assert not window._selection_timer.isActive()
-    finally:
-        window._timer.stop()
-        window._selection_timer.stop()
+def test_connection_is_the_injected_one(qapp):
+    """MainWindow never creates its own BoardConnection — the embedding main
+    GUI always injects its own (one kipy client, one REQ socket, one polling
+    loop feeding this window through set_connection_status()/
+    set_live_selection())."""
+    shared = _FakeConnection()
+    window = main_window_mod.MainWindow(connection=shared)
+    assert window.connection is shared
 
 
 def test_push_selection_to_board_gated_during_long_op(main_window):
@@ -227,9 +221,6 @@ def test_push_selection_to_board_gated_during_long_op(main_window):
     shared socket, a tree-pick must not fire select_items() into it (that
     would interleave a second request into the op's in-flight REQ)."""
     from types import SimpleNamespace
-    main_window._timer.stop()  # deterministic: no auto-tick can fire mid-test
-    main_window._selection_timer.stop()
-
     select_calls = []
 
     class _Adapter:

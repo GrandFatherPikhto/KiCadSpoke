@@ -29,7 +29,7 @@ class DockHub:
     window. MainWindow creates one DockHub with its BoardConnection and then
     drives the docks through this controller's delegates."""
 
-    def __init__(self, main_window, connection, timeout_ms: int, verbose: bool = False):
+    def __init__(self, main_window, connection, verbose: bool = False):
         self.main_window = main_window
 
         # ── left group: Components tree, Cells tab, Placements tab ────────
@@ -45,8 +45,7 @@ class DockHub:
         main_window.tabifyDockWidget(self.cell_list_dock, self.placer_list_dock)
 
         # ── right group: fieldstool, Files, Extract-to-file, Placer ───────
-        self.fieldstool_dock = FieldsToolDock(main_window, timeout_ms=timeout_ms,
-                                              connection=connection)
+        self.fieldstool_dock = FieldsToolDock(main_window, connection=connection)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fieldstool_dock)
 
         self.file_picker_dock = FilePickerDock(main_window)

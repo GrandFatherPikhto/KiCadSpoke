@@ -4,35 +4,29 @@ MainWindow — root-sheet picker, an edit panel, PendingChangesDock, and
 Apply. Two phases with different KiCad requirements (see
 fieldstool/__init__.py):
 
-1. Staging (KiCad open): a live, read-only BoardConnection (this
-   module's own fieldstool/gui/connection.py, NOT kicadstamp/gui's —
-   separate process when run standalone) watches the PCB selection on a
-   fast QTimer, same pattern as kicadstamp/gui/main_window.py's
-   SELECTION_POLL — because PCB/schematic selection cross-probe in KiCad,
-   a selection made in Eeschema shows up here too. That live selection is
-   the only way to pick a target when this window runs standalone
-   (fieldstool_gui.py). When embedded in the main GUI (gui/docks/
-   fieldstool_dock.py), the main GUI's own Components tree (gui/docks/
-   role_cluster_tree.py) can ALSO pick a target without a live selection
-   at all — its "Not yet applied" mode reads this window's own parsed
-   schematic components (self._components, refreshed via _rescan()) and
-   calls _on_tree_leaf_picked()/_on_group_picked() below directly. This
-   window used to have its own internal tree for that (ComponentTreeDock,
+1. Staging (KiCad open): always embedded as a dock inside the main GUI
+   (gui/docks/fieldstool_dock.py), which injects its OWN BoardConnection
+   (one kipy client, one REQ socket) here — this window never creates or
+   polls a connection of its own. The main GUI's single 2s/400ms poll
+   drives this window through the public set_connection_status()/
+   set_live_selection() hooks below (Phase 5.1 — a second, independent
+   timer on the same connection would interleave requests mid-flight on
+   kipy's REQ socket). Because PCB/schematic selection cross-probe in
+   KiCad, a selection made in Eeschema reaches set_live_selection() too.
+
+   The main GUI's own Components tree (gui/docks/role_cluster_tree.py) can
+   ALSO pick a target without any live selection at all — its "Not yet
+   applied" mode reads this window's own parsed schematic components
+   (self._components, refreshed via _rescan()) and calls
+   _on_tree_leaf_picked()/_on_group_picked() below directly. This window
+   used to have its own internal tree for that (ComponentTreeDock,
    fieldstool/gui/tree.py) — retired 2026-08-01 in favor of the merged
-   tree, everywhere, including standalone (no tree there anymore at all,
-   only live-selection cross-probe).
+   tree. A standalone entry point (fieldstool_gui.py, with its own
+   BoardConnection and polling timers) existed until 2026-08-02, when it
+   was retired as pure duplication of the embedded tab.
 
-   Phase 5.1 (gui-optimization roadmap): when embedded in the main GUI, the
-   main window injects ITS OWN BoardConnection here (connection=...) and this
-   window's two QTimers are NOT started — kipy's REQ socket only allows one
-   request in flight, so two timers driving the same connection would
-   interleave requests mid-flight. The embedding main window's single
-   2s/400ms poll drives this window through the public
-   set_connection_status()/set_live_selection() instead. Standalone
-   (fieldstool_gui.py) passes no connection and keeps its own timers.
-
-   Either way, staging only ever writes to PendingRegistry (JSON) —
-   nothing touches .kicad_sch yet.
+   Staging only ever writes to PendingRegistry (JSON) — nothing touches
+   .kicad_sch yet.
 2. Apply (KiCad must be closed): converts the whole pending queue into
    real edits via fieldstool.set_fields.plan_set_edits_for_root() +
    fieldstool.editing.write_files() — the same offline pipeline the CLI's
@@ -41,12 +35,10 @@ fieldstool/__init__.py):
    2026-08-01: kipy has no app-level quit/save-all call to automate this
    safely, see handoff_2026_08_01_fieldstool.md).
 """
-import logging
 from pathlib import Path
 from typing import Callable, List, Optional
 
-from kipy.board_types import FootprintInstance
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout,
                               QHBoxLayout, QLabel, QMainWindow, QMessageBox,
                               QPushButton, QVBoxLayout, QWidget)
@@ -57,28 +49,19 @@ from .. import editing, set_fields
 from ..exceptions import FieldsToolError
 from ..schema_model import SchematicComponent, load_schematic_components
 from . import settings
-from .connection import BoardConnection
 from .pending import PendingChangesDock, PendingRegistry
-
-logger = logging.getLogger(__name__)
-
-POLL_INTERVAL_MS = 2000
-SELECTION_POLL_INTERVAL_MS = 400
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, timeout_ms: int, connection: Optional[BoardConnection] = None):
+    def __init__(self, connection):
         super().__init__()
         self.setWindowTitle(_("fieldstool"))
         self.resize(420, 700)
 
-        # Phase 5.1 — when embedded, the main GUI injects its own
-        # BoardConnection (one kipy client, one REQ socket) and this window
-        # must not start its own polling timers against it (see module
-        # docstring). Standalone (fieldstool_gui.py) passes no connection
-        # and keeps them.
-        self.connection = connection or BoardConnection(timeout_ms=timeout_ms)
-        self._owns_connection = connection is None
+        # Always injected by the embedding main GUI (gui/docks/
+        # fieldstool_dock.py) — the shared BoardConnection this window is
+        # driven through (see module docstring). Never created here.
+        self.connection = connection
         self._root_sheet: Optional[Path] = None
         self._current_targets: List[str] = []
         self._components: List[SchematicComponent] = []
@@ -138,17 +121,6 @@ class MainWindow(QMainWindow):
         self.pending_dock.on_apply_clicked = self._on_apply
 
         self.setCentralWidget(central)
-
-        # The two QTimer objects are always created (teardown paths call
-        # stop() unconditionally) but only STARTED when this window owns its
-        # connection — embedded, the main GUI's single poll drives it.
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._poll)
-        self._selection_timer = QTimer(self)
-        self._selection_timer.timeout.connect(self._poll_selection)
-        if self._owns_connection:
-            self._timer.start(POLL_INTERVAL_MS)
-            self._selection_timer.start(SELECTION_POLL_INTERVAL_MS)
 
         self._restore_last_root_sheet()
         if settings.load().get("always_on_top"):
@@ -292,8 +264,8 @@ class MainWindow(QMainWindow):
         component(s) are visibly highlighted on the real board too, not
         just in this window's target label. adapter.select_items() only
         sets GUI selection state, not board data (see its docstring in
-        kicadstamp/kicad/adapter.py) — doesn't conflict with this
-        connection being otherwise read-only (fieldstool/gui/connection.py)."""
+        kicadstamp/kicad/adapter.py) — doesn't conflict with the shared
+        connection otherwise only ever being read from here."""
         if not self.connection.is_connected or not refs:
             return
         # Phase 5.2 — a background long op (Extract/Redraw) holds the shared
@@ -328,47 +300,25 @@ class MainWindow(QMainWindow):
     # ── Live connection (staging only — never writes) ──────────────────────
 
     def set_connection_status(self, error: Optional[str]) -> None:
-        """Public — Phase 5.1: the single point that reflects the
-        connection's state in this window's status label. Standalone, _poll()
-        computes `error` and calls this; embedded, the main GUI's single 2s
-        poll calls it through the dock so the label stays honest without this
-        window running its own connect()/refresh() against the shared
-        connection."""
+        """Public — the single point that reflects the shared connection's
+        state in this window's status label. Called from the main GUI's
+        single 2s poll (through gui/docks/fieldstool_dock.py) so the label
+        stays honest without this window running any connect()/refresh() of
+        its own."""
         self.status_label.setText(
             _("Not connected: {error}").format(error=error) if error
             else _("Connected (staging only — this tool never writes over IPC)"))
 
-    def _poll(self) -> None:
-        if self.connection.is_connected:
-            error = self.connection.refresh()
-        else:
-            error = self.connection.connect()
-        self.set_connection_status(error)
-
     def set_live_selection(self, refs: List[str]) -> None:
-        """Public — Phase 5.1: the single point that turns a live PCB
-        selection into this window's target label/combos. Standalone,
-        _poll_selection() computes the footprint refs and calls this;
-        embedded, the main GUI's single 400ms selection tick calls it through
-        the dock. An empty selection is a no-op (keeps the last picked
-        targets — the existing cross-probe behavior)."""
+        """Public — the single point that turns a live PCB selection into
+        this window's target label/combos. Called from the main GUI's single
+        400ms selection tick (through the dock). An empty selection is a
+        no-op (keeps the last picked targets — the existing cross-probe
+        behavior)."""
         if not refs:
             return
         self._set_targets(sorted(refs))
         self._prefill_combos_for_refs(sorted(refs))
-
-    def _poll_selection(self) -> None:
-        if not self.connection.is_connected:
-            return
-        try:
-            items = self.connection.board.adapter.get_selected_items()
-        except Exception as e:
-            logger.warning("Lost connection while polling selection: %s", e)
-            self.connection.board = None
-            return
-        refs = {item.reference_field.text.value for item in items
-                if isinstance(item, FootprintInstance)}
-        self.set_live_selection(refs)
 
     # ── Apply (KiCad must be closed — instruction, not automation) ─────────
 

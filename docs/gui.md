@@ -61,21 +61,21 @@ below). Click one to feed the **Placer** dock's Cell field.
 
 ## fieldstool tab
 
-The first right-hand tab embeds [fieldstool](fieldstool.md)'s own GUI whole — the same window
-`fieldstool_gui.py` runs standalone, wrapped in one dock (`gui/docks/fieldstool_dock.py`) so
-there's no second process/window to keep track of. It has its own internal Pending changes queue at
-its bottom, and its own live, read-only connection to KiCad — independent of this GUI's own
-connection, polling on its own timers. Unlike standalone `fieldstool_gui.py`, it doesn't need its
-own Components tree — the main [Components tree](#components-tree)'s "Not yet applied" mode covers
-that job when embedded here (retired 2026-08-01, along with fieldstool's own tree entirely — the
-standalone entry point now relies solely on live board-selection cross-probe to pick a target).
+The first right-hand tab embeds [fieldstool](fieldstool.md)'s own GUI whole, wrapped in one dock
+(`gui/docks/fieldstool_dock.py`) — there is no second process/window, this is now the only way
+fieldstool runs (a standalone `fieldstool_gui.py` entry point existed until 2026-08-02, retired as
+pure duplication of this tab). It has its own internal Pending changes queue at its bottom, and
+shares this GUI's own `BoardConnection` and single 2s/400ms poll (one kipy client, one REQ socket —
+a second independent timer on the same connection would interleave requests mid-flight). It has no
+Components tree of its own — the main [Components tree](#components-tree)'s "Not yet applied" mode
+covers that job when embedded here (fieldstool's own tree, `fieldstool/gui/tree.py`, was retired
+2026-08-01).
 
 This replaced **Bulk edit** (also retired 2026-08-01), which used to set Role/Cluster directly over
 live PCB IPC from this tab's slot — that write was PCB-only and got silently reverted by KiCad's
 own "Update PCB from Schematic", since `Role`/`Cluster` actually originate in the schematic symbol.
 fieldstool edits `.kicad_sch` directly instead, which survives that resync — see
-[fieldstool.md](fieldstool.md) for the full design and why it needs KiCad closed to Apply
-(regardless of being embedded here or run standalone).
+[fieldstool.md](fieldstool.md) for the full design and why it needs KiCad closed to Apply.
 
 ## Files
 
@@ -199,8 +199,7 @@ Plain JSON in `gui/gui_state.json` (gitignored, human-readable, deliberately not
 `QSettings`/`saveGeometry()` blob): window position/size, Always on top, Tray icon, Components tree
 grouping and its live/"Not yet applied" toggle, the Files dock's root directory and last click, and
 all three file-role assignments (Cells/Extractor/Placer). fieldstool's own tab keeps its own
-separate state file (`fieldstool/gui/fieldstool_gui_state.json`), shared with the standalone
-`fieldstool_gui.py`.
+separate state file (`fieldstool/gui/fieldstool_gui_state.json`).
 
 ## Tests
 
