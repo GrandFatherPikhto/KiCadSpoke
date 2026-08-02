@@ -1,4 +1,4 @@
-# KiCadStamp v1.4.0
+# KiCadStamp v1.6.1
 
 **KiCadStamp** is a command‑line **PCB cloning and layout automation** tool for **KiCad 10**, designed as an advanced script‑based alternative to the traditional **KiCad Replicate Layout** plugin. It enables automated **block replication**, component placement, and routing of complex multi‑channel designs using **templates**, **roles**, and the IPC API.
 

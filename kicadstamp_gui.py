@@ -34,6 +34,7 @@ if hasattr(sys.stderr, "reconfigure"):
 
 from PyQt6.QtWidgets import QApplication
 
+from kicadstamp import __version__
 from kicadstamp.constants import DEFAULT_TIMEOUT_MS
 from kicadstamp.i18n import _
 from kicadstamp.logging_setup import setup_logging
@@ -46,6 +47,8 @@ _SINGLE_INSTANCE_NAME = "kicadstamp-gui-singleton"
 
 def main():
     parser = argparse.ArgumentParser(description=_("KiCadStamp GUI"))
+    parser.add_argument("--version", "-V", action="version",
+                        version=f"kicadstamp-gui {__version__}")
     parser.add_argument("--timeout-ms", type=int, default=DEFAULT_TIMEOUT_MS,
                         help=_("IPC timeout in ms"))
     parser.add_argument("--verbose", action="store_true", help=_("Verbose output"))
