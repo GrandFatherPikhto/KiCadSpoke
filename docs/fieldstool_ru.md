@@ -28,8 +28,10 @@
   `kicadstamp/` и так держит модули этого уровня плоско): `schematic_blocks.py` (побайтовый поиск
   диапазонов в тексте `.kicad_sch`), `schematic_discovery.py` (`walk_schematic_hierarchy()`),
   `schematic_safety.py` (проверка не-ASCII, `list_kicad_pids()`), `schematic_editing.py`
-  (`apply_edits()`, пайплайн записи `.bak`/самопроверка), `schematic_set_fields.py`/
-  `schematic_rename_fields.py` (логика планирования `set`/`rename`). `FieldsToolError` переехал
+  (`apply_edits()`, пайплайн записи `.bak`/самопроверка), `schematic_config.py` (общий
+  `load_fields_config()` — формат YAML-конфига, который читают и `set`, и `rename`),
+  `schematic_set_fields.py`/`schematic_rename_fields.py` (логика планирования `set`/`rename`).
+  `FieldsToolError` переехал
   прямо в `kicadstamp/exceptions.py` (обычный подкласс `Exception`, НЕ подкласс `PlacerError` —
   другой домен риска, перехват одного не должен случайно проглатывать другое). **`fieldstool_cli.py`
   использует это напрямую** и остаётся отдельным CLI/интерфейсом от `kicadstamp_cli.py` — разные

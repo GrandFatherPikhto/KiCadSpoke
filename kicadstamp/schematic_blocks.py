@@ -118,6 +118,15 @@ def escape_sexp_string(value: str) -> str:
     return value.replace('\\', '\\\\').replace('"', '\\"')
 
 
+def unescape_sexp_string(value: str) -> str:
+    """Inverse of escape_sexp_string(): first collapses an escaped quote
+    (backslash + double-quote) back to a plain double-quote, then collapses
+    an escaped backslash (backslash + backslash) back to one backslash.
+    Read a (property ...) value out of .kicad_sch text with this before
+    comparing it to a raw config value."""
+    return value.replace('\\"', '"').replace('\\\\', '\\')
+
+
 PROPERTY_BLOCK_TEMPLATE = (
     '{prefix}(property "{field}" "{value}"\r\n'
     '{prefix}\t(at {x} {y} 0)\r\n'

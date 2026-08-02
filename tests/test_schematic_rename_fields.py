@@ -107,3 +107,34 @@ def test_plan_rename_empty_renames_is_fatal(tmp_path):
     config = _write_config(tmp_path, "root.kicad_sch", {})
     with pytest.raises(FieldsToolError, match="renames"):
         plan_rename_edits(config)
+
+
+def test_plan_rename_matches_value_with_escaped_quote(tmp_path):
+    """A .kicad_sch stores a value containing a quote as an escaped
+    backslash-quote; the config key is the UNESCAPED value, so the value
+    read back must be unescaped before comparing (regression test for the
+    unescape_sexp_string() step in matching)."""
+    block = (
+        '(symbol\n'
+        '    (lib_id "Device:R")\n'
+        '    (at 1 2 0)\n'
+        '    (property "Reference" "R1" (at 0 0 0) (effects (font (size 1 1))))\n'
+        '    (property "Role" "A\\"B" (at 0 0 0) (effects (font (size 1 1))))\n'
+        '    (instances\n'
+        '        (project "x" (path "/" (reference "R1") (unit 1)))\n'
+        '    )\n'
+        ')'
+    )
+    root = tmp_path / "root.kicad_sch"
+    root.write_text(block, encoding="utf-8")
+    config = _write_config(tmp_path, "root.kicad_sch", {"Role": {'A"B': "NEW"}})
+
+    edits_by_file, file_texts, report, unmatched = plan_rename_edits(config)
+
+    assert len(report) == 1
+    assert report[0].old_value == 'A"B'
+    assert report[0].new_value == "NEW"
+    assert unmatched == []
+    all_edits = [e for edits in edits_by_file.values() for e in edits]
+    assert len(all_edits) == 1
+    assert all_edits[0][2] == "NEW"

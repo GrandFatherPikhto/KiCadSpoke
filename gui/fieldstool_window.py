@@ -91,12 +91,15 @@ class MainWindow(QMainWindow):
         self._root_sheet: Optional[Path] = None
         self._current_targets: List[str] = []
         self._components: List[SchematicComponent] = []
-        # Set by gui/docks/fieldstool_dock.py when embedded (never set when
-        # run standalone). Must default to None and _rescan() must guard on
-        # it (not assume it's already wired) — _restore_last_root_sheet()
-        # below can synchronously trigger the FIRST _rescan() during this
-        # very __init__, before FieldsToolDock has had a chance to assign
-        # the real callback.
+        # Set by gui/docks/fieldstool_dock.py when the window is embedded
+        # as the fieldstool tab (the only way it runs in production — the
+        # standalone fieldstool_gui.py entry point was retired 2026-08-02;
+        # see the module docstring). Tests construct MainWindow directly
+        # and never assign this, so it must default to None and _rescan()
+        # must guard on it (not assume it's already wired) —
+        # _restore_last_root_sheet() below can synchronously trigger the
+        # FIRST _rescan() during this very __init__, before FieldsToolDock
+        # has had a chance to assign the real callback.
         self.on_components_changed: Optional[Callable[[], None]] = None
 
         central = QWidget()

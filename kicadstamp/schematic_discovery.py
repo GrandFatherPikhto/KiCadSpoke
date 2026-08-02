@@ -25,15 +25,16 @@ root's directory or the current working directory.
 import re
 from pathlib import Path
 
-from .schematic_blocks import find_balanced_span
+from .schematic_blocks import (SymbolBlock, find_balanced_span, iter_symbol_blocks,
+                               unescape_sexp_string)
 
 _SHEETFILE_RE = re.compile(r'\(property "Sheetfile" "((?:[^"\\]|\\.)*)"')
 
 
 def _sheet_files_in(text: str) -> list[str]:
-    """Sheetfile values (still escaped, see schematic_blocks.
-    escape_sexp_string's inverse) referenced by every (sheet ...) block in
-    one file's text, in file order."""
+    """Sheetfile values (still escaped — see schematic_blocks.
+    unescape_sexp_string) referenced by every (sheet ...) block in one
+    file's text, in file order."""
     files = []
     for m in re.finditer(r'\(sheet\r?\n', text):
         start = m.start()
@@ -41,7 +42,7 @@ def _sheet_files_in(text: str) -> list[str]:
         span_text = text[start:end]
         sf = _SHEETFILE_RE.search(span_text)
         if sf:
-            files.append(sf.group(1).replace('\\"', '"').replace('\\\\', '\\'))
+            files.append(unescape_sexp_string(sf.group(1)))
     return files
 
 
@@ -67,3 +68,20 @@ def walk_schematic_hierarchy(root_sheet_path: str) -> list[str]:
 
     visit(root)
     return order
+
+
+def load_schematic_tree(root_sheet_path: str) -> tuple[list[str], dict[str, str], list[SymbolBlock]]:
+    """The walk + read + parse-into-blocks step three callers share
+    (schematic_set_fields, schematic_rename_fields, gui/schema_model):
+    returns (files, file_texts, all_blocks) — files in discovery order, one
+    .kicad_sch text per file, and every placed (symbol ...) block (with the
+    file path being the same object used as the file_texts key, so callers
+    can index file_texts[block.file])."""
+    files = walk_schematic_hierarchy(root_sheet_path)
+    file_texts: dict[str, str] = {}
+    all_blocks: list[SymbolBlock] = []
+    for f in files:
+        with open(f, encoding='utf-8', newline='') as fh:
+            file_texts[f] = fh.read()
+        all_blocks.extend(iter_symbol_blocks(f, file_texts[f]))
+    return files, file_texts, all_blocks

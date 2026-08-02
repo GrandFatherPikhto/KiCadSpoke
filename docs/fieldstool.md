@@ -28,8 +28,10 @@ was no real independence left to preserve):
   project keeps `kicadstamp/` itself flat for modules at this scope): `schematic_blocks.py` (byte-
   offset span-finding in `.kicad_sch` text), `schematic_discovery.py`
   (`walk_schematic_hierarchy()`), `schematic_safety.py` (non-ASCII check, `list_kicad_pids()`),
-  `schematic_editing.py` (`apply_edits()`, the `.bak`/self-verify write pipeline), `schematic_
-  set_fields.py`/`schematic_rename_fields.py` (the `set`/`rename` planning logic).
+  `schematic_editing.py` (`apply_edits()`, the `.bak`/self-verify write pipeline),
+  `schematic_config.py` (shared `load_fields_config()` — the YAML config shape both
+  `set` and `rename` read), `schematic_set_fields.py`/`schematic_rename_fields.py` (the
+  `set`/`rename` planning logic).
   `FieldsToolError` joined `kicadstamp/exceptions.py` directly (a plain `Exception` subclass, NOT a
   `PlacerError` subclass — a different risk domain, catching one must never accidentally swallow
   the other). **`fieldstool_cli.py` uses these directly** and stays its own separate CLI/interface

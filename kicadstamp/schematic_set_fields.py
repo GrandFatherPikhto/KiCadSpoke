@@ -22,36 +22,16 @@ iter_symbol_blocks/schematic_blocks.py):
 import difflib
 from pathlib import Path
 
-import yaml
-
 from .exceptions import FieldsToolError
 from .schematic_blocks import (PROPERTY_BLOCK_TEMPLATE, SymbolBlock, escape_sexp_string,
-                               find_insertion_point, find_property_value_span, find_symbol_at,
-                               iter_symbol_blocks)
-from .schematic_discovery import walk_schematic_hierarchy
+                               find_insertion_point, find_property_value_span, find_symbol_at)
+from .schematic_config import load_fields_config
+from .schematic_discovery import load_schematic_tree
 from .schematic_editing import Edit, EditReport
 
 
 def load_set_config(path: Path) -> tuple[str, dict[str, dict[str, str]]]:
-    with open(path, encoding='utf-8') as f:
-        data = yaml.safe_load(f) or {}
-    root_sheet = data.get('root_sheet')
-    if not root_sheet:
-        raise FieldsToolError("config has no root_sheet")
-    fields = data.get('fields') or {}
-    if not fields:
-        raise FieldsToolError("config's fields: is empty (or missing)")
-    return root_sheet, fields
-
-
-def _parse_all_blocks(files: list[str]) -> tuple[dict[str, str], list[SymbolBlock]]:
-    file_texts: dict[str, str] = {}
-    all_blocks: list[SymbolBlock] = []
-    for f in files:
-        with open(f, encoding='utf-8', newline='') as fh:
-            file_texts[f] = fh.read()
-        all_blocks.extend(iter_symbol_blocks(f, file_texts[f]))
-    return file_texts, all_blocks
+    return load_fields_config(path, "fields")
 
 
 def plan_set_edits(
@@ -79,8 +59,7 @@ def plan_set_edits_for_root(
     problem listed at once (unknown refdes, multi-instance conflicts) —
     nothing is planned if anything is wrong, same "stop before touching
     anything" discipline the rest of this project uses."""
-    files = walk_schematic_hierarchy(root_sheet_path)
-    file_texts, all_blocks = _parse_all_blocks(files)
+    files, file_texts, all_blocks = load_schematic_tree(root_sheet_path)
 
     ref_to_blocks: dict[str, list[SymbolBlock]] = {}
     for b in all_blocks:

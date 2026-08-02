@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from kicadstamp.schematic_blocks import (escape_sexp_string, find_balanced_span,
                                          find_insertion_point, find_property_value_span,
-                                         find_symbol_at, iter_symbol_blocks)
+                                         find_symbol_at, iter_symbol_blocks, unescape_sexp_string)
 from tests.fieldstool_fixtures import sch_file, symbol_block
 
 
@@ -79,3 +79,14 @@ def test_find_insertion_point_before_pin():
 
 def test_escape_sexp_string_roundtrip_chars():
     assert escape_sexp_string('a"b\\c') == 'a\\"b\\\\c'
+
+
+def test_unescape_sexp_string_is_inverse_of_escape():
+    # escape_sexp_string('a"b\\c') == 'a\\"b\\\\c' — unescape must undo
+    # quote-escape first (\\" -> "), then backslash-escape (\\\\ -> \).
+    assert unescape_sexp_string('a\\"b\\\\c') == 'a"b\\c'
+
+
+def test_unescape_sexp_string_roundtrip():
+    for raw in ['plain', 'with "quote"', 'with \\backslash\\', 'both \\" \\\\', 'unicode é']:
+        assert unescape_sexp_string(escape_sexp_string(raw)) == raw

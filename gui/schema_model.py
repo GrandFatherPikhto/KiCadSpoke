@@ -14,11 +14,10 @@ into "one row per ref" since that's the unit a human picks components by,
 even though the underlying edit is block-level.
 """
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, List, Optional
 
-from kicadstamp.schematic_blocks import find_property_value_span, iter_symbol_blocks
-from kicadstamp.schematic_discovery import walk_schematic_hierarchy
+from kicadstamp.schematic_blocks import find_property_value_span
+from kicadstamp.schematic_discovery import load_schematic_tree
 
 
 @dataclass
@@ -34,21 +33,19 @@ class SchematicComponent:
 
 
 def load_schematic_components(root_sheet: str) -> List[SchematicComponent]:
-    files = walk_schematic_hierarchy(root_sheet)
+    _files, file_texts, all_blocks = load_schematic_tree(root_sheet)
     # ref -> list of (role, cluster, file, block_start), one entry per block containing it
     by_ref: Dict[str, list] = {}
-    for f in files:
-        text = Path(f).read_text(encoding="utf-8")
-        for block in iter_symbol_blocks(f, text):
-            if not block.refs:
-                continue
-            span_text = text[block.start:block.end]
-            role_span = find_property_value_span(span_text, "Role")
-            cluster_span = find_property_value_span(span_text, "Cluster")
-            role = span_text[role_span[0]:role_span[1]] if role_span else None
-            cluster = span_text[cluster_span[0]:cluster_span[1]] if cluster_span else None
-            for ref in block.refs:
-                by_ref.setdefault(ref, []).append((role, cluster, f, block.start))
+    for block in all_blocks:
+        if not block.refs:
+            continue
+        span_text = file_texts[block.file][block.start:block.end]
+        role_span = find_property_value_span(span_text, "Role")
+        cluster_span = find_property_value_span(span_text, "Cluster")
+        role = span_text[role_span[0]:role_span[1]] if role_span else None
+        cluster = span_text[cluster_span[0]:cluster_span[1]] if cluster_span else None
+        for ref in block.refs:
+            by_ref.setdefault(ref, []).append((role, cluster, block.file, block.start))
 
     components = []
     for ref, entries in by_ref.items():
