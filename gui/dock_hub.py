@@ -14,13 +14,12 @@ lazy fieldstool lookup and the test suite).
 """
 from PyQt6.QtCore import Qt
 
-from .docks.cell_list import CellListDock
+from .docks.config_tree import ConfigTreeDock
 from .docks.extract import ExtractDock
 from .docks.fieldstool_dock import FieldsToolDock
 from .docks.file_picker import FilePickerDock
 from .docks.log_panel import LogDock
 from .docks.placer import PlacerDock
-from .docks.placer_list import PlacerListDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
 
 
@@ -32,17 +31,13 @@ class DockHub:
     def __init__(self, main_window, connection, verbose: bool = False):
         self.main_window = main_window
 
-        # ── left group: Components tree, Cells tab, Placements tab ────────
+        # ── left group: Components tree, Config tree ──────────────────────
         self.tree_dock = RoleClusterTreeDock(main_window, connection=connection)
         main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.tree_dock)
 
-        self.cell_list_dock = CellListDock(main_window)
-        main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.cell_list_dock)
-        main_window.tabifyDockWidget(self.tree_dock, self.cell_list_dock)
-
-        self.placer_list_dock = PlacerListDock(main_window)
-        main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.placer_list_dock)
-        main_window.tabifyDockWidget(self.cell_list_dock, self.placer_list_dock)
+        self.config_tree_dock = ConfigTreeDock(main_window)
+        main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.config_tree_dock)
+        main_window.tabifyDockWidget(self.tree_dock, self.config_tree_dock)
 
         # ── right group: fieldstool, Files, Extract-to-file, Placer ───────
         self.fieldstool_dock = FieldsToolDock(main_window, connection=connection)
@@ -80,35 +75,42 @@ class DockHub:
         """Every dock-to-dock connection (real pyqtSignals — a role can
         legitimately have more than one listener)."""
 
-        # Files -> Extract/Placer/Cells-tab: ExtractDock's cell-output file,
-        # PlacerDock's placeholder discovery and the Cells tab's own list all
-        # follow the Cells role; ExtractDock's extract_profiles file follows
-        # the Extractor role; ExtractDock's and PlacerDock's Placer file each
-        # follow the Placer role — all assigned via "Use selected" in the
-        # Files dock.
+        # Files -> Extract/Placer: ExtractDock's cell-output file and
+        # PlacerDock's placeholder discovery follow the Cells role;
+        # ExtractDock's extract_profiles file follows the Extractor role;
+        # ExtractDock's and PlacerDock's Placer file follow the Placer
+        # role — all assigned via "Use selected" in the Files dock.
         self.file_picker_dock.cells_file_changed.connect(self.extract_dock.set_target_file)
         self.file_picker_dock.cells_file_changed.connect(self.placer_dock.set_cells_file)
-        self.file_picker_dock.cells_file_changed.connect(self.cell_list_dock.set_cells_file)
         self.file_picker_dock.extractor_file_changed.connect(self.extract_dock.set_profile_file)
         self.file_picker_dock.placer_file_changed.connect(self.extract_dock.set_placer_file)
         self.file_picker_dock.placer_file_changed.connect(self.placer_dock.set_placer_file)
-        self.file_picker_dock.placer_file_changed.connect(self.placer_list_dock.set_placer_file)
+        # Config tree's root — bridged to the Placer role for now (see
+        # ConfigTreeDock.set_root_file's docstring): it's the file
+        # ExtractDock already wires Cells/Extractor includes into after a
+        # successful extract ("placer — это точка сборки"), the closest
+        # existing thing to a single root file until a dedicated "Open
+        # Root file" action replaces this whole Files dock (Этап 2).
+        self.file_picker_dock.placer_file_changed.connect(self.config_tree_dock.set_root_file)
         # Roles restored from a previous session must reach the listeners
         # above — restore_roles() re-fires the current values through the
         # same signals (they were restored before these connections existed).
         self.file_picker_dock.restore_roles()
 
         # Components tree -> Placer: clicking a Cluster group node in the
-        # tree fills PlacerDock's Cluster field; Cells tab -> Placer:
-        # clicking a Cell fills PlacerDock's Cell field.
+        # tree fills PlacerDock's Cluster field; Config tree -> Placer/
+        # Extract: clicking a Cell/Clone placement/Extract profile leaf
+        # routes into the matching existing form (2026-08-03, GUI tree
+        # roadmap Этап 1 — replaces the old CellListDock/PlacerListDock
+        # wiring, same target methods, unified single source).
         self.tree_dock.cluster_picked.connect(self.placer_dock.set_cluster_name)
-        self.cell_list_dock.cell_picked.connect(self.placer_dock.set_selected_cell)
-        # Placements tab -> Placer: clicking an already-saved clone_placement
-        # re-opens it in the form for editing/Redraw; Placer -> Placements
-        # tab the other way: a successful Save refreshes the list so a brand
-        # new (or renamed) entry shows up without reassigning Files.
-        self.placer_list_dock.placement_picked.connect(self.placer_dock.load_placement)
-        self.placer_dock.saved.connect(self.placer_list_dock.refresh)
+        self.config_tree_dock.cell_picked.connect(self.placer_dock.set_selected_cell)
+        self.config_tree_dock.placement_picked.connect(self.placer_dock.load_placement)
+        self.config_tree_dock.profile_picked.connect(self.extract_dock.pick_profile)
+        # Placer -> Config tree: a successful Save refreshes the whole tree
+        # (walk_include_tree() is re-run) so a brand new (or renamed)
+        # placement shows up without reassigning Files.
+        self.placer_dock.saved.connect(self.config_tree_dock.refresh)
 
         # fieldstool tab -> Components tree: an explicit Rescan/Apply there
         # refreshes this tree's schematic view (see FieldsToolDock).

@@ -493,7 +493,14 @@ class ExtractDock(QDockWidget):
             self._apply_profile_entry(profile_key)
 
     def _on_profile_item_clicked(self, item) -> None:
-        profile_key = item.text()
+        self.pick_profile(item.text())
+
+    def pick_profile(self, profile_key: str) -> None:
+        """Public entry point for picking an extract_profiles: entry —
+        same effect as clicking it in this dock's own "Existing Profiles"
+        list, exposed so ConfigTreeDock's Extract-profiles category (2026-
+        08-03, GUI tree roadmap Этап 1) can route into the same behavior
+        without duplicating it."""
         self.profile_key_edit.setText(profile_key)
         self._apply_profile_entry(profile_key)
 

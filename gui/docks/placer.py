@@ -42,8 +42,10 @@ Redraws idempotent (a second click recognizes vias/tracks the first
 click already created, via the SAME registry file a real
 `kicadstamp_cli.py apply` on this file would also use).
 
-Cell picking moved out to CellListDock (gui/docks/cell_list.py), tabified
-with the Components tree — feeds set_selected_cell() here. Cluster name
+Cell picking moved out to ConfigTreeDock (gui/docks/config_tree.py, its
+Cells category — replaced the earlier standalone CellListDock 2026-08-03,
+see handoff_2026_08_03_gui_tree_risks_resolved.md), tabified with the
+Components tree — feeds set_selected_cell() here. Cluster name
 similarly follows RoleClusterTreeDock's cluster_picked signal when a
 Cluster GROUP node is clicked there (set_cluster_name()) — both requested
 live
@@ -66,10 +68,12 @@ refs: explicit role->ref override, by_selection mode. All still reachable
 by hand-editing the saved YAML; add UI for them if they turn out to be
 needed often.
 
-load_placement() (reverse of _build_entry_dict) lets PlacerListDock
-(gui/docks/placer_list.py) re-open an already-saved clone_placement for
-editing/Redraw — requested live 2026-08-02 alongside a "Placements" tab
-next to the Components tree/Cells list ("таб пласеров (там где дерево
+load_placement() (reverse of _build_entry_dict) lets ConfigTreeDock's Clone
+placements category (gui/docks/config_tree.py — replaced the earlier
+standalone PlacerListDock 2026-08-03) re-open an already-saved
+clone_placement for editing/Redraw — requested live 2026-08-02 alongside a
+"Placements" tab next to the Components tree/Cells list ("таб пласеров
+(там где дерево
 компонент и экстракторов)"), same "pick from a list you already browse"
 pattern as Cell/Cluster picking.
 
@@ -112,8 +116,8 @@ _PLACEHOLDER_RE = re.compile(r"\{(\w+)\}")
 
 
 class PlacerDock(QDockWidget):
-    # Fired after a successful Save — PlacerListDock listens to refresh its
-    # list of already-saved placements (see gui/main_window.py).
+    # Fired after a successful Save — ConfigTreeDock listens to refresh its
+    # Clone placements category (see gui/dock_hub.py).
     saved = pyqtSignal()
 
     def __init__(self, main_window):
@@ -242,8 +246,9 @@ class PlacerDock(QDockWidget):
         self._placer_path = path
 
     def set_selected_cell(self, name: str) -> None:
-        """Called by CellListDock (see gui/docks/cell_list.py) when a Cell
-        is clicked there — Cell picking used to live inside this dock, but
+        """Called by ConfigTreeDock's Cells category (see
+        gui/docks/config_tree.py) when a Cell is clicked there — Cell
+        picking used to live inside this dock, but
         the user expected it alongside the Components tree instead
         (2026-08-01: "где выбирать cell? ...к дереву компонент надо
         добавить табик со списком cell")."""
@@ -602,8 +607,9 @@ class PlacerDock(QDockWidget):
     # ── Loading an already-saved placement back into the form ──────────────
 
     def load_placement(self, entry: Dict[str, Any]) -> None:
-        """Reverse of _build_entry_dict() — called by PlacerListDock (via
-        its placement_picked signal) when the user clicks an already-saved
+        """Reverse of _build_entry_dict() — called by ConfigTreeDock's Clone
+        placements category (via its placement_picked signal) when the
+        user clicks an already-saved
         clone_placement in the new "Placements" tab, so it can be edited
         and Redrawn/re-Saved instead of only ever building placements from
         scratch (2026-08-02: "таб пласеров... там где дерево компонент и

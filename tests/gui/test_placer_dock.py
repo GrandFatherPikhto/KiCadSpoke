@@ -43,7 +43,7 @@ def _make_cell_and_dock(main_window, tmp_path):
     dock = PlacerDock(main_window)
     dock.set_cells_file(cells_file)
     dock.set_placer_file(placer_file)
-    dock.set_selected_cell("pi_filter")  # Cell picking now lives in CellListDock, see test_cell_list.py
+    dock.set_selected_cell("pi_filter")  # Cell picking now lives in ConfigTreeDock, see test_config_tree.py
     return dock, cells_file, placer_file
 
 
@@ -242,8 +242,9 @@ def test_redraw_preserves_other_placements_for_registry_safety(main_window, tmp_
 
 
 def test_load_placement_round_trips_absolute_xy(main_window, tmp_path):
-    """Reverse of _build_entry_dict — PlacerListDock feeds a saved
-    clone_placement dict straight back in via load_placement()."""
+    """Reverse of _build_entry_dict — ConfigTreeDock's Clone placements
+    category feeds a saved clone_placement dict straight back in via
+    load_placement()."""
     dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
     entry = {
         "name": "Channel_2_PI_Filter", "cell": "pi_filter", "xy": [10.5, -3.2],

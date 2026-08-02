@@ -138,12 +138,8 @@ class MainWindow(QMainWindow):
         return self._dock_hub.tree_dock
 
     @property
-    def cell_list_dock(self):
-        return self._dock_hub.cell_list_dock
-
-    @property
-    def placer_list_dock(self):
-        return self._dock_hub.placer_list_dock
+    def config_tree_dock(self):
+        return self._dock_hub.config_tree_dock
 
     @property
     def fieldstool_dock(self):

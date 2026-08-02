@@ -45,7 +45,7 @@ def _write(path):
     path.write_text("{}\n", encoding="utf-8")
 
 
-def test_cells_role_reaches_extract_placer_and_cell_list(real_main_window, tmp_path):
+def test_cells_role_reaches_extract_and_placer(real_main_window, tmp_path):
     cells_file = tmp_path / "cells.yaml"
     _write(cells_file)
 
@@ -54,7 +54,10 @@ def test_cells_role_reaches_extract_placer_and_cell_list(real_main_window, tmp_p
 
     assert real_main_window.extract_dock._target_path == cells_file
     assert real_main_window.placer_dock._cells_path == cells_file
-    assert real_main_window.cell_list_dock._cells_path == cells_file
+    # Config tree's root is bridged to the Placer role only (see
+    # ConfigTreeDock.set_root_file's docstring) — the Cells role alone
+    # doesn't touch it.
+    assert real_main_window.config_tree_dock._root_path is None
 
 
 def test_extractor_role_reaches_extract_dock_profile(real_main_window, tmp_path):
@@ -67,7 +70,7 @@ def test_extractor_role_reaches_extract_dock_profile(real_main_window, tmp_path)
     assert real_main_window.extract_dock._profile_path == extractor_file
 
 
-def test_placer_role_reaches_extract_placer_and_placer_list(real_main_window, tmp_path):
+def test_placer_role_reaches_extract_placer_and_config_tree_root(real_main_window, tmp_path):
     placer_file = tmp_path / "placer.yaml"
     _write(placer_file)
 
@@ -76,7 +79,7 @@ def test_placer_role_reaches_extract_placer_and_placer_list(real_main_window, tm
 
     assert real_main_window.extract_dock._placer_path == placer_file
     assert real_main_window.placer_dock._placer_path == placer_file
-    assert real_main_window.placer_list_dock._placer_path == placer_file
+    assert real_main_window.config_tree_dock._root_path == placer_file
 
 
 def test_restore_roles_reaches_all_listeners_after_restart(qapp, tmp_path):
@@ -100,11 +103,10 @@ def test_restore_roles_reaches_all_listeners_after_restart(qapp, tmp_path):
     try:
         assert window.extract_dock._target_path == cells_file
         assert window.placer_dock._cells_path == cells_file
-        assert window.cell_list_dock._cells_path == cells_file
         assert window.extract_dock._profile_path == extractor_file
         assert window.extract_dock._placer_path == placer_file
         assert window.placer_dock._placer_path == placer_file
-        assert window.placer_list_dock._placer_path == placer_file
+        assert window.config_tree_dock._root_path == placer_file
     finally:
         window._timer.stop()
         window._selection_timer.stop()
@@ -135,25 +137,25 @@ def test_tree_cluster_picked_fills_placer_cluster_field(real_main_window):
 
 
 def test_cell_picked_fills_placer_selected_cell(real_main_window):
-    """CellListDock -> PlacerDock wiring (cell_picked -> set_selected_cell,
-    see gui/docks/cell_list.py's cell_picked docstring) — clicking a Cell in
-    the real Cells list must reach PlacerDock's Cell field end-to-end, not
-    just via a direct set_selected_cell() call (already covered elsewhere,
-    but never through the actual signal)."""
-    real_main_window.cell_list_dock.cell_picked.emit("ldo_adj")
+    """ConfigTreeDock -> PlacerDock wiring (cell_picked -> set_selected_cell,
+    see gui/docks/config_tree.py's cell_picked docstring) — clicking a Cell
+    leaf in the real Config tree must reach PlacerDock's Cell field
+    end-to-end, not just via a direct set_selected_cell() call (already
+    covered elsewhere, but never through the actual signal)."""
+    real_main_window.config_tree_dock.cell_picked.emit("ldo_adj")
 
     assert real_main_window.placer_dock._selected_cell == "ldo_adj"
     assert "ldo_adj" in real_main_window.placer_dock.cell_label.text()
 
 
 def test_placement_picked_loads_into_placer_form(real_main_window):
-    """PlacerListDock -> PlacerDock wiring (placement_picked -> load_placement,
-    see gui/docks/placer_list.py's placement_picked docstring) — clicking an
-    already-saved placement in the real Placements list must reach
+    """ConfigTreeDock -> PlacerDock wiring (placement_picked -> load_placement,
+    see gui/docks/config_tree.py's placement_picked docstring) — clicking an
+    already-saved placement leaf in the real Config tree must reach
     PlacerDock's form end-to-end, not just via a direct load_placement()
     call (already covered elsewhere, but never through the actual signal)."""
     entry = {"name": "spoke_1", "cell": "ldo_adj", "xy": [1.5, 2.5]}
-    real_main_window.placer_list_dock.placement_picked.emit(entry)
+    real_main_window.config_tree_dock.placement_picked.emit(entry)
 
     assert real_main_window.placer_dock.cluster_edit.text() == "spoke_1"
     assert real_main_window.placer_dock._selected_cell == "ldo_adj"
@@ -161,30 +163,49 @@ def test_placement_picked_loads_into_placer_form(real_main_window):
     assert real_main_window.placer_dock.y_edit.text() == "2.5"
 
 
-def test_placer_saved_refreshes_placer_list(real_main_window, tmp_path):
-    """PlacerDock -> PlacerListDock wiring (saved -> refresh, see
-    gui/docks/placer_list.py's module docstring) — a successful Save must
-    reach PlacerListDock's refresh() end-to-end, not just via a direct call
-    (the list would otherwise go stale after Save without a file reassign,
-    exactly the bug the module docstring says this wiring prevents).
+def test_profile_picked_fills_extract_form(real_main_window, tmp_path):
+    """ConfigTreeDock -> ExtractDock wiring (profile_picked -> pick_profile,
+    see gui/docks/config_tree.py's profile_picked docstring / ExtractDock.
+    pick_profile's docstring) — clicking an Extract-profile leaf in the real
+    Config tree must reach ExtractDock's form end-to-end, not just via a
+    direct pick_profile() call."""
+    extractor_file = tmp_path / "profiles.yaml"
+    extractor_file.write_text(
+        "extract_profiles:\n  alpha_profile:\n    params: {ROLE: '+3V3'}\n", encoding="utf-8")
+    real_main_window.extract_dock.set_profile_file(extractor_file)
 
-    Asserts on real widget state (the list picking up a change made on disk
+    real_main_window.config_tree_dock.profile_picked.emit("alpha_profile")
+
+    assert real_main_window.extract_dock.profile_key_edit.text() == "alpha_profile"
+
+
+def test_placer_saved_refreshes_config_tree_placements(real_main_window, tmp_path):
+    """PlacerDock -> ConfigTreeDock wiring (saved -> refresh, see
+    gui/docks/config_tree.py's refresh docstring) — a successful Save must
+    reach ConfigTreeDock's Clone placements category end-to-end, not just
+    via a direct call (the tree would otherwise go stale after Save
+    without a file reassign).
+
+    Asserts on real widget state (the tree picking up a change made on disk
     after the fact) rather than monkeypatching refresh() — a PyQt signal
     connection captures the bound method at connect() time, so patching the
     instance attribute afterwards would not be intercepted (same caveat as
     test_fieldstool_components_changed_refreshes_tree above)."""
     placer_file = tmp_path / "placer.yaml"
     _write(placer_file)
-    real_main_window.placer_list_dock.set_placer_file(placer_file)
-    assert real_main_window.placer_list_dock.list.count() == 0
+    real_main_window.config_tree_dock.set_root_file(placer_file)
+    root_item = real_main_window.config_tree_dock.tree.topLevelItem(0)
+    assert root_item.childCount() == 0
 
     placer_file.write_text(
         "clone_placements:\n  - name: spoke_1\n    cell: ldo_adj\n    xy: [0, 0]\n",
         encoding="utf-8")
     real_main_window.placer_dock.saved.emit()
 
-    assert real_main_window.placer_list_dock.list.count() == 1
-    assert real_main_window.placer_list_dock.list.item(0).text() == "spoke_1"
+    root_item = real_main_window.config_tree_dock.tree.topLevelItem(0)
+    placements = root_item.child(0)
+    assert placements.text(0) == "Clone placements"
+    assert placements.child(0).text(0) == "spoke_1"
 
 
 # ── 3.2: docks use the injected BoardConnection, not main_window.connection ──
@@ -311,8 +332,7 @@ def test_main_window_exposes_all_docks_through_the_hub(real_main_window):
     assert isinstance(hub, DockHub)
 
     assert real_main_window.tree_dock is hub.tree_dock
-    assert real_main_window.cell_list_dock is hub.cell_list_dock
-    assert real_main_window.placer_list_dock is hub.placer_list_dock
+    assert real_main_window.config_tree_dock is hub.config_tree_dock
     assert real_main_window.fieldstool_dock is hub.fieldstool_dock
     assert real_main_window.file_picker_dock is hub.file_picker_dock
     assert real_main_window.extract_dock is hub.extract_dock
@@ -330,8 +350,7 @@ def test_dock_hub_constructs_all_docks_and_wires_roles(main_window, tmp_path):
     hub = DockHub(main_window, connection=main_window.connection, verbose=False)
     try:
         assert hub.tree_dock is not None
-        assert hub.cell_list_dock is not None
-        assert hub.placer_list_dock is not None
+        assert hub.config_tree_dock is not None
         assert hub.fieldstool_dock is not None
         assert hub.file_picker_dock is not None
         assert hub.extract_dock is not None
@@ -342,7 +361,12 @@ def test_dock_hub_constructs_all_docks_and_wires_roles(main_window, tmp_path):
         hub.file_picker_dock._assign_role("cells")
         assert hub.extract_dock._target_path == cells_file
         assert hub.placer_dock._cells_path == cells_file
-        assert hub.cell_list_dock._cells_path == cells_file
+
+        # Config tree's root is bridged to the Placer role only (see
+        # ConfigTreeDock.set_root_file's docstring).
+        hub.file_picker_dock.picked_path = cells_file
+        hub.file_picker_dock._assign_role("placer")
+        assert hub.config_tree_dock._root_path == cells_file
     finally:
         _teardown_hub(hub)
 

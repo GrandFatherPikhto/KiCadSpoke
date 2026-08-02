@@ -21,6 +21,7 @@ Operates on raw dicts (already yaml.safe_load'd), before any Config/dataclass
 parsing — resolve_includes() is called right after yaml.safe_load() in both
 load_config() and load_profile(), and everything downstream is unchanged.
 """
+import dataclasses
 import logging
 from pathlib import Path
 from typing import Any
@@ -203,3 +204,77 @@ def resolve_includes(path: str, data: dict[str, Any]) -> dict[str, Any]:
     """
     root_path = Path(path).resolve()
     return _resolve(path, data, ancestors={root_path}, resolved={root_path})
+
+
+@dataclasses.dataclass
+class IncludeTreeNode:
+    """One file in the include: graph, for display (GUI Config tree,
+    2026-08-03) — deliberately NOT merged across files, unlike
+    resolve_includes()'s flat result: each node keeps only its OWN directly
+    declared content, so a leaf's physical file is always exactly "whichever
+    node it's under" — no separate provenance tracking needed. children is
+    this file's own include: list, each walked the same way, recursively."""
+    path: Path
+    sections: dict[str, Any]  # one key per _LIST_SECTIONS/_DICT_SECTIONS entry, this file's own only
+    children: list["IncludeTreeNode"]
+
+
+def _walk(path: str, ancestors: set[Path]) -> IncludeTreeNode:
+    with open(path, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f) or {}
+    if not isinstance(data, dict):
+        raise ValidationError(format_fatal_error(
+            _("{file!r}: top level must be a YAML mapping, got {type}").format(
+                file=path, type=type(data).__name__),
+            [_("check for a stray/misplaced list (e.g. list items left without "
+               "a wrapping 'clone_placements:'/'rules:' key)")]
+        ))
+
+    sections: dict[str, Any] = {}
+    for section in _LIST_SECTIONS:
+        sections[section] = list(data.get(section) or [])
+    for section in _DICT_SECTIONS:
+        sections[section] = dict(data.get(section) or {})
+
+    base_dir = Path(path).parent
+    children: list[IncludeTreeNode] = []
+    for entry in data.get('include', []) or []:
+        include_str, enabled = _parse_include_entry(entry, path)
+        if not enabled:
+            continue
+
+        include_path = (base_dir / include_str).resolve()
+        if not include_path.exists():
+            raise ValidationError(format_fatal_error(
+                _("include: file {file!r} not found").format(file=include_str),
+                [_("expected at {path} (relative to {source!r}, not the current "
+                   "working directory)").format(path=include_path, source=path)]
+            ))
+        if include_path in ancestors:
+            raise ValidationError(format_fatal_error(
+                _("include: cycle detected — {file!r} is included from {source!r}, "
+                  "but is already being resolved higher up the same include chain")
+                .format(file=str(include_path), source=path),
+                [_("the include: chain loops back on itself — remove one of the "
+                   "include: entries that closes the loop")]
+            ))
+        children.append(_walk(str(include_path), ancestors | {include_path}))
+
+    return IncludeTreeNode(path=Path(path), sections=sections, children=children)
+
+
+def walk_include_tree(path: str) -> IncludeTreeNode:
+    """Structure-preserving counterpart of resolve_includes() — walks the
+    same include: graph from the same single root, but never merges: each
+    file keeps only its own directly declared content, plus its own
+    children. Used for display (GUI Config tree), not for loading a working
+    Config — that's still resolve_includes()/load_config().
+
+    A true cycle is fatal, same rule and same message as resolve_includes().
+    A diamond (the same file reachable from two branches) is NOT deduped
+    here — unlike resolve_includes(), there is no merge to protect, so both
+    occurrences are walked and shown independently; this is deliberately
+    simpler than resolve_includes() for exactly that reason (see
+    handoff_2026_08_03_gui_tree_risks_resolved.md)."""
+    root_path = Path(path).resolve()
+    return _walk(path, ancestors={root_path})
