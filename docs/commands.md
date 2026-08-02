@@ -48,11 +48,11 @@ python kicadstamp_cli.py apply <config.yaml> [options]
 | `--log-file` | Save logs to the specified file. |
 | `--no-collision-check` | Disable collision checking (if false positives occur). |
 | `--collision-margin` | Extra clearance for collision checking in mm (default: `0.2`). |
-| `--only NAME` | Process only the `rules`/`clone_placements`/`thermal_via_array` with this identity (flag can be repeated, and/or comma-separated: `--only a,b --only c`). The main way to narrow a run (replaces the old `--clone-placement`, which is gone – it never isolated `rules`/`thermal_via_array`, only `clone_placements`, hence the confusion). The identity is the entry's `name:` if set, else its `net` for a rule (see below); mandatory for `clone_placements`/`thermal_via_array`. Everything that doesn't match is excluded from this run entirely, not even touched by validation/logging – for checking one section of the board in isolation, without noise from the rest. An unknown name is fatal, with a `difflib`-based suggestion. |
-| `--cluster PATH` | Process only spokes / `clone_placements` / `thermal_via_array` whose `Cluster` (`anchor_cluster` / a spoke's `cluster`) matches this path or a prefix of it, segment-wise (`Channel_0` also matches `Channel_0/DAC_OA`). Repeatable and/or comma-separated. A second, independent selection axis (physical instance, not name/identity) – for a `rules:` entry it narrows `spokes:` inside the rule (the rule survives if at least one spoke matches, is dropped entirely otherwise), for `clone_placements`/`thermal_via_array` it's a whole-block match. Combines with `--only` via AND only (no OR mode) – run `apply` twice if you need "this OR that"; the registry makes repeat runs safe (already-placed items aren't duplicated). Matches nothing → fatal, same as `--only`. |
+| `--only NAME` | Process only the `rules`/`clone_placements`/`thermal_via_arrays` with this identity (flag can be repeated, and/or comma-separated: `--only a,b --only c`). The main way to narrow a run (replaces the old `--clone-placement`, which is gone – it never isolated `rules`/`thermal_via_arrays`, only `clone_placements`, hence the confusion). The identity is the entry's `name:` if set, else its `net` for a rule (see below); mandatory for `clone_placements`/`thermal_via_arrays`. Everything that doesn't match is excluded from this run entirely, not even touched by validation/logging – for checking one section of the board in isolation, without noise from the rest. An unknown name is fatal, with a `difflib`-based suggestion. |
+| `--cluster PATH` | Process only spokes / `clone_placements` / `thermal_via_arrays` entries whose `Cluster` (`anchor_cluster` / a spoke's `cluster`) matches this path or a prefix of it, segment-wise (`Channel_0` also matches `Channel_0/DAC_OA`). Repeatable and/or comma-separated. A second, independent selection axis (physical instance, not name/identity) – for a `rules:` entry it narrows `spokes:` inside the rule (the rule survives if at least one spoke matches, is dropped entirely otherwise), for `clone_placements`/`thermal_via_arrays` it's a whole-entry match. Combines with `--only` via AND only (no OR mode) – run `apply` twice if you need "this OR that"; the registry makes repeat runs safe (already-placed items aren't duplicated). Matches nothing → fatal, same as `--only`. |
 
 **Terminology used below and in the code:** `rules:` (`Rule`, part of `ManualSpoke`) are called **spokes**;
-`thermal_via_array:` is the **thermal vias**; `clone_placements:` (`ClonePlacement`) are the **clones**. All
+`thermal_via_arrays:` are the **thermal vias**; `clone_placements:` (`ClonePlacement`) are the **clones**. All
 three are independent, uniformly `--only`/`--cluster`/`enabled`-filterable sections of one config.
 
 **`log_file:` in the config itself** – an optional root‑level YAML field (like `cells_file`/
@@ -83,15 +83,16 @@ likely a mistake). A file included twice (directly, or reached from two differen
 whether or not it's a true cycle. Paths are resolved relative to the file that references them, not the
 top‑level config or the current working directory.
 
-**About the current production config:** the master config for the `3CH-AWG-TIA` board is `profiles/3ch-awg-tia.yaml` (merged `rules:`, `clone_placements:`, `thermal_via_array`, with a reference to `profiles/templates/3ch-awg-tia.yaml` via `cells_file`). The file `profiles/generated/10CL006YE144C8G.yaml` written by `tools/generate_10cl006.py` is a self‑contained archival version (can be run separately, but is no longer used in `apply` for this board).
+**About the current production config:** the master config for the `3CH-AWG-TIA` board is `profiles/3ch-awg-tia.yaml` (merged `rules:`, `clone_placements:`, `thermal_via_arrays:`, with a reference to `profiles/templates/3ch-awg-tia.yaml` via `cells_file`). The file `profiles/generated/10CL006YE144C8G.yaml` written by `tools/generate_10cl006.py` is a self‑contained archival version (can be run separately, but is no longer used in `apply` for this board).
 
-**`name:` is mandatory on `thermal_via_array:` (if that section is present at all) and on every
+**`name:` is mandatory on every `thermal_via_arrays:` entry and every
 `clone_placements:` entry, but OPTIONAL on `rules:` entries** (a rule falls back to its `net` – this was
 briefly made mandatory for rules too, then deliberately reverted the same day: a rule's `net` is already a
 perfectly good, usually-unique identity, and forcing a redundant `name:` on every single rule added no
 value). Used by `--only`. A `clone_placement` without `name:` used to silently become the literal string
-`'?'` (a real hole, not a feature), and `thermal_via_array` without one used to silently fall back to
-`thermal_<pad>` – both gone, missing `name:` is fatal at config-load time for these two. For `rules:`, the
+`'?'` (a real hole, not a feature), and a `thermal_via_arrays` entry without one used to silently fall back
+to `thermal_<pad>` – both gone, missing `name:` is fatal at config-load time for these two (and every
+`thermal_via_arrays` entry's `name:` must also be unique across the whole list). For `rules:`, the
 loader instead fatals if **two rules resolve to the same effective identity** (same `net`, no distinguishing
 `name:`) – add a `name:` to disambiguate, don't rely on one being picked silently:
 ```yaml
@@ -103,8 +104,8 @@ rules:
   enabled: true          # optional, default true – see below
   spokes: [...]
 
-thermal_via_array:
-  name: fpga_thermal   # mandatory, if the section is present
+thermal_via_arrays:
+- name: fpga_thermal   # mandatory, and unique across the list
   enabled: true
   ...
 
@@ -114,7 +115,7 @@ clone_placements:
   ...
 ```
 
-**`enabled: bool` (default `true`) on every `rules:`/`clone_placements:`/`thermal_via_array:` entry** –
+**`enabled: bool` (default `true`) on every `rules:`/`clone_placements:`/`thermal_via_arrays:` entry** –
 whole-entry on/off switch. `enabled: false` always wins, applied **before** `--only`/`--cluster` are even
 looked at – it means "does not exist on the board right now", not "excluded from this particular run", so
 it cannot be un-done by naming the entry explicitly on the command line. Use it to permanently park a
@@ -153,7 +154,7 @@ python kicadstamp_cli.py apply templates\pi_filter_vccio.yaml --only pi_filter_v
 # Only one clone_placement, no FPGA spokes or thermal vias in the log
 python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --only p5v_pi_filter --dry-run
 
-# Multiple names/identities at once (a rule via its net + a named thermal_via_array), repeat flag or comma
+# Multiple names/identities at once (a rule via its net + a named thermal_via_arrays entry), repeat flag or comma
 python kicadstamp_cli.py apply profiles/3ch-awg-tia.yaml --only +3V3_VCCIO,fpga_thermal
 ```
 

@@ -45,6 +45,56 @@ clone_placements:
     assert "one_role" in cfg.cells
 
 
+def test_include_merges_thermal_via_arrays(tmp_path):
+    """2026-08-02: thermal_via_arrays: generalized from a single always-root
+    field to a real list section — must now split across include: files the
+    same way rules:/clone_placements: already do (a second IC needing
+    thermal vias, e.g. AD9707 per-channel, shouldn't have to crowd into the
+    root config just because the first one — FPGA — historically did)."""
+    (tmp_path / "sub.yaml").write_text("""
+thermal_via_arrays:
+  - name: from_sub
+    anchor_ref: U9
+    pad: '1'
+""", encoding="utf-8")
+
+    root = tmp_path / "root.yaml"
+    root.write_text("""
+include:
+  - sub.yaml
+thermal_via_arrays:
+  - name: from_root
+    anchor_ref: U1
+    pad: '1'
+""", encoding="utf-8")
+
+    cfg, _ = load_config(str(root))
+    names = {tva.name for tva in cfg.thermal_via_arrays}
+    assert names == {"from_root", "from_sub"}
+
+
+def test_duplicate_thermal_via_array_name_across_includes_is_fatal(tmp_path):
+    (tmp_path / "sub.yaml").write_text("""
+thermal_via_arrays:
+  - name: dup
+    anchor_ref: U9
+    pad: '1'
+""", encoding="utf-8")
+
+    root = tmp_path / "root.yaml"
+    root.write_text("""
+include:
+  - sub.yaml
+thermal_via_arrays:
+  - name: dup
+    anchor_ref: U1
+    pad: '1'
+""", encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="duplicate name"):
+        load_config(str(root))
+
+
 def test_include_templates_merge_alongside_cells_file(tmp_path):
     (tmp_path / "sub.yaml").write_text("""
 cells:

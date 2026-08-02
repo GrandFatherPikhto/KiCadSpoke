@@ -178,7 +178,7 @@ Modules that work with coordinates, independent of KiCad:
 
 ### 4.10. User Interface (CLI)
 
-- **`kicadstamp_cli.py`** – the main executable, handling argument parsing, config loading, KiCad connection, validation, planning, and execution (three phases: moves → vias → tracks), plus `undo`, `extract`, `clone-extract`, and the optional `--only` flag for processing only the named `rules`/`clone_placements`/`thermal_via_array`.
+- **`kicadstamp_cli.py`** – the main executable, handling argument parsing, config loading, KiCad connection, validation, planning, and execution (three phases: moves → vias → tracks), plus `undo`, `extract`, `clone-extract`, and the optional `--only` flag for processing only the named `rules`/`clone_placements`/`thermal_via_arrays`.
 
 ---
 

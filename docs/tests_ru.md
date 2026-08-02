@@ -145,7 +145,7 @@ pytest tests/integration_tests/ -v -s -m integration
 | `test_i18n.py` | Доступность функции `_()`, настройка gettext, проверка импорта во всех исходных файлах. |
 | `test_kicad.py` | Наличие всех методов интерфейса `IBoardAdapter` в `KiCadBoardAdapter`, импорт и конструктор (без реального IPC). |
 | `test_manual_position_calculator.py` | Логику `ManualPositionCalculator`: построение пула, расчёт позиций, планирование via для `rules`. |
-| `test_naming.py` | Доступоры `rule_effective_name`/`thermal_via_array_effective_name`, загрузка `name:` из YAML, проверка обязательности имён (фатальность при отсутствии), опциональность Rule.name, значения по умолчанию enabled/active. |
+| `test_naming.py` | Доступоры `rule_effective_name`/`thermal_via_array_effective_name`, загрузка `name:` из YAML, проверка обязательности имён (фатальность при отсутствии и при повторе имени внутри `thermal_via_arrays:`), опциональность Rule.name, значения по умолчанию enabled/active. |
 | `test_net_resolution.py` | Разрешение цепей с плейсхолдерами: подстановка из `params`, применение `net_overrides`, ошибки при отсутствии параметров. |
 | `test_pad_projection.py` | Предсказание позиции пада после перемещения/поворота (без флипа и с флипом), инвариантность `local_pad_offset` к углу. |
 | `test_registry_integration.py` | Полный цикл реестра (создание, обновление, prune) на моках, включая сверку с реальными via. |
@@ -157,7 +157,7 @@ pytest tests/integration_tests/ -v -s -m integration
 | `test_two_phase_execution.py` | Двухфазное выполнение (moves → refresh → vias) на моках – гарантирует, что via планируются после перемещений и имеют корректный `registry_key`. |
 | `test_undo_layer.py` | Сохранение и восстановление слоя компонента при undo (`original_layer` в JSON-логе). |
 | `test_unique_roles.py` | Проверка уникальности ролей внутри шаблона (фатальная ошибка при дублировании). |
-| `test_unknown_keys_validation.py` | Проверку `check_unknown_keys` для секций конфига: неизвестные ключи на верхнем уровне, внутри `clone_placements`, `rules`, `thermal_via_array`, `templates`. |
+| `test_unknown_keys_validation.py` | Проверку `check_unknown_keys` для секций конфига: неизвестные ключи на верхнем уровне, внутри `clone_placements`, `rules`, `thermal_via_arrays`, `templates`. |
 | `test_validation.py` | Предварительные проверки конфигурации: существование шаблонов и падов, достаточность компонентов по ролям, уникальность якорей клонов, резолв цепей via/треков, режим выделения для клонов. |
 
 ---

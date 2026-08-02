@@ -53,11 +53,13 @@ def main():
         logger.error(_("No planned components or vias!"))
         return
 
-    # Build keepout from IC pads and components (for diagnostics)
-    tva = cfg.thermal_via_array
-    target_fp = adapter.get_footprint(tva.anchor_ref) if not tva.retired else None
+    # Build keepout from IC pads and components (for diagnostics) — first
+    # active thermal_via_arrays entry only, this script is a single-target
+    # diagnostic, not a full plan_vias() replay.
+    active_tvas = [t for t in cfg.thermal_via_arrays if not t.retired]
+    target_fp = adapter.get_footprint(active_tvas[0].anchor_ref) if active_tvas else None
     if target_fp is None:
-        logger.info(_("Thermal vias retired — keepout diagnostics skipped"))
+        logger.info(_("No active thermal_via_arrays entry — keepout diagnostics skipped"))
         return
     keepout_rects = planner.via_planner._build_keepout(target_fp, planned_components)
     # Could also add existing vias to keepout? But for pad diagnostics it's enough.

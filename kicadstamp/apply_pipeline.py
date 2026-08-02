@@ -107,16 +107,20 @@ def drop_inactive_items(cfg, _logger=None) -> None:
                       "(existing via/tracks stay protected)").format(name=rule_effective_name(r)))
     cfg.rules = narrowed_rules
 
-    if not cfg.thermal_via_array.retired and cfg.thermal_via_array.skip:
-        l.info(_("thermal_via_array {name!r}: skip=true, skipped this run "
-                  "(existing vias stay protected)")
-               .format(name=thermal_via_array_effective_name(cfg.thermal_via_array)))
-        cfg.thermal_via_array.retired = True
+    kept_tvas = []
+    for tva in cfg.thermal_via_arrays:
+        if not tva.retired and tva.skip:
+            l.info(_("thermal_via_arrays {name!r}: skip=true, skipped this run "
+                      "(existing vias stay protected)")
+                   .format(name=thermal_via_array_effective_name(tva)))
+            continue
+        kept_tvas.append(tva)
+    cfg.thermal_via_arrays = kept_tvas
 
 
 def apply_only_filter(cfg, only_names: list[str], _logger=None) -> None:
     """--only: whole-block selection by identity (rule name-or-net, clone_placement
-    name, thermal_via_array name). Raises PlacerError on unmatched names.
+    name, thermal_via_arrays entry name). Raises PlacerError on unmatched names.
     Pure cfg mutation."""
     l = _logger or logger
     if not only_names:
@@ -124,21 +128,18 @@ def apply_only_filter(cfg, only_names: list[str], _logger=None) -> None:
     requested = set(only_names)
     matched_rules = [r for r in cfg.rules if rule_effective_name(r) in requested]
     matched_clones = [c for c in cfg.clone_placements if c.name in requested]
-    thermal_matches = (not cfg.thermal_via_array.retired and
-                       thermal_via_array_effective_name(cfg.thermal_via_array) in requested)
+    matched_tvas = [t for t in cfg.thermal_via_arrays
+                    if not t.retired and thermal_via_array_effective_name(t) in requested]
 
     found_names = ({rule_effective_name(r) for r in matched_rules}
                    | {c.name for c in matched_clones}
-                   | ({thermal_via_array_effective_name(cfg.thermal_via_array)}
-                      if thermal_matches else set()))
+                   | {thermal_via_array_effective_name(t) for t in matched_tvas})
     missing = requested - found_names
     if missing:
-        tva_name = (thermal_via_array_effective_name(cfg.thermal_via_array)
-                    if not cfg.thermal_via_array.retired else None)
         all_names = sorted(
             {rule_effective_name(r) for r in cfg.rules}
             | {c.name for c in cfg.clone_placements}
-            | ({tva_name} if tva_name is not None else set())
+            | {thermal_via_array_effective_name(t) for t in cfg.thermal_via_arrays if not t.retired}
         )
         lines = []
         for name in sorted(missing):
@@ -146,21 +147,20 @@ def apply_only_filter(cfg, only_names: list[str], _logger=None) -> None:
             hint = (_(" (maybe you meant {suggestion!r}?)").format(suggestion=suggestion[0])
                     if suggestion else "")
             lines.append(_("  {name!r} — not found among rules, clone_placements, "
-                           "or thermal_via_array{hint}")
+                           "or thermal_via_arrays{hint}")
                          .format(name=name, hint=hint))
         raise PlacerError(_("[error] --only: names not found:\n{lines}\nAvailable: {all}")
                           .format(lines="\n".join(lines), all=all_names))
 
     cfg.rules = matched_rules
     cfg.clone_placements = matched_clones
-    if not thermal_matches:
-        cfg.thermal_via_array.retired = True
+    cfg.thermal_via_arrays = matched_tvas
     l.info(_("--only {requested}: rules={rules}, clone_placements={clones}, "
-              "thermal_via_array={thermal} (everything else is ignored in this run)")
+              "thermal_via_arrays={thermal} (everything else is ignored in this run)")
             .format(requested=sorted(requested),
                     rules=[rule_effective_name(r) for r in matched_rules],
                     clones=[c.name for c in matched_clones],
-                    thermal=_("yes") if thermal_matches else _("no")))
+                    thermal=[thermal_via_array_effective_name(t) for t in matched_tvas]))
 
 
 def apply_cluster_filter(cfg, cluster_paths: list[str], _logger=None) -> None:
@@ -172,8 +172,8 @@ def apply_cluster_filter(cfg, cluster_paths: list[str], _logger=None) -> None:
         return
     matched_clones = [c for c in cfg.clone_placements
                       if _matches_any_cluster(c.anchor_cluster, cluster_paths)]
-    thermal_matches = (not cfg.thermal_via_array.retired and
-                       _matches_any_cluster(cfg.thermal_via_array.anchor_cluster, cluster_paths))
+    matched_tvas = [t for t in cfg.thermal_via_arrays
+                    if not t.retired and _matches_any_cluster(t.anchor_cluster, cluster_paths)]
 
     narrowed_rules = []
     for r in cfg.rules:
@@ -184,20 +184,19 @@ def apply_cluster_filter(cfg, cluster_paths: list[str], _logger=None) -> None:
             l.debug(_("Rule {name!r}: no spokes match --cluster {paths}, rule dropped")
                      .format(name=rule_effective_name(r), paths=cluster_paths))
 
-    if not narrowed_rules and not matched_clones and not thermal_matches:
+    if not narrowed_rules and not matched_clones and not matched_tvas:
         raise PlacerError(_("[error] --cluster {paths}: matched nothing among rules' spokes, "
-                            "clone_placements, or thermal_via_array").format(paths=cluster_paths))
+                            "clone_placements, or thermal_via_arrays").format(paths=cluster_paths))
 
     cfg.rules = narrowed_rules
     cfg.clone_placements = matched_clones
-    if not thermal_matches:
-        cfg.thermal_via_array.retired = True
+    cfg.thermal_via_arrays = matched_tvas
     l.info(_("--cluster {paths}: rules={rules} (spokes narrowed), "
-              "clone_placements={clones}, thermal_via_array={thermal}")
+              "clone_placements={clones}, thermal_via_arrays={thermal}")
             .format(paths=cluster_paths,
                     rules=[rule_effective_name(r) for r in narrowed_rules],
                     clones=[c.name for c in matched_clones],
-                    thermal=_("yes") if thermal_matches else _("no")))
+                    thermal=[thermal_via_array_effective_name(t) for t in matched_tvas]))
 
 
 # ── Compute helper ────────────────────────────────────────────────────────────
@@ -208,8 +207,7 @@ def _compute_all_anchor_ids(cfg) -> set[str]:
     ids = {clone_anchor_id(c) for c in cfg.clone_placements if not c.retired}
     for r in cfg.rules:
         ids |= rule_anchor_ids(r)
-    if not cfg.thermal_via_array.retired:
-        ids.add(thermal_anchor_id(cfg.thermal_via_array))
+    ids |= {thermal_anchor_id(t) for t in cfg.thermal_via_arrays if not t.retired}
     return ids
 
 

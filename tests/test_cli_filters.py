@@ -12,7 +12,7 @@ import pytest
 import yaml
 from kicadstamp.config import Config, Rule, ManualSpoke, ClonePlacement, ThermalViaArrayConfig
 from kicadstamp.apply_pipeline import (
-    _split_comma_values, _matches_any_cluster,
+    _split_comma_values, _matches_any_cluster, _compute_all_anchor_ids,
     drop_disabled_rules, drop_inactive_items, apply_only_filter, apply_cluster_filter,
 )
 from kicadstamp.cli_extract import load_profile, _EXTRACT_PROFILE_KNOWN_KEYS, _CLONE_EXTRACT_PROFILE_KNOWN_KEYS
@@ -21,9 +21,9 @@ from kicadstamp.exceptions import PlacerError, ValidationError
 logger = logging.getLogger("test_cli_filters")
 
 
-def _cfg(rules=None, clone_placements=None, thermal_via_array=None):
+def _cfg(rules=None, clone_placements=None, thermal_via_arrays=None):
     return Config(rules=rules or [], clone_placements=clone_placements or [],
-                  thermal_via_array=thermal_via_array or ThermalViaArrayConfig())
+                  thermal_via_arrays=thermal_via_arrays or [])
 
 
 class TestSplitCommaValues:
@@ -83,6 +83,29 @@ class TestDropDisabledRules:
         assert cfg.rules == []
 
 
+class TestComputeAllAnchorIds:
+    """_compute_all_anchor_ids feeds registry.reconcile()'s known_anchor_ids
+    protection — each thermal_via_arrays entry must contribute its OWN id
+    (thermal:<name>), independently of its siblings, so retiring/narrowing
+    one array can never affect another array's already-placed vias."""
+
+    def test_each_active_thermal_via_array_contributes_its_own_id(self):
+        cfg = _cfg(thermal_via_arrays=[
+            ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch1_thermal"),
+            ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch2_thermal"),
+        ])
+        ids = _compute_all_anchor_ids(cfg)
+        assert ids == {"thermal:ad9707_ch1_thermal", "thermal:ad9707_ch2_thermal"}
+
+    def test_retired_thermal_via_array_excluded_others_kept(self):
+        cfg = _cfg(thermal_via_arrays=[
+            ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch1_thermal", retired=True),
+            ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch2_thermal", retired=False),
+        ])
+        ids = _compute_all_anchor_ids(cfg)
+        assert ids == {"thermal:ad9707_ch2_thermal"}
+
+
 class TestDropInactiveItems:
     """skip: true — the inline counterpart of --only/--cluster (skip this
     run, but do NOT prune from the registry, unlike retired: true). See
@@ -131,23 +154,37 @@ class TestDropInactiveItems:
         drop_inactive_items(cfg, logger)
         assert [c.name for c in cfg.clone_placements] == ["b"]
 
-    def test_skipped_thermal_via_array_retired_for_this_run(self):
-        cfg = _cfg(thermal_via_array=ThermalViaArrayConfig(
+    def test_skipped_thermal_via_array_dropped_for_this_run(self):
+        cfg = _cfg(thermal_via_arrays=[ThermalViaArrayConfig(
             retired=False, anchor_role="FPGA", pad="145", name="fpga_thermal", skip=True,
-        ))
+        )])
         drop_inactive_items(cfg, logger)
-        assert cfg.thermal_via_array.retired is True
+        assert cfg.thermal_via_arrays == []
+
+    def test_one_of_several_thermal_via_arrays_skipped_others_kept(self):
+        """2026-08-02: thermal_via_arrays is now a real list — each entry's
+        skip: must be independent of its siblings, same as rules/
+        clone_placements (the AD9707-per-channel motivating case: skipping
+        one channel's thermal vias must not touch any other channel's)."""
+        cfg = _cfg(thermal_via_arrays=[
+            ThermalViaArrayConfig(anchor_role="FPGA", pad="145", name="fpga_thermal", skip=True),
+            ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch1_thermal", skip=False),
+            ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch2_thermal", skip=False),
+        ])
+        drop_inactive_items(cfg, logger)
+        assert [t.name for t in cfg.thermal_via_arrays] == ["ad9707_ch1_thermal", "ad9707_ch2_thermal"]
 
     def test_skip_false_everywhere_is_noop(self):
         cfg = _cfg(
             rules=[Rule(net="GND", spokes=[ManualSpoke(pad="1", cell="t")], anchor_role="FPGA")],
             clone_placements=[ClonePlacement(name="a", xy=(0.0, 0.0), cell="t")],
-            thermal_via_array=ThermalViaArrayConfig(retired=False, anchor_role="FPGA", pad="145", name="th"),
+            thermal_via_arrays=[ThermalViaArrayConfig(retired=False, anchor_role="FPGA", pad="145", name="th")],
         )
         drop_inactive_items(cfg, logger)
         assert len(cfg.rules) == 1
         assert len(cfg.clone_placements) == 1
-        assert cfg.thermal_via_array.retired is False
+        assert len(cfg.thermal_via_arrays) == 1
+        assert cfg.thermal_via_arrays[0].retired is False
 
     def test_skip_true_does_not_affect_known_anchor_ids_computation_order(self):
         """drop_inactive_items only mutates cfg — it must NOT be confused with
@@ -185,6 +222,14 @@ class TestApplyOnlyFilter:
         ])
         apply_only_filter(cfg, ["fpga_gnd"], logger)
         assert len(cfg.rules) == 1
+
+    def test_only_selects_one_of_several_thermal_via_arrays_by_name(self):
+        cfg = _cfg(thermal_via_arrays=[
+            ThermalViaArrayConfig(anchor_role="FPGA", pad="145", name="fpga_thermal"),
+            ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch1_thermal"),
+        ])
+        apply_only_filter(cfg, ["ad9707_ch1_thermal"], logger)
+        assert [t.name for t in cfg.thermal_via_arrays] == ["ad9707_ch1_thermal"]
 
     def test_matches_clone_placement_by_name(self):
         cfg = _cfg(clone_placements=[
@@ -257,13 +302,23 @@ class TestApplyClusterFilter:
         cfg = _cfg(
             clone_placements=[ClonePlacement(name="ch0", xy=(0.0, 0.0),
                                              cell="t", anchor_cluster="Channel_0")],
-            thermal_via_array=ThermalViaArrayConfig(
+            thermal_via_arrays=[ThermalViaArrayConfig(
                 retired=False, anchor_role="FPGA", pad="145", name="fpga_thermal",
                 anchor_cluster="Channel_1",
-            ),
+            )],
         )
         apply_cluster_filter(cfg, ["Channel_0"], logger)
-        assert cfg.thermal_via_array.retired is True
+        assert cfg.thermal_via_arrays == []
+
+    def test_cluster_narrows_among_several_thermal_via_arrays(self):
+        cfg = _cfg(thermal_via_arrays=[
+            ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch1_thermal",
+                                  anchor_cluster="Channel_1"),
+            ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch2_thermal",
+                                  anchor_cluster="Channel_2"),
+        ])
+        apply_cluster_filter(cfg, ["Channel_1"], logger)
+        assert [t.name for t in cfg.thermal_via_arrays] == ["ad9707_ch1_thermal"]
 
     def test_no_match_anywhere_exits_fatal(self):
         cfg = _cfg(rules=[Rule(net="GND", spokes=[

@@ -25,7 +25,7 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer
 
-from kicadstamp.config import Config, ThermalViaArrayConfig
+from kicadstamp.config import Config
 from kicadstamp.placement.executor.base import layer_to_str as _layer_to_str
 from kicadstamp.placement.executor import BatchExecutor
 from kicadstamp.placement.commands import MoveCommand
@@ -60,7 +60,6 @@ class TestOriginalLayerCapture:
         cfg = Config(
             layer='B.Cu',
             cells={},
-            thermal_via_array=ThermalViaArrayConfig(retired=True),
             rules=[],
             clone_placements=[],
         )

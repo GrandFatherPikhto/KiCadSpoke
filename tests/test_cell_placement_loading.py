@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from kicadstamp.config import Config, Cell, CellPlacement, ThermalViaArrayConfig, load_config
+from kicadstamp.config import Config, Cell, CellPlacement, load_config
 from kicadstamp.exceptions import ValidationError
 from kicadstamp.validation import check_clone_cells_exist, check_no_cell_definition_cycles
 
@@ -18,7 +18,6 @@ MINIMAL = "layer: B.Cu\nrules: []\n"
 
 def _cfg(cells):
     return Config(layer='B.Cu', cells=cells,
-                  thermal_via_array=ThermalViaArrayConfig(retired=True),
                   rules=[], clone_placements=[])
 
 

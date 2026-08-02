@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer
 
-from kicadstamp.config import Config, ThermalViaArrayConfig, load_config
+from kicadstamp.config import Config, load_config
 from kicadstamp.placement.executor import BatchExecutor
 from kicadstamp.placement.commands import MoveCommand
 
@@ -70,7 +70,6 @@ class TestBatchExecutorUsesConfigOperationLogDir:
         cfg = Config(
             layer='B.Cu',
             cells={},
-            thermal_via_array=ThermalViaArrayConfig(retired=True),
             rules=[],
             clone_placements=[],
             operation_log_dir=str(bound),

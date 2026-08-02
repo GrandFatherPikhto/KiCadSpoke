@@ -79,8 +79,8 @@ class TestThermalViaArrayUnknownKeys:
     def test_typo_field_is_fatal(self, tmp_path):
         text = """
 layer: B.Cu
-thermal_via_array:
-  retired: false
+thermal_via_arrays:
+- retired: false
   anchor_role: FPGA
   pad: '145'
   name: fpga_thermal
@@ -95,8 +95,8 @@ cells: {}
     def test_all_known_fields_load_fine(self, tmp_path):
         text = """
 layer: B.Cu
-thermal_via_array:
-  retired: false
+thermal_via_arrays:
+- retired: false
   anchor_role: FPGA
   anchor_sheet: Channel_0
   anchor_cluster: FPGA_BANK
@@ -115,10 +115,10 @@ cells: {}
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.thermal_via_array.retired is False
-        assert cfg.thermal_via_array.skip is True
+        assert cfg.thermal_via_arrays[0].retired is False
+        assert cfg.thermal_via_arrays[0].skip is True
 
-    def test_absent_thermal_via_array_is_fine(self, tmp_path):
+    def test_absent_thermal_via_arrays_is_fine(self, tmp_path):
         text = """
 layer: B.Cu
 cells: {}
@@ -126,6 +126,7 @@ cells: {}
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        # retired=True, not False: an absent section means "nothing configured,
-        # do nothing" — found 2026-07-31, see test_naming.py for the full story.
-        assert cfg.thermal_via_array.retired is True
+        # An absent section is simply an empty list (2026-08-02: generalized
+        # to thermal_via_arrays:, a real list — no more special sentinel,
+        # see test_naming.py for the full story).
+        assert cfg.thermal_via_arrays == []

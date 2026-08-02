@@ -145,7 +145,7 @@ pytest tests/integration_tests/ -v -s -m integration
 | `test_i18n.py` | `_()` function availability, gettext setup, and import verification across all source files. |
 | `test_kicad.py` | Presence of all `IBoardAdapter` methods in `KiCadBoardAdapter`, import, and constructor (without real IPC). |
 | `test_manual_position_calculator.py` | `ManualPositionCalculator` logic: pool building, position calculation, via planning for `rules`. |
-| `test_naming.py` | `rule_effective_name`/`thermal_via_array_effective_name` accessors, `name:` loading from YAML, required name validation (fatality on missing name), optional Rule.name, Rule.enabled/active defaults. |
+| `test_naming.py` | `rule_effective_name`/`thermal_via_array_effective_name` accessors, `name:` loading from YAML, required name validation (fatality on missing name, and on a duplicate name within `thermal_via_arrays:`), optional Rule.name, Rule.enabled/active defaults. |
 | `test_net_resolution.py` | Net resolution with placeholders: substitution from `params`, application of `net_overrides`, errors on missing parameters. |
 | `test_pad_projection.py` | Pad position prediction after move/rotate (without and with flip), invariance of `local_pad_offset` to angle. |
 | `test_registry_integration.py` | Full registry cycle (create, update, prune) with mocks, including reconciliation with real vias. |
@@ -157,7 +157,7 @@ pytest tests/integration_tests/ -v -s -m integration
 | `test_two_phase_execution.py` | Two‑phase execution (moves → refresh → vias) with mocks – ensures that vias are planned after moves and have the correct `registry_key`. |
 | `test_undo_layer.py` | Saving and restoring the component layer in undo (`original_layer` in JSON log). |
 | `test_unique_roles.py` | Uniqueness of roles inside a template (fatal error on duplicates). |
-| `test_unknown_keys_validation.py` | `check_unknown_keys` validation for config sections: unknown top‑level keys, unknown keys inside `clone_placements`, `rules`, `thermal_via_array`, `templates`. |
+| `test_unknown_keys_validation.py` | `check_unknown_keys` validation for config sections: unknown top‑level keys, unknown keys inside `clone_placements`, `rules`, `thermal_via_arrays`, `templates`. |
 | `test_validation.py` | Pre‑validation checks: template/pad existence, component pool sufficiency, uniqueness of clone anchors, net resolution for via/tracks, selection mode for clones. |
 
 ---

@@ -15,7 +15,7 @@ from kipy.geometry import Vector2
 from kipy.board_types import Pad, FootprintInstance
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ClonePlacement, Cell, TemplateComponentSlot, Point,
+    Config, ClonePlacement, Cell, TemplateComponentSlot, Point,
 )
 from kicadstamp.exceptions import ValidationError
 from kicadstamp.placement.dependency_order import resolve_execution_order, _build_items
@@ -70,7 +70,6 @@ def _cfg(clones=None, points=None):
         layer='F.Cu',
         cells={"producer_tpl": producer_tpl, "consumer_tpl": consumer_tpl},
         points=points or {},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[],
         clone_placements=clones or [],
     )

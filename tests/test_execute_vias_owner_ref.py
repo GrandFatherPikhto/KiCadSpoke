@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from unittest.mock import MagicMock
 from kipy.geometry import Vector2
 
-from kicadstamp.config import Config, ThermalViaArrayConfig
+from kicadstamp.config import Config
 from kicadstamp.placement.executor import BatchExecutor
 from kicadstamp.placement.commands import ViaCommand
 
@@ -63,7 +63,6 @@ def test_owner_ref_matches_actual_command_not_first_in_batch():
     cfg = Config(
         layer='F.Cu',
         cells={},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[],
     )
 
@@ -115,7 +114,6 @@ def test_registry_record_created_called_with_correct_uuid_per_via():
     cfg = Config(
         layer='F.Cu',
         cells={},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[],
     )
 

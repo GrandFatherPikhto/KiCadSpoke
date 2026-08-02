@@ -1,17 +1,17 @@
 layer: B.Cu
 
-thermal_via_array:
-  retired: false
-  name: ic1_thermal
-  anchor_ref: IC1
-  pad: '145'
-  net: GND
-  rows: 4
-  cols: 4
-  margin_mm: 0.5
-  pattern: grid
-  drill_mm: 0.3
-  diameter_mm: 0.5
+thermal_via_arrays:
+  - retired: false
+    name: ic1_thermal
+    anchor_ref: IC1
+    pad: '145'
+    net: GND
+    rows: 4
+    cols: 4
+    margin_mm: 0.5
+    pattern: grid
+    drill_mm: 0.3
+    diameter_mm: 0.5
 
 # Один шаблон на всё -- вся геометрия локальная (along/across), при
 # rotation_deg=0 это выглядело бы как "эталонный" правый борт.

@@ -1,7 +1,7 @@
 # Справочник по YAML-конфигу
 
 Всё про то, как **писать** конфиг KiCadStamp с нуля: корневые поля, каждая секция (`cells:`/`rules:`/
-`clone_placements:`/`thermal_via_array:`/`points:`), `include:`, `extract_profiles:`/`clone_profiles:`.
+`clone_placements:`/`thermal_via_arrays:`/`points:`), `include:`, `extract_profiles:`/`clone_profiles:`.
 Про запуск команд над конфигом — [docs/commands_ru.md](commands_ru.md); про написание расстановки на
 Python вместо ручного YAML — [docs/python_ru.md](python_ru.md); про архитектуру модулей/классов за этой
 схемой — [docs/architect_ru.md](architect_ru.md).
@@ -22,8 +22,8 @@ log_file: ../logs/fpga.log
 schematic_dir: ../../../test_boards/3CH-AWG-TIA
 layer: B.Cu
 
-thermal_via_array:
-  ...
+thermal_via_arrays:
+  - ...
 
 cell_files:
   - templates/fpga_pi_filters.yaml
@@ -46,7 +46,7 @@ clone_placements:
 | `include` | список | Другие YAML-файлы для подключения — см. **`include:`** ниже. |
 | `rules` | список | Правила ManualSpoke — см. **`rules:`** ниже. |
 | `clone_placements` | список | Размещения TemplatePlacer — см. **`clone_placements:`** ниже. |
-| `thermal_via_array` | словарь | Одна термо-via-сетка — см. **`thermal_via_array:`** ниже. |
+| `thermal_via_arrays` | список | Любое число термо-via-сеток, каждая с собственным именем/якорем — см. **`thermal_via_arrays:`** ниже. |
 | `place_components` | булево | По умолчанию `true`. `false` — перемещать/создавать via и треки, но не трогать позиции компонентов. |
 | `skip_existing_components` | булево | По умолчанию `false`. Пропускать компоненты (и их via/треки), уже стоящие в целевой позиции — дешёвая идемпотентность для повторных прогонов. |
 | `via_keepout_clearance_mm`, `via_search_step_mm`, `via_search_max_radius_mm`, `via_search_n_directions` | числа | Параметры поиска свободного места, используются только термо-via. |
@@ -287,29 +287,31 @@ clone_placements:
 
 ---
 
-## `thermal_via_array:` — одна термо-via-сетка
+## `thermal_via_arrays:` — термо-via-сетки
 
 ```yaml
 # boards/3ch-awg-tia/profiles/fpga.yaml
-thermal_via_array:
-  name: fpga_thermal
-  retired: false
-  skip: false
-  anchor_role: FPGA
-  pad: '145'
-  net: GND
-  rows: 4
-  cols: 4
-  margin_mm: 0.5
-  pattern: grid
-  drill_mm: 0.3
-  diameter_mm: 0.5
+thermal_via_arrays:
+  - name: fpga_thermal
+    retired: false
+    skip: false
+    anchor_role: FPGA
+    pad: '145'
+    net: GND
+    rows: 4
+    cols: 4
+    margin_mm: 0.5
+    pattern: grid
+    drill_mm: 0.3
+    diameter_mm: 0.5
 ```
 
-Только **одна** `thermal_via_array:` на конфиг (в отличие от `rules:`/`clone_placements:`, это не
-список — если плате нужно больше одной термо-площадки, разбивайте по `include:`-файлам, у каждого свой
-корневой `thermal_via_array:`). `name` **обязателен**, если секция вообще присутствует (используется
-для `--only` и идентичности в реестре `f"thermal:{name}"`).
+Настоящий список (2026-08-02, обобщено, когда появилась вторая ИС с термо-via — AD9707, по одной на
+канал) — та же форма, что `rules:`/`clone_placements:`: любое число записей, каждая со своим именем/
+якорем/`retired`/`skip`, и каждая может жить в своём файле через `include:` (`thermal_via_arrays` —
+объединяемая списочная секция, как `rules`/`clone_placements`). `name:` **обязателен** у каждой записи
+(используется для `--only` и идентичности в реестре `f"thermal:{name}"`) и должен быть **уникален по
+всему списку** (иначе фатал при загрузке — `--only` не сможет различить одноимённые записи).
 
 | Поле | Смысл |
 |---|---|
@@ -320,10 +322,12 @@ thermal_via_array:
 | `margin_mm` | Отступ от края пада до первой via. |
 | `pattern` | `grid` или `staggered`. |
 | `drill_mm`/`diameter_mm` | Размеры via. |
-| `retired` | По умолчанию `false`. Тот же смысл «не существует», что и везде. Унифицировано под дефолт `false` у всех четырёх retired-несущих типов 2026-07-31 — до этого только `thermal_via_array` дефолтил старый `enabled` в `False` (opt-in), несоответствие теперь устранено. |
+| `retired` | По умолчанию `false`. Тот же смысл «не существует», что и везде. |
 | `skip` | По умолчанию `false`. Тот же смысл «не трогать в этом прогоне», что и везде. |
 
-**Устарело, фатал при загрузке:** `target_ref` (переименован в `anchor_ref`), старый `enabled:`
+**Устарело, фатал при загрузке:** старый одиночный `thermal_via_array:` (словарь, не список —
+переименуй в `thermal_via_arrays:` и оберни блок в YAML-список), `target_ref` (переименован в
+`anchor_ref`), старый `enabled:`
 (переименован и обратен по смыслу `retired:` — `enabled: true` ≠ `retired: true`, не делай буквальный
 find-and-replace в старом конфиге, перепроверь исходный смысл).
 
@@ -385,8 +389,8 @@ include:
 Каждая запись — либо строка-путь, либо `{path: <строка>, enabled: <булево>}`, чтобы выключить целый
 подключаемый файл, не удаляя и не закомментировав его.
 
-- **Списочные секции** (`rules`, `clone_placements`) — конкатенируются: сначала записи этого файла,
-  затем каждого подключённого, в порядке перечисления. (Реальный порядок размещения при `apply`
+- **Списочные секции** (`rules`, `clone_placements`, `thermal_via_arrays`) — конкатенируются: сначала
+  записи этого файла, затем каждого подключённого, в порядке перечисления. (Реальный порядок размещения при `apply`
   решается отдельно, по настоящим якорным зависимостям, не по порядку в YAML — см.
   [docs/placement_ru.md](placement_ru.md).)
 - **Словарные секции** (`cells`, `points`, `extract_profiles`, `clone_profiles`) — объединяются
@@ -394,7 +398,7 @@ include:
   «инлайн перекрывает внешнее» у `cells_file:` — подключаемые файлы задуманы как по-настоящему
   независимые подсистемы, так что повтор имени куда вероятнее ошибка копипаста, чем намеренное
   перекрытие).
-- **Любой другой top-level ключ** (`layer:`, `thermal_via_array:`, `schematic_dir:`, `registry_path:`,
+- **Любой другой top-level ключ** (`layer:`, `schematic_dir:`, `registry_path:`,
   …) внутри *подключаемого* (не корневого) файла не имеет определённого правила слияния между файлами
   и является **фатальной** ошибкой — перенеси его в корневой конфиг. (Раньше это тихо отбрасывалось —
   реальный, неоднократно встречавшийся класс багов на `boards/3ch-awg-tia`, теперь ловится при

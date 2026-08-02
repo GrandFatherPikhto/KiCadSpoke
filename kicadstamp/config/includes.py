@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 # include's, in listed order). YAML order has no functional effect —
 # dependency_order.py already reorders rules/clone_placements by real anchor
 # dependency at apply time.
-_LIST_SECTIONS = ('rules', 'clone_placements')
+_LIST_SECTIONS = ('rules', 'clone_placements', 'thermal_via_arrays')
 
 # Dict sections: merged key-by-key, fatal on a key defined in two different
 # files (unlike cells_file's silent inline-overrides-external — these are
@@ -88,9 +88,14 @@ def _resolve(path: str, data: dict[str, Any], seen: set[Path], is_root: bool = T
     # _DICT_SECTIONS/'include' have no defined multi-file merge semantics —
     # they used to be silently computed here and then dropped by the caller
     # (only _LIST_SECTIONS/_DICT_SECTIONS get pulled up, see below), a real,
-    # repeatedly-hit class of bug (layer:, thermal_via_array:, an un-wrapped
+    # repeatedly-hit class of bug (layer:, schematic_dir:, an un-wrapped
     # cells: shape — all found live on boards/3ch-awg-tia). Fatal instead
     # of guessing a merge rule for an arbitrary scalar/mapping key.
+    # (thermal_via_arrays: used to be exactly this kind of unmergeable
+    # scalar-shaped block under its old singular name thermal_via_array: —
+    # generalized to a real list section 2026-08-02, see
+    # handoff_2026_08_02_thermal_via_arrays_list.md, so it's fine to include
+    # now, same as rules:/clone_placements:.)
     if not is_root:
         unsupported = sorted(k for k in data.keys()
                              if k not in _LIST_SECTIONS and k not in _DICT_SECTIONS and k != 'include')
@@ -100,8 +105,8 @@ def _resolve(path: str, data: dict[str, Any], seen: set[Path], is_root: bool = T
                 _("include: {file!r} has top-level key(s) not supported inside an included file: {keys}")
                 .format(file=path, keys=keys_str),
                 [_("include: only merges {list_sections} (lists) and {dict_sections} (mappings) "
-                   "from an included file — anything else (e.g. layer:, thermal_via_array:, "
-                   "schematic_dir:, registry_path:) has no defined way to merge across multiple "
+                   "from an included file — anything else (e.g. layer:, schematic_dir:, "
+                   "registry_path:) has no defined way to merge across multiple "
                    "included files and was previously silently dropped. Move {keys} to the root "
                    "config file instead")
                  .format(list_sections=_LIST_SECTIONS, dict_sections=_DICT_SECTIONS, keys=keys_str)]

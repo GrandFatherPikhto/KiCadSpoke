@@ -1,4 +1,4 @@
-# KiCadStamp v1.6.1
+# KiCadStamp v1.7.0
 
 **KiCadStamp** is a command‑line **PCB cloning and layout automation** tool for **KiCad 10**, designed as an advanced script‑based alternative to the traditional **KiCad Replicate Layout** plugin. It enables automated **block replication**, component placement, and routing of complex multi‑channel designs using **templates**, **roles**, and the IPC API.
 
@@ -135,7 +135,7 @@ During extraction, the reverse operation (`--net-template`) is available, turnin
 ## Configuration File Format (YAML)
 
 Full field-by-field reference for every section (`cells`/`rules`/`clone_placements`/
-`thermal_via_array`/`points`/`include`/`extract_profiles`) with real, currently-loading examples now
+`thermal_via_arrays`/`points`/`include`/`extract_profiles`) with real, currently-loading examples now
 lives in its own page: [docs/config.md](docs/config.md).
 
 ---
@@ -158,7 +158,7 @@ Options:
 - `--log-file` – save logs to a file.
 - `--no-collision-check` – disable collision checking.
 - `--collision-margin` – margin in mm (default 0.2).
-- `--only NAME` – process only the `rules`/`clone_placements`/`thermal_via_array` with this name (repeatable); everything else is skipped entirely. `name:` is mandatory on every such entry.
+- `--only NAME` – process only the `rules`/`clone_placements`/`thermal_via_arrays` with this name (repeatable); everything else is skipped entirely. `name:` is mandatory on every such entry.
 
 ### `extract` – extract template from selection (enhanced)
 

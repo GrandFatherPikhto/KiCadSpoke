@@ -1,7 +1,7 @@
 # YAML Configuration Reference
 
 Everything about **writing** a KiCadStamp config from scratch: root fields, every section
-(`cells:`/`rules:`/`clone_placements:`/`thermal_via_array:`/`points:`), `include:`, and
+(`cells:`/`rules:`/`clone_placements:`/`thermal_via_arrays:`/`points:`), `include:`, and
 `extract_profiles:`/`clone_profiles:`. For running commands against a config, see
 [docs/commands.md](commands.md); for coding placement in Python instead of hand-writing YAML, see
 [docs/python.md](python.md); for the module/class architecture behind all of this, see
@@ -23,8 +23,8 @@ log_file: ../logs/fpga.log
 schematic_dir: ../../../test_boards/3CH-AWG-TIA
 layer: B.Cu
 
-thermal_via_array:
-  ...
+thermal_via_arrays:
+  - ...
 
 cell_files:
   - templates/fpga_pi_filters.yaml
@@ -47,7 +47,7 @@ clone_placements:
 | `include` | list | Other YAML files to merge in — see **`include:`** below. |
 | `rules` | list | ManualSpoke rules — see **`rules:`** below. |
 | `clone_placements` | list | TemplatePlacer placements — see **`clone_placements:`** below. |
-| `thermal_via_array` | mapping | One thermal via grid — see **`thermal_via_array:`** below. |
+| `thermal_via_arrays` | list | Any number of thermal via grids, each independently named/anchored — see **`thermal_via_arrays:`** below. |
 | `place_components` | bool | Default `true`. `false` moves/creates vias and tracks but leaves component positions untouched. |
 | `skip_existing_components` | bool | Default `false`. Skip components (and their vias/tracks) already at the target position — cheap idempotency for re-runs. |
 | `via_keepout_clearance_mm`, `via_search_step_mm`, `via_search_max_radius_mm`, `via_search_n_directions` | numbers | Free-space search parameters, used only by thermal via placement. |
@@ -286,29 +286,31 @@ by explicit `layer:`+`mirror:`).
 
 ---
 
-## `thermal_via_array:` — one thermal via grid
+## `thermal_via_arrays:` — thermal via grids
 
 ```yaml
 # boards/3ch-awg-tia/profiles/fpga.yaml
-thermal_via_array:
-  name: fpga_thermal
-  retired: false
-  skip: false
-  anchor_role: FPGA
-  pad: '145'
-  net: GND
-  rows: 4
-  cols: 4
-  margin_mm: 0.5
-  pattern: grid
-  drill_mm: 0.3
-  diameter_mm: 0.5
+thermal_via_arrays:
+  - name: fpga_thermal
+    retired: false
+    skip: false
+    anchor_role: FPGA
+    pad: '145'
+    net: GND
+    rows: 4
+    cols: 4
+    margin_mm: 0.5
+    pattern: grid
+    drill_mm: 0.3
+    diameter_mm: 0.5
 ```
 
-Only **one** `thermal_via_array:` per config (unlike `rules:`/`clone_placements:`, it's not a list —
-if a board needs more than one thermal pad handled, split across `include:`d files, each with its own
-root-level `thermal_via_array:`). `name` is **required** if the section is present at all (used for
-`--only` and the registry identity `f"thermal:{name}"`).
+A real list (2026-08-02, generalized once a second IC needing thermal vias — AD9707, one per channel —
+showed up) — same shape as `rules:`/`clone_placements:`: any number of entries, each independently
+named/anchored/retired/skipped, and each can live in a different file via `include:` (`thermal_via_arrays`
+is a merged list section, same as `rules`/`clone_placements`). `name:` is **required** on every entry (used
+for `--only` and the registry identity `f"thermal:{name}"`) and must be **unique across the whole list**
+(fatal at load otherwise — `--only` couldn't tell same-named entries apart).
 
 | Field | Meaning |
 |---|---|
@@ -319,12 +321,13 @@ root-level `thermal_via_array:`). `name` is **required** if the section is prese
 | `margin_mm` | Clearance from the pad edge to the first via. |
 | `pattern` | `grid` or `staggered`. |
 | `drill_mm`/`diameter_mm` | Via dimensions. |
-| `retired` | Default `false`. Same "does not exist" meaning as elsewhere. Unified to default `false` across all four `retired`-bearing types on 2026-07-31 — before that, `thermal_via_array` alone defaulted its old `enabled` field to `False` (opt-in), an inconsistency now resolved. |
+| `retired` | Default `false`. Same "does not exist" meaning as elsewhere. |
 | `skip` | Default `false`. Same "leave alone this run" meaning as elsewhere. |
 
-**Deprecated, fatal on load:** `target_ref` (renamed to `anchor_ref`), the old `enabled:` (renamed and
-inverted to `retired:` — `enabled: true` ≠ `retired: true`, don't do a literal find-and-replace on an
-old config, re-check the intended sense).
+**Deprecated, fatal on load:** the old singular `thermal_via_array:` (a mapping, not a list — rename to
+`thermal_via_arrays:` and wrap the block in a YAML list), `target_ref` (renamed to `anchor_ref`), the old
+`enabled:` (renamed and inverted to `retired:` — `enabled: true` ≠ `retired: true`, don't do a literal
+find-and-replace on an old config, re-check the intended sense).
 
 ---
 
@@ -384,14 +387,14 @@ include:
 Each entry is either a bare path string, or `{path: <str>, enabled: <bool>}` to switch a whole
 included file off without deleting or commenting it out.
 
-- **List sections** (`rules`, `clone_placements`) — concatenated: this file's own entries first, then
-  each included file's, in listed order. (Real placement order at `apply` time is decided separately,
-  by actual anchor dependencies, not YAML order — see [docs/placement.md](placement.md).)
+- **List sections** (`rules`, `clone_placements`, `thermal_via_arrays`) — concatenated: this file's own
+  entries first, then each included file's, in listed order. (Real placement order at `apply` time is
+  decided separately, by actual anchor dependencies, not YAML order — see [docs/placement.md](placement.md).)
 - **Dict sections** (`cells`, `points`, `extract_profiles`, `clone_profiles`) — merged key-by-key,
   **fatal** on a key defined in two different files (deliberately stricter than `cells_file:`'s silent
   inline-overrides-external — included files are meant to be genuinely independent subsystems, so a
   repeated name is far more likely a copy-paste mistake than an intentional override).
-- **Any other top-level key** (`layer:`, `thermal_via_array:`, `schematic_dir:`, `registry_path:`, …)
+- **Any other top-level key** (`layer:`, `schematic_dir:`, `registry_path:`, …)
   inside an *included* (non-root) file has no defined multi-file merge rule and is a **fatal** error —
   move it to the root config instead. (This used to be silently dropped — a real, repeatedly-hit bug
   class on `boards/3ch-awg-tia`, now caught at load time.)

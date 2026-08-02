@@ -24,7 +24,7 @@ from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ManualSpoke, Cell,
+    Config, ManualSpoke, Cell,
     TemplateVia, TemplateComponentSlot, Rule
 )
 from kicadstamp.placement.services.manual_position_calculator import ManualPositionCalculator
@@ -63,7 +63,6 @@ def _build_cfg(power_via_offset_across=-1.5):
     return Config(
         layer='B.Cu',
         cells={"t": cell},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[spoke])],
     )
 
@@ -133,7 +132,7 @@ def test_registry_full_cycle_across_two_runs():
     adapter.reset_mock()  # resets call counts, keeps side_effect and return_value
     cfg4 = Config(
         layer='B.Cu', cells={},
-        thermal_via_array=ThermalViaArrayConfig(retired=True), rules=[],
+        rules=[],
     )
     calc4 = ManualPositionCalculator(adapter, cfg4)
     _, vias4, _ = calc4.compute_raw_positions(cfg4.rules)

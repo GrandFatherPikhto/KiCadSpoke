@@ -18,11 +18,18 @@ from .points import Point
 
 @dataclass
 class ThermalViaArrayConfig:
-    """Configuration for a thermal via array under an IC thermal pad.
+    """Configuration for one thermal via array under an IC thermal pad.
+    Config.thermal_via_arrays: list[ThermalViaArrayConfig] — any number of
+    these, each independently named/anchored/retired/skipped, same shape as
+    rules/clone_placements (2026-08-02: generalized from a single field once
+    a second real IC needing thermal vias — AD9707 — showed up; see
+    handoff_2026_08_02_thermal_via_arrays_list.md).
 
-    name — for --only (see kicadstamp_cli.py). REQUIRED in YAML if the
-    thermal_via_array section is present at all (see config/loader.py — fatal,
-    not a silent fallback). Here in the dataclass it's Optional only because
+    name — for --only (see kicadstamp_cli.py), and to disambiguate one array
+    from another. REQUIRED in YAML for every entry in thermal_via_arrays:
+    (see config/loader.py — fatal, not a silent fallback), and must be unique
+    across the whole list (also fatal at load, same reasoning as rules'
+    --only collision check). Here in the dataclass it's Optional only because
     tests/internal code that construct ThermalViaArrayConfig() directly in
     Python (bypassing the YAML loader) don't need a name — the requirement
     applies ONLY to human input via YAML, not to the data structure itself.
@@ -396,7 +403,7 @@ class Config:
     layer: str = 'F.Cu'
     cells: dict[str, Cell] = field(default_factory=dict)
     points: dict[str, Point] = field(default_factory=dict)
-    thermal_via_array: ThermalViaArrayConfig = field(default_factory=ThermalViaArrayConfig)
+    thermal_via_arrays: list[ThermalViaArrayConfig] = field(default_factory=list)
     rules: list[Rule] = field(default_factory=list)
     clone_placements: list[ClonePlacement] = field(default_factory=list)
     place_components: bool = True
@@ -435,8 +442,8 @@ class Config:
     operation_log_dir: str | None = None
     @property
     def anchor_refs(self) -> set:
-        """All anchor refs in the config: spoke rules + thermal via array."""
+        """All anchor refs in the config: spoke rules + thermal via arrays."""
         out = {r.anchor_ref for r in self.rules if r.anchor_ref}
-        if not self.thermal_via_array.retired and self.thermal_via_array.anchor_ref:
-            out.add(self.thermal_via_array.anchor_ref)
+        out |= {tva.anchor_ref for tva in self.thermal_via_arrays
+                if not tva.retired and tva.anchor_ref}
         return out

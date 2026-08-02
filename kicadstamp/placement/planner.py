@@ -139,13 +139,12 @@ class PlacementPlanner:
 
     def plan_vias(self) -> list[ViaCommand]:
         # Thermal via anchor resolution (anchor_ref/anchor_role/anchor_sheet/
-        # anchor_cluster) is entirely inside via_planner.py (_resolve_thermal_anchor)
-        # — we do not duplicate that logic here; target_fp=None means "resolve
-        # yourself from cfg.thermal_via_array".
+        # anchor_cluster), one per cfg.thermal_via_arrays entry, is entirely
+        # inside via_planner.py (_resolve_thermal_anchor) — we do not
+        # duplicate that logic here.
         return self.via_planner.plan_vias(
             planned_components=self._planned,
             planned_vias=self._planned_vias,
-            target_fp=None,
             target_layer=self._target_layer
         )
 

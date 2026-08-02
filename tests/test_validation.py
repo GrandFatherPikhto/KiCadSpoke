@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ManualSpoke, Cell,
+    Config, ManualSpoke, Cell,
     TemplateComponentSlot, TemplateVia, Rule, ClonePlacement
 )
 from kicadstamp.exceptions import ValidationError
@@ -27,7 +27,6 @@ def _cfg(rules=None, cells=None, clone_placements=None, layer='B.Cu'):
         cells=cells or {"t": Cell(name="t", components=[
             TemplateComponentSlot(role="HEAVY"), TemplateComponentSlot(role="LIGHT")
         ])},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=rules or [],
         clone_placements=clone_placements or [],
     )

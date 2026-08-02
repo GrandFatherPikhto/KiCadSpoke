@@ -43,35 +43,29 @@ class TestEffectiveNameAccessors:
 
 
 def test_thermal_via_array_retired_defaults_false():
-    """Regression for Task A.1: constructed directly in Python (bypassing the
-    YAML loader), ThermalViaArrayConfig's 'retired' field defaults to False —
-    unified with Rule/ManualSpoke/ClonePlacement. This is ONLY about the bare
-    dataclass constructor (e.g. tests building one by hand); it says nothing
-    about what load_config() should default to for an ABSENT thermal_via_array:
-    section — see test_thermal_via_array_absent_section_stays_retired below,
-    found 2026-07-31: naively reusing this same False default in the loader for
-    an absent section made every config without thermal_via_array fatal on
-    apply (no anchor_ref/anchor_role either, since those also default to None)."""
+    """Constructed directly in Python (bypassing the YAML loader),
+    ThermalViaArrayConfig's 'retired' field defaults to False — unified with
+    Rule/ManualSpoke/ClonePlacement."""
     assert ThermalViaArrayConfig().retired is False
 
 
-def test_thermal_via_array_absent_section_stays_retired(tmp_path):
-    """Regression 2026-07-31: a config with NO thermal_via_array: section at all
-    must load with retired=True (does nothing), exactly like before the
-    active/enabled -> skip/retired rename — NOT retired=False (which would make
-    ViaPlanner._resolve_thermal_anchor() raise ValidationError on every apply,
-    since anchor_ref/anchor_role are also None when nothing was configured)."""
+def test_thermal_via_arrays_absent_section_is_an_empty_list(tmp_path):
+    """2026-08-02: thermal_via_array (one, always-present field with a
+    special retired=True-when-absent sentinel) became thermal_via_arrays (a
+    real list, default_factory=list) — an absent section is now simply an
+    empty list, same as absent rules:/clone_placements:, no sentinel hack
+    needed."""
     config_file = tmp_path / "test.yaml"
     config_file.write_text("layer: B.Cu\nrules: []\ncells: {}\n", encoding="utf-8")
     cfg, _ = load_config(str(config_file))
 
-    assert cfg.thermal_via_array.retired is True
+    assert cfg.thermal_via_arrays == []
 
 
 YAML_TEXT = """
 layer: B.Cu
-thermal_via_array:
-  retired: false
+thermal_via_arrays:
+- retired: false
   anchor_role: FPGA
   pad: '145'
   name: fpga_thermal
@@ -109,21 +103,21 @@ class TestNameLoadedFromYaml:
         config_file.write_text(YAML_TEXT, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
 
-        assert cfg.thermal_via_array.name == "fpga_thermal"
-        assert thermal_via_array_effective_name(cfg.thermal_via_array) == "fpga_thermal"
+        assert cfg.thermal_via_arrays[0].name == "fpga_thermal"
+        assert thermal_via_array_effective_name(cfg.thermal_via_arrays[0]) == "fpga_thermal"
 
 
 class TestNameRequired:
     """Without name: — fatal, not a silent fallback/'?'. Two remaining
     places (Rule is the exception now, see TestRuleNameOptional below):
-    thermal_via_array (only when the section is actually present),
-    clone_placement (closes an old hole with a silent '?')."""
+    every thermal_via_arrays entry, clone_placement (closes an old hole
+    with a silent '?')."""
 
     def test_thermal_via_array_without_name_is_fatal(self, tmp_path):
         text = """
 layer: B.Cu
-thermal_via_array:
-  retired: false
+thermal_via_arrays:
+- retired: false
   anchor_role: FPGA
   pad: '145'
 cells: {}
@@ -133,13 +127,11 @@ cells: {}
         with pytest.raises(ValidationError):
             load_config(str(config_file))
 
-    def test_absent_thermal_via_array_section_is_not_fatal(self, tmp_path):
+    def test_absent_thermal_via_arrays_section_is_not_fatal(self, tmp_path):
         """Section absent from YAML entirely — not the same as "present but
-        without name" — nothing is being named here, no error. It does default
-        to retired=True though (found 2026-07-31: a retired=False default here
-        would make ViaPlanner try to resolve a thermal anchor with no
-        anchor_ref/anchor_role set and raise ValidationError on every apply —
-        see test_thermal_via_array_absent_section_stays_retired above)."""
+        without name" — nothing is being named here, no error, just an
+        empty list (see test_thermal_via_arrays_absent_section_is_an_empty_list
+        above)."""
         text = """
 layer: B.Cu
 cells: {}
@@ -147,8 +139,7 @@ cells: {}
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.thermal_via_array.retired is True
-        assert cfg.thermal_via_array.name is None
+        assert cfg.thermal_via_arrays == []
 
     def test_clone_placement_without_name_is_fatal(self, tmp_path):
         text = """
@@ -303,8 +294,8 @@ cells: {}
     def test_thermal_via_array_skip_true_loaded_from_yaml(self, tmp_path):
         text = """
 layer: B.Cu
-thermal_via_array:
-  retired: false
+thermal_via_arrays:
+- retired: false
   anchor_role: FPGA
   pad: '145'
   name: fpga_thermal
@@ -314,4 +305,4 @@ cells: {}
         config_file = tmp_path / "test.yaml"
         config_file.write_text(text, encoding="utf-8")
         cfg, _ = load_config(str(config_file))
-        assert cfg.thermal_via_array.skip is True
+        assert cfg.thermal_via_arrays[0].skip is True

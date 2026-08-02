@@ -25,7 +25,7 @@ from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ManualSpoke, Cell,
+    Config, ManualSpoke, Cell,
     TemplateVia, TemplateComponentSlot, Rule
 )
 from kicadstamp.placement.planner import PlacementPlanner
@@ -57,7 +57,6 @@ def test_two_phase_flow_completes_and_via_geometry_is_correct():
     cfg = Config(
         layer='B.Cu',
         cells={"t": cell},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[spoke])],
     )
 

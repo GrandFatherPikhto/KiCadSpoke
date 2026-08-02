@@ -17,7 +17,7 @@ from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, Net
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ManualSpoke, Cell,
+    Config, ManualSpoke, Cell,
     TemplateVia, TemplateComponentSlot, Rule
 )
 from kicadstamp.placement.planner import PlacementPlanner
@@ -79,7 +79,6 @@ def _build_config():
     cfg = Config(
         layer='B.Cu',
         cells={"cap_pair_standard": cell},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[Rule(net="+1V2_VCCINT", anchor_ref='IC1', spokes=[spoke_109, spoke_62])],
         via_keepout_clearance_mm=0.2, via_search_step_mm=0.1,
         via_search_max_radius_mm=3.0, via_search_n_directions=8,

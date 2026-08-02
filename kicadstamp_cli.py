@@ -105,12 +105,12 @@ def main() -> int:
                                      "behaves as if nothing were selected."))
     apply_parser.add_argument("--collision-margin", type=float, default=0.2, help=_("Extra clearance for collision check in mm"))
     apply_parser.add_argument("--only", action="append", metavar="NAME",
-                              help=_("Process only rules/clone_placements/thermal_via_array with this "
+                              help=_("Process only rules/clone_placements/thermal_via_arrays with this "
                                      "identity (rule name if set, else its net; clone_placement/"
-                                     "thermal_via_array name). Repeatable and/or comma-separated "
+                                     "thermal_via_arrays entry name). Repeatable and/or comma-separated "
                                      "(--only a,b --only c). Everything else is ignored in this run."))
     apply_parser.add_argument("--cluster", action="append", metavar="PATH",
-                              help=_("Process only spokes/clone_placements/thermal_via_array whose "
+                              help=_("Process only spokes/clone_placements/thermal_via_arrays entries whose "
                                      "Cluster (anchor_cluster / spoke cluster) matches this path or "
                                      "prefix (segment-wise, e.g. 'Channel_0' also matches "
                                      "'Channel_0/DAC_OA'). Repeatable and/or comma-separated. "

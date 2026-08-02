@@ -13,7 +13,7 @@ from kipy.geometry import Vector2, Angle
 from kipy.board_types import BoardLayer, Pad, FootprintInstance, Net
 
 from kicadstamp.config import (
-    Config, ThermalViaArrayConfig, ClonePlacement, Cell,
+    Config, ClonePlacement, Cell,
     TemplateVia, TemplateComponentSlot, ManualSpoke, Rule
 )
 from kicadstamp.placement.planner import PlacementPlanner
@@ -55,7 +55,6 @@ def test_clone_placements_only_via_selection():
     cfg = Config(
         layer='B.Cu',
         cells={"crystal": tpl},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[],  # НЕТ rules вовсе
         clone_placements=[clone],
     )
@@ -110,7 +109,6 @@ def test_rules_and_clone_placements_together():
     cfg = Config(
         layer='B.Cu',
         cells={"cap_single": spoke_tpl, "crystal": clone_tpl},
-        thermal_via_array=ThermalViaArrayConfig(retired=True),
         rules=[Rule(net="+3V3", anchor_ref='IC1', spokes=[ManualSpoke(pad="17", cell="cap_single")])],
         clone_placements=[ClonePlacement(name="xtal1", cell="crystal", xy=(200.0, 0.0))],
     )
