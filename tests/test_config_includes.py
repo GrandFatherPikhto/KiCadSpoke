@@ -218,11 +218,14 @@ def test_cycle_is_fatal(tmp_path):
     root = tmp_path / "root.yaml"
     root.write_text("include:\n  - a.yaml\n", encoding="utf-8")
 
-    with pytest.raises(ValidationError, match="included more than once"):
+    with pytest.raises(ValidationError, match="cycle detected"):
         load_config(str(root))
 
 
-def test_diamond_reinclude_is_fatal(tmp_path):
+def test_diamond_reinclude_is_deduplicated_not_fatal(tmp_path):
+    """d.yaml is included from two unrelated branches (b and c) — a diamond,
+    not a cycle. Must load cleanly, with d's cells: merged exactly once (not
+    duplicated, and not fatal on a false "duplicate key" against itself)."""
     (tmp_path / "d.yaml").write_text(MINIMAL_TEMPLATE, encoding="utf-8")
     (tmp_path / "b.yaml").write_text("include:\n  - d.yaml\n", encoding="utf-8")
     (tmp_path / "c.yaml").write_text("include:\n  - d.yaml\n", encoding="utf-8")
@@ -230,8 +233,8 @@ def test_diamond_reinclude_is_fatal(tmp_path):
     root = tmp_path / "root.yaml"
     root.write_text("include:\n  - b.yaml\n  - c.yaml\n", encoding="utf-8")
 
-    with pytest.raises(ValidationError, match="included more than once"):
-        load_config(str(root))
+    cfg, _ = load_config(str(root))
+    assert list(cfg.cells.keys()) == ["one_role"]
 
 
 def test_dict_section_used_as_list_is_fatal(tmp_path):

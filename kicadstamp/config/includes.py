@@ -56,7 +56,8 @@ def _parse_include_entry(entry: Any, source_path: str) -> tuple[str, bool]:
     ))
 
 
-def _resolve(path: str, data: dict[str, Any], seen: set[Path], is_root: bool = True) -> dict[str, Any]:
+def _resolve(path: str, data: dict[str, Any], ancestors: set[Path], resolved: set[Path],
+             is_root: bool = True) -> dict[str, Any]:
     base_dir = Path(path).parent
     if not isinstance(data, dict):
         raise ValidationError(format_fatal_error(
@@ -139,19 +140,33 @@ def _resolve(path: str, data: dict[str, Any], seen: set[Path], is_root: bool = T
                 [_("expected at {path} (relative to {source!r}, not the current "
                    "working directory)").format(path=include_path, source=path)]
             ))
-        if include_path in seen:
+        # Two different situations used to be conflated into one fatal check here:
+        # a true cycle (include_path is an ancestor of the file we're resolving right
+        # now — the chain would loop forever) and a diamond (include_path was already
+        # fully resolved somewhere else in the tree, via an unrelated branch — normal
+        # reuse, not a contradiction, needed for content files meant to be shared
+        # between subsystems/projects). ancestors tracks only the current path from
+        # the root down (a cycle is only a cycle relative to where you currently are);
+        # resolved is global for the whole resolve_includes() call (a diamond is a
+        # diamond no matter which branch reaches it first).
+        if include_path in ancestors:
             raise ValidationError(format_fatal_error(
-                _("include: {file!r} is included more than once (directly or "
-                  "indirectly), from {source!r}").format(file=str(include_path), source=path),
-                [_("either a cycle, or the same file included from two different "
-                   "branches — both are unsupported, split the shared content out "
-                   "instead")]
+                _("include: cycle detected — {file!r} is included from {source!r}, "
+                  "but is already being resolved higher up the same include chain")
+                .format(file=str(include_path), source=path),
+                [_("the include: chain loops back on itself — remove one of the "
+                   "include: entries that closes the loop")]
             ))
-        seen.add(include_path)
+        if include_path in resolved:
+            logger.info(_("include: {file!r} already resolved elsewhere in the tree "
+                          "(diamond) — reusing, not re-merging").format(file=str(include_path)))
+            continue
+        resolved.add(include_path)
 
         with open(include_path, 'r', encoding='utf-8') as f:
             include_data = yaml.safe_load(f) or {}
-        include_merged = _resolve(str(include_path), include_data, seen, is_root=False)
+        include_merged = _resolve(str(include_path), include_data, ancestors | {include_path},
+                                  resolved, is_root=False)
 
         for section in _LIST_SECTIONS:
             merged[section].extend(include_merged.get(section) or [])
@@ -177,8 +192,14 @@ def resolve_includes(path: str, data: dict[str, Any]) -> dict[str, Any]:
     extract_profiles/clone_profiles — merged, fatal on key collision) from
     every included file into data. Returns a new dict; does not mutate data.
 
+    A true cycle (a file including itself, directly or via a longer chain) is
+    fatal. A diamond (the same file included from two unrelated branches of
+    the tree) is not an error — it's resolved once and reused, not re-merged
+    a second time (which would otherwise trip the dict-section duplicate-key
+    check on the file's own content).
+
     path — the file data was loaded from (used to resolve relative include
-    paths, and to seed cycle/diamond detection with the root itself).
+    paths, and to seed cycle detection with the root itself).
     """
-    seen: set[Path] = {Path(path).resolve()}
-    return _resolve(path, data, seen)
+    root_path = Path(path).resolve()
+    return _resolve(path, data, ancestors={root_path}, resolved={root_path})
