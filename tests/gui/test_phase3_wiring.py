@@ -11,7 +11,7 @@ the injected object instead of main_window.connection.
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from fieldstool.schema_model import SchematicComponent
+from gui.schema_model import SchematicComponent
 
 from gui import settings
 from gui.dock_hub import DockHub

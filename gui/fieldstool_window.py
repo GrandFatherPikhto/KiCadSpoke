@@ -1,8 +1,8 @@
-# fieldstool/gui/main_window.py
+# gui/fieldstool_window.py
 """
 MainWindow — root-sheet picker, an edit panel, PendingChangesDock, and
 Apply. Two phases with different KiCad requirements (see
-fieldstool/__init__.py):
+docs/fieldstool.md):
 
 1. Staging (KiCad open): always embedded as a dock inside the main GUI
    (gui/docks/fieldstool_dock.py), which injects its OWN BoardConnection
@@ -28,12 +28,20 @@ fieldstool/__init__.py):
    Staging only ever writes to PendingRegistry (JSON) — nothing touches
    .kicad_sch yet.
 2. Apply (KiCad must be closed): converts the whole pending queue into
-   real edits via fieldstool.set_fields.plan_set_edits_for_root() +
-   fieldstool.editing.write_files() — the same offline pipeline the CLI's
-   `set` subcommand uses. Gated by check_kicad_not_running() — if KiCad
-   is running, this is an INSTRUCTION dialog, never automated (confirmed
-   2026-08-01: kipy has no app-level quit/save-all call to automate this
-   safely, see handoff_2026_08_01_fieldstool.md).
+   real edits via kicadstamp.schematic_set_fields.plan_set_edits_for_root()
+   + kicadstamp.schematic_editing.write_files() — the same offline pipeline
+   the CLI's `set` subcommand uses. Gated by check_kicad_not_running() — if
+   KiCad is running, this is an INSTRUCTION dialog, never automated
+   (confirmed 2026-08-01: kipy has no app-level quit/save-all call to
+   automate this safely, see handoff_2026_08_01_fieldstool.md).
+
+This module used to be fieldstool/gui/main_window.py, in its own package
+independent of gui/ — folded in 2026-08-02 (see docs/fieldstool.md)
+because it had already become entirely gui/-coupled in practice (always
+requires an injected gui.connection.BoardConnection, embedded exclusively
+via gui/docks/fieldstool_dock.py). The underlying schematic-editing
+library (parsing, splicing, safety guards) stays independent, in
+kicadstamp/ — fieldstool_cli.py uses that directly, without any of this.
 """
 from pathlib import Path
 from typing import Callable, List, Optional
@@ -43,13 +51,31 @@ from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout,
                               QHBoxLayout, QLabel, QMainWindow, QMessageBox,
                               QPushButton, QVBoxLayout, QWidget)
 
+from kicadstamp.exceptions import FieldsToolError
 from kicadstamp.i18n import _
+from kicadstamp.schematic_editing import check_kicad_not_running, write_files
+from kicadstamp.schematic_set_fields import plan_set_edits_for_root
 
-from .. import editing, set_fields
-from ..exceptions import FieldsToolError
-from ..schema_model import SchematicComponent, load_schematic_components
-from . import settings
-from .pending import PendingChangesDock, PendingRegistry
+from .docks.pending import PendingChangesDock, PendingRegistry
+from .schema_model import SchematicComponent, load_schematic_components
+from .settings import Settings
+
+# Own state file, separate from gui/gui_state.json (gui/settings.py's
+# default singleton) — reuses the same Settings class (atomic write,
+# point-wise get/set) rather than a second near-identical settings module.
+FIELDSTOOL_SETTINGS_PATH = Path(__file__).resolve().parent / "fieldstool_gui_state.json"
+
+
+class _FieldstoolSettings(Settings):
+    @property
+    def path(self) -> Path:
+        # Resolved at call time (not construction time), same reasoning as
+        # gui/settings.py's own module-level singleton — lets tests
+        # monkeypatch FIELDSTOOL_SETTINGS_PATH after import.
+        return self._path if self._path is not None else FIELDSTOOL_SETTINGS_PATH
+
+
+settings = _FieldstoolSettings()
 
 
 class MainWindow(QMainWindow):
@@ -115,7 +141,7 @@ class MainWindow(QMainWindow):
         edit_layout.addWidget(self.stage_button)
         layout.addWidget(edit_box)
 
-        self._pending_registry = PendingRegistry(Path(settings.SETTINGS_PATH).parent / "no_project.pending.json")
+        self._pending_registry = PendingRegistry(FIELDSTOOL_SETTINGS_PATH.parent / "no_project.pending.json")
         self.pending_dock = PendingChangesDock(self, self._pending_registry)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.pending_dock)
         self.pending_dock.on_apply_clicked = self._on_apply
@@ -123,25 +149,23 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         self._restore_last_root_sheet()
-        if settings.load().get("always_on_top"):
+        if settings.get("always_on_top"):
             self.always_on_top_checkbox.setChecked(True)  # triggers _set_always_on_top via its signal
 
     # ── Root sheet ───────────────────────────────────────────────────────
 
     def _restore_last_root_sheet(self) -> None:
-        saved = settings.load().get("root_sheet")
+        saved = settings.get("root_sheet")
         if saved and Path(saved).is_file():
             self._set_root_sheet(Path(saved))
 
     def _set_always_on_top(self, checked: bool) -> None:
         """setWindowFlag() only takes effect on the next show() — the window
         briefly disappears and reappears on most platforms (X11/Windows),
-        same as kicadstamp/gui/main_window.py's identical checkbox."""
+        same as gui/main_window.py's identical checkbox."""
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)
         self.show()
-        data = settings.load()
-        data["always_on_top"] = checked
-        settings.save(data)
+        settings.set("always_on_top", checked)
 
     def _on_pick_root_sheet(self) -> None:
         path, _filter = QFileDialog.getOpenFileName(
@@ -152,9 +176,7 @@ class MainWindow(QMainWindow):
     def _set_root_sheet(self, path: Path) -> None:
         self._root_sheet = path
         self.root_label.setText(str(path))
-        data = settings.load()
-        data["root_sheet"] = str(path)
-        settings.save(data)
+        settings.set("root_sheet", str(path))
 
         pending_path = path.with_suffix(".pending.json")
         self._pending_registry = PendingRegistry(pending_path)
@@ -327,18 +349,18 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, _("No root sheet"), _("Pick a root sheet first."))
             return
         try:
-            editing.check_kicad_not_running(force=False)
+            check_kicad_not_running(force=False)
         except RuntimeError:
             QMessageBox.information(
                 self, _("Close KiCad first"),
                 _("KiCad appears to be running. Save your work and close KiCad, then click "
                   "Apply again — this tool never closes KiCad for you (see "
-                  "fieldstool/__init__.py for why)."))
+                  "docs/fieldstool.md for why)."))
             return
 
         fields_cfg = self._pending_registry.as_fields_cfg()
         try:
-            edits_by_file, file_texts, report = set_fields.plan_set_edits_for_root(
+            edits_by_file, file_texts, report = plan_set_edits_for_root(
                 str(self._root_sheet), fields_cfg)
         except FieldsToolError as e:
             QMessageBox.critical(self, _("Cannot apply"), str(e))
@@ -358,7 +380,7 @@ class MainWindow(QMainWindow):
         if confirmed != QMessageBox.StandardButton.Yes:
             return
 
-        written, failed = editing.write_files(edits_by_file, file_texts)
+        written, failed = write_files(edits_by_file, file_texts)
         if failed:
             QMessageBox.critical(self, _("Some files failed"),
                                  _("Restored from .bak: {failed}").format(failed=failed))

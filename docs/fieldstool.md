@@ -1,28 +1,61 @@
 # fieldstool — bulk Role/Cluster set/rename in `.kicad_sch`
 
-`fieldstool/` (library) + `fieldstool_cli.py` (CLI) + `fieldstool.gui.main_window.MainWindow`,
-embedded as the first tab of the main [PyQt6 GUI](./gui.md) (`gui/docks/fieldstool_dock.py`, see
-[gui.md's fieldstool tab section](./gui.md#fieldstool-tab)) — the only way its GUI runs (a
-standalone `fieldstool_gui.py` entry point existed 2026-08-01 through 2026-08-02, retired as pure
-duplication of the embedded tab). It edits `.kicad_sch` **directly, as text** — not through KiCad's
-live IPC — because `Role`/`Cluster` custom fields originate in the schematic symbol, and a PCB-only
-IPC write gets silently reverted by KiCad's own "Update PCB from Schematic" (the main GUI used to
-have exactly that as a dock, `BulkFieldEditorDock` — retired in favor of fieldstool taking its
-place). See [Why a separate package](#why-a-separate-package) below — that's what stays separate,
-not the window/process.
+"fieldstool" is the name for a small family of `.kicad_sch`-text-editing tools sharing one
+underlying library — not a Python package anymore (folded into `kicadstamp`/`gui` 2026-08-02, see
+[Where the code actually lives](#where-the-code-actually-lives) below):
 
-## Why a separate package
+- **`fieldstool_cli.py`** — offline CLI (`set`/`rename` subcommands).
+- **The fieldstool tab** — `gui.fieldstool_window.MainWindow`, embedded as the first tab of the main
+  [PyQt6 GUI](./gui.md) (`gui/docks/fieldstool_dock.py`, see
+  [gui.md's fieldstool tab section](./gui.md#fieldstool-tab)) — the only way its GUI runs (a
+  standalone `fieldstool_gui.py` entry point existed 2026-08-01 through 2026-08-02, retired as pure
+  duplication of the embedded tab).
 
-`fieldstool/` and `fieldstool/gui/` stay their own dependency-free packages (no import of
-`kicadstamp`/`gui` in the offline core; `gui/docks/fieldstool_dock.py` is the one place that
-imports `fieldstool.gui.main_window`, never the reverse) — this is about the write pipeline being
-different, not about the window living in its own process:
+Both edit `.kicad_sch` **directly, as text** — not through KiCad's live IPC — because `Role`/
+`Cluster` custom fields originate in the schematic symbol, and a PCB-only IPC write gets silently
+reverted by KiCad's own "Update PCB from Schematic" (the main GUI used to have exactly that as a
+dock, `BulkFieldEditorDock` — retired in favor of fieldstool taking its place).
+
+## Where the code actually lives
+
+Originally its own `fieldstool`/`fieldstool.gui` packages, dependency-free from `kicadstamp`/`gui`.
+Split apart 2026-08-02 along the same fault line every module already had, once `fieldstool.gui`
+turned out to be inseparable from `gui/` in practice (it always requires an injected
+`gui.connection.BoardConnection`, embedded exclusively via `gui/docks/fieldstool_dock.py` — there
+was no real independence left to preserve):
+
+- **Schematic-editing library → `kicadstamp/`, flat, `schematic_` prefix** (not a subpackage — this
+  project keeps `kicadstamp/` itself flat for modules at this scope): `schematic_blocks.py` (byte-
+  offset span-finding in `.kicad_sch` text), `schematic_discovery.py`
+  (`walk_schematic_hierarchy()`), `schematic_safety.py` (non-ASCII check, `list_kicad_pids()`),
+  `schematic_editing.py` (`apply_edits()`, the `.bak`/self-verify write pipeline), `schematic_
+  set_fields.py`/`schematic_rename_fields.py` (the `set`/`rename` planning logic).
+  `FieldsToolError` joined `kicadstamp/exceptions.py` directly (a plain `Exception` subclass, NOT a
+  `PlacerError` subclass — a different risk domain, catching one must never accidentally swallow
+  the other). **`fieldstool_cli.py` uses these directly** and stays its own separate CLI/interface
+  from `kicadstamp_cli.py` — a different domain (bulk schematic text edits vs. board placement),
+  not worth folding into one argument parser.
+- **GUI-only pieces → `gui/`, flat**: `gui/schema_model.py` (`load_schematic_components()` — flattens
+  the schematic into one row per refdes for the Components tree; `fieldstool_cli.py` never needs
+  this per-ref view), `gui/fieldstool_window.py` (the `MainWindow` embedded as the fieldstool tab —
+  see [The fieldstool tab](#the-fieldstool-tab) below), `gui/docks/pending.py` (`PendingRegistry` +
+  `PendingChangesDock` — a `QDockWidget`, so it lives alongside the rest of `gui/docks/`). Its own
+  settings file (`gui/fieldstool_gui_state.json`) reuses `gui/settings.py`'s `Settings` class with a
+  different path, rather than a second near-identical settings module.
+
+None of this changed *behavior* — pure move-and-rename, same logic, same tests (relocated
+alongside).
+
+## Why this write pipeline stays separate from `kicadstamp`/`gui`'s
+
+This is about the write pipeline being fundamentally different, not about package/process
+boundaries (there are none left):
 
 - **A different, riskier write surface.** `kicadstamp`/`gui` only ever write through KiCad's live,
   transactional IPC (`BeginCommit`/`UpdateItems`/`EndCommit` — undoable in KiCad itself).
-  `fieldstool` edits `.kicad_sch` as a file, directly — the same hazard class as KiCad bug #24966
-  (touching a file KiCad may have open/cached), but worse, since it doesn't go through KiCad's
-  live IPC at all.
+  `schematic_editing.py` edits `.kicad_sch` as a file, directly — the same hazard class as KiCad bug
+  #24966 (touching a file KiCad may have open/cached), but worse, since it doesn't go through
+  KiCad's live IPC at all.
 - **KiCad must be closed to apply, and reopened to see the result.** A running KiCad process does
   not hot-reload an externally-modified schematic file. Checked exhaustively (kipy 0.7.1): there is
   **no application-level quit/close/shutdown call, and no "unsaved changes" check**, anywhere in
@@ -102,8 +135,8 @@ just as likely a harmless re-run (renaming is idempotent) as a typo.
 
 ## The fieldstool tab
 
-`fieldstool.gui.main_window.MainWindow` is embedded whole as the first right-hand tab of the main
-GUI (`gui/docks/fieldstool_dock.py`, see [gui.md's fieldstool tab
+`gui.fieldstool_window.MainWindow` is embedded whole as the first right-hand tab of the main GUI
+(`gui/docks/fieldstool_dock.py`, see [gui.md's fieldstool tab
 section](./gui.md#fieldstool-tab)) and shares that GUI's own `BoardConnection` and single 2s/400ms
 poll — it never creates or polls a connection of its own (kipy's REQ socket allows exactly one
 request in flight; a second independent timer on the same connection would interleave requests
@@ -140,22 +173,23 @@ above:
 ### 2. Apply (KiCad must be closed)
 
 - Checks for a running KiCad process — if found, shows an **instruction** dialog ("save your work
-  and close KiCad, then Apply again"). This is never automated (see
-  [Why a separate package](#why-a-separate-package)).
+  and close KiCad, then Apply again"). This is never automated (see [Why this write pipeline stays
+  separate](#why-this-write-pipeline-stays-separate-from-kicadstampguis)).
 - If KiCad is closed: plans every staged edit through the exact same offline pipeline
   `fieldstool_cli.py set` uses, shows a confirmation summary, then writes (same `.bak`/self-verify
   guards as the CLI). On success, the pending queue is cleared and the tree is rescanned.
 
 ## Migrated from `tools/apply_role_cluster.py`
 
-`fieldstool set` supersedes that script (folded in 2026-08-01, not left duplicated) — same
-core logic (parsing, splicing, safety guards), just reorganized into a reusable library plus a
-`rename` mode that didn't exist there. `root_sheet:` (hierarchy walk) replaces its
+`kicadstamp.schematic_set_fields` supersedes that script (folded in 2026-08-01, not left
+duplicated) — same core logic (parsing, splicing, safety guards), just reorganized into a reusable
+library plus a `rename` mode that didn't exist there. `root_sheet:` (hierarchy walk) replaces its
 `schematic_dir:` (flat glob) — **not** backwards compatible, update old configs.
 
 ## Tests
 
-`tests/test_fieldstool_*.py` (offline core — parsing, discovery, editing, `set`, `rename`, the
-pending-changes registry, schematic-to-tree flattening) plus `tests/fieldstool_gui/` (the actual
-Qt widgets, offscreen — same pattern as [`tests/gui/`](./gui.md#tests)), including a full
-staging → Apply → write round trip against a synthetic `.kicad_sch`. No live KiCad needed anywhere.
+`tests/test_schematic_*.py` (offline core — parsing, discovery, editing, `set`, `rename`) plus
+`tests/gui/test_schema_model.py`, `tests/gui/test_pending_dock.py` (registry + `QDockWidget`,
+offscreen) and `tests/gui/test_fieldstool_window.py` (the embedded tab's own `MainWindow`, same
+pattern as the rest of [`tests/gui/`](./gui.md#tests)), including a full staging → Apply → write
+round trip against a synthetic `.kicad_sch`. No live KiCad needed anywhere.

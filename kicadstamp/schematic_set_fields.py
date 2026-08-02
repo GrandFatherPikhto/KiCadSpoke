@@ -1,13 +1,14 @@
-# fieldstool/set_fields.py
+# kicadstamp/schematic_set_fields.py
 """
 Bulk-set Role/Cluster (or any field) by refdes: YAML config maps
 refdes -> {field: value}. Ported from tools/apply_role_cluster.py's
 main() steps 3-6 (2026-08-01 fold-in), split out of that script's single
 main() into functions returning a plan instead of printing/exiting
-inline, so both fieldstool_cli.py and (later) fieldstool/gui can call it.
+inline, so both fieldstool_cli.py and gui/fieldstool_window.py can call
+it.
 
 Two ways one refdes shows up in a file, both handled (see
-iter_symbol_blocks/blocks.py):
+iter_symbol_blocks/schematic_blocks.py):
   - Multi-unit symbol (e.g. a dual op-amp) — one refdes sits in SEVERAL
     separate (symbol ...) blocks (one per unit), each with its own copy
     of the field — ALL of that refdes's blocks get edited.
@@ -20,19 +21,18 @@ iter_symbol_blocks/blocks.py):
 """
 import difflib
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import yaml
 
-from .blocks import (PROPERTY_BLOCK_TEMPLATE, SymbolBlock, escape_sexp_string,
-                     find_insertion_point, find_property_value_span, find_symbol_at,
-                     iter_symbol_blocks)
-from .discovery import walk_schematic_hierarchy
-from .editing import Edit, EditReport
 from .exceptions import FieldsToolError
+from .schematic_blocks import (PROPERTY_BLOCK_TEMPLATE, SymbolBlock, escape_sexp_string,
+                               find_insertion_point, find_property_value_span, find_symbol_at,
+                               iter_symbol_blocks)
+from .schematic_discovery import walk_schematic_hierarchy
+from .schematic_editing import Edit, EditReport
 
 
-def load_set_config(path: Path) -> Tuple[str, Dict[str, Dict[str, str]]]:
+def load_set_config(path: Path) -> tuple[str, dict[str, dict[str, str]]]:
     with open(path, encoding='utf-8') as f:
         data = yaml.safe_load(f) or {}
     root_sheet = data.get('root_sheet')
@@ -44,9 +44,9 @@ def load_set_config(path: Path) -> Tuple[str, Dict[str, Dict[str, str]]]:
     return root_sheet, fields
 
 
-def _parse_all_blocks(files: List[str]) -> Tuple[Dict[str, str], List[SymbolBlock]]:
-    file_texts: Dict[str, str] = {}
-    all_blocks: List[SymbolBlock] = []
+def _parse_all_blocks(files: list[str]) -> tuple[dict[str, str], list[SymbolBlock]]:
+    file_texts: dict[str, str] = {}
+    all_blocks: list[SymbolBlock] = []
     for f in files:
         with open(f, encoding='utf-8', newline='') as fh:
             file_texts[f] = fh.read()
@@ -56,12 +56,12 @@ def _parse_all_blocks(files: List[str]) -> Tuple[Dict[str, str], List[SymbolBloc
 
 def plan_set_edits(
     config_path: Path,
-) -> Tuple[Dict[str, List[Edit]], Dict[str, str], List[EditReport]]:
+) -> tuple[dict[str, list[Edit]], dict[str, str], list[EditReport]]:
     """Resolves config_path (root_sheet + fields:) against the live
     schematic tree. Thin wrapper around plan_set_edits_for_root() — see
-    there for the actual planning logic (shared with fieldstool/gui's
-    Apply, which stages refdes -> {field: value} in memory rather than
-    writing a temporary YAML config just to reuse this)."""
+    there for the actual planning logic (shared with gui/fieldstool_
+    window.py's Apply, which stages refdes -> {field: value} in memory
+    rather than writing a temporary YAML config just to reuse this)."""
     base = config_path.parent
     root_sheet, fields_cfg = load_set_config(config_path)
     root_path = base / root_sheet
@@ -71,8 +71,8 @@ def plan_set_edits(
 
 
 def plan_set_edits_for_root(
-    root_sheet_path: str, fields_cfg: Dict[str, Dict[str, str]],
-) -> Tuple[Dict[str, List[Edit]], Dict[str, str], List[EditReport]]:
+    root_sheet_path: str, fields_cfg: dict[str, dict[str, str]],
+) -> tuple[dict[str, list[Edit]], dict[str, str], list[EditReport]]:
     """Same planning as plan_set_edits(), given an already-resolved root
     sheet path and an in-memory fields_cfg (refdes -> {field: value})
     instead of a YAML config file. Raises FieldsToolError with every
@@ -82,7 +82,7 @@ def plan_set_edits_for_root(
     files = walk_schematic_hierarchy(root_sheet_path)
     file_texts, all_blocks = _parse_all_blocks(files)
 
-    ref_to_blocks: Dict[str, List[SymbolBlock]] = {}
+    ref_to_blocks: dict[str, list[SymbolBlock]] = {}
     for b in all_blocks:
         for r in b.refs:
             ref_to_blocks.setdefault(r, []).append(b)
@@ -99,7 +99,7 @@ def plan_set_edits_for_root(
 
     # bid -> {field: (value, first_requesting_refdes)}
     blocks_by_id = {b.id: b for b in all_blocks}
-    blocks_fields: Dict[Tuple[str, int], Dict[str, Tuple[str, str]]] = {}
+    blocks_fields: dict[tuple[str, int], dict[str, tuple[str, str]]] = {}
     conflicts = []
     for ref, fv in fields_cfg.items():
         for b in ref_to_blocks[ref]:
@@ -123,8 +123,8 @@ def plan_set_edits_for_root(
             "values of the same field:\n" + "\n".join(lines)
         )
 
-    edits_by_file: Dict[str, List[Edit]] = {f: [] for f in files}
-    report: List[EditReport] = []
+    edits_by_file: dict[str, list[Edit]] = {f: [] for f in files}
+    report: list[EditReport] = []
     for bid, per_block in blocks_fields.items():
         b = blocks_by_id[bid]
         span_text = file_texts[b.file][b.start:b.end]

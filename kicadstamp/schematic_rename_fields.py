@@ -1,12 +1,12 @@
-# fieldstool/rename_fields.py
+# kicadstamp/schematic_rename_fields.py
 """
 Bulk-rename a field's VALUE, project-wide, without enumerating refdes:
 YAML config maps field -> {old_value: new_value}. New (2026-08-01,
-alongside the set_fields.py port) — the actual reason fieldstool exists
-beyond what tools/apply_role_cluster.py already did.
+alongside the schematic_set_fields.py port) — the actual reason this tool
+exists beyond what tools/apply_role_cluster.py already did.
 
-Simpler than set_fields.py in one respect: SET has to detect and fatal on
-a real conflict (two refdes sharing one (symbol ...) block via a
+Simpler than schematic_set_fields.py in one respect: SET has to detect and
+fatal on a real conflict (two refdes sharing one (symbol ...) block via a
 multi-instance sheet, asking for different values — the format can't
 express that). RENAME never hits this, because it always writes the SAME
 new value to every block whose CURRENT value matches — there's no
@@ -16,17 +16,16 @@ means no current value to compare against) — every EditReport this
 produces has kind == "replace".
 """
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import yaml
 
-from .blocks import escape_sexp_string, find_property_value_span, iter_symbol_blocks
-from .discovery import walk_schematic_hierarchy
-from .editing import Edit, EditReport
 from .exceptions import FieldsToolError
+from .schematic_blocks import escape_sexp_string, find_property_value_span, iter_symbol_blocks
+from .schematic_discovery import walk_schematic_hierarchy
+from .schematic_editing import Edit, EditReport
 
 
-def load_rename_config(path: Path) -> Tuple[str, Dict[str, Dict[str, str]]]:
+def load_rename_config(path: Path) -> tuple[str, dict[str, dict[str, str]]]:
     with open(path, encoding='utf-8') as f:
         data = yaml.safe_load(f) or {}
     root_sheet = data.get('root_sheet')
@@ -40,7 +39,7 @@ def load_rename_config(path: Path) -> Tuple[str, Dict[str, Dict[str, str]]]:
 
 def plan_rename_edits(
     config_path: Path,
-) -> Tuple[Dict[str, List[Edit]], Dict[str, str], List[EditReport], List[str]]:
+) -> tuple[dict[str, list[Edit]], dict[str, str], list[EditReport], list[str]]:
     """Resolves config_path (root_sheet + renames:) against the live
     schematic tree. Returns (edits_by_file, file_texts, report,
     unmatched_old_values) — unmatched_old_values (renames entries that
@@ -55,13 +54,13 @@ def plan_rename_edits(
         raise FieldsToolError(f"root_sheet {root_sheet!r} not found ({root_path})")
 
     files = walk_schematic_hierarchy(str(root_path))
-    file_texts: Dict[str, str] = {}
+    file_texts: dict[str, str] = {}
     for f in files:
         with open(f, encoding='utf-8', newline='') as fh:
             file_texts[f] = fh.read()
 
-    edits_by_file: Dict[str, List[Edit]] = {f: [] for f in files}
-    report: List[EditReport] = []
+    edits_by_file: dict[str, list[Edit]] = {f: [] for f in files}
+    report: list[EditReport] = []
     matched_old_values = {field: set() for field in renames_cfg}
 
     for f in files:
@@ -87,7 +86,7 @@ def plan_rename_edits(
                 report.append(EditReport(
                     f, sorted(block.refs), field, current_value, new_value, "replace"))
 
-    unmatched: List[str] = []
+    unmatched: list[str] = []
     for field, value_map in renames_cfg.items():
         for old_value in value_map:
             if old_value not in matched_old_values[field]:

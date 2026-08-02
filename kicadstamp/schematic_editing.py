@@ -1,43 +1,43 @@
-# fieldstool/editing.py
+# kicadstamp/schematic_editing.py
 """
 apply_edits() (byte-offset text splicing) plus the shared write pipeline —
 dry-run report printing, the running-KiCad guard, and the per-file
 .bak -> splice -> sexpdata self-verify -> restore-on-failure sequence.
 Ported from tools/apply_role_cluster.py's main() steps 6-8 (2026-08-01
 fold-in), factored out of that one script's main() so both the `set` and
-`rename` CLI subcommands — and later fieldstool/gui's Apply button — share
-one write path instead of three copies of the same backup/verify logic.
+`rename` CLI subcommands (fieldstool_cli.py) — and gui/fieldstool_window.
+py's Apply button — share one write path instead of three copies of the
+same backup/verify logic.
 """
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import sexpdata
 
-from .safety import list_kicad_pids
+from .schematic_safety import list_kicad_pids
 
 logger = logging.getLogger(__name__)
 
-Edit = Tuple[int, int, str]  # (start, end, replacement) — see apply_edits
+Edit = tuple[int, int, str]  # (start, end, replacement) — see apply_edits
 
 
 @dataclass
 class EditReport:
     """One planned field change, for printing and for driving the actual
     write. kind is 'replace' (property already exists) or 'insert' (new
-    property block) — rename_fields.py never produces 'insert' (see its
-    module docstring: renaming only ever touches an already-existing
-    value)."""
+    property block) — schematic_rename_fields.py never produces 'insert'
+    (see its module docstring: renaming only ever touches an
+    already-existing value)."""
     file: str
-    refs: List[str]
+    refs: list[str]
     field: str
-    old_value: Optional[str]
+    old_value: str | None
     new_value: str
     kind: str
 
 
-def apply_edits(text: str, edits: List[Edit]) -> str:
+def apply_edits(text: str, edits: list[Edit]) -> str:
     """edits — [(start, end, replacement), ...], need not be sorted;
     several insertions at the same point (start==end) are allowed, their
     relative order is preserved as given."""
@@ -55,7 +55,7 @@ def apply_edits(text: str, edits: List[Edit]) -> str:
     return "".join(out)
 
 
-def print_report(report: List[EditReport], write_mode: bool) -> None:
+def print_report(report: list[EditReport], write_mode: bool) -> None:
     print(f"\n=== {'WRITE' if write_mode else 'DRY-RUN'}: {len(report)} edit(s) ===\n")
     for r in sorted(report, key=lambda r: (r.file, r.refs)):
         refs_s = ",".join(r.refs)
@@ -79,14 +79,14 @@ def check_kicad_not_running(force: bool) -> None:
         )
 
 
-def write_files(edits_by_file: Dict[str, List[Edit]],
-                 file_texts: Dict[str, str]) -> Tuple[List[str], List[str]]:
+def write_files(edits_by_file: dict[str, list[Edit]],
+                 file_texts: dict[str, str]) -> tuple[list[str], list[str]]:
     """Per file, independently: .bak -> splice -> write -> reparse with
     sexpdata as a self-verify -> on failure, restore the original text and
     record the file as failed, then continue with the rest. Returns
     (written, failed)."""
-    written: List[str] = []
-    failed: List[str] = []
+    written: list[str] = []
+    failed: list[str] = []
     for file, edits in edits_by_file.items():
         if not edits:
             continue

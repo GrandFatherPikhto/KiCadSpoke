@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fieldstool.discovery import walk_schematic_hierarchy
+from kicadstamp.schematic_discovery import walk_schematic_hierarchy
 from tests.fieldstool_fixtures import sch_file, sheet_block, symbol_block
 
 

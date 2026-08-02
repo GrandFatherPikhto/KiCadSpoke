@@ -1,20 +1,20 @@
-# fieldstool/safety.py
+# kicadstamp/schematic_safety.py
 """
-Pre-write safety guards — ported from tools/apply_role_cluster.py
-(2026-08-01 fold-in). Kept dependency-free from kicadstamp/kipy on
-purpose (this tool must work with KiCad closed) — psutil is optional,
-used only on non-Windows.
+Pre-write safety guards for the schematic-editing tools (schematic_
+set_fields.py/schematic_rename_fields.py, fieldstool_cli.py) — ported from
+tools/apply_role_cluster.py (2026-08-01 fold-in). Kept dependency-free from
+kipy on purpose (this tool must work with KiCad closed) — psutil is
+optional, used only on non-Windows.
 """
 import logging
 import os
 import subprocess
 import unicodedata
-from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
 
-def find_non_ascii(value: str) -> List[Tuple[int, str, int, str]]:
+def find_non_ascii(value: str) -> list[tuple[int, str, int, str]]:
     bad = []
     for i, ch in enumerate(value):
         if not (0x20 <= ord(ch) <= 0x7E):
@@ -26,7 +26,7 @@ def find_non_ascii(value: str) -> List[Tuple[int, str, int, str]]:
     return bad
 
 
-def list_kicad_pids() -> List[int]:
+def list_kicad_pids() -> list[int]:
     """If KiCad is running, a .kicad_sch we're about to splice may be open
     in Eeschema, and an edit made around that live session risks being
     silently overwritten by KiCad's own next save."""

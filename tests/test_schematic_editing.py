@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 
-from fieldstool.editing import apply_edits, check_kicad_not_running, write_files
+from kicadstamp.schematic_editing import apply_edits, check_kicad_not_running, write_files
 from tests.fieldstool_fixtures import sch_file, symbol_block
 
 
@@ -28,18 +28,18 @@ def test_apply_edits_overlapping_raises():
 
 
 def test_check_kicad_not_running_passes_when_no_pids():
-    with patch("fieldstool.editing.list_kicad_pids", return_value=[]):
+    with patch("kicadstamp.schematic_editing.list_kicad_pids", return_value=[]):
         check_kicad_not_running(force=False)  # must not raise
 
 
 def test_check_kicad_not_running_raises_when_pids_found():
-    with patch("fieldstool.editing.list_kicad_pids", return_value=[1234]):
+    with patch("kicadstamp.schematic_editing.list_kicad_pids", return_value=[1234]):
         with pytest.raises(RuntimeError, match="1234"):
             check_kicad_not_running(force=False)
 
 
 def test_check_kicad_not_running_force_overrides():
-    with patch("fieldstool.editing.list_kicad_pids", return_value=[1234]):
+    with patch("kicadstamp.schematic_editing.list_kicad_pids", return_value=[1234]):
         check_kicad_not_running(force=True)  # must not raise
 
 
@@ -48,7 +48,7 @@ def test_write_files_backs_up_splices_and_self_verifies(tmp_path):
     original = sch_file(symbol_block(["R1"], role="OLD"))
     path.write_text(original, encoding="utf-8")
 
-    from fieldstool.blocks import find_property_value_span, iter_symbol_blocks
+    from kicadstamp.schematic_blocks import find_property_value_span, iter_symbol_blocks
     block = iter_symbol_blocks(str(path), original)[0]
     span_text = original[block.start:block.end]
     vs, ve = find_property_value_span(span_text, "Role")

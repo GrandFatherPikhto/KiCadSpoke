@@ -6,8 +6,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import pytest
 import yaml
 
-from fieldstool.exceptions import FieldsToolError
-from fieldstool.rename_fields import plan_rename_edits
+from kicadstamp.exceptions import FieldsToolError
+from kicadstamp.schematic_rename_fields import plan_rename_edits
 from tests.fieldstool_fixtures import sch_file, symbol_block
 
 

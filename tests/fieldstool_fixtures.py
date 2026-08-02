@@ -1,11 +1,13 @@
 # tests/fieldstool_fixtures.py
-"""Synthetic .kicad_sch text builders shared by tests/test_fieldstool_*.py
-— small but structurally faithful to real KiCad output (verified against
+"""Synthetic .kicad_sch text builders shared by tests/test_schematic_*.py
+and tests/gui/test_schema_model.py, test_fieldstool_window.py — small but
+structurally faithful to real KiCad output (verified against
 test_boards/3CH-AWG-TIA/op_amp.kicad_sch and 3CH-AWG-TIA.kicad_sch), so
-the regex/balanced-paren parsing in fieldstool/blocks.py and
-fieldstool/discovery.py exercises the real shapes, not a simplified one.
-Whole files must stay valid S-expression syntax (balanced parens) since
-fieldstool/editing.py's write self-verify calls sexpdata.load() on them.
+the regex/balanced-paren parsing in kicadstamp/schematic_blocks.py and
+kicadstamp/schematic_discovery.py exercises the real shapes, not a
+simplified one. Whole files must stay valid S-expression syntax (balanced
+parens) since kicadstamp/schematic_editing.py's write self-verify calls
+sexpdata.load() on them.
 """
 from typing import Iterable, Optional
 

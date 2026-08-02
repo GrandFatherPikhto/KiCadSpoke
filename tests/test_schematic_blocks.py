@@ -3,9 +3,9 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fieldstool.blocks import (escape_sexp_string, find_balanced_span,
-                               find_insertion_point, find_property_value_span,
-                               find_symbol_at, iter_symbol_blocks)
+from kicadstamp.schematic_blocks import (escape_sexp_string, find_balanced_span,
+                                         find_insertion_point, find_property_value_span,
+                                         find_symbol_at, iter_symbol_blocks)
 from tests.fieldstool_fixtures import sch_file, symbol_block
 
 

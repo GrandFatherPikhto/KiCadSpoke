@@ -12,10 +12,11 @@ subcommands:
 
 Both: dry-run by default, --write to actually touch files, --allow-non-
 ascii to skip the homoglyph-typo guard, --force-with-kicad-running to
-skip the running-KiCad guard. See fieldstool/__init__.py for why this is
-a separate app from kicadstamp/gui (this writes .kicad_sch directly, a
-fundamentally different risk class from kicadstamp's live-IPC-only
-writes).
+skip the running-KiCad guard. See docs/fieldstool.md for why this stays a
+separate CLI/interface from kicadstamp_cli.py (this writes .kicad_sch
+directly, a fundamentally different risk class from kicadstamp's
+live-IPC-only writes) even though the underlying kicadstamp.schematic_*
+modules now live in the same package.
 
 Usage:
     python fieldstool_cli.py set roles.yaml                # dry-run
@@ -32,11 +33,15 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
-from fieldstool.editing import check_kicad_not_running, print_report, write_files
-from fieldstool.exceptions import FieldsToolError
-from fieldstool.rename_fields import plan_rename_edits
-from fieldstool.safety import find_non_ascii
-from fieldstool.set_fields import plan_set_edits
+# fieldstool_cli.py runs as a bare script (no package context), and the
+# project root — where kicadstamp/ lives — is that script's own directory,
+# already on sys.path by default; no sys.path.insert needed (unlike
+# kicadstamp_cli.py/kicadstamp_gui.py, see their own comments on this).
+from kicadstamp.exceptions import FieldsToolError
+from kicadstamp.schematic_editing import check_kicad_not_running, print_report, write_files
+from kicadstamp.schematic_rename_fields import plan_rename_edits
+from kicadstamp.schematic_safety import find_non_ascii
+from kicadstamp.schematic_set_fields import plan_set_edits
 
 logger = logging.getLogger(__name__)
 

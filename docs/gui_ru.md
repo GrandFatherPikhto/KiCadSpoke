@@ -203,7 +203,7 @@ Guard от повторного запуска (`gui/single_instance.py`, на `
 blob `QSettings`/`saveGeometry()` из Qt): позиция/размер окна, Always on top, Tray icon,
 группировка дерева компонентов и переключатель живая/«не применённые», корневая директория и
 последний клик в доке Files, все три назначения ролей файлов (Cells/Extractor/Placer). У таба
-fieldstool своё отдельное состояние (`fieldstool/gui/fieldstool_gui_state.json`).
+fieldstool своё отдельное состояние (`gui/fieldstool_gui_state.json`).
 
 ## Тесты
 

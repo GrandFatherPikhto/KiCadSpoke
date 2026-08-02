@@ -1,12 +1,12 @@
-# fieldstool/gui/pending.py
+# gui/docks/pending.py
 """
 PendingRegistry — JSON-backed queue of staged field assignments (ref,
 field, new_value), built up while KiCad is open (staging never touches
 .kicad_sch), applied all at once later while KiCad is closed (see
-fieldstool/__init__.py). Renaming a whole tree group just stages one
-entry per member ref — by the time anything reaches Apply it's already
-plain refdes -> {field: value}, the same shape fieldstool.set_fields
-always used (see fieldstool/set_fields.py's plan_set_edits_for_root()).
+docs/fieldstool.md). Renaming a whole tree group just stages one entry
+per member ref — by the time anything reaches Apply it's already plain
+refdes -> {field: value}, the same shape kicadstamp.schematic_set_fields
+always used (see its plan_set_edits_for_root()).
 
 PendingRegistry itself has no Qt/kipy dependency (testable without a
 QApplication) — PendingChangesDock below is the thin Qt wrapper around it.
@@ -75,7 +75,7 @@ class PendingRegistry:
 
     def as_fields_cfg(self) -> Dict[str, Dict[str, str]]:
         """refdes -> {field: value} — the shape
-        fieldstool.set_fields.plan_set_edits_for_root() consumes."""
+        kicadstamp.schematic_set_fields.plan_set_edits_for_root() consumes."""
         cfg: Dict[str, Dict[str, str]] = {}
         for (ref, field), value in self._entries.items():
             cfg.setdefault(ref, {})[field] = value
@@ -94,9 +94,9 @@ except ImportError:  # pragma: no cover — PendingRegistry above is usable with
 
 class PendingChangesDock(QDockWidget):
     """Table of staged edits, remove-selected/clear-all, and an Apply
-    button MainWindow wires (see fieldstool/gui/main_window.py) — Apply
-    itself needs the root_sheet path and the KiCad-running guard, which
-    this dock deliberately doesn't know about."""
+    button MainWindow wires (see gui/fieldstool_window.py) — Apply itself
+    needs the root_sheet path and the KiCad-running guard, which this dock
+    deliberately doesn't know about."""
 
     def __init__(self, main_window, registry: PendingRegistry):
         super().__init__(_("Pending changes"), main_window)
@@ -136,8 +136,8 @@ class PendingChangesDock(QDockWidget):
     def stage_group(self, refs: List[str], field: str, new_value: str) -> None:
         """Group-rename entry point: one pending entry per member ref, see
         module docstring — this is the mechanism a tree group-rename
-        action (fieldstool.gui.main_window.MainWindow._on_group_picked)
-        feeds into."""
+        action (gui.fieldstool_window.MainWindow._on_group_picked) feeds
+        into."""
         for ref in refs:
             self.registry.stage(ref, field, new_value)
         self.refresh()

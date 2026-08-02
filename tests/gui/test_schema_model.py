@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from fieldstool.schema_model import load_schematic_components
+# tests/gui/test_schema_model.py
+from gui.schema_model import load_schematic_components
 from tests.fieldstool_fixtures import sch_file, symbol_block
 
 

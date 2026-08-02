@@ -442,8 +442,10 @@ python tools/generate_config.py
 `Role` живьём — кириллическая «С» вместо латинской, см. `diagnostic_charset.py` выше) и отказ при
 запущенном KiCad (файл может быть открыт в Eeschema).
 
-Библиотека — `fieldstool/` (отдельный, независимый от `kicadstamp/` пакет — см.
-`fieldstool/__init__.py`). Есть и GUI — первый правый таб `kicadstamp_gui.py` (см.
+Библиотека живёт в `kicadstamp/` (модули `schematic_blocks.py`/`schematic_discovery.py`/
+`schematic_safety.py`/`schematic_editing.py`/`schematic_set_fields.py`/`schematic_rename_fields.py`
+— перенесены туда из отдельного пакета `fieldstool/` 02.08.2026, см. [docs/fieldstool_ru.md](
+fieldstool_ru.md)). Есть и GUI — первый правый таб `kicadstamp_gui.py` (см.
 `docs/gui_ru.md#таб-fieldstool`) — дерево Role/Cluster по схеме, отложенная (staged)
 простановка/переименование, пока KiCad открыт, и явный Apply, когда KiCad закрыт (см.
 `techdocs/handoff/handoff_2026_08_01_fieldstool.md`, внутренний, не в git).

@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
-from fieldstool.gui import settings as fieldstool_settings
+from gui import fieldstool_window as fieldstool_window_mod
 from gui import settings
 from gui.docks.log_panel import LogDock
 from gui.main_window import MainWindow
@@ -47,25 +47,32 @@ def isolated_settings(tmp_path, monkeypatch):
     """Every gui.settings.load()/save() call in a test hits a throwaway
     file instead of the developer's real gui/gui_state.json — autouse so
     no test can forget it and accidentally pollute real GUI state. Also
-    isolates fieldstool.gui.settings — constructing the real MainWindow
-    (see real_main_window below) embeds a real fieldstool MainWindow via
-    FieldsToolDock, which would otherwise touch the developer's real
-    fieldstool_gui_state.json (e.g. restoring a real root_sheet path)."""
+    isolates gui.fieldstool_window's own settings file — constructing the
+    real MainWindow (see real_main_window below) embeds a real fieldstool
+    MainWindow via FieldsToolDock, which would otherwise touch the
+    developer's real fieldstool_gui_state.json (e.g. restoring a real
+    root_sheet path)."""
     monkeypatch.setattr(settings, "SETTINGS_PATH", tmp_path / "gui_state.json")
-    monkeypatch.setattr(fieldstool_settings, "SETTINGS_PATH", tmp_path / "fieldstool_gui_state.json")
+    monkeypatch.setattr(fieldstool_window_mod, "FIELDSTOOL_SETTINGS_PATH",
+                        tmp_path / "fieldstool_gui_state.json")
 
 
 class _FakeConnection:
-    board = None
-    # Phase 5.1 — the embedded fieldstool window now receives this connection
-    # directly (it checks connection.is_connected in _push_selection_to_board),
-    # so the fake needs the same attribute the real BoardConnection exposes.
-    is_connected = False
-    # Phase 5.2 — held exclusively by a background long op (Extract/Redraw,
-    # gui/worker.py); the main window's polling timers and the fieldstool's
-    # _push_selection_to_board check it, so the fake needs the same attribute
-    # the real BoardConnection exposes.
-    long_op_active = False
+    def __init__(self):
+        self.board = None
+        # Phase 5.2 — held exclusively by a background long op (Extract/
+        # Redraw, gui/worker.py); the main window's polling timers and the
+        # fieldstool's _push_selection_to_board check it, so the fake needs
+        # the same attribute the real BoardConnection exposes.
+        self.long_op_active = False
+
+    @property
+    def is_connected(self) -> bool:
+        # The embedded fieldstool window checks connection.is_connected in
+        # _push_selection_to_board — a property (board is not None), same
+        # shape as the real BoardConnection, so a test that sets .board
+        # after construction sees it flip automatically.
+        return self.board is not None
 
 
 @pytest.fixture
@@ -77,6 +84,17 @@ def main_window(qapp):
     per-test where an actual write path needs exercising."""
     window = QMainWindow()
     window.connection = _FakeConnection()
+    return window
+
+
+@pytest.fixture
+def fieldstool_window(qapp):
+    """A real gui.fieldstool_window.MainWindow with a fake connection —
+    exercises fieldstool's own staging/Apply logic standalone, without a
+    live board or the embedding main GUI. Constructed the same way
+    FieldsToolDock does (an injected connection is required, never
+    optional — see gui/fieldstool_window.py)."""
+    window = fieldstool_window_mod.MainWindow(connection=_FakeConnection())
     return window
 
 

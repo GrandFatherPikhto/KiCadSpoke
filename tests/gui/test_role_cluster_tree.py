@@ -1,7 +1,7 @@
 # tests/gui/test_role_cluster_tree.py
 from unittest.mock import Mock
 
-from fieldstool.schema_model import SchematicComponent
+from gui.schema_model import SchematicComponent
 
 from gui import settings
 from gui.docks.role_cluster_tree import RoleClusterTreeDock

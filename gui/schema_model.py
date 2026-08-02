@@ -1,22 +1,24 @@
-# fieldstool/schema_model.py
+# gui/schema_model.py
 """
 load_schematic_components() — flattens the whole schematic hierarchy
-(discovery.py + blocks.py) into one row per REFDES, for the main GUI's
-Components tree in "Not yet applied" mode (gui/docks/role_cluster_tree.py,
-reading fieldstool.gui.main_window.MainWindow's own self._components) and
-for staging edits by ref.
+(kicadstamp.schematic_discovery + kicadstamp.schematic_blocks) into one
+row per REFDES, for the main GUI's Components tree in "Not yet applied"
+mode (gui/docks/role_cluster_tree.py, reading gui.fieldstool_window.
+MainWindow's own self._components) and for staging edits by ref. GUI-only
+(fieldstool_cli.py never needs a per-ref flattened view) — that's why this
+lives in gui/, not alongside the kicadstamp.schematic_* modules it reads.
 A (symbol ...) block can carry several refdes (multi-instance sheet) or a
-refdes can span several blocks (multi-unit symbol, see set_fields.py's
-module docstring) — this expands/collapses both into "one row per ref"
-since that's the unit a human picks components by, even though the
-underlying edit is block-level.
+refdes can span several blocks (multi-unit symbol, see kicadstamp.
+schematic_set_fields's module docstring) — this expands/collapses both
+into "one row per ref" since that's the unit a human picks components by,
+even though the underlying edit is block-level.
 """
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .blocks import find_property_value_span, iter_symbol_blocks
-from .discovery import walk_schematic_hierarchy
+from kicadstamp.schematic_blocks import find_property_value_span, iter_symbol_blocks
+from kicadstamp.schematic_discovery import walk_schematic_hierarchy
 
 
 @dataclass
@@ -28,7 +30,7 @@ class SchematicComponent:
     block_start: int  # identifies which SymbolBlock this ref's shown values came from
     divergent: bool    # True if this ref spans multiple blocks with disagreeing Role/Cluster
                        # (multi-unit symbol whose per-unit copies were never kept in sync —
-                       # schema allows it, nothing enforces it, see set_fields.py)
+                       # schema allows it, nothing enforces it, see schematic_set_fields.py)
 
 
 def load_schematic_components(root_sheet: str) -> List[SchematicComponent]:

@@ -1,11 +1,10 @@
 # gui/docks/fieldstool_dock.py
 """
-FieldsToolDock — embeds fieldstool.gui.main_window.MainWindow (fieldstool's
-own QMainWindow, with its own internal PendingChangesDock) whole, as-is,
-inside one QDockWidget via setWidget(). QDockWidget.setWidget() accepts any
+FieldsToolDock — embeds gui.fieldstool_window.MainWindow (fieldstool's own
+QMainWindow, with its own internal PendingChangesDock) whole, as-is, inside
+one QDockWidget via setWidget(). QDockWidget.setWidget() accepts any
 QWidget and QMainWindow is one, so fieldstool's own internal docking keeps
-working nested here — no restructuring of fieldstool/gui/ needed, it stays
-dependency-free of gui/.
+working nested here.
 
 This dock embeds fieldstool's window with the main GUI's OWN BoardConnection
 (one kipy client, one REQ socket) — the embedded window never creates or
@@ -31,8 +30,9 @@ from typing import List, Optional
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QDockWidget
 
-from fieldstool.gui.main_window import MainWindow as FieldsToolMainWindow
 from kicadstamp.i18n import _
+
+from ..fieldstool_window import MainWindow as FieldsToolMainWindow
 
 
 class FieldsToolDock(QDockWidget):

@@ -1,16 +1,16 @@
-# fieldstool/blocks.py
+# kicadstamp/schematic_blocks.py
 """
 Locating (symbol ...) instance blocks and (property "Field" "value" ...)
 spans inside .kicad_sch text — ported from tools/apply_role_cluster.py
-(2026-08-01 fold-in, see fieldstool/__init__.py), logic unchanged.
+(2026-08-01 fold-in), later the fieldstool package (2026-08-02: folded
+into kicadstamp/ proper, see docs/fieldstool.md), logic unchanged.
 
 Point-edit, not parse->dump: byte-offset spans for splicing, not a full
 sexpdata parse/serialize round trip — there is no precedent that
 sexpdata.dumps() reproduces KiCad's own formatting byte-for-byte (see
-editing.py for the splice application and self-verify step).
+schematic_editing.py for the splice application and self-verify step).
 """
 import re
-from typing import List, Optional, Tuple
 
 
 def find_balanced_span(text: str, open_idx: int) -> int:
@@ -58,7 +58,7 @@ class SymbolBlock:
         return (self.file, self.start)
 
 
-def iter_symbol_blocks(path: str, text: str) -> List[SymbolBlock]:
+def iter_symbol_blocks(path: str, text: str) -> list[SymbolBlock]:
     """All PLACED symbol instance blocks — NOT lib_symbols definitions.
     Verified against real files, no exceptions found: a lib_symbols
     definition is always `(symbol "Lib:Name" ...)` (a name immediately
@@ -81,7 +81,7 @@ def iter_symbol_blocks(path: str, text: str) -> List[SymbolBlock]:
     return blocks
 
 
-def find_property_value_span(span_text: str, field: str) -> Optional[Tuple[int, int]]:
+def find_property_value_span(span_text: str, field: str) -> tuple[int, int] | None:
     """(start, end) of the value (inside the quotes, relative to
     span_text) for (property "{field}" "..." ...), or None if this block
     has no such property."""
@@ -91,7 +91,7 @@ def find_property_value_span(span_text: str, field: str) -> Optional[Tuple[int, 
     return m.start(1), m.end(1)
 
 
-def find_symbol_at(span_text: str) -> Tuple[str, str]:
+def find_symbol_at(span_text: str) -> tuple[str, str]:
     """(x, y) from the symbol's own (at X Y ROT) — the first (at ...) in
     the block, before any (property ...); hidden bookkeeping fields like
     Role/Cluster always use the symbol's own coordinates in real files,
@@ -102,7 +102,7 @@ def find_symbol_at(span_text: str) -> Tuple[str, str]:
     return m.group(1), m.group(2)
 
 
-def find_insertion_point(span_text: str) -> Tuple[int, str]:
+def find_insertion_point(span_text: str) -> tuple[int, str]:
     """(index in span_text, indent) to insert a new (property ...) — before
     the first (pin ...), or before (instances ...) if there are no pins at
     all (safety net, never seen in real files)."""

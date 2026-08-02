@@ -199,7 +199,7 @@ Plain JSON in `gui/gui_state.json` (gitignored, human-readable, deliberately not
 `QSettings`/`saveGeometry()` blob): window position/size, Always on top, Tray icon, Components tree
 grouping and its live/"Not yet applied" toggle, the Files dock's root directory and last click, and
 all three file-role assignments (Cells/Extractor/Placer). fieldstool's own tab keeps its own
-separate state file (`fieldstool/gui/fieldstool_gui_state.json`).
+separate state file (`gui/fieldstool_gui_state.json`).
 
 ## Tests
 
@@ -209,4 +209,5 @@ tested with `ApplyPipeline`/`PlacementPlanner` mocked — it verifies the dock b
 config and calls the pipeline correctly, never that it actually moves anything. See
 `tests/gui/conftest.py` for the fixtures: `qapp`, `main_window` (a bare stub, for dock-level tests),
 `real_main_window` (the real `MainWindow`, needed for tray/close/fieldstool-embedding tests),
-`isolated_settings`, `log_dock`.
+`fieldstool_window` (a real `gui.fieldstool_window.MainWindow` with a fake connection, for the
+fieldstool tab's own staging/Apply logic standalone), `isolated_settings`, `log_dock`.

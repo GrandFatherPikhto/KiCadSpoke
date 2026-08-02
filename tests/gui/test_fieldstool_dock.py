@@ -3,7 +3,7 @@
 FieldsToolDock wraps a real fieldstool MainWindow and is tabified first in
 the right-hand dock group (replacing the retired BulkFieldEditorDock slot).
 """
-from fieldstool.gui.main_window import MainWindow as FieldsToolMainWindow
+from gui.fieldstool_window import MainWindow as FieldsToolMainWindow
 
 
 def test_wraps_a_real_fieldstool_main_window(real_main_window):

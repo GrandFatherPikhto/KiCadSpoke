@@ -27,6 +27,17 @@ class ValidationError(PlacerError):
     pass
 
 
+class FieldsToolError(Exception):
+    """
+    Fatal error from the schematic-editing tools (schematic_set_fields.py/
+    schematic_rename_fields.py, fieldstool_cli.py, gui/fieldstool_window.py)
+    — deliberately NOT a PlacerError subclass: a different risk domain
+    (.kicad_sch text splicing, no board/KiCad-IPC involved at all), so
+    catching PlacerError must never accidentally swallow one of these too.
+    """
+    pass
+
+
 def format_fatal_error(title: str, problems: list) -> str:
     """
     Common fatal error formatter – used both in config.py (checks at YAML load)
