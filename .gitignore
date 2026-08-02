@@ -13,6 +13,9 @@ env/
 .pypoetry/
 .pipenv/
 
+# Для метаконтекста Claude
+.claude
+
 # Дистрибутивы, сборка и пакеты
 *.egg-info/
 .eggs/
