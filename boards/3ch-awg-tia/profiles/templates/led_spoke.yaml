@@ -1,32 +1,33 @@
-led_spoke:
-  vias:
-  - offset_along_mm: -0.225
-    offset_across_mm: 3.86
-    net: GND
-    drill_mm: 0.4
-    diameter_mm: 0.8
-  components:
-  - role: R_LED
-    offset_along_mm: 0.9125
-    offset_across_mm: 0.0
-    angle_deg: 180.0
-    net_template: '{PWR_IN}'
-  - role: LED
-    offset_along_mm: 0.8
-    offset_across_mm: 2.15
-    angle_deg: 0.0
-    net_template: '{PWR_OUT}'
-  tracks:
-  - start_along_mm: 1.825
-    start_across_mm: 2.15
-    end_along_mm: 1.825
-    end_across_mm: 0.0
-    width_mm: 0.8
-    net: '{PWR_OUT}'
-  - start_along_mm: -0.225
-    start_across_mm: 2.15
-    end_along_mm: -0.225
-    end_across_mm: 3.825
-    width_mm: 0.8
-    net: GND
-  layer: F.Cu
+cells:
+  led_spoke:
+    vias:
+    - offset_along_mm: -0.225
+      offset_across_mm: 3.86
+      net: GND
+      drill_mm: 0.4
+      diameter_mm: 0.8
+    components:
+    - role: R_LED
+      offset_along_mm: 0.9125
+      offset_across_mm: 0.0
+      angle_deg: 180.0
+      net_template: '{PWR_IN}'
+    - role: LED
+      offset_along_mm: 0.8
+      offset_across_mm: 2.15
+      angle_deg: 0.0
+      net_template: '{PWR_OUT}'
+    tracks:
+    - start_along_mm: 1.825
+      start_across_mm: 2.15
+      end_along_mm: 1.825
+      end_across_mm: 0.0
+      width_mm: 0.8
+      net: '{PWR_OUT}'
+    - start_along_mm: -0.225
+      start_across_mm: 2.15
+      end_along_mm: -0.225
+      end_across_mm: 3.825
+      width_mm: 0.8
+      net: GND
+    layer: F.Cu

@@ -5,13 +5,17 @@ files (e.g. by subsystem: ldo.yaml, pi_filters.yaml, dac_channels.yaml — each
 carrying whatever mix of extract_profiles/clone_placements/rules/cells
 that subsystem needs).
 
-Independent of cells_file (kicadstamp/config/loader.py) — that mechanism
-stays as-is (single-purpose, cells only, inline-overrides-external).
 include: is general-purpose and used by BOTH load_config() (rules/
-clone_placements/cells) and load_profile() in kicadstamp_cli.py
-(extract_profiles/clone_profiles) — the two existing, otherwise-independent
-YAML-reading entry points — since a subsystem file is meant to carry
-extract_profiles AND clone_placements together, not just one section.
+clone_placements/thermal_via_arrays/cells/points) and load_profile() in
+kicadstamp_cli.py (extract_profiles/clone_profiles) — the two existing,
+otherwise-independent YAML-reading entry points — since a subsystem file is
+meant to carry extract_profiles AND clone_placements together, not just one
+section. cells_file:/cell_files: used to be a separate, narrower mechanism
+just for external Cell files (single-purpose, inline-overrides-external) —
+folded into include: on 2026-08-02 (see
+handoff_2026_08_02_cells_include_unification.md): an external Cell file is
+now just another include:'d file, wrapped in its own cells: key, same as
+any other dict section below.
 
 Operates on raw dicts (already yaml.safe_load'd), before any Config/dataclass
 parsing — resolve_includes() is called right after yaml.safe_load() in both
@@ -35,9 +39,8 @@ logger = logging.getLogger(__name__)
 _LIST_SECTIONS = ('rules', 'clone_placements', 'thermal_via_arrays')
 
 # Dict sections: merged key-by-key, fatal on a key defined in two different
-# files (unlike cells_file's silent inline-overrides-external — these are
-# meant to be genuinely separate subsystem files, so a repeated key is far
-# more likely a mistake than an intentional override).
+# files — these are meant to be genuinely separate subsystem files, so a
+# repeated key is far more likely a mistake than an intentional override.
 _DICT_SECTIONS = ('cells', 'points', 'extract_profiles', 'clone_profiles')
 
 

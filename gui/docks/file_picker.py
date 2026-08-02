@@ -10,17 +10,16 @@ to pick a file for closely related purposes, reported as confusing live
 pick any file this GUI writes to: click a file in the tree, then "Use
 selected" on whichever role it belongs to.
 
-Extractor and Placer are meant to be shareable — both are the same
-"structured root config" shape (extract_profiles:/cell_files:/include:/
-clone_placements: as sibling keys), and pointing both at one file is the
-normal way to use this (see ExtractDock, which writes cell_files:/
+All three roles are shareable with each other — all are the same
+"structured root config" shape (extract_profiles:/cells:/include:/
+clone_placements: as sibling keys, since cells_file:/cell_files: were
+folded into include: 2026-08-02 — see
+handoff_2026_08_02_cells_include_unification.md), and pointing more than
+one role at the same file works fine (see ExtractDock, which writes
 include: entries into whatever the Placer file is right after an
-extract). Cells is NOT shareable with either: cell_files/cells_file
-content is parsed as a FLAT {cell_name: {...}} dict with no wrapper (see
-config/loader.py) — every top-level key is read as a cell name, so an
-extract_profiles:/cell_files: key sharing that file would itself be
-misread as a cell. _update_role_warning() flags that combination rather
-than silently letting it happen.
+extract). Nothing stops all three from being the same file if that suits
+a small board; a dedicated file per role is just the default habit, not a
+requirement enforced anywhere.
 
 Default root is boards/ (this project's own config tree), NOT derived from
 the live board connection. Checked live before assuming that would work:
@@ -110,16 +109,10 @@ class FilePickerDock(QDockWidget):
             row.addWidget(button)
             layout.addLayout(row)
 
-        self.role_warning_label = QLabel("")
-        self.role_warning_label.setWordWrap(True)
-        self.role_warning_label.setStyleSheet("color: #a00;")
-        layout.addWidget(self.role_warning_label)
-
         self.setWidget(container)
 
         self.set_root(self._load_root())
         self._restore_last_pick()
-        self._update_role_warning()
 
     @staticmethod
     def _load_root() -> Path:
@@ -161,18 +154,7 @@ class FilePickerDock(QDockWidget):
         self.assigned[role_key] = self.picked_path
         self._role_labels[role_key].setText(self._role_text(role_key, self.picked_path))
         settings.state.set(f"{role_key}_file", str(self.picked_path))
-        self._update_role_warning()
         getattr(self, f"{role_key}_file_changed").emit(self.picked_path)
-
-    def _update_role_warning(self) -> None:
-        cells = self.assigned["cells"]
-        if cells is not None and cells in (self.assigned["extractor"], self.assigned["placer"]):
-            self.role_warning_label.setText(
-                _("Cells shares a file with Extractor/Placer — every top-level key in a "
-                  "Cells file is read as a cell name, so extract_profiles:/cell_files: "
-                  "entries in the same file would corrupt it. Give Cells its own file."))
-        else:
-            self.role_warning_label.setText("")
 
     def _role_text(self, role_key: str, path: Optional[Path]) -> str:
         value = display_path(path) if path is not None else _("not set")
@@ -191,7 +173,6 @@ class FilePickerDock(QDockWidget):
             self.assigned[role_key] = path
             self._role_labels[role_key].setText(self._role_text(role_key, path))
             getattr(self, f"{role_key}_file_changed").emit(path)
-        self._update_role_warning()
 
     def _restore_last_pick(self) -> None:
         """Restores the last file picked in a previous session — skipped

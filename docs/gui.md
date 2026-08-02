@@ -84,19 +84,16 @@ named **roles** other docks read their target file from:
 
 | Role | Consumed by | What goes there |
 |---|---|---|
-| **Cells** | Extract (writes), Placer/Cells tab (reads) | The flat `{cell_name: {...}}` file `extract`'s output goes into (`cells_file:`/`cell_files:` shape). |
+| **Cells** | Extract (writes), Placer/Cells tab (reads) | `extract`'s output goes into this file's `cells:` key. |
 | **Extractor** | Extract | The structured root config `extract_profiles:` entries get written into. |
 | **Placer** | Extract (wiring only), Placer | The structured root config `clone_placements:` entries get written into — the file you'd point a real `apply` run at. |
 
 To assign a role: click a file in the tree, then **"Use selected"** on the role's row.
 
-**Extractor and Placer can — and normally should — share one file**: both are the same
-"structured root config" shape (`extract_profiles:`/`cell_files:`/`include:`/`clone_placements:`
-as sibling keys). **Cells cannot share a file with either one**: a `cells_file`/`cell_files`
-target is parsed as a flat mapping with no wrapper (every top-level key is read as a cell name —
-see [docs/config.md](config.md)), so an `extract_profiles:`/`clone_placements:` key sitting in
-that same file would itself be misread as a cell. The Files dock warns if you assign Cells the
-same file as Extractor or Placer.
+**All three roles can share one file** — all three are the same "structured root config" shape
+(`extract_profiles:`/`cells:`/`include:`/`clone_placements:` as sibling keys, since `cells_file:`/
+`cell_files:` were folded into `include:` on 2026-08-02 — see [docs/config.md](config.md)). A
+dedicated file per role is just the default habit, not a requirement enforced anywhere.
 
 ## Extract
 
@@ -125,8 +122,8 @@ writes it into the Cells file — the GUI equivalent of `kicadstamp_cli.py extra
   extraction can be re-run later from the CLI (`kicadstamp_cli.py extract --profile <key>`)
   without retyping the alias mapping.
 - If a **Placer** file is assigned, a successful extraction also makes sure that file's
-  `cell_files:` list includes the Cells file and its `include:` list includes the Extractor file
-  (deduplicated by resolved path) — the Placer file ends up ready to use what was just extracted.
+  `include:` list includes both the Cells file and the Extractor file (deduplicated by resolved
+  path) — the Placer file ends up ready to use what was just extracted.
 
 ## Placer
 

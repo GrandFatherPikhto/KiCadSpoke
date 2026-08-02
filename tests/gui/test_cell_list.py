@@ -4,7 +4,7 @@ from gui.docks.cell_list import CellListDock
 
 def test_list_populated_from_cells_file_and_click_fires_callback(main_window, tmp_path):
     cells_file = tmp_path / "cells.yaml"
-    cells_file.write_text("pi_filter: {}\nldo_adj: {}\n", encoding="utf-8")
+    cells_file.write_text("cells:\n  pi_filter: {}\n  ldo_adj: {}\n", encoding="utf-8")
 
     dock = CellListDock(main_window)
     dock.set_cells_file(cells_file)

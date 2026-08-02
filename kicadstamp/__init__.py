@@ -9,4 +9,4 @@ setup_i18n()
 # of how many commits it took), PATCH for point fixes made between stages,
 # MAJOR reserved for actual breaking changes to the CLI or YAML config
 # format (e.g. a renamed field/flag that is not backward compatible).
-__version__ = "1.7.0"
+__version__ = "1.8.0"

@@ -419,14 +419,13 @@ class Config:
     # NOT through kipy — see discussion: sheet_path.path_human_readable is broken
     # in this KiCad version, and UUID from kipy (path[:-1]) empirically matches
     # the sheet UUIDs in .kicad_sch. schematic_dir — folder containing all
-    # *.kicad_sch of the project (path relative to the YAML config itself,
-    # like cells_file); schematic_files — extra files for sheets outside
-    # schematic_dir.
+    # *.kicad_sch of the project (path relative to the YAML config itself);
+    # schematic_files — extra files for sheets outside schematic_dir.
     schematic_dir: str | None = None
     schematic_files: list[str] = field(default_factory=list)
     # Explicit override for registry file paths — by default they are derived
     # from the CONFIG file name itself (registry_path_for_config), which changes
-    # when the config is renamed. Paths are relative to this YAML, like cells_file.
+    # when the config is renamed. Paths are relative to this YAML.
     registry_path: str | None = None
     track_registry_path: str | None = None
     # Path to log file for `apply` of this config (relative to this YAML,

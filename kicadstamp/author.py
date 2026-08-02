@@ -93,7 +93,10 @@ def dump_rules(rules: list[Rule], path: str) -> None:
 
 def dump_template(template_dict: dict, path: str) -> None:
     """Writes a template_extraction.extract_template_from_selection() result
-    (already {name: {...}} shaped) straight to path, ready for cells_file.
+    (already {name: {...}} shaped) wrapped as {'cells': {name: {...}}} to
+    path, ready for include: (cells_file:/cell_files: were folded into
+    include: 2026-08-02 — see handoff_2026_08_02_cells_include_unification.md
+    — include: expects the wrapped shape, same as an inline cells: block).
     Same yaml.dump style as kicadstamp_cli.py's cmd_extract, minus its
     merge-into-existing-file behaviour: this always overwrites the whole
     file, matching dump_clone_placements/dump_rules — a script re-running
@@ -101,7 +104,7 @@ def dump_template(template_dict: dict, path: str) -> None:
     of its own dedicated file, not accumulate into a shared one. Use
     cmd_extract/the CLI directly if you want the merge behaviour instead."""
     with open(path, "w", encoding="utf-8") as f:
-        yaml.dump(template_dict, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
+        yaml.dump({"cells": template_dict}, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
 
 def apply_config(cfg: Config, config_path: str, *, ctx: RuntimeContext | None = None,
@@ -154,8 +157,8 @@ def cli_main(build_fn: Callable[[], list[ClonePlacement]], output_path: str,
     argparse block (single source of truth for the apply-gating logic).
 
     root_config_path (NOT output_path) is what gets loaded/applied — it's
-    the one that carries schematic_dir/cells_file and (via include:)
-    picks up output_path, and it's what registry identity is keyed off (see
+    the one that carries schematic_dir and (via include:) picks up
+    output_path, and it's what registry identity is keyed off (see
     apply_config's own docstring) — it must be the SAME config every run.
 
     Without --apply (the default), this only ever writes output_path —

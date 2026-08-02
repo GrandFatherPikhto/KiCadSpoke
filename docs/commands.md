@@ -55,7 +55,7 @@ python kicadstamp_cli.py apply <config.yaml> [options]
 `thermal_via_arrays:` are the **thermal vias**; `clone_placements:` (`ClonePlacement`) are the **clones**. All
 three are independent, uniformly `--only`/`--cluster`/`enabled`-filterable sections of one config.
 
-**`log_file:` in the config itself** – an optional root‑level YAML field (like `cells_file`/
+**`log_file:` in the config itself** – an optional root‑level YAML field (like
 `registry_path`), resolved relative to the config file itself. If set, you don't need to pass
 `--log-file` by hand every time for the same board profile. The CLI flag `--log-file`, if given, takes
 priority over this field:
@@ -63,13 +63,14 @@ priority over this field:
 log_file: ../logs/placer.log
 ```
 
-**`include:` – splitting a profile into subsystem files.** Independent of `cells_file` (which only
-covers `templates:`, with inline-overrides-external semantics, unchanged). `include:` is general‑purpose,
-merges `rules:`/`clone_placements:` (concatenated) and `templates:`/`extract_profiles:`/`clone_profiles:`
-(merged by key) from other files into the current one, recursively, and works for **both** `apply`
-(`load_config`) and `extract`/`clone-extract` (`load_profile`, since `extract_profiles`/`clone_profiles` are
-read through a separate code path) — so one subsystem file can carry the extract profile and the
-clone_placement for that subsystem together:
+**`include:` – splitting a profile into subsystem files.** General‑purpose: merges `rules:`/
+`clone_placements:`/`thermal_via_arrays:` (concatenated) and `cells:`/`points:`/`extract_profiles:`/
+`clone_profiles:` (merged by key) from other files into the current one, recursively, and works for
+**both** `apply` (`load_config`) and `extract`/`clone-extract` (`load_profile`, since
+`extract_profiles`/`clone_profiles` are read through a separate code path) — so one subsystem file can
+carry the extract profile and the clone_placement for that subsystem together, or an external `Cell`
+file (wrap its content in a `cells:` key — the old separate `cells_file:`/`cell_files:` mechanism was
+folded into `include:` on 2026-08-02, one way to split ANY section across files instead of two):
 ```yaml
 include:
   - subsystems/ldo.yaml
@@ -77,11 +78,10 @@ include:
     enabled: false   # whole file skipped — not even opened — while iterating on something else
 ```
 Each entry is either a path string, or `{path, enabled}` (`enabled` defaults to `true`). A duplicate
-`templates`/`extract_profiles`/`clone_profiles` key defined in two different files is fatal (unlike
-`cells_file`'s silent override — these are meant to be separate files, so a repeated name is far more
-likely a mistake). A file included twice (directly, or reached from two different branches) is fatal too,
-whether or not it's a true cycle. Paths are resolved relative to the file that references them, not the
-top‑level config or the current working directory.
+`cells`/`extract_profiles`/`clone_profiles` key defined in two different files is fatal – these are meant
+to be separate files, so a repeated name is far more likely a mistake. A file included twice (directly, or
+reached from two different branches) is fatal too, whether or not it's a true cycle. Paths are resolved
+relative to the file that references them, not the top‑level config or the current working directory.
 
 **About the current production config:** the master config for the `3CH-AWG-TIA` board is `profiles/3ch-awg-tia.yaml` (merged `rules:`, `clone_placements:`, `thermal_via_arrays:`, with a reference to `profiles/templates/3ch-awg-tia.yaml` via `cells_file`). The file `profiles/generated/10CL006YE144C8G.yaml` written by `tools/generate_10cl006.py` is a self‑contained archival version (can be run separately, but is no longer used in `apply` for this board).
 
@@ -227,7 +227,7 @@ python kicadstamp_cli.py extract --name <template_name> --output <file> [--timeo
 | `--profiles FILE` | YAML file with named profiles for `extract`. |
 | `--profile NAME` | Use a profile from the `--profiles` file instead of explicit flags (cannot be combined with `--name`, `--output`, `--param`, `--net-template`, `--origin-by-*` – either everything from the profile or all explicit flags). |
 
-**Important:** Before running, select the desired components, vias, and tracks in the PCB editor. Roles must be unique. When saving as JSON, the file is written **without a `templates:` wrapper**, making it directly usable as a `cells_file` in the main configuration.
+**Important:** Before running, select the desired components, vias, and tracks in the PCB editor. Roles must be unique. The output (YAML or JSON) is written wrapped under a `cells:` key, ready to be listed directly under `include:` in the main configuration.
 
 **Uncertain `net_template`:** when a component's pads match more than one net from `--net-template`/`net_template` (e.g. an inductor/ferrite bead bridging two rails), `net_template` cannot be set automatically — a warning is logged, and (YAML output only, not JSON) a commented placeholder line is written right after that component's block, e.g. `# net_template: could not determine automatically — ...`, so the gap is visible in the file itself, not only in the log. Resolve it either by editing the line manually or via `--net-template-role ROLE=<net>` on the next run.
 
@@ -552,13 +552,13 @@ python -m kicadstamp.diagnostics.diagnostic_keepout 10CL006YE144C8G.yaml
 
 ## Usage recommendations
 
-1. **Before the first run** – use `extract` on a correctly placed instance to obtain a template. Use JSON format for convenient `cells_file` integration.
+1. **Before the first run** – use `extract` on a correctly placed instance to obtain a template. Use JSON format if you prefer it over YAML for the external file.
 2. **Check your configuration** with `--dry-run` to verify positions, vias, and tracks.
 3. **For debugging** – enable `--verbose` and log to a file.
 4. **When handling multiple clones in selection mode** – use `--only <name>` to process them one at a time.
 5. **If KiCad crashes** on the first run – close the schematic editor or make an interactive edit in PCB before launching (workaround for issue #24966).
 6. **For hierarchical projects** – use `clone-extract` before writing ClonePlacement to get exact net names and twin refdes.
-7. **Store templates separately** – use `cells_file: templates.json` in the main config to keep geometry out of the main file.
+7. **Store templates separately** – list the external file under `include:` (wrapped in a `cells:` key) to keep geometry out of the main file.
 8. **Transform templates** with `transform_template.py` instead of manual coordinate recalculation.
 
 ---
@@ -624,7 +624,7 @@ python kicadstamp_cli.py extract --name pi_filter_4 --output templates/pi_filter
 ### Apply a clone using an external template file
 
 ```bash
-python kicadstamp_cli.py apply config_with_cell_files.yaml --only fpga_filter_1v2_vccint
+python kicadstamp_cli.py apply config_with_include.yaml --only fpga_filter_1v2_vccint
 ```
 
 ### Transform a template

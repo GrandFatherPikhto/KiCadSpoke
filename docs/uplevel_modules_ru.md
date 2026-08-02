@@ -164,7 +164,7 @@
 |--------|----------|
 | `__init__.py` | Экспортирует все типы конфига и `load_config()`. |
 | `models.py` | Датаклассы: `Config`, `SpokeTemplate`, `ManualSpoke`, `ClonePlacement`, `Rule`, `TemplateVia`, `TemplateTrack`, `TemplateComponentSlot`, `ThermalViaArrayConfig`. |
-| `loader.py` | `load_config()` и вспомогательные функции `_load_*` для каждой секции конфига. Обрабатывает `cells_file` и проверки уникальности ролей. |
+| `loader.py` | `load_config()` и вспомогательные функции `_load_*` для каждой секции конфига. Обрабатывает проверки уникальности ролей. |
 | `includes.py` | Обрабатывает директивы `include:` — загружает и объединяет конфиги из нескольких файлов с обнаружением циклов и проверкой дубликатов ключей. |
 
 **Основные датаклассы:**
@@ -185,7 +185,7 @@
 
 | Функция | Описание |
 |---------|----------|
-| `load_config(path)` | Читает YAML, загружает внешний файл шаблонов (`cells_file`), объединяет с инлайновыми. Парсит все секции, возвращает `Config` и `RuntimeContext`. |
+| `load_config(path)` | Читает YAML, разрешает `include:` (мёржит внешние `cells:`/`rules:`/и т.д. из других файлов). Парсит все секции, возвращает `Config` и `RuntimeContext`. |
 | `_load_template_via(data)` | Загружает `TemplateVia`. Проверяет, что `net` — строка. |
 | `_load_template_track(data)` | Загружает `TemplateTrack`. Проверяет, что `net` — строка. |
 | `_load_template_component_slot(data)` | Загружает `TemplateComponentSlot`. |
@@ -194,8 +194,7 @@
 | `_load_clone_placement(data)` | Загружает `ClonePlacement`. Проверяет ограничения на якоря и координаты. |
 
 **Особенности:**  
-- **`cells_file`** — путь к внешнему файлу шаблонов (JSON или YAML). Инлайновые `templates` дополняют/переопределяют внешние.
-- **`include:`** — множество файлов конфига с объединением и обнаружением циклов.
+- **`include:`** — множество файлов конфига с объединением и обнаружением циклов, включая внешние файлы `cells:` (обёрнутые в ключ `cells:` — `cells_file:`/`cell_files:`, отдельный более старый механизм, были слиты в `include:` 2026-08-02).
 - Проверка уникальности ролей внутри шаблона.
 - `net_template` для клонирования (плейсхолдеры для цепей).
 - Два режима сопоставления ролей: «по выделению» и «по цепям».
@@ -372,8 +371,7 @@ graph TD
     ConfigPkg --> Exceptions[exceptions.py]
     ConfigPkg --> Models[config/models.py]
     ConfigPkg --> Loader[config/loader.py]
-    ConfigPkg --> Includes[config/includes.py]
-    ConfigPkg --> CellsFile[cells_file (external JSON/YAML)]
+    ConfigPkg --> Includes[config/includes.py: include: (external cells:/rules:/etc.)]
 
     Validation --> ConfigPkg
     Validation --> ComponentPool[placement/services/component_pool.py]

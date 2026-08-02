@@ -95,7 +95,11 @@ thermal_via_arrays:
         load_config(str(root))
 
 
-def test_include_templates_merge_alongside_cells_file(tmp_path):
+def test_include_merges_cells_across_multiple_files(tmp_path):
+    # cells_file:/cell_files: (a separate, older mechanism for external Cell
+    # files) were folded into include: 2026-08-02 — an external Cell file is
+    # now just another include:'d file, wrapped in its own cells: key, same
+    # as this one.
     (tmp_path / "sub.yaml").write_text("""
 cells:
   from_include:
@@ -106,23 +110,24 @@ cells:
         angle_deg: 0.0
 """, encoding="utf-8")
     (tmp_path / "ext_templates.yaml").write_text("""
-from_cells_file:
-  components:
-    - role: R2
-      offset_along_mm: 0.0
-      offset_across_mm: 0.0
-      angle_deg: 0.0
+cells:
+  from_other_include:
+    components:
+      - role: R2
+        offset_along_mm: 0.0
+        offset_across_mm: 0.0
+        angle_deg: 0.0
 """, encoding="utf-8")
 
     root = tmp_path / "root.yaml"
     root.write_text("""
-cells_file: ext_templates.yaml
 include:
   - sub.yaml
+  - ext_templates.yaml
 """, encoding="utf-8")
 
     cfg, _ = load_config(str(root))
-    assert set(cfg.cells.keys()) == {"from_include", "from_cells_file"}
+    assert set(cfg.cells.keys()) == {"from_include", "from_other_include"}
 
 
 def test_duplicate_template_key_across_includes_is_fatal(tmp_path):

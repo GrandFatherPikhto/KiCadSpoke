@@ -208,7 +208,10 @@ class TestCliMain:
 
 
 class TestDumpTemplate:
-    def test_writes_template_dict_as_is(self, tmp_path):
+    def test_writes_template_dict_wrapped_in_cells(self, tmp_path):
+        """Wrapped under 'cells:' since 2026-08-02 (cells_file:/cell_files:
+        folded into include:, which expects the same wrapped shape as an
+        inline cells: block)."""
         template_dict = {"cap_pair_standard": {"components": [
             {"role": "C_IN_BULK", "offset_along_mm": 0.0, "offset_across_mm": 0.0, "angle_deg": 0.0},
         ]}}
@@ -216,7 +219,7 @@ class TestDumpTemplate:
         dump_template(template_dict, str(out))
 
         loaded = yaml.safe_load(out.read_text(encoding="utf-8"))
-        assert loaded == template_dict
+        assert loaded == {"cells": template_dict}
 
     def test_overwrites_rather_than_merges(self, tmp_path):
         """Unlike cmd_extract's merge-into-existing behaviour, dump_template
@@ -227,4 +230,4 @@ class TestDumpTemplate:
         dump_template({"new_name": {"components": []}}, str(out))
 
         loaded = yaml.safe_load(out.read_text(encoding="utf-8"))
-        assert loaded == {"new_name": {"components": []}}
+        assert loaded == {"cells": {"new_name": {"components": []}}}

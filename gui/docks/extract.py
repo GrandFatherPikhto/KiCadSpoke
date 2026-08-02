@@ -18,13 +18,12 @@ alongside the Selected-wrapped footprint list the other docks use.
 Optionally also writes an extract_profiles: entry (the --profile mechanism
 in kicadstamp_cli.py's extract command) — a replayable recipe (name/output/
 params) so the same extraction can be re-run from the CLI later without
-retyping the alias mapping by hand. This CANNOT go in the same file as the
-cell output: cell_files/cells_file content is parsed as a flat
-{cell_name: {...}} dict with no wrapper (see config/loader.py — every
-top-level key is treated as a cell name), so an extract_profiles: sibling
-key in that file would be misread as another cell. extract_profiles: lives
-in a root/included profile config instead (alongside clone_placements:/
-include:/cells_file: etc.) — a second, independent file target.
+retyping the alias mapping by hand. This CAN now go in the same file as the
+cell output (cells_file:/cell_files: were folded into include: 2026-08-02 —
+see handoff_2026_08_02_cells_include_unification.md — cells: and
+extract_profiles: are both just include:-mergeable dict sections of the
+same "structured root config" shape now), but a dedicated Extractor file is
+still the default two-role split below — nothing requires merging them.
 
 Net aliases feed params, NOT net_template_map, directly — the alias field
 next to a net IS its params key (e.g. net '+2V5' aliased 'PWR_IN' becomes
@@ -48,15 +47,15 @@ closely related purposes — reported as confusing live 2026-08-01.
 There's a third role, Placer (set_placer_file()) — the root config a
 placement run would actually be pointed at. After a successful extract,
 if a Placer file is assigned, this dock also makes sure that file's own
-cell_files: list includes the Cells file and its include: list includes
-the Extractor file (deduped by resolved path, never duplicated, every
-other key in the file left alone — see _add_list_entry(), same read-
-merge-write shape as _write_merged() but for a list section instead of a
-dict one). Requested live 2026-08-01 ("это всё собралось вместе, и placer
-— это точка сборки"): extracting a cell is meant to leave the Placer file
-ready to use it, not just leave the cell sitting in a file nothing points
-at yet. Skipped when Cells/Extractor already IS the Placer file (self-
-reference is pointless — the file already effectively "has itself").
+include: list includes both the Cells file and the Extractor file
+(deduped by resolved path, never duplicated, every other key in the file
+left alone — see add_list_entry(), same read-merge-write shape as
+merge_write() but for a list section instead of a dict one). Requested
+live 2026-08-01 ("это всё собралось вместе, и placer — это точка сборки"):
+extracting a cell is meant to leave the Placer file ready to use it, not
+just leave the cell sitting in a file nothing points at yet. Skipped when
+Cells/Extractor already IS the Placer file (self-reference is pointless —
+the file already effectively "has itself").
 
 Net template role (a component whose pads touch TWO aliased nets — a
 ferrite bead/inductor bridging two rails, e.g. a pi-filter's feedback
@@ -320,8 +319,7 @@ class ExtractDock(QDockWidget):
         """Called by MainWindow whenever the Files dock's Placer-role file
         changes (wired via FilePickerDock's placer_file_changed signal).
         Optional — extraction works the same without one, it just skips
-        the cell_files:/include: wiring described in the module
-        docstring."""
+        the include: wiring described in the module docstring."""
         self._placer_path = path
         self.placer_target_label.setText(
             _("Placer file: {path}").format(path=path) if path is not None
@@ -336,7 +334,7 @@ class ExtractDock(QDockWidget):
 
     def _refresh_existing_lists(self) -> None:
         self.cells_list.clear()
-        self.cells_list.addItems(sorted(self._existing_keys(self._target_path)))
+        self.cells_list.addItems(sorted(self._existing_keys(self._target_path, section="cells")))
         self.profiles_list.clear()
         self.profiles_list.addItems(sorted(self._existing_keys(self._profile_path, section="extract_profiles")))
         self._last_autofill_key = None  # force _autofill_from_cluster to re-check against the new content
@@ -388,7 +386,7 @@ class ExtractDock(QDockWidget):
             if "/" in cluster:
                 candidates.append(self._slugify(cluster.rsplit("/", 1)[-1]))
 
-            cell_keys = self._existing_keys(self._target_path)
+            cell_keys = self._existing_keys(self._target_path, section="cells")
             matched_cell = next((c for c in candidates if c in cell_keys), None)
             if not self.name_edit.text().strip():
                 # An existing key wins if there is one (it reflects
@@ -706,7 +704,8 @@ class ExtractDock(QDockWidget):
             return {"error": str(e)}
 
         try:
-            cell_overwritten = merge_write(payload["target_path"], template_dict)
+            cell_overwritten = merge_write(
+                payload["target_path"], {"cells": template_dict}, section="cells")
         except OSError as e:
             return {"error": _("Write failed: {error}").format(error=e)}
 
@@ -743,8 +742,8 @@ class ExtractDock(QDockWidget):
             try:
                 if payload["target_path"] != placer_path:
                     rel = Path(os.path.relpath(payload["target_path"], placer_path.parent)).as_posix()
-                    if add_list_entry(placer_path, "cell_files", rel):
-                        messages.append(_("added {rel!r} to cell_files: in {path}").format(
+                    if add_list_entry(placer_path, "include", rel):
+                        messages.append(_("added {rel!r} to include: in {path}").format(
                             rel=rel, path=placer_path))
                 if payload["save_profile"] and payload["profile_path"] != placer_path:
                     bad_keys = self._non_includable_keys(payload["profile_path"])
@@ -804,10 +803,10 @@ class ExtractDock(QDockWidget):
     # (config/includes.py's _LIST_SECTIONS/_DICT_SECTIONS) — everything
     # else is fatal there (no defined multi-file merge behaviour). A file
     # assigned the Extractor role can perfectly well ALSO be a full root
-    # config in its own right (registry_path/cell_files/schematic_dir/...)
-    # if it was set up that way before being pointed at by this role —
-    # found live 2026-08-01: writing include: blindly in that case leaves
-    # the Placer file unloadable the next time anything reads it.
+    # config in its own right (registry_path/schematic_dir/...) if it was
+    # set up that way before being pointed at by this role — found live
+    # 2026-08-01: writing include: blindly in that case leaves the Placer
+    # file unloadable the next time anything reads it.
     _INCLUDABLE_KEYS = frozenset(
         {"rules", "clone_placements", "cells", "points", "extract_profiles", "clone_profiles", "include"})
 

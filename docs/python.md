@@ -122,7 +122,7 @@ python boards/3ch-awg-tia/scripts/my_subsystem.py --apply                      #
 ```
 
 `root_config_path` (the third argument, `.../profiles/power.yaml` above) is what actually gets loaded
-and applied with `--apply` — it's the one carrying `schematic_dir`/`cells_file`/`registry_path`, and
+and applied with `--apply` — it's the one carrying `schematic_dir`/`registry_path`, and
 (via `include:`) it's expected to pick up `OUTPUT` itself, so the registry sees the FULL board config,
 not just this one script's slice (a partial `Config` built from one script alone is unsafe for
 registry pruning — see the "Getting it wrong" section below).

@@ -7,7 +7,6 @@ Split from monolithic config.py by the same refactoring as models.py.
 """
 import difflib
 import logging
-import json
 from pathlib import Path
 from typing import Any
 import yaml
@@ -623,61 +622,28 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
     if 'templates_file' in data or 'template_files' in data:
         raise ValidationError(format_fatal_error(
             _("deprecated fields 'templates_file'/'template_files'"),
-            [_("renamed to cells_file: <path> / cell_files: [...] — the class became "
-               "Cell (was SpokeTemplate), these were the one place the file-list keys "
-               "were left behind")]
+            [_("renamed to cells_file:/cell_files: (the class became Cell, was "
+               "SpokeTemplate), and those were themselves folded into include: on "
+               "2026-08-02 — see the 'cells_file'/'cell_files' error below for the "
+               "current way to do this")]
         ))
 
-    cells_file = data.get('cells_file')
-    cell_files = data.get('cell_files') or []
-    if not isinstance(cell_files, list):
+    if 'cells_file' in data or 'cell_files' in data:
         raise ValidationError(format_fatal_error(
-            _("cell_files must be a list, got {type}").format(type=type(cell_files).__name__),
-            [_("cell_files: is a YAML list of paths ('- templates/a.yaml'); "
-               "for a single file use cells_file: <path> instead")]
+            _("deprecated field(s) 'cells_file'/'cell_files' at root of config"),
+            [_("folded into include: 2026-08-02 (one mechanism for splitting ANY "
+               "section across files — rules:/clone_placements:/thermal_via_arrays:/"
+               "cells:/points:/extract_profiles:/clone_profiles: — instead of cells "
+               "having its own separate, differently-shaped mechanism): list the "
+               "external file(s) under include: instead, and add a 'cells:' key "
+               "wrapping what used to be that file's whole content, e.g.\n"
+               "include:\n"
+               "  - templates/a.yaml\n"
+               "  - templates/b.yaml\n"
+               "(each of those files needs 'cells:' at its own top level now, same "
+               "shape as an inline cells: block here)")]
         ))
-    external_files = ([cells_file] if cells_file else []) + list(cell_files)
 
-    # Each external file is the RAW extract() shape ({name: {...}}, no
-    # 'cells:' wrapper — unlike include:, which expects one). Merged
-    # among THEMSELVES with fatal on a repeated name (independent files —
-    # a collision is far more likely a copy-paste mistake than an
-    # intentional override, same philosophy as include:'s _DICT_SECTIONS).
-    # Inline cells: in this config file still overrides silently on top
-    # of all of them, unchanged from cells_file's original behaviour.
-    external_cells: dict[str, Any] = {}
-    for ext_file in external_files:
-        cells_path = Path(path).parent / ext_file
-        if not cells_path.exists():
-            raise ValidationError(format_fatal_error(
-                _("templates file {file!r} not found").format(file=ext_file),
-                [_("expected at {path} (relative to the config file itself, "
-                   "not the current working directory)").format(path=cells_path)]
-            ))
-        with open(cells_path, 'r', encoding='utf-8') as f:
-            if cells_path.suffix.lower() == '.json':
-                file_cells = json.load(f)
-            else:
-                file_cells = yaml.safe_load(f) or {}
-        for name, cdata in (file_cells or {}).items():
-            if name in external_cells:
-                raise ValidationError(format_fatal_error(
-                    _("duplicate cell {name!r} across cells_file/cell_files").format(name=name),
-                    [_("defined in more than one external cells file (cells_file "
-                       "and/or an entry of cell_files) — external files are meant to "
-                       "be independent, a repeated name is far more likely a mistake than "
-                       "an intentional override; inline cells: in the config itself "
-                       "CAN still override an external one, that is unaffected")]
-                ))
-            external_cells[name] = cdata
-
-    merged = dict(external_cells)
-    merged.update(cells_data)
-    cells_data = merged
-    if external_files:
-        logger.info(_("Cells from {files}: {count_ext}, plus inline: {count_inline}")
-                    .format(files=external_files, count_ext=len(external_cells),
-                            count_inline=len(data.get('cells', {}) or {})))
     cells = {name: _load_cell(name, cdata) for name, cdata in cells_data.items()}
 
     points_data = dict(data.get('points', {}) or {})

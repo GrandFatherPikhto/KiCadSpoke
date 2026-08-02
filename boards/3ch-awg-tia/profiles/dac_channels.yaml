@@ -3,12 +3,10 @@ track_registry_path: registries/dac.tracks.registry.json
 log_file: ../logs/dac.log
 schematic_dir: ../../../test_boards/3CH-AWG-TIA
 
-cell_files:
+include:
   - templates/dac_clkvdd_pi_filter.yaml
   - templates/dac_avdd_pi_filter.yaml
   - templates/dac_dvdd_pi_filter.yaml
-
-include:
   - ../generated/dac_channels.yaml  # written by scripts/dac_channels.py --apply
   - dac_channel_extracts.yaml
 
