@@ -438,6 +438,49 @@ def test_open_root_dialog_cancelled_leaves_root_untouched(main_window, tmp_path,
     assert dock._root_path == root
 
 
+def test_new_root_creates_an_empty_file_and_opens_it(main_window, tmp_path, monkeypatch):
+    new_root = tmp_path / "brand_new.yaml"
+    assert not new_root.exists()
+
+    dock = ConfigTreeDock(main_window)
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(new_root), "")))
+    dock._on_new_root()
+
+    assert new_root.exists()
+    assert yaml.safe_load(new_root.read_text(encoding="utf-8")) == {}
+    assert dock._root_path == new_root
+    assert dock.tree.topLevelItem(0).text(0) == "brand_new.yaml"
+
+
+def test_new_root_does_not_overwrite_an_existing_file(main_window, tmp_path, monkeypatch):
+    existing = tmp_path / "already_here.yaml"
+    existing.write_text(MINIMAL_CELL, encoding="utf-8")
+    before = existing.read_text(encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(existing), "")))
+    dock._on_new_root()
+
+    assert existing.read_text(encoding="utf-8") == before
+    assert dock._root_path == existing
+
+
+def test_new_root_dialog_cancelled_leaves_root_untouched(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: ("", "")))
+    dock._on_new_root()
+
+    assert dock._root_path == root
+
+
 def test_recent_list_most_recent_first_and_deduplicated(main_window, tmp_path):
     a = tmp_path / "a.yaml"
     b = tmp_path / "b.yaml"

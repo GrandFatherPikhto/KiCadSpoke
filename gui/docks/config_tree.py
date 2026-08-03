@@ -5,7 +5,9 @@ single root config file (2026-08-03, GUI tree roadmap Этап 1/2 — see
 techdocs/handoff/handoff_2026_08_03_gui_tree_risks_resolved.md and the
 2026-08-03 config-architecture-brainstorm session). Root = the ONE file
 carrying metadata. Picked via "Open Root file..." (a plain QFileDialog, no
-directory browser) + a Recent dropdown — replaces FilePickerDock entirely
+directory browser), "New Root file..." (Save-mode dialog, creates an empty
+{} file — added 2026-08-03, "А мы можем создавать root-файл?") + a Recent
+dropdown — replaces FilePickerDock entirely
 (removed same day: "Да не хочу я файл-пикер"), which used to offer a
 QFileSystemModel directory browser plus three independent "role" slots
 (Cells/Extractor/Placer) other docks read their target file from.
@@ -130,6 +132,9 @@ class ConfigTreeDock(QDockWidget):
         open_button = QPushButton(_("Open Root file..."))
         open_button.clicked.connect(self._on_open_root)
         open_row.addWidget(open_button)
+        new_button = QPushButton(_("New Root file..."))
+        new_button.clicked.connect(self._on_new_root)
+        open_row.addWidget(new_button)
         self.recent_combo = QComboBox()
         self.recent_combo.setPlaceholderText(_("Recent..."))
         self.recent_combo.activated.connect(self._on_recent_selected)
@@ -161,6 +166,22 @@ class ConfigTreeDock(QDockWidget):
         if not chosen:
             return
         self.set_root_file(Path(chosen))
+
+    def _on_new_root(self) -> None:
+        """Save-mode dialog (not Open) lets a not-yet-existing filename be
+        typed, same reasoning as _add_included_file's own Save-mode dialog
+        ("если включаем файл, его может реально и не быть") — a brand new
+        root starts out as an empty, perfectly valid config (every Config
+        field is optional/defaulted)."""
+        chosen, _filter = QFileDialog.getSaveFileName(
+            self, _("New Root file"), str(self._root_path.parent if self._root_path else ""),
+            "YAML files (*.yaml *.yml)")
+        if not chosen:
+            return
+        chosen_path = Path(chosen)
+        if not chosen_path.exists():
+            chosen_path.write_text("{}\n", encoding="utf-8")
+        self.set_root_file(chosen_path)
 
     def _on_recent_selected(self, index: int) -> None:
         path_str = self.recent_combo.itemData(index)

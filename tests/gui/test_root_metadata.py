@@ -17,7 +17,7 @@ def test_no_file_picked_shows_placeholder_and_defaults(main_window):
     dock.set_target_file(None)
     assert "pick one" in dock.target_label.text()
     assert dock.layer_combo.currentText() == "F.Cu"
-    assert dock.schematic_files_edit.text() == ""
+    assert dock.schematic_files_list.count() == 0
     assert dock.save_button is not None
 
 
@@ -38,7 +38,8 @@ def test_populates_widgets_from_existing_scalar_keys(main_window, tmp_path):
 
     assert dock.layer_combo.currentText() == "B.Cu"
     assert dock._text_edits["schematic_dir"].text() == "../sch"
-    assert dock.schematic_files_edit.text() == "extra1.kicad_sch, extra2.kicad_sch"
+    assert [dock.schematic_files_list.item(i).text() for i in range(dock.schematic_files_list.count())] \
+        == ["extra1.kicad_sch", "extra2.kicad_sch"]
     assert dock._text_edits["registry_path"].text() == "registries/fpga.json"
     assert dock._bool_checks["place_components"].isChecked() is False
     assert dock._bool_checks["skip_existing_components"].isChecked() is True
@@ -134,7 +135,95 @@ def test_schematic_files_round_trips_as_a_list(main_window, tmp_path):
     dock = RootMetadataDock(main_window)
     dock.set_target_file(path)
 
-    dock.schematic_files_edit.setText("a.kicad_sch, b.kicad_sch")
+    dock.schematic_files_list.addItems(["a.kicad_sch", "b.kicad_sch"])
     dock._on_save()
 
     assert _read_yaml(path)["schematic_files"] == ["a.kicad_sch", "b.kicad_sch"]
+
+
+def test_remove_schematic_file_removes_selected_item(main_window, tmp_path):
+    path = tmp_path / "root.yaml"
+    _write_yaml(path, {"schematic_files": ["a.kicad_sch", "b.kicad_sch"]})
+    dock = RootMetadataDock(main_window)
+    dock.set_target_file(path)
+
+    dock.schematic_files_list.item(0).setSelected(True)
+    dock._remove_schematic_file()
+
+    assert [dock.schematic_files_list.item(i).text() for i in range(dock.schematic_files_list.count())] \
+        == ["b.kicad_sch"]
+
+
+def test_browse_dir_writes_path_relative_to_target_file(main_window, tmp_path, monkeypatch):
+    target = tmp_path / "sub" / "root.yaml"
+    target.parent.mkdir()
+    _write_yaml(target, {})
+    picked_dir = tmp_path / "sub" / "schematics"
+    picked_dir.mkdir()
+
+    dock = RootMetadataDock(main_window)
+    dock.set_target_file(target)
+    monkeypatch.setattr(
+        "gui.docks.root_metadata.QFileDialog.getExistingDirectory",
+        staticmethod(lambda *a, **k: str(picked_dir)))
+
+    dock._browse_dir(dock._text_edits["schematic_dir"], "Schematic dir")
+
+    assert dock._text_edits["schematic_dir"].text() == "schematics"
+
+
+def test_browse_file_writes_path_relative_to_target_file(main_window, tmp_path, monkeypatch):
+    target = tmp_path / "sub" / "root.yaml"
+    target.parent.mkdir()
+    _write_yaml(target, {})
+    picked_file = tmp_path / "sub" / "registries" / "fpga.json"
+
+    dock = RootMetadataDock(main_window)
+    dock.set_target_file(target)
+    monkeypatch.setattr(
+        "gui.docks.root_metadata.QFileDialog.getSaveFileName",
+        staticmethod(lambda *a, **k: (str(picked_file), "")))
+
+    dock._browse_file(dock._text_edits["registry_path"], "Registry path")
+
+    assert dock._text_edits["registry_path"].text() == "registries/fpga.json"
+
+
+def test_add_schematic_file_writes_path_relative_to_target_file(main_window, tmp_path, monkeypatch):
+    target = tmp_path / "sub" / "root.yaml"
+    target.parent.mkdir()
+    _write_yaml(target, {})
+    picked_file = tmp_path / "sub" / "extra.kicad_sch"
+
+    dock = RootMetadataDock(main_window)
+    dock.set_target_file(target)
+    monkeypatch.setattr(
+        "gui.docks.root_metadata.QFileDialog.getOpenFileName",
+        staticmethod(lambda *a, **k: (str(picked_file), "")))
+
+    dock._add_schematic_file()
+
+    assert [dock.schematic_files_list.item(i).text() for i in range(dock.schematic_files_list.count())] \
+        == ["extra.kicad_sch"]
+
+
+def test_add_schematic_file_does_not_duplicate(main_window, tmp_path, monkeypatch):
+    target = tmp_path / "root.yaml"
+    _write_yaml(target, {"schematic_files": ["extra.kicad_sch"]})
+    picked_file = tmp_path / "extra.kicad_sch"
+
+    dock = RootMetadataDock(main_window)
+    dock.set_target_file(target)
+    monkeypatch.setattr(
+        "gui.docks.root_metadata.QFileDialog.getOpenFileName",
+        staticmethod(lambda *a, **k: (str(picked_file), "")))
+
+    dock._add_schematic_file()
+
+    assert dock.schematic_files_list.count() == 1
+
+
+def test_browse_without_a_file_picked_shows_error(main_window):
+    dock = RootMetadataDock(main_window)
+    dock._browse_dir(dock._text_edits["schematic_dir"], "Schematic dir")
+    assert "Pick a file" in dock.message_label.text()

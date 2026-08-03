@@ -31,14 +31,35 @@ never silently dropping a key the file already declared explicitly (even
 one now typed back to its default). Actually clearing a key back to
 "absent" is out of scope here — same "reachable by hand-editing the saved
 YAML" spirit as PlacerDock's own documented scope limits.
+
+Path fields get a "..." browse button (2026-08-03, Denis: "надо бы кнопки
+с диалогом выбора пути/файла") — schematic_dir/operation_log_dir pick an
+existing DIRECTORY (QFileDialog.getExistingDirectory); registry_path/
+track_registry_path/log_file pick a FILE via a Save-mode dialog (these
+files are routinely created BY `apply` on first run, not beforehand — same
+"may not exist yet" reasoning ConfigTreeDock's own Add-included-file
+dialog already uses). Whatever absolute path the dialog returns is
+converted to a path relative to the target file's own directory before
+being written into the field — every one of these fields is documented as
+"relative to this YAML" (see config/models.py's Config docstring).
+
+schematic_files (a real list, not a single scalar) gets a QListWidget +
+Add.../Remove instead of a comma-separated QLineEdit (2026-08-03, Denis:
+"диалоговое окошко со списком и кнопки добавить/удалить с диалогом выбора
+файла") — Add opens an Open-mode dialog filtered to *.kicad_sch (these
+files must already exist, unlike the path fields above), Remove deletes
+whatever's currently selected.
 """
 import dataclasses
 import logging
+import os
 from pathlib import Path
 from typing import Dict, Optional
 
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFormLayout,
-                              QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget)
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout,
+                              QHBoxLayout, QLabel, QLineEdit, QListWidget,
+                              QPushButton, QVBoxLayout, QWidget)
 
 from kicadstamp.config.models import Config
 from kicadstamp.i18n import _
@@ -58,12 +79,14 @@ _DEFAULTS: Dict[str, object] = {
     for f in dataclasses.fields(Config)
 }
 
+# Third element: "dir" -> browse button opens getExistingDirectory,
+# "file" -> Save-mode getSaveFileName (see module docstring for why).
 _TEXT_FIELDS = [
-    ("schematic_dir", _("Schematic dir:")),
-    ("registry_path", _("Registry path:")),
-    ("track_registry_path", _("Track registry path:")),
-    ("log_file", _("Log file:")),
-    ("operation_log_dir", _("Operation log dir:")),
+    ("schematic_dir", _("Schematic dir:"), "dir"),
+    ("registry_path", _("Registry path:"), "file"),
+    ("track_registry_path", _("Track registry path:"), "file"),
+    ("log_file", _("Log file:"), "file"),
+    ("operation_log_dir", _("Operation log dir:"), "dir"),
 ]
 _BOOL_FIELDS = [
     ("place_components", _("Place components")),
@@ -106,15 +129,38 @@ class RootMetadataDock(QWidget):
         form.addRow(_("Layer:"), self.layer_combo)
 
         self._text_edits: Dict[str, QLineEdit] = {}
-        for key, label in _TEXT_FIELDS:
+        for key, label, kind in _TEXT_FIELDS:
             edit = QLineEdit()
             edit.setPlaceholderText(_("(relative to this YAML)"))
-            form.addRow(label, edit)
+            row = QHBoxLayout()
+            row.addWidget(edit)
+            browse_button = QPushButton("...")
+            browse_button.setMaximumWidth(30)
+            if kind == "dir":
+                browse_button.clicked.connect(
+                    lambda _checked=False, e=edit, l=label: self._browse_dir(e, l))
+            else:
+                browse_button.clicked.connect(
+                    lambda _checked=False, e=edit, l=label: self._browse_file(e, l))
+            row.addWidget(browse_button)
+            form.addRow(label, row)
             self._text_edits[key] = edit
 
-        self.schematic_files_edit = QLineEdit()
-        self.schematic_files_edit.setPlaceholderText(_("comma-separated, relative to this YAML"))
-        form.addRow(_("Schematic files:"), self.schematic_files_edit)
+        schematic_files_container = QWidget()
+        sf_layout = QVBoxLayout(schematic_files_container)
+        sf_layout.setContentsMargins(0, 0, 0, 0)
+        self.schematic_files_list = QListWidget()
+        self.schematic_files_list.setMaximumHeight(80)
+        sf_layout.addWidget(self.schematic_files_list)
+        sf_buttons = QHBoxLayout()
+        sf_add_button = QPushButton(_("Add..."))
+        sf_add_button.clicked.connect(self._add_schematic_file)
+        sf_remove_button = QPushButton(_("Remove"))
+        sf_remove_button.clicked.connect(self._remove_schematic_file)
+        sf_buttons.addWidget(sf_add_button)
+        sf_buttons.addWidget(sf_remove_button)
+        sf_layout.addLayout(sf_buttons)
+        form.addRow(_("Schematic files:"), schematic_files_container)
 
         self._bool_checks: Dict[str, QCheckBox] = {}
         for key, label in _BOOL_FIELDS:
@@ -165,15 +211,60 @@ class RootMetadataDock(QWidget):
 
     def _populate(self, data: dict) -> None:
         self.layer_combo.setCurrentText(data.get("layer", _DEFAULTS["layer"]))
-        for key, _label in _TEXT_FIELDS:
+        for key, _label, _kind in _TEXT_FIELDS:
             self._text_edits[key].setText(data.get(key) or "")
-        self.schematic_files_edit.setText(", ".join(data.get("schematic_files") or []))
+        self.schematic_files_list.clear()
+        self.schematic_files_list.addItems(data.get("schematic_files") or [])
         for key, _label in _BOOL_FIELDS:
             self._bool_checks[key].setChecked(bool(data.get(key, _DEFAULTS[key])))
         for key, _label in _FLOAT_FIELDS:
             self._float_edits[key].setText(str(data.get(key, _DEFAULTS[key])))
         for key, _label in _INT_FIELDS:
             self._int_edits[key].setText(str(data.get(key, _DEFAULTS[key])))
+
+    # ── Browse buttons for the path fields ──────────────────────────────
+
+    def _relative_to_target(self, absolute: str) -> str:
+        return Path(os.path.relpath(absolute, self._path.parent)).as_posix()
+
+    def _browse_dir(self, edit: QLineEdit, label: str) -> None:
+        if self._path is None:
+            self._show_message(_("Pick a file in the Config tree first."), _ERROR_STYLE)
+            return
+        start = (self._path.parent / edit.text()) if edit.text().strip() else self._path.parent
+        chosen = QFileDialog.getExistingDirectory(self, label, str(start))
+        if not chosen:
+            return
+        edit.setText(self._relative_to_target(chosen))
+
+    def _browse_file(self, edit: QLineEdit, label: str) -> None:
+        if self._path is None:
+            self._show_message(_("Pick a file in the Config tree first."), _ERROR_STYLE)
+            return
+        start = (self._path.parent / edit.text()) if edit.text().strip() else self._path.parent
+        chosen, _filter = QFileDialog.getSaveFileName(self, label, str(start))
+        if not chosen:
+            return
+        edit.setText(self._relative_to_target(chosen))
+
+    # ── Add/Remove for the schematic_files list ─────────────────────────
+
+    def _add_schematic_file(self) -> None:
+        if self._path is None:
+            self._show_message(_("Pick a file in the Config tree first."), _ERROR_STYLE)
+            return
+        chosen, _filter = QFileDialog.getOpenFileName(
+            self, _("Add schematic file"), str(self._path.parent),
+            "KiCad Schematic (*.kicad_sch);;All files (*)")
+        if not chosen:
+            return
+        rel = self._relative_to_target(chosen)
+        if not self.schematic_files_list.findItems(rel, Qt.MatchFlag.MatchExactly):
+            self.schematic_files_list.addItem(rel)
+
+    def _remove_schematic_file(self) -> None:
+        for item in self.schematic_files_list.selectedItems():
+            self.schematic_files_list.takeItem(self.schematic_files_list.row(item))
 
     # ── Save ──────────────────────────────────────────────────────────────
 
@@ -191,12 +282,13 @@ class RootMetadataDock(QWidget):
         if layer != _DEFAULTS["layer"] or "layer" in self._present_keys:
             updates["layer"] = layer
 
-        for key, _label in _TEXT_FIELDS:
+        for key, _label, _kind in _TEXT_FIELDS:
             text = self._text_edits[key].text().strip()
             if text or key in self._present_keys:
                 updates[key] = text or None
 
-        files = [f.strip() for f in self.schematic_files_edit.text().split(",") if f.strip()]
+        files = [self.schematic_files_list.item(i).text()
+                 for i in range(self.schematic_files_list.count())]
         if files or "schematic_files" in self._present_keys:
             updates["schematic_files"] = files
 
