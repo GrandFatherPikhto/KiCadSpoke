@@ -376,6 +376,29 @@ def test_dock_hub_injects_connection_into_connection_docks(main_window):
         _teardown_hub(hub)
 
 
+def test_dock_hub_omits_board_written_hook_on_a_plain_main_window(main_window):
+    """DockHub works on any QMainWindow, not just the real one (see
+    test_dock_hub_constructs_all_docks_and_wires_file_selected above) — a
+    fake main_window has no request_refresh, so the hook must fall back to
+    None rather than raising AttributeError."""
+    hub = DockHub(main_window, connection=main_window.connection, verbose=False)
+    try:
+        assert hub.tree_dock.on_board_written is None
+        assert hub.fieldstool_dock.window.on_board_written is None
+    finally:
+        _teardown_hub(hub)
+
+
+def test_dock_hub_wires_board_written_hook_to_request_refresh(real_main_window):
+    """2026-08-03 fix: Stage/Clear all write straight to the live board, but
+    the automatic poll tick never refreshes on its own once already
+    connected — without this wiring, Pending changes never picks up the
+    write until the user notices and clicks Refresh themselves."""
+    hub = real_main_window._dock_hub
+    assert hub.tree_dock.on_board_written == real_main_window.request_refresh
+    assert hub.fieldstool_dock.window.on_board_written == real_main_window.request_refresh
+
+
 def test_dock_hub_restore_tree_mode_after_construction(real_main_window):
     """restore_tree_mode() is deliberately NOT part of __init__ (the tree
     dock's lazy fieldstool lookup needs main_window.fieldstool_dock

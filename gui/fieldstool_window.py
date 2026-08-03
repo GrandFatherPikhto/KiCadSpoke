@@ -119,6 +119,15 @@ class MainWindow(QMainWindow):
         # FIRST _rescan() during this very __init__, before FieldsToolDock
         # has had a chance to assign the real callback.
         self.on_components_changed: Optional[Callable[[], None]] = None
+        # Set by gui/dock_hub.py to the main window's request_refresh() —
+        # called right after Stage successfully writes to the live board, so
+        # Pending changes' diff picks up the write immediately instead of
+        # waiting for a manual Refresh click (the automatic poll tick never
+        # refreshes on its own once already connected, see MainWindow._poll's
+        # docstring). Same default-None-and-guard pattern as
+        # on_components_changed, for the same reason (direct-construction
+        # tests never assign it).
+        self.on_board_written: Optional[Callable[[], None]] = None
 
         central = QWidget()
         layout = QVBoxLayout(central)
@@ -384,6 +393,8 @@ class MainWindow(QMainWindow):
             self._add_combo_item_if_missing(self.role_combo, result["role"])
         if result["cluster"]:
             self._add_combo_item_if_missing(self.cluster_combo, result["cluster"])
+        if self.on_board_written:
+            self.on_board_written()
 
     def _on_stage_failed(self, message: str) -> None:
         QMessageBox.critical(self, _("Could not set fields"), message)

@@ -306,6 +306,18 @@ class MainWindow(QMainWindow):
         self._persist_settings()
         QApplication.instance().quit()
 
+    def request_refresh(self) -> None:
+        """Public — lets a dock trigger an out-of-cycle refresh right after
+        its own live board write (Stage in fieldstool, Clear all/Delete
+        selected in the Components tree) instead of waiting for the user to
+        notice nothing updated and click Refresh themselves. The automatic
+        timer tick deliberately never refreshes once already connected (see
+        _poll's docstring), so without this call Pending changes' diff would
+        never pick up a write that just happened (found live 2026-08-03:
+        Stage wrote Role/Cluster to the board, but Pending changes stayed
+        empty until a manual Refresh). Same path as the status-bar button."""
+        self._poll(manual=True)
+
     def _poll(self, manual: bool = False) -> None:
         """manual=True (button click) always does real work. manual=False (an
         automatic timer tick) only tries to connect while disconnected — see

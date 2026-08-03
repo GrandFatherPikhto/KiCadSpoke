@@ -377,6 +377,27 @@ def test_clear_all_skips_footprint_missing_a_field_instead_of_rolling_back_the_b
     assert "Skipped 1 without Role/Cluster field: FB15" in dock.message_label.text()
 
 
+def test_clear_all_success_fires_on_board_written_callback(main_window, monkeypatch):
+    """2026-08-03 fix: the automatic poll tick never refreshes on its own
+    once already connected (see MainWindow._poll's docstring), so without
+    this hook Pending changes never saw a Clear all write until the user
+    happened to click Refresh — the exact "wrote to the board but staged
+    nothing" gap the Apply redesign was meant to close."""
+    monkeypatch.setattr(role_cluster_tree_mod, "start_long_op", _run_sync)
+    board = FakeBoard()
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    dock.set_footprints([FakeSelected("C1", "C_IN", "Channel_1")])
+    calls = []
+    dock.on_board_written = lambda: calls.append(1)
+
+    monkeypatch.setattr(role_cluster_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    dock._on_clear_all()
+
+    assert calls == [1]
+
+
 def test_clear_all_with_nothing_on_board_shows_message(main_window, monkeypatch):
     board = FakeBoard()
     main_window.connection.board = board

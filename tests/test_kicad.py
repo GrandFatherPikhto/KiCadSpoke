@@ -215,6 +215,64 @@ class TestFootprintsCache:
         assert adapter._board.get_footprints.call_count == 2
 
 
+class TestSetFieldValuesBulk:
+    """Regression (found live 2026-08-03, reproduced live on a real board via
+    fieldstool's Stage/Clear all): `touched` used to be built with one
+    append() per (footprint, field, value) triple, outside work() — a
+    footprint with more than one field in the same batch (true of every
+    Clear all/Delete selected call, which always sets Role AND Cluster) got
+    appended more than once, so update_items() received the SAME
+    FootprintInstance object multiple times in one list, and a live KiCad
+    board turned that into a genuine duplicate physical footprint (verified
+    in isolation: update_items([fp, fp]) creates a second footprint instead
+    of a no-op double-update of the one already there)."""
+
+    @staticmethod
+    def _adapter():
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+        adapter._write_risk_checked = True  # skip check_write_crash_risk's own IPC call
+        return adapter
+
+    def test_touched_list_has_each_footprint_once_even_with_two_fields_set(self):
+        adapter = self._adapter()
+        fp = _fp_with_fields(Role="OLD_ROLE", Cluster="OLD_CLUSTER")
+        updates = [(fp, "Role", "NEW_ROLE"), (fp, "Cluster", "NEW_CLUSTER")]
+
+        adapter.set_field_values_bulk(updates, "test")
+
+        (touched,), _kwargs = adapter._board.update_items.call_args
+        assert touched == [fp]
+
+    def test_touched_list_preserves_first_seen_order_across_several_footprints(self):
+        adapter = self._adapter()
+        fp1 = _fp_with_fields(Role="R1", Cluster="C1")
+        fp2 = _fp_with_fields(Role="R2", Cluster="C2")
+        updates = [(fp1, "Role", "X"), (fp2, "Role", "X"),
+                   (fp1, "Cluster", "Y"), (fp2, "Cluster", "Y")]
+
+        adapter.set_field_values_bulk(updates, "test")
+
+        (touched,), _kwargs = adapter._board.update_items.call_args
+        assert touched == [fp1, fp2]
+
+    def test_retry_does_not_accumulate_touched_across_attempts(self):
+        """commit_with_retry() calls work() again on a transient failure —
+        touched used to live in the enclosing function, so a retried batch
+        carried over every previous attempt's entries on top of the
+        per-field duplication above, compounding it further."""
+        adapter = self._adapter()
+        fp = _fp_with_fields(Role="OLD_ROLE", Cluster="OLD_CLUSTER")
+        updates = [(fp, "Role", "NEW_ROLE"), (fp, "Cluster", "NEW_CLUSTER")]
+        adapter._board.push_commit.side_effect = [Exception("not ready"), None]
+
+        adapter.set_field_values_bulk(updates, "test")
+
+        assert adapter._board.update_items.call_count == 2
+        for (touched,), _kwargs in adapter._board.update_items.call_args_list:
+            assert touched == [fp]
+
+
 class TestIgnoreSelection:
     """adapter.ignore_selection / --no-selection (added 2026-07-30): a stray
     leftover GUI selection in the PCB editor feeds into role-based

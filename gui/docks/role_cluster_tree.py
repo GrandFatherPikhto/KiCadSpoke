@@ -127,6 +127,13 @@ class RoleClusterTreeDock(QDockWidget):
         # parent-less QThread isn't garbage-collected mid-run (same pattern
         # as PlacerDock/ExtractDock/ThermalViaArrayDock).
         self._active_op: Optional[Any] = None
+        # Set by gui/dock_hub.py to the main window's request_refresh() —
+        # called right after Clear all/Delete selected successfully write to
+        # the live board, so Pending changes' diff picks up the write
+        # immediately instead of waiting for a manual Refresh click (the
+        # automatic poll tick never refreshes on its own once already
+        # connected, see MainWindow._poll's docstring).
+        self.on_board_written: Optional[Callable[[], None]] = None
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -587,6 +594,8 @@ class RoleClusterTreeDock(QDockWidget):
             message += " " + _("Skipped {count} without Role/Cluster field: {refs}").format(
                 count=len(skipped), refs=shown)
         self._show_message(message, _SUCCESS_STYLE)
+        if self.on_board_written:
+            self.on_board_written()
 
     def _on_clear_failed(self, message: str) -> None:
         self._show_message(_("Clear failed: {error}").format(error=message), _ERROR_STYLE)

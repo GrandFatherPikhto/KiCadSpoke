@@ -163,6 +163,24 @@ def test_stage_writes_role_cluster_to_the_live_board(fieldstool_window, tmp_path
     assert (board.adapter._fps["R1"], "Role", "NEW") in updates
 
 
+def test_stage_success_fires_on_board_written_callback(fieldstool_window, tmp_path, monkeypatch):
+    """2026-08-03 fix: the automatic poll tick never refreshes on its own
+    once already connected (see MainWindow._poll's docstring), so without
+    this hook Pending changes never saw a Stage write until the user
+    happened to click Refresh — found live right after the Apply redesign."""
+    root = _write_root(tmp_path, symbol_block(["R1"], role="OLD"))
+    fieldstool_window._set_root_sheet(root)
+    _connect_board(fieldstool_window, monkeypatch)
+    calls = []
+    fieldstool_window.on_board_written = lambda: calls.append(1)
+
+    fieldstool_window._set_targets(["R1"])
+    fieldstool_window.role_combo.setCurrentText("NEW")
+    fieldstool_window._on_stage()
+
+    assert calls == [1]
+
+
 def test_stage_with_no_target_does_nothing(fieldstool_window, tmp_path):
     root = _write_root(tmp_path, symbol_block(["R1"], role="OLD"))
     fieldstool_window._set_root_sheet(root)

@@ -57,6 +57,19 @@ class DockHub:
             main_window, connection=connection, pending_dock=self.pending_dock)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fieldstool_dock)
 
+        # Both live-board writers get an immediate out-of-cycle refresh hook
+        # (see MainWindow.request_refresh) — the automatic poll tick never
+        # refreshes on its own once already connected, so without this a
+        # Stage/Clear all/Delete selected write would sit invisible to
+        # Pending changes until the user manually clicked Refresh. getattr,
+        # not a direct attribute access — DockHub itself is built (and
+        # tested) against any plain QMainWindow, not just the real
+        # gui.main_window.MainWindow (see test_phase3_wiring.py's "the
+        # composition root works without a real MainWindow too").
+        request_refresh = getattr(main_window, "request_refresh", None)
+        self.tree_dock.on_board_written = request_refresh
+        self.fieldstool_dock.window.on_board_written = request_refresh
+
         self.detail_dock = DetailDock(main_window, connection=connection)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.detail_dock)
         main_window.tabifyDockWidget(self.fieldstool_dock, self.detail_dock)

@@ -234,13 +234,31 @@ class KiCadBoardAdapter(IBoardAdapter):
         batch is missing the target field — begin_commit()/drop_commit()
         wraps the whole batch, so a mid-batch failure rolls back the ones
         already mutated in this Python process too (they were never sent).
+
+        FIXED (2026-08-03): `touched` used to be built OUTSIDE work() and
+        with one plain append() per (footprint, field, value) triple. Any
+        footprint with more than one field in this same batch (Role AND
+        Cluster — true of every Clear all/Delete selected call, and of any
+        Stage that sets both) was appended more than once, so update_items()
+        received the SAME FootprintInstance object multiple times in one
+        list — found live: this duplicated the physical footprint on the
+        real board once per repeat entry (reproduced in isolation: writing
+        the identical object twice via update_items() creates a second
+        footprint instead of no-op updating the one that's already there).
+        Same reasoning made `touched` a local of work(), not the enclosing
+        function — commit_with_retry() can call work() again on a retry,
+        and the old outer-scope list kept every previous attempt's entries,
+        doubling up again on top of the first bug on any retried batch.
         """
-        touched = []
 
         def work():
+            touched = []
+            seen = set()
             for footprint, field_name, value in updates:
                 self.set_field_value(footprint, field_name, value)
-                touched.append(footprint)
+                if id(footprint) not in seen:
+                    seen.add(id(footprint))
+                    touched.append(footprint)
             self.update_items(touched)
 
         return self.commit_with_retry(description, work)
