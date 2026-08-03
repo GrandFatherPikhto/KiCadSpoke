@@ -516,6 +516,57 @@ def _load_clone_placement(data: dict[str, Any]) -> ClonePlacement:
     )
 
 
+def _load_thermal_via_array(tva_data: dict[str, Any]) -> ThermalViaArrayConfig:
+    """One thermal_via_arrays: entry — split out of load_config()'s loop
+    (2026-08-03) so the GUI's ThermalViaArrayDock can validate a single
+    entry before writing it, the same way _load_clone_placement (public as
+    load_clone_placement) already does for clone_placements. The list-level
+    duplicate-name check stays in load_config() — it needs the whole list,
+    not a single entry."""
+    if 'target_ref' in tva_data:
+        raise ValidationError(format_fatal_error(
+            _("deprecated field 'target_ref' in thermal_via_arrays"),
+            [_("renamed for consistency: use anchor_ref")]
+        ))
+    if not tva_data.get('name'):
+        raise ValidationError(format_fatal_error(
+            _("thermal_via_arrays entry without name"),
+            [_("every thermal_via_arrays entry must have a name – used in --only "
+               "(kicadstamp_cli.py) for isolated runs, and to tell entries apart; write "
+               "name: <any understandable string>, e.g. name: fpga_thermal")]
+        ))
+    check_unknown_keys(tva_data, _THERMAL_VIA_ARRAY_KNOWN_KEYS,
+                       _("unknown fields in thermal_via_arrays entry {name!r}")
+                       .format(name=tva_data.get('name')))
+    if tva_data.get('anchor_point') is not None and (
+            tva_data.get('anchor_ref') is not None or tva_data.get('anchor_role') is not None):
+        raise ValidationError(format_fatal_error(
+            _("anchor_point together with anchor_ref/anchor_role in thermal_via_arrays "
+              "entry {name!r}").format(name=tva_data.get('name')),
+            [_("anchor_point={point!r} names a points: entry that already carries its own "
+               "anchor — mutually exclusive with anchor_ref/anchor_role")
+             .format(point=tva_data.get('anchor_point'))]
+        ))
+    return ThermalViaArrayConfig(
+        retired=tva_data.get('retired', False),
+        anchor_ref=tva_data.get('anchor_ref'),
+        anchor_role=tva_data.get('anchor_role'),
+        anchor_sheet=tva_data.get('anchor_sheet'),
+        anchor_cluster=tva_data.get('anchor_cluster'),
+        anchor_point=tva_data.get('anchor_point'),
+        pad=tva_data.get('pad', ''),
+        net=tva_data.get('net', 'GND'),
+        rows=tva_data.get('rows', 4),
+        cols=tva_data.get('cols', 4),
+        margin_mm=tva_data.get('margin_mm', 0.5),
+        pattern=tva_data.get('pattern', 'grid'),
+        drill_mm=tva_data.get('drill_mm', 0.3),
+        diameter_mm=tva_data.get('diameter_mm', 0.5),
+        name=tva_data.get('name'),
+        skip=tva_data.get('skip', False),
+    )
+
+
 def load_config(path: str) -> tuple[Config, RuntimeContext]:
     logger.info(_("Loading configuration from {path}").format(path=path))
     with open(path, 'r', encoding='utf-8') as f:
@@ -551,50 +602,9 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
                      if isinstance(data['thermal_via_array'], dict) else '<name>')]
         ))
 
-    thermal_vias: list[ThermalViaArrayConfig] = []
-    for tva_data in data.get('thermal_via_arrays', []):
-        if 'target_ref' in tva_data:
-            raise ValidationError(format_fatal_error(
-                _("deprecated field 'target_ref' in thermal_via_arrays"),
-                [_("renamed for consistency: use anchor_ref")]
-            ))
-        if not tva_data.get('name'):
-            raise ValidationError(format_fatal_error(
-                _("thermal_via_arrays entry without name"),
-                [_("every thermal_via_arrays entry must have a name – used in --only "
-                   "(kicadstamp_cli.py) for isolated runs, and to tell entries apart; write "
-                   "name: <any understandable string>, e.g. name: fpga_thermal")]
-            ))
-        check_unknown_keys(tva_data, _THERMAL_VIA_ARRAY_KNOWN_KEYS,
-                           _("unknown fields in thermal_via_arrays entry {name!r}")
-                           .format(name=tva_data.get('name')))
-        if tva_data.get('anchor_point') is not None and (
-                tva_data.get('anchor_ref') is not None or tva_data.get('anchor_role') is not None):
-            raise ValidationError(format_fatal_error(
-                _("anchor_point together with anchor_ref/anchor_role in thermal_via_arrays "
-                  "entry {name!r}").format(name=tva_data.get('name')),
-                [_("anchor_point={point!r} names a points: entry that already carries its own "
-                   "anchor — mutually exclusive with anchor_ref/anchor_role")
-                 .format(point=tva_data.get('anchor_point'))]
-            ))
-        thermal_vias.append(ThermalViaArrayConfig(
-            retired=tva_data.get('retired', False),
-            anchor_ref=tva_data.get('anchor_ref'),
-            anchor_role=tva_data.get('anchor_role'),
-            anchor_sheet=tva_data.get('anchor_sheet'),
-            anchor_cluster=tva_data.get('anchor_cluster'),
-            anchor_point=tva_data.get('anchor_point'),
-            pad=tva_data.get('pad', ''),
-            net=tva_data.get('net', 'GND'),
-            rows=tva_data.get('rows', 4),
-            cols=tva_data.get('cols', 4),
-            margin_mm=tva_data.get('margin_mm', 0.5),
-            pattern=tva_data.get('pattern', 'grid'),
-            drill_mm=tva_data.get('drill_mm', 0.3),
-            diameter_mm=tva_data.get('diameter_mm', 0.5),
-            name=tva_data.get('name'),
-            skip=tva_data.get('skip', False),
-        ))
+    thermal_vias: list[ThermalViaArrayConfig] = [
+        _load_thermal_via_array(tva_data) for tva_data in data.get('thermal_via_arrays', [])
+    ]
 
     # Fatal on collision: two entries with the same name would silently
     # collide under --only, same reasoning/shape as the rules' --only

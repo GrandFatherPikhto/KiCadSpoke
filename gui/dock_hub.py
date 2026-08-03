@@ -12,12 +12,13 @@ MainWindow re-exposes as thin forwarding properties — needed for the parts
 of the app that still reach a dock directly (notably RoleClusterTreeDock's
 lazy fieldstool lookup and the test suite).
 
-Extract/Placer/Root (extract_dock/placer_dock/root_metadata_dock) are the
-one exception: 2026-08-03 they were merged into ONE QDockWidget, DetailDock
-(gui/docks/detail_panel.py) — its own module docstring covers why. Those
-three attributes are kept as aliases straight into DetailDock's stack pages
-so every existing call site keeps working unchanged; they are plain
-QWidgets now, not QDockWidgets in their own right.
+Extract/Placer/Root/Thermal via (extract_dock/placer_dock/
+root_metadata_dock/thermal_via_dock) are the one exception: 2026-08-03 they
+were merged into ONE QDockWidget, DetailDock (gui/docks/detail_panel.py) —
+its own module docstring covers why. Those attributes are kept as aliases
+straight into DetailDock's stack pages so every existing call site keeps
+working unchanged; they are plain QWidgets now, not QDockWidgets in their
+own right.
 """
 from PyQt6.QtCore import Qt
 
@@ -59,6 +60,7 @@ class DockHub:
         self.extract_dock = self.detail_dock.extract_panel
         self.placer_dock = self.detail_dock.placer_panel
         self.root_metadata_dock = self.detail_dock.root_panel
+        self.thermal_via_dock = self.detail_dock.thermal_via_panel
 
         # ── bottom: log ───────────────────────────────────────────────────
         self.log_dock = LogDock(main_window, verbose=verbose)
@@ -93,6 +95,7 @@ class DockHub:
         self.config_tree_dock.file_selected.connect(self.placer_dock.set_cells_file)
         self.config_tree_dock.file_selected.connect(self.placer_dock.set_placer_file)
         self.config_tree_dock.file_selected.connect(self.root_metadata_dock.set_target_file)
+        self.config_tree_dock.file_selected.connect(self.thermal_via_dock.set_target_file)
         # file_selected fires BEFORE the more specific cell_picked/
         # placement_picked/profile_picked signal on a leaf click (see
         # config_tree.py's _on_clicked) — so this fallback runs first and
@@ -113,15 +116,19 @@ class DockHub:
         self.config_tree_dock.placement_picked.connect(self.detail_dock.show_placer)
         self.config_tree_dock.profile_picked.connect(self.extract_dock.pick_profile)
         self.config_tree_dock.profile_picked.connect(self.detail_dock.show_extract)
-        # Placer -> Config tree: a successful Save refreshes the whole tree
-        # (walk_include_tree() is re-run) so a brand new (or renamed)
-        # placement shows up without reassigning Files.
+        self.config_tree_dock.thermal_via_picked.connect(self.thermal_via_dock.load_entry)
+        self.config_tree_dock.thermal_via_picked.connect(self.detail_dock.show_thermal_via)
+        # Placer/Thermal via -> Config tree: a successful Save refreshes the
+        # whole tree (walk_include_tree() is re-run) so a brand new (or
+        # renamed) entry shows up without reassigning Files.
         self.placer_dock.saved.connect(self.config_tree_dock.refresh)
-        # Config tree's "Add placer..." context-menu action -> Placer:
-        # opens the form blank, targeting the file the action was invoked
-        # on, and brings that tab to front (same raise pattern as
-        # open_fieldstool() below).
+        self.thermal_via_dock.saved.connect(self.config_tree_dock.refresh)
+        # Config tree's "Add placer.../Add thermal via pad..." context-menu
+        # actions -> Placer/Thermal via: open the form blank, targeting the
+        # file the action was invoked on, and bring that tab to front (same
+        # raise pattern as open_fieldstool() below).
         self.config_tree_dock.add_placer_requested.connect(self._start_new_placement)
+        self.config_tree_dock.add_thermal_via_requested.connect(self._start_new_thermal_via)
 
         # fieldstool tab -> Components tree: an explicit Rescan/Apply there
         # refreshes this tree's schematic view (see FieldsToolDock).
@@ -136,6 +143,8 @@ class DockHub:
         self.tree_dock.set_footprints(snapshot)
         self.placer_dock.refresh_known_roles(snapshot)
         self.placer_dock.refresh_known_nets(board)
+        self.thermal_via_dock.refresh_known_roles(snapshot)
+        self.thermal_via_dock.refresh_known_nets(board)
 
     def clear_components(self) -> None:
         """Connection-lost path: empty the Components tree (live mode only —
@@ -180,3 +189,11 @@ class DockHub:
         self.detail_dock.setVisible(True)
         self.detail_dock.raise_()
         self.detail_dock.show_placer()
+
+    def _start_new_thermal_via(self, file_path) -> None:
+        """ConfigTreeDock's add_thermal_via_requested delegate — same
+        reasoning as _start_new_placement above, for ThermalViaArrayDock."""
+        self.thermal_via_dock.new_thermal_via(file_path)
+        self.detail_dock.setVisible(True)
+        self.detail_dock.raise_()
+        self.detail_dock.show_thermal_via()

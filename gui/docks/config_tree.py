@@ -18,11 +18,15 @@ shape here: an earlier version of this dock read one flat file per role
 and didn't walk include: at all, corrected same day, see the handoff
 above).
 
-Only 3 of the 7 recognized sections route into an existing form when
-clicked (Cells -> PlacerDock.set_selected_cell, Clone placements ->
-PlacerDock.load_placement, Extract profiles -> ExtractDock.pick_profile) —
-Rules/Thermal via arrays/Points/Clone profiles have no GUI edit form yet,
-shown read-only for now, same deliberate scope limit as before.
+4 of the 7 recognized sections route into an existing form when clicked
+(Cells -> PlacerDock.set_selected_cell, Clone placements ->
+PlacerDock.load_placement, Extract profiles -> ExtractDock.pick_profile,
+Thermal via arrays -> ThermalViaArrayDock.load_entry, added 2026-08-03) —
+Rules/Points/Clone profiles have no GUI edit form yet, shown read-only for
+now, same deliberate scope limit as before. Rules/ManualSpoke specifically
+was flagged live as a related future gap (Denis, re: fpga_cap_pair_spoke.yaml
+being used via rules: spokes, not clone_placements:) — parked alongside it,
+not started.
 
 Every click (file header, category, or leaf alike) also fires
 file_selected with that item's nearest file ancestor — this REPLACES the
@@ -58,7 +62,7 @@ from kicadstamp.i18n import _
 
 from .. import settings
 from ._common import (add_include, disable_include, display_path, merge_write,
-                      non_includable_keys, upsert_list_entry)
+                      non_includable_keys)
 
 # Recent root files, most-recent-first, capped at this many entries — same
 # "remember a handful of recently used paths" idea FilePickerDock's
@@ -82,7 +86,7 @@ _SECTION_LABELS = {
 
 # Sections with a real leaf-click destination (see module docstring) — the
 # rest are listed but inert (no existing form to route into yet).
-_CLICKABLE_SECTIONS = {"cells", "clone_placements", "extract_profiles"}
+_CLICKABLE_SECTIONS = {"cells", "clone_placements", "extract_profiles", "thermal_via_arrays"}
 
 
 class ConfigTreeDock(QDockWidget):
@@ -95,10 +99,19 @@ class ConfigTreeDock(QDockWidget):
     # Fired when an Extract profile leaf is clicked — ExtractDock listens
     # via its pick_profile() entry point.
     profile_picked = pyqtSignal(str)
+    # Fired when a Thermal via array leaf is clicked (2026-08-03) —
+    # ThermalViaArrayDock listens to load it back into the form, same shape
+    # as placement_picked.
+    thermal_via_picked = pyqtSignal(object)
     # Fired by the context menu's "Add placer..." — PlacerDock listens via
     # its new_placement() entry point (opens the form blank rather than
     # writing a raw stub straight to YAML).
     add_placer_requested = pyqtSignal(object)
+    # Fired by the context menu's "Add thermal via pad..." (2026-08-03,
+    # replaces writing a raw {"name": ...} stub straight to YAML) —
+    # ThermalViaArrayDock listens via its new_thermal_via() entry point,
+    # same reasoning as add_placer_requested above.
+    add_thermal_via_requested = pyqtSignal(object)
     # Fired on EVERY click in the tree (file header, category, or leaf) —
     # see module docstring for why this replaces the three independent
     # FilePickerDock role signals.
@@ -260,6 +273,8 @@ class ConfigTreeDock(QDockWidget):
             self.placement_picked.emit(ref)
         elif section == "extract_profiles":
             self.profile_picked.emit(ref)
+        elif section == "thermal_via_arrays":
+            self.thermal_via_picked.emit(ref)
 
     # ── Context menu (right-click anywhere under a file) ────────────────
 
@@ -287,7 +302,7 @@ class ConfigTreeDock(QDockWidget):
         menu.addAction(_("Add cell...")).triggered.connect(
             lambda: self._add_cell(file_path))
         menu.addAction(_("Add thermal via pad...")).triggered.connect(
-            lambda: self._add_thermal_via_pad(file_path))
+            lambda: self.add_thermal_via_requested.emit(file_path))
         menu.addAction(_("Add placer...")).triggered.connect(
             lambda: self.add_placer_requested.emit(file_path))
         menu.addAction(_("Add included file...")).triggered.connect(
@@ -305,14 +320,6 @@ class ConfigTreeDock(QDockWidget):
         if not ok or not name:
             return
         merge_write(file_path, {"cells": {name: {"components": []}}}, section="cells")
-        self.refresh()
-
-    def _add_thermal_via_pad(self, file_path: Path) -> None:
-        name, ok = QInputDialog.getText(self, _("Add thermal via pad"), _("Name:"))
-        name = name.strip()
-        if not ok or not name:
-            return
-        upsert_list_entry(file_path, "thermal_via_arrays", {"name": name})
         self.refresh()
 
     def _add_included_file(self, file_path: Path) -> None:

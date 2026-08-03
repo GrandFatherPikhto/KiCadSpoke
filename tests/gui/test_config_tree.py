@@ -261,20 +261,37 @@ def test_add_cell_cancelled_writes_nothing(main_window, tmp_path, monkeypatch):
     assert yaml.safe_load(root.read_text(encoding="utf-8")) == {"cells": {}}
 
 
-def test_add_thermal_via_pad_writes_a_minimal_stub(main_window, tmp_path, monkeypatch):
+def test_add_thermal_via_pad_emits_request_instead_of_writing_directly(main_window, tmp_path):
     root = tmp_path / "root.yaml"
     root.write_text("thermal_via_arrays: []\n", encoding="utf-8")
 
     dock = ConfigTreeDock(main_window)
     dock.set_root_file(root)
 
-    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
-                        staticmethod(lambda *a, **k: ("thermal_1", True)))
-    dock._add_thermal_via_pad(root)
+    requested = []
+    dock.add_thermal_via_requested.connect(requested.append)
+    dock.add_thermal_via_requested.emit(root)
 
-    data = yaml.safe_load(root.read_text(encoding="utf-8"))
-    assert data["thermal_via_arrays"] == [{"name": "thermal_1"}]
-    assert _find(dock.tree.topLevelItem(0), "Thermal via arrays").child(0).text(0) == "thermal_1"
+    assert requested == [root]
+    # nothing written — Add thermal via pad defers to ThermalViaArrayDock's
+    # own Save path (2026-08-03, same reasoning as Add placer)
+    assert yaml.safe_load(root.read_text(encoding="utf-8")) == {"thermal_via_arrays": []}
+
+
+def test_thermal_via_leaf_click_emits_thermal_via_picked(main_window, tmp_path):
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        "thermal_via_arrays:\n  - name: fpga_thermal\n    pad: '1'\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    picked = []
+    dock.thermal_via_picked.connect(picked.append)
+    leaf = _find(dock.tree.topLevelItem(0), "Thermal via arrays").child(0)
+    dock._on_clicked(leaf, 0)
+
+    assert picked == [{"name": "fpga_thermal", "pad": "1"}]
 
 
 def test_add_placer_emits_request_instead_of_writing_directly(main_window, tmp_path):
