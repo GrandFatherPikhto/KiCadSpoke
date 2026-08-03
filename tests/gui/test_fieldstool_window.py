@@ -9,8 +9,11 @@ round-trips, not just that each piece is individually plausible.
 from pathlib import Path
 from unittest.mock import Mock
 
+from PyQt6.QtWidgets import QDialog, QListWidget
+
 from gui import fieldstool_window as fieldstool_window_mod
 from kicadstamp.explore import Selected
+from kicadstamp.schematic_editing import EditReport
 from tests.fieldstool_fixtures import sch_file, symbol_block
 from tests.gui.conftest import _FakeConnection
 
@@ -221,8 +224,7 @@ def test_apply_succeeds_writes_file_and_clears_pending(fieldstool_window, tmp_pa
     fieldstool_window.set_live_snapshot([_selected("R1", "NEW", None)])
 
     monkeypatch.setattr(fieldstool_window_mod, "check_kicad_not_running", lambda force: None)
-    monkeypatch.setattr(fieldstool_window_mod.QMessageBox, "question",
-                        staticmethod(lambda *a, **k: fieldstool_window_mod.QMessageBox.StandardButton.Yes))
+    monkeypatch.setattr(fieldstool_window, "_confirm_apply", lambda report: True)
     shown = []
     monkeypatch.setattr(fieldstool_window_mod.QMessageBox, "information",
                         staticmethod(lambda *a, **k: shown.append("info")))
@@ -233,6 +235,40 @@ def test_apply_succeeds_writes_file_and_clears_pending(fieldstool_window, tmp_pa
     assert fieldstool_window._pending_edits == []  # _rescan() found the schematic now matches the board
     assert shown == ["info"]
     assert Path(str(root) + ".bak").exists()
+
+
+def _report(count):
+    return [EditReport(file="x.kicad_sch", refs=[f"R{i}"], field="Role",
+                       old_value="OLD", new_value="NEW", kind="replace")
+            for i in range(count)]
+
+
+def test_confirm_apply_lists_one_row_per_report_entry(fieldstool_window, monkeypatch):
+    """2026-08-03 regression: a plain QMessageBox with one line per changed
+    ref grew into an enormous window on a real board (hundreds of pending
+    edits), pushing OK/Cancel off-screen — the summary must be a
+    height-capped, scrollable list instead."""
+    captured = []
+
+    def fake_exec(self):
+        captured.append(self)
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog, "exec", fake_exec)
+
+    confirmed = fieldstool_window._confirm_apply(_report(300))
+
+    assert confirmed is True
+    list_widget = captured[0].findChild(QListWidget)
+    assert list_widget.count() == 300
+    assert list_widget.maximumHeight() <= 300
+
+
+def test_confirm_apply_returns_false_on_cancel(fieldstool_window, monkeypatch):
+    monkeypatch.setattr(QDialog, "exec", lambda self: QDialog.DialogCode.Rejected)
+
+    confirmed = fieldstool_window._confirm_apply(_report(1))
+
+    assert confirmed is False
 
 
 # ── shared-connection public hooks ──────────────────────────────────────────

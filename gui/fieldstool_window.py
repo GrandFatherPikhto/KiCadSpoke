@@ -56,9 +56,10 @@ from pathlib import Path
 from typing import Callable, List, Optional
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QComboBox, QFileDialog, QFormLayout,
-                              QHBoxLayout, QLabel, QMainWindow, QMessageBox,
-                              QPushButton, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QFileDialog,
+                              QFormLayout, QHBoxLayout, QLabel, QListWidget,
+                              QMainWindow, QMessageBox, QPushButton, QVBoxLayout,
+                              QWidget)
 
 from kicadstamp.exceptions import FieldsToolError, ValidationError
 from kicadstamp.explore import Selected
@@ -422,6 +423,34 @@ class MainWindow(QMainWindow):
 
     # ── Apply (KiCad must be closed — instruction, not automation) ─────────
 
+    def _confirm_apply(self, report: List) -> bool:
+        """Confirmation dialog for Apply — a plain QMessageBox with one line
+        of text per changed ref used to grow into an enormous window on a
+        real board (hundreds of pending edits), pushing its OK/Cancel
+        buttons off-screen. The summary lives in a height-capped QListWidget
+        instead — it gets its own scrollbar once the list outgrows that cap,
+        so the dialog itself (and its buttons) stays a sane, fixed size
+        regardless of how many refs are being applied."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle(_("Confirm apply"))
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel(_("About to write {count} change(s):").format(count=len(report))))
+
+        summary_list = QListWidget()
+        for r in report:
+            summary_list.addItem(
+                f"{','.join(r.refs)} .{r.field}: {r.old_value!r} -> {r.new_value!r}")
+        summary_list.setMaximumHeight(300)
+        layout.addWidget(summary_list)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        return dialog.exec() == QDialog.DialogCode.Accepted
+
     def _on_apply(self) -> None:
         if self._root_sheet is None:
             QMessageBox.warning(self, _("No root sheet"), _("Pick a root sheet first."))
@@ -456,13 +485,7 @@ class MainWindow(QMainWindow):
                                     _("Every pending value already matches the schematic."))
             return
 
-        summary = "\n".join(f"{','.join(r.refs)} .{r.field}: {r.old_value!r} -> {r.new_value!r}"
-                            for r in report)
-        confirmed = QMessageBox.question(
-            self, _("Confirm apply"),
-            _("About to write {count} change(s):\n\n{summary}").format(
-                count=len(report), summary=summary))
-        if confirmed != QMessageBox.StandardButton.Yes:
+        if not self._confirm_apply(report):
             return
 
         written, failed = write_files(edits_by_file, file_texts)
