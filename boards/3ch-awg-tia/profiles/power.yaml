@@ -2,19 +2,18 @@ registry_path: registries/power.json
 track_registry_path: registries/power.tracks.registry.json
 log_file: ../logs/power.log
 schematic_dir: ../../../test_boards/3CH-AWG-TIA
-
 include:
-  - templates/ldo_adj.yaml
-  - templates/led_spoke.yaml
-  - templates/ldo_adj_pi_filter.yaml
-  - templates/ldo_out_pi_filter.yaml
-  - templates/power_pi_filters.yaml
-  - templates/ldo_1v2.yaml
-  - templates/ldo_3v3.yaml
-  - points.yaml  # Именованные Point (Фаза 5) — см. techdocs/handoff/handoff_2026_08_01_phase5_plan.md
-  - power_extracts.yaml  # Коллекция экстраторов для силовой части платы
-  - pn5v_filters.yaml
-  - p3v3_ldo.yaml
-  - p2v5_ldo.yaml
-  - n2v5_ldo.yaml
-  - p1v2_ldo.yaml
+- templates/ldo_adj.yaml
+- templates/led_spoke.yaml
+- templates/ldo_adj_pi_filter.yaml
+- templates/ldo_out_pi_filter.yaml
+- templates/power_pi_filters.yaml
+- templates/ldo_1v2.yaml
+- templates/ldo_3v3.yaml
+- points.yaml
+- power_extracts.yaml
+- pn5v_filters.yaml
+- p3v3_ldo.yaml
+- p2v5_ldo.yaml
+- n2v5_ldo.yaml
+- p1v2_ldo.yaml

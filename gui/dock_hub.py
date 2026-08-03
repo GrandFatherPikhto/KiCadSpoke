@@ -11,16 +11,21 @@ lifetime; DockHub creates/arranges/connects them and holds the references
 MainWindow re-exposes as thin forwarding properties — needed for the parts
 of the app that still reach a dock directly (notably RoleClusterTreeDock's
 lazy fieldstool lookup and the test suite).
+
+Extract/Placer/Root/Thermal via (extract_dock/placer_dock/
+root_metadata_dock/thermal_via_dock) are the one exception: 2026-08-03 they
+were merged into ONE QDockWidget, DetailDock (gui/docks/detail_panel.py) —
+its own module docstring covers why. Those attributes are kept as aliases
+straight into DetailDock's stack pages so every existing call site keeps
+working unchanged; they are plain QWidgets now, not QDockWidgets in their
+own right.
 """
 from PyQt6.QtCore import Qt
 
-from .docks.cell_list import CellListDock
-from .docks.extract import ExtractDock
+from .docks.config_tree import ConfigTreeDock
+from .docks.detail_panel import DetailDock
 from .docks.fieldstool_dock import FieldsToolDock
-from .docks.file_picker import FilePickerDock
 from .docks.log_panel import LogDock
-from .docks.placer import PlacerDock
-from .docks.placer_list import PlacerListDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
 
 
@@ -32,33 +37,30 @@ class DockHub:
     def __init__(self, main_window, connection, verbose: bool = False):
         self.main_window = main_window
 
-        # ── left group: Components tree, Cells tab, Placements tab ────────
+        # ── left group: Components tree, Config tree ──────────────────────
         self.tree_dock = RoleClusterTreeDock(main_window, connection=connection)
         main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.tree_dock)
 
-        self.cell_list_dock = CellListDock(main_window)
-        main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.cell_list_dock)
-        main_window.tabifyDockWidget(self.tree_dock, self.cell_list_dock)
+        self.config_tree_dock = ConfigTreeDock(main_window)
+        main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.config_tree_dock)
+        main_window.tabifyDockWidget(self.tree_dock, self.config_tree_dock)
 
-        self.placer_list_dock = PlacerListDock(main_window)
-        main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.placer_list_dock)
-        main_window.tabifyDockWidget(self.cell_list_dock, self.placer_list_dock)
-
-        # ── right group: fieldstool, Files, Extract-to-file, Placer ───────
+        # ── right group: fieldstool, Detail (Extract/Placer/Root) ─────────
         self.fieldstool_dock = FieldsToolDock(main_window, connection=connection)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fieldstool_dock)
 
-        self.file_picker_dock = FilePickerDock(main_window)
-        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.file_picker_dock)
-        main_window.tabifyDockWidget(self.fieldstool_dock, self.file_picker_dock)
-
-        self.extract_dock = ExtractDock(main_window, connection=connection)
-        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
-        main_window.tabifyDockWidget(self.file_picker_dock, self.extract_dock)
-
-        self.placer_dock = PlacerDock(main_window)
-        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.placer_dock)
-        main_window.tabifyDockWidget(self.extract_dock, self.placer_dock)
+        self.detail_dock = DetailDock(main_window, connection=connection)
+        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.detail_dock)
+        main_window.tabifyDockWidget(self.fieldstool_dock, self.detail_dock)
+        # Thin aliases — kept so every existing call site/test that reaches
+        # a specific panel by name (extract_dock/placer_dock/
+        # root_metadata_dock) keeps working unchanged; they're pages inside
+        # detail_dock's stack now (gui/docks/detail_panel.py), not their
+        # own QDockWidgets.
+        self.extract_dock = self.detail_dock.extract_panel
+        self.placer_dock = self.detail_dock.placer_panel
+        self.root_metadata_dock = self.detail_dock.root_panel
+        self.thermal_via_dock = self.detail_dock.thermal_via_panel
 
         # ── bottom: log ───────────────────────────────────────────────────
         self.log_dock = LogDock(main_window, verbose=verbose)
@@ -80,35 +82,53 @@ class DockHub:
         """Every dock-to-dock connection (real pyqtSignals — a role can
         legitimately have more than one listener)."""
 
-        # Files -> Extract/Placer/Cells-tab: ExtractDock's cell-output file,
-        # PlacerDock's placeholder discovery and the Cells tab's own list all
-        # follow the Cells role; ExtractDock's extract_profiles file follows
-        # the Extractor role; ExtractDock's and PlacerDock's Placer file each
-        # follow the Placer role — all assigned via "Use selected" in the
-        # Files dock.
-        self.file_picker_dock.cells_file_changed.connect(self.extract_dock.set_target_file)
-        self.file_picker_dock.cells_file_changed.connect(self.placer_dock.set_cells_file)
-        self.file_picker_dock.cells_file_changed.connect(self.cell_list_dock.set_cells_file)
-        self.file_picker_dock.extractor_file_changed.connect(self.extract_dock.set_profile_file)
-        self.file_picker_dock.placer_file_changed.connect(self.extract_dock.set_placer_file)
-        self.file_picker_dock.placer_file_changed.connect(self.placer_dock.set_placer_file)
-        self.file_picker_dock.placer_file_changed.connect(self.placer_list_dock.set_placer_file)
-        # Roles restored from a previous session must reach the listeners
-        # above — restore_roles() re-fires the current values through the
-        # same signals (they were restored before these connections existed).
-        self.file_picker_dock.restore_roles()
+        # Config tree -> Extract/Placer (2026-08-03, replaces FilePickerDock
+        # entirely — see gui/docks/config_tree.py's module docstring):
+        # file_selected fires on every click anywhere in the tree, and
+        # feeds ALL of ExtractDock's/PlacerDock's file targets at once —
+        # what used to be three independently-assigned roles (Cells/
+        # Extractor/Placer) collapse into "whichever file is currently
+        # being browsed".
+        self.config_tree_dock.file_selected.connect(self.extract_dock.set_target_file)
+        self.config_tree_dock.file_selected.connect(self.extract_dock.set_profile_file)
+        self.config_tree_dock.file_selected.connect(self.extract_dock.set_placer_file)
+        self.config_tree_dock.file_selected.connect(self.placer_dock.set_cells_file)
+        self.config_tree_dock.file_selected.connect(self.placer_dock.set_placer_file)
+        self.config_tree_dock.file_selected.connect(self.root_metadata_dock.set_target_file)
+        self.config_tree_dock.file_selected.connect(self.thermal_via_dock.set_target_file)
+        # file_selected fires BEFORE the more specific cell_picked/
+        # placement_picked/profile_picked signal on a leaf click (see
+        # config_tree.py's _on_clicked) — so this fallback runs first and
+        # the specific handler below (if any) wins by running after it,
+        # same emission order the auto-switch relies on.
+        self.config_tree_dock.file_selected.connect(lambda _path: self.detail_dock.show_root())
 
         # Components tree -> Placer: clicking a Cluster group node in the
-        # tree fills PlacerDock's Cluster field; Cells tab -> Placer:
-        # clicking a Cell fills PlacerDock's Cell field.
+        # tree fills PlacerDock's Cluster field; Config tree -> Placer/
+        # Extract: clicking a Cell/Clone placement/Extract profile leaf
+        # routes into the matching existing form (2026-08-03, GUI tree
+        # roadmap Этап 1 — replaces the old CellListDock/PlacerListDock
+        # wiring, same target methods, unified single source).
         self.tree_dock.cluster_picked.connect(self.placer_dock.set_cluster_name)
-        self.cell_list_dock.cell_picked.connect(self.placer_dock.set_selected_cell)
-        # Placements tab -> Placer: clicking an already-saved clone_placement
-        # re-opens it in the form for editing/Redraw; Placer -> Placements
-        # tab the other way: a successful Save refreshes the list so a brand
-        # new (or renamed) entry shows up without reassigning Files.
-        self.placer_list_dock.placement_picked.connect(self.placer_dock.load_placement)
-        self.placer_dock.saved.connect(self.placer_list_dock.refresh)
+        self.config_tree_dock.cell_picked.connect(self.placer_dock.set_selected_cell)
+        self.config_tree_dock.cell_picked.connect(self.detail_dock.show_placer)
+        self.config_tree_dock.placement_picked.connect(self.placer_dock.load_placement)
+        self.config_tree_dock.placement_picked.connect(self.detail_dock.show_placer)
+        self.config_tree_dock.profile_picked.connect(self.extract_dock.pick_profile)
+        self.config_tree_dock.profile_picked.connect(self.detail_dock.show_extract)
+        self.config_tree_dock.thermal_via_picked.connect(self.thermal_via_dock.load_entry)
+        self.config_tree_dock.thermal_via_picked.connect(self.detail_dock.show_thermal_via)
+        # Placer/Thermal via -> Config tree: a successful Save refreshes the
+        # whole tree (walk_include_tree() is re-run) so a brand new (or
+        # renamed) entry shows up without reassigning Files.
+        self.placer_dock.saved.connect(self.config_tree_dock.refresh)
+        self.thermal_via_dock.saved.connect(self.config_tree_dock.refresh)
+        # Config tree's "Add placer.../Add thermal via pad..." context-menu
+        # actions -> Placer/Thermal via: open the form blank, targeting the
+        # file the action was invoked on, and bring that tab to front (same
+        # raise pattern as open_fieldstool() below).
+        self.config_tree_dock.add_placer_requested.connect(self._start_new_placement)
+        self.config_tree_dock.add_thermal_via_requested.connect(self._start_new_thermal_via)
 
         # fieldstool tab -> Components tree: an explicit Rescan/Apply there
         # refreshes this tree's schematic view (see FieldsToolDock).
@@ -123,6 +143,8 @@ class DockHub:
         self.tree_dock.set_footprints(snapshot)
         self.placer_dock.refresh_known_roles(snapshot)
         self.placer_dock.refresh_known_nets(board)
+        self.thermal_via_dock.refresh_known_roles(snapshot)
+        self.thermal_via_dock.refresh_known_nets(board)
 
     def clear_components(self) -> None:
         """Connection-lost path: empty the Components tree (live mode only —
@@ -157,3 +179,21 @@ class DockHub:
         is active or the dock was individually closed."""
         self.fieldstool_dock.setVisible(True)
         self.fieldstool_dock.raise_()
+
+    def _start_new_placement(self, placer_path) -> None:
+        """ConfigTreeDock's add_placer_requested delegate — resets
+        PlacerDock's form and brings the Detail dock's Placer page to
+        front, same reasoning as open_fieldstool() above (the action was
+        invoked from the Config tree tab, not the Detail tab)."""
+        self.placer_dock.new_placement(placer_path)
+        self.detail_dock.setVisible(True)
+        self.detail_dock.raise_()
+        self.detail_dock.show_placer()
+
+    def _start_new_thermal_via(self, file_path) -> None:
+        """ConfigTreeDock's add_thermal_via_requested delegate — same
+        reasoning as _start_new_placement above, for ThermalViaArrayDock."""
+        self.thermal_via_dock.new_thermal_via(file_path)
+        self.detail_dock.setVisible(True)
+        self.detail_dock.raise_()
+        self.detail_dock.show_thermal_via()

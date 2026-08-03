@@ -1,7 +1,7 @@
 # gui/main_window.py
 """
 MainWindow — persistent shell for the KiCadStamp GUI: connection lifecycle
-+ status bar + docks (Role/Cluster tree, fieldstool, file picker,
++ status bar + docks (Role/Cluster tree, fieldstool, config tree,
 extract-to-file) + an optional tray icon. The docks themselves live in a
 DockHub controller (see gui/dock_hub.py, Phase 3.3) — MainWindow only owns
 the window and the BoardConnection, and drives its docks through DockHub
@@ -16,11 +16,13 @@ the schematic symbol), which is exactly the problem `fieldstool` was built
 to solve correctly (direct `.kicad_sch` edits). FieldsToolDock (see
 gui/docks/fieldstool_dock.py) now occupies that first right-hand tab
 instead, embedding fieldstool's own standalone MainWindow whole. Then
-FilePickerDock (pick a target file by clicking instead of typing a path)
+ConfigTreeDock (pick a Root file, browse/edit its include: graph — folded
+FilePickerDock's job into it 2026-08-03, see gui/docks/config_tree.py)
 and ExtractDock (build a Cell from the current selection, write it into
-that target file). kipy 0.7.1's Board has no selection/board-change push
-events (checked directly against the installed kipy.board.Board class), so
-"live" here means polled on a QTimer, not pushed.
+whatever file is currently selected in the Config tree). kipy 0.7.1's
+Board has no selection/board-change push events (checked directly against
+the installed kipy.board.Board class), so "live" here means polled on a
+QTimer, not pushed.
 
 The timer's automatic tick only ever tries to CONNECT (while disconnected)
 — it deliberately never re-fetches/rebuilds the tree on its own. An earlier
@@ -138,20 +140,12 @@ class MainWindow(QMainWindow):
         return self._dock_hub.tree_dock
 
     @property
-    def cell_list_dock(self):
-        return self._dock_hub.cell_list_dock
-
-    @property
-    def placer_list_dock(self):
-        return self._dock_hub.placer_list_dock
+    def config_tree_dock(self):
+        return self._dock_hub.config_tree_dock
 
     @property
     def fieldstool_dock(self):
         return self._dock_hub.fieldstool_dock
-
-    @property
-    def file_picker_dock(self):
-        return self._dock_hub.file_picker_dock
 
     @property
     def extract_dock(self):
@@ -160,6 +154,14 @@ class MainWindow(QMainWindow):
     @property
     def placer_dock(self):
         return self._dock_hub.placer_dock
+
+    @property
+    def root_metadata_dock(self):
+        return self._dock_hub.root_metadata_dock
+
+    @property
+    def thermal_via_dock(self):
+        return self._dock_hub.thermal_via_dock
 
     @property
     def log_dock(self):

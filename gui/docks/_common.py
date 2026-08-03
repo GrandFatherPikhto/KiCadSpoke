@@ -31,12 +31,15 @@ from PyQt6.QtWidgets import QComboBox, QCompleter, QLabel
 
 from kicadstamp.i18n import _
 
+from .. import yaml_io
+
 logger = logging.getLogger(__name__)
 
-# Project root — the value FilePickerDock's file-tree is rooted at (it
-# used to derive its own copy: gui/docks/file_picker.py). Single
-# definition here so display_path() and the dock that owns the tree
-# share one source of truth.
+# Project root — used by display_path() below to show paths relative to it
+# when possible. Used to also be where FilePickerDock's file-tree was
+# rooted (gui/docks/file_picker.py, removed 2026-08-03 — see
+# handoff_2026_08_03_gui_tree_risks_resolved.md — replaced by ConfigTreeDock's
+# "Open Root file" action, a plain QFileDialog with no directory browser).
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # Message-label styles — one definition shared by every dock's status
@@ -122,21 +125,24 @@ def add_list_entry(path: Path, section: str, entry: str) -> bool:
     return True
 
 
-def upsert_clone_placement(path: Path, entry: Dict[str, Any]) -> bool:
-    """Read-merge-write like merge_write()/add_list_entry(), but for
-    clone_placements: — a list of dicts matched by their own 'name' key,
-    not by list membership: an entry whose name already exists gets
-    REPLACED in place (same position), a new name gets appended. Every
-    other key in the file (cells:, include:, extract_profiles:, ...) is
-    left untouched."""
+def upsert_list_entry(path: Path, section: str, entry: Dict[str, Any], key: str = "name") -> bool:
+    """Read-merge-write like merge_write()/add_list_entry(), but for a list
+    section whose entries are dicts matched by their own `key` field, not
+    by list membership: an entry whose key already exists gets REPLACED in
+    place (same position), a new key gets appended. Every other top-level
+    key in the file (cells:, include:, extract_profiles:, ...) is left
+    untouched. Shared shape for clone_placements: (see
+    upsert_clone_placement) and thermal_via_arrays: (ConfigTreeDock's Add
+    thermal via pad, 2026-08-03) — both are "list of named dict entries"
+    sections in exactly this way."""
     existing = _read_data(path)
-    items = existing.setdefault("clone_placements", [])
+    items = existing.setdefault(section, [])
     if not isinstance(items, list):
-        raise OSError(_("clone_placements: in {path} is not a list — refusing to touch it")
-                      .format(path=path))
+        raise OSError(_("{section}: in {path} is not a list — refusing to touch it")
+                      .format(section=section, path=path))
     overwritten = False
     for i, existing_entry in enumerate(items):
-        if isinstance(existing_entry, dict) and existing_entry.get("name") == entry["name"]:
+        if isinstance(existing_entry, dict) and existing_entry.get(key) == entry.get(key):
             items[i] = entry
             overwritten = True
             break
@@ -145,6 +151,92 @@ def upsert_clone_placement(path: Path, entry: Dict[str, Any]) -> bool:
     _write_data(path, existing)
     return overwritten
 
+
+def upsert_clone_placement(path: Path, entry: Dict[str, Any]) -> bool:
+    """clone_placements:-specific name kept for the existing call sites/
+    tests — see upsert_list_entry, the general form this now delegates to."""
+    return upsert_list_entry(path, "clone_placements", entry)
+
+
+def _include_entry_target(entry: Any, base_dir: Path) -> Optional[Path]:
+    """Resolved path an include: entry (string or {path:, enabled:} dict)
+    points at, or None for a malformed entry — shared by add_include()/
+    disable_include() for matching an existing entry against a target
+    file, same resolution rule config/includes.py's _parse_include_entry
+    uses."""
+    entry_str = entry if isinstance(entry, str) else (entry or {}).get("path")
+    return (base_dir / entry_str).resolve() if entry_str else None
+
+
+def add_include(path: Path, entry: str) -> bool:
+    """Like add_list_entry(path, "include", entry), but if an entry already
+    there resolves to the same file and is currently disabled
+    (enabled: false), RE-ENABLES it instead of adding a duplicate line —
+    ConfigTreeDock's Add-file action (2026-08-03) re-including a file
+    previously removed via disable_include() below should undo that, not
+    pile up a second entry for the same path. Returns whether anything
+    changed (added or re-enabled)."""
+    existing = _read_data(path)
+    items = existing.setdefault("include", [])
+    if not isinstance(items, list):
+        raise OSError(_("include: in {path} is not a list — refusing to touch it").format(path=path))
+    base_dir = path.parent
+    target = (base_dir / entry).resolve()
+    for i, existing_entry in enumerate(items):
+        if _include_entry_target(existing_entry, base_dir) != target:
+            continue
+        if isinstance(existing_entry, dict) and existing_entry.get("enabled") is False:
+            items[i] = existing_entry["path"]  # re-enabled == plain string form again
+            _write_data(path, existing)
+            return True
+        return False  # already there and already enabled
+    items.append(entry)
+    _write_data(path, existing)
+    return True
+
+
+def disable_include(path: Path, target: Path) -> bool:
+    """Soft-removes an include: entry pointing at `target` — sets
+    enabled: false rather than erasing the line (ConfigTreeDock's Remove-
+    file action, 2026-08-03: "стирать файл — это экстремизм", toggle-able
+    back via add_include() above, not a destructive delete). Converts a
+    plain string entry into the {path:, enabled: false} mapping form
+    add_include()/config/includes.py's _parse_include_entry already
+    understand. Returns whether an entry was found and changed."""
+    existing = _read_data(path)
+    items = existing.get("include") or []
+    base_dir = path.parent
+    for i, existing_entry in enumerate(items):
+        if _include_entry_target(existing_entry, base_dir) != target.resolve():
+            continue
+        if isinstance(existing_entry, dict) and existing_entry.get("enabled") is False:
+            return False  # already disabled
+        entry_str = existing_entry if isinstance(existing_entry, str) else existing_entry["path"]
+        items[i] = {"path": entry_str, "enabled": False}
+        _write_data(path, existing)
+        return True
+    return False
+
+
+# include: only ever merges these top-level keys from an included file
+# (config/includes.py's _LIST_SECTIONS/_DICT_SECTIONS) — everything else is
+# fatal there (no defined multi-file merge behaviour). A file assigned a
+# GUI role (or added as an include: target) can perfectly well ALSO be a
+# full root config in its own right (registry_path/schematic_dir/...) if
+# it was set up that way before — found live 2026-08-01: writing include:
+# blindly in that case leaves the including file unloadable next time
+# anything reads it.
+INCLUDABLE_KEYS = frozenset(
+    {"rules", "clone_placements", "cells", "points", "extract_profiles", "clone_profiles", "include"})
+
+
+def non_includable_keys(path: Path) -> set:
+    """Top-level keys in `path` that include: can't merge — see
+    INCLUDABLE_KEYS. Shared by ExtractDock (after a successful extract,
+    wiring the Placer file's include:) and ConfigTreeDock's Add-file
+    action (2026-08-03, must not offer to include a file that would make
+    the including file unloadable)."""
+    return set(yaml_io.load_data(path).keys()) - INCLUDABLE_KEYS
 
 
 def display_path(path: Path) -> str:

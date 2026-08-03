@@ -30,22 +30,42 @@ rely on elsewhere (see kicadstamp/explore.py's Board.select() docstring)
 — NOT a flat group on the exact string (fieldstool's old tree used to do
 that for Cluster; this is a deliberate, approved behavior change to match
 this dock's existing Cluster handling instead).
+
+Delete selected / Clear all (2026-08-03, Denis: "для отладки и проверки")
+— live-mode only (schematic mode has no live footprint to write to, see
+_on_mode_changed): both blank out Role AND Cluster on real board
+footprints via KiCadBoardAdapter.set_field_values_bulk (one commit, so
+KiCad's own Ctrl+Z undoes the whole batch). Delete selected targets
+whatever's currently selected in THIS tree (a leaf or a whole group,
+collected the same way _on_clicked's board-highlight already does via
+_collect_refs); Clear all targets every footprint in the current live
+snapshot regardless of selection/filter, behind a confirmation dialog —
+its blast radius (the WHOLE board) is qualitatively different from a
+targeted selection, same reasoning ConfigTreeDock's "Remove this file"
+confirmation already uses for a comparably consequential action. Runs
+through gui/worker.py's start_long_op like every other board-writing
+action in this codebase (Placer's Redraw, Extract) — never a bespoke
+synchronous board write.
 """
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 
 from PyQt6.QtCore import QItemSelectionModel, Qt, pyqtSignal
 from PyQt6.QtGui import QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QHBoxLayout,
-                              QLineEdit, QPushButton, QTreeView, QVBoxLayout,
-                              QWidget)
+                              QLabel, QLineEdit, QMessageBox, QPushButton,
+                              QTreeView, QVBoxLayout, QWidget)
 
+from kicadstamp.constants import CLUSTER_FIELD_NAME, ROLE_FIELD_NAME
+from kicadstamp.exceptions import ValidationError
 from kicadstamp.explore import Selected
 from kicadstamp.i18n import _
 
 from .. import settings
+from ..worker import start_long_op
+from ._common import ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STYLE, show_message
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +118,10 @@ class RoleClusterTreeDock(QDockWidget):
         # and that empty build must not burn the flag before real data
         # ever gets a chance to auto-expand.
         self._auto_expand_pending = True
+        # The currently running long op (gui/worker.py) — held so the
+        # parent-less QThread isn't garbage-collected mid-run (same pattern
+        # as PlacerDock/ExtractDock/ThermalViaArrayDock).
+        self._active_op: Optional[Any] = None
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -112,6 +136,15 @@ class RoleClusterTreeDock(QDockWidget):
         self.collapse_all_button.clicked.connect(self.tree_collapse_all)
         top_row.addWidget(self.collapse_all_button)
         layout.addLayout(top_row)
+
+        write_row = QHBoxLayout()
+        self.delete_selected_button = QPushButton(_("Delete selected"))
+        self.delete_selected_button.clicked.connect(self._on_delete_selected)
+        write_row.addWidget(self.delete_selected_button)
+        self.clear_all_button = QPushButton(_("Clear all"))
+        self.clear_all_button.clicked.connect(self._on_clear_all)
+        write_row.addWidget(self.clear_all_button)
+        layout.addLayout(write_row)
 
         # NOT restored from settings here — see restore_mode_from_settings()
         # below for why (main_window.fieldstool_dock doesn't exist yet at
@@ -135,6 +168,10 @@ class RoleClusterTreeDock(QDockWidget):
         self.tree.setHeaderHidden(True)
         self.tree.clicked.connect(self._on_clicked)
         layout.addWidget(self.tree)
+
+        self.message_label = QLabel("")
+        self.message_label.setWordWrap(True)
+        layout.addWidget(self.message_label)
 
         self.setWidget(container)
 
@@ -209,6 +246,11 @@ class RoleClusterTreeDock(QDockWidget):
 
     def _on_mode_changed(self, checked: bool) -> None:
         settings.state.set("tree_schematic_mode", checked)
+        # Schematic mode has no live footprint to write Role/Cluster onto
+        # (its rows come from fieldstool's parsed-schematic list, not real
+        # board footprints) — see module docstring.
+        self.delete_selected_button.setEnabled(not checked)
+        self.clear_all_button.setEnabled(not checked)
         self._rebuild()
 
     def _current_rows(self) -> List[_Row]:
@@ -426,3 +468,94 @@ class RoleClusterTreeDock(QDockWidget):
         for row in range(item.rowCount()):
             refs.extend(self._collect_refs(item.child(row)))
         return refs
+
+    # ── Delete selected / Clear all (2026-08-03, live mode only) ─────────
+
+    def _show_message(self, text: str, style: str = "") -> None:
+        show_message(self.message_label, text, style, logger)
+
+    def _selected_tree_refs(self) -> List[str]:
+        """Every refdes reachable from the tree's CURRENT selection — a
+        selected leaf answers with itself, a selected group with every
+        refdes under it (via _collect_refs, same as a click's board-
+        highlight already does)."""
+        model = self.tree.model()
+        if model is None:
+            return []
+        refs: List[str] = []
+        for index in self.tree.selectionModel().selectedIndexes():
+            refs.extend(self._collect_refs(model.itemFromIndex(index)))
+        return sorted(set(refs))
+
+    def _on_delete_selected(self) -> None:
+        self._show_message("")
+        if self._connection.board is None:
+            self._show_message(_("Not connected."), _ERROR_STYLE)
+            return
+        refs = self._selected_tree_refs()
+        if not refs:
+            self._show_message(_("Nothing selected."), _ERROR_STYLE)
+            return
+        footprints = [s.fp for s in self._selected if s.ref in refs]
+        self._start_clear_op(footprints, _("Cleared Role/Cluster on {count} component(s)."))
+
+    def _on_clear_all(self) -> None:
+        self._show_message("")
+        if self._connection.board is None:
+            self._show_message(_("Not connected."), _ERROR_STYLE)
+            return
+        if not self._selected:
+            self._show_message(_("Nothing to clear."), _ERROR_STYLE)
+            return
+        reply = QMessageBox.question(
+            self, _("Clear all"),
+            _("Clear Role and Cluster on ALL {count} component(s) currently on the board? "
+              "This is a single commit — undo-able in KiCad with Ctrl+Z.")
+            .format(count=len(self._selected)))
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        self._start_clear_op([s.fp for s in self._selected],
+                             _("Cleared Role/Cluster on all {count} component(s)."))
+
+    def _start_clear_op(self, footprints: List[Any], message_template: str) -> None:
+        payload = {"footprints": footprints, "message_template": message_template}
+        self._active_op = start_long_op(
+            self._connection, (self.delete_selected_button, self.clear_all_button),
+            self._run_clear, self._finish_clear, self._on_clear_failed, payload)
+
+    def _do_clear(self, footprints: List[Any], message_template: str) -> None:
+        """Synchronous composition of run + finish — the same behaviour the
+        async button path would produce, kept for tests and any caller that
+        must not return until the clear is complete (same shape as
+        PlacerDock's _do_redraw)."""
+        result = self._run_clear({"footprints": footprints, "message_template": message_template})
+        self._finish_clear(result)
+
+    def _run_clear(self, payload: dict) -> dict:
+        """Worker thread: board IPC only — never touches a widget. Blanks
+        Role AND Cluster (not just the field the tree happens to be
+        grouped by right now) in ONE commit via set_field_values_bulk —
+        same "batch undo in one Ctrl+Z" reasoning as PlacerDock's Cluster
+        tagging."""
+        footprints = payload["footprints"]
+        updates = []
+        for fp in footprints:
+            updates.append((fp, ROLE_FIELD_NAME, ""))
+            updates.append((fp, CLUSTER_FIELD_NAME, ""))
+        try:
+            self._connection.board.adapter.set_field_values_bulk(
+                updates, _("Clear Role/Cluster on {count} component(s)").format(count=len(footprints)))
+        except ValidationError as e:
+            return {"error": str(e)}
+        return {"count": len(footprints), "message_template": payload["message_template"]}
+
+    def _finish_clear(self, result: dict) -> None:
+        """UI thread: reflect the worker's result into the message label."""
+        if result.get("error"):
+            self._show_message(result["error"], _ERROR_STYLE)
+            return
+        self._show_message(
+            result["message_template"].format(count=result["count"]), _SUCCESS_STYLE)
+
+    def _on_clear_failed(self, message: str) -> None:
+        self._show_message(_("Clear failed: {error}").format(error=message), _ERROR_STYLE)

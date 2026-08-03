@@ -50,6 +50,23 @@ def test_component_with_no_role_or_cluster(tmp_path):
     assert comps[0].role is None and comps[0].cluster is None
 
 
+def test_power_symbols_are_excluded(tmp_path):
+    """Refs starting with "#" (power symbols/PWR_FLAG, e.g. #PWR01, #FLG01)
+    are KiCad's own "excluded from board" convention — no footprint ever
+    exists for them, so they'd otherwise show up as pure noise (found live
+    2026-08-03: 171 unfilterable "#FLG*" rows on a real board)."""
+    root = tmp_path / "root.kicad_sch"
+    root.write_text(sch_file(
+        symbol_block(["R1"], role="R_A"),
+        symbol_block(["#FLG01"]),
+        symbol_block(["#PWR01"]),
+    ), encoding="utf-8")
+
+    comps = load_schematic_components(str(root))
+
+    assert {c.ref for c in comps} == {"R1"}
+
+
 def test_components_across_multiple_sheets(tmp_path):
     child = tmp_path / "child.kicad_sch"
     child.write_text(sch_file(symbol_block(["C1"], role="C_A")), encoding="utf-8")

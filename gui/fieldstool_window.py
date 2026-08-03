@@ -47,7 +47,7 @@ from pathlib import Path
 from typing import Callable, List, Optional
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout,
+from PyQt6.QtWidgets import (QComboBox, QFileDialog, QFormLayout,
                               QHBoxLayout, QLabel, QMainWindow, QMessageBox,
                               QPushButton, QVBoxLayout, QWidget)
 
@@ -120,9 +120,6 @@ class MainWindow(QMainWindow):
         status_row = QHBoxLayout()
         self.status_label = QLabel(_("Not connected"))
         status_row.addWidget(self.status_label, 1)
-        self.always_on_top_checkbox = QCheckBox(_("Always on top"))
-        self.always_on_top_checkbox.toggled.connect(self._set_always_on_top)
-        status_row.addWidget(self.always_on_top_checkbox)
         layout.addLayout(status_row)
 
         edit_box = QWidget()
@@ -152,8 +149,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         self._restore_last_root_sheet()
-        if settings.get("always_on_top"):
-            self.always_on_top_checkbox.setChecked(True)  # triggers _set_always_on_top via its signal
 
     # ── Root sheet ───────────────────────────────────────────────────────
 
@@ -161,14 +156,6 @@ class MainWindow(QMainWindow):
         saved = settings.get("root_sheet")
         if saved and Path(saved).is_file():
             self._set_root_sheet(Path(saved))
-
-    def _set_always_on_top(self, checked: bool) -> None:
-        """setWindowFlag() only takes effect on the next show() — the window
-        briefly disappears and reappears on most platforms (X11/Windows),
-        same as gui/main_window.py's identical checkbox."""
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)
-        self.show()
-        settings.set("always_on_top", checked)
 
     def _on_pick_root_sheet(self) -> None:
         path, _filter = QFileDialog.getOpenFileName(

@@ -1,12 +1,13 @@
 # gui/docks/extract.py
 """
 ExtractDock — build a Cell template from whatever's currently selected on
-the board and write it into the file picked in the Files dock. Wraps
+the board and write it into whichever file is currently selected in the
+Config tree (gui/docks/config_tree.py). Wraps
 kicadstamp.template_extraction.extract_template_from_selection() plus
 kicadstamp_cli.py's cmd_extract merge-into-existing-file behaviour — NOT
 kicadstamp.author.dump_template(), which always overwrites the whole file
-(fine for a script regenerating its own dedicated file, wrong here: a file
-picked in the Files dock is very likely already home to other cells).
+(fine for a script regenerating its own dedicated file, wrong here: the
+currently selected file is very likely already home to other cells).
 
 Fed by the same selection-watch timer as the tree/bulk-edit docks (see
 MainWindow._poll_board_selection) — but unlike those, which only need
@@ -37,9 +38,11 @@ params=={} that check fails for every single alias (found live 2026-08-01,
 "net '{X}' has a placeholder with no parameter" on every extract attempt
 that used an alias).
 
-Both the cell-output file and the extract_profiles file are chosen in the
-Files dock now (its Cells/Extractor role slots — see file_picker.py),
-pushed here via set_target_file()/set_profile_file(). This dock used to
+Both the cell-output file and the extract_profiles file follow the SAME
+currently-selected file in the Config tree (2026-08-03 — used to be two
+independent FilePickerDock role slots, Cells/Extractor; collapsed into one
+since browsing to a file already implies "write here" for both), pushed
+here via set_target_file()/set_profile_file(). This dock used to
 have its own separate "Change profile file..." QFileDialog button for the
 profile file alone, which meant two different ways to pick a file for two
 closely related purposes — reported as confusing live 2026-08-01.
@@ -100,7 +103,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from kipy.board_types import Via
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QFormLayout,
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFormLayout,
                               QGridLayout, QHBoxLayout, QLabel, QLineEdit,
                               QListWidget, QPushButton, QScrollArea,
                               QVBoxLayout, QWidget)
@@ -114,14 +117,21 @@ from .. import yaml_io
 from ..worker import start_long_op
 from ._common import (ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STYLE,
                       WARN_STYLE as _WARN_STYLE, add_list_entry, display_path,
-                      merge_write, set_combo_items, show_message)
+                      merge_write, non_includable_keys, set_combo_items, show_message)
 
 logger = logging.getLogger(__name__)
 
 
-class ExtractDock(QDockWidget):
+class ExtractDock(QWidget):
+    """A page inside DetailDock's stack (gui/docks/detail_panel.py) —
+    used to be its own QDockWidget, merged 2026-08-03 (Denis: "Панели:
+    Экстракт, Пласер, Рут — становятся контекстными (общая область
+    формы)"). Building the layout directly on self instead of a wrapped
+    QDockWidget-owned container is the only change from that; every widget
+    attribute/method below is unchanged."""
+
     def __init__(self, main_window, connection=None):
-        super().__init__(_("Extract"), main_window)
+        super().__init__(main_window)
         self._main_window = main_window
         # Injected BoardConnection — falls back to the owning window's when
         # not passed explicitly (keeps direct-construction callers, e.g.
@@ -139,8 +149,7 @@ class ExtractDock(QDockWidget):
         self._net_template_role_edits: Dict[str, QComboBox] = {}
         self._last_autofill_key: Optional[Tuple[frozenset, Optional[Path], Optional[Path]]] = None
 
-        container = QWidget()
-        layout = QVBoxLayout(container)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
         self.selection_label = QLabel(_("Nothing selected"))
@@ -158,7 +167,7 @@ class ExtractDock(QDockWidget):
         form.addRow(_("Cell name:"), self.name_edit)
         layout.addLayout(form)
 
-        self.target_label = QLabel(_("No target file picked (pick one in Files)"))
+        self.target_label = QLabel(_("No target file picked (pick one in the Config tree)"))
         self.target_label.setWordWrap(True)
         layout.addWidget(self.target_label)
 
@@ -242,11 +251,11 @@ class ExtractDock(QDockWidget):
         profile_form.addRow(_("Profile key:"), self.profile_key_edit)
         layout.addLayout(profile_form)
 
-        self.profile_target_label = QLabel(_("No profile file picked (pick one in Files)"))
+        self.profile_target_label = QLabel(_("No profile file picked (pick one in the Config tree)"))
         self.profile_target_label.setWordWrap(True)
         layout.addWidget(self.profile_target_label)
 
-        self.placer_target_label = QLabel(_("No placer file picked (pick one in Files, optional)"))
+        self.placer_target_label = QLabel(_("No placer file picked (pick one in the Config tree, optional)"))
         self.placer_target_label.setWordWrap(True)
         layout.addWidget(self.placer_target_label)
 
@@ -258,8 +267,6 @@ class ExtractDock(QDockWidget):
         self.message_label = QLabel("")
         self.message_label.setWordWrap(True)
         layout.addWidget(self.message_label)
-
-        self.setWidget(container)
 
     def set_board_selection(self, raw_items: List[Any], selected_footprints: List[Selected]) -> None:
         """Called every selection-watch tick — see module docstring for why
@@ -293,37 +300,39 @@ class ExtractDock(QDockWidget):
         set_combo_items(self.origin_via_net_combo, via_nets)
 
     def set_target_file(self, path: Optional[Path]) -> None:
-        """Called by MainWindow whenever the Files dock's Cells-role file
-        changes (wired via FilePickerDock's cells_file_changed signal)."""
+        """Called whenever the Config tree's current file changes (wired to
+        ConfigTreeDock's file_selected signal, 2026-08-03 — replaced
+        FilePickerDock's Cells-role slot; see gui/docks/config_tree.py's
+        module docstring)."""
         self._target_path = path
         self.target_label.setText(
             _("Target: {path}").format(path=path) if path is not None
-            else _("No target file picked (pick one in Files)"))
+            else _("No target file picked (pick one in the Config tree)"))
         self._refresh_existing_lists()
         self._update_button_state()
 
     def set_profile_file(self, path: Optional[Path]) -> None:
-        """Called by MainWindow whenever the Files dock's Extractor-role
-        file changes (wired via FilePickerDock's extractor_file_changed
-        signal) —
-        replaces this dock's former standalone file-dialog button, so all
-        three file roles (Cells/Extractor/Placer) are picked from one
-        place (see file_picker.py)."""
+        """Called whenever the Config tree's current file changes (wired to
+        ConfigTreeDock's file_selected signal, 2026-08-03 — replaced
+        FilePickerDock's Extractor-role slot; both Cells and Extractor now
+        always follow the SAME currently-browsed file, collapsing what
+        used to be two independently-assignable roles into one)."""
         self._profile_path = path
         self.profile_target_label.setText(
             _("Profile file: {path}").format(path=path) if path is not None
-            else _("No profile file picked (pick one in Files)"))
+            else _("No profile file picked (pick one in the Config tree)"))
         self._refresh_existing_lists()
 
     def set_placer_file(self, path: Optional[Path]) -> None:
-        """Called by MainWindow whenever the Files dock's Placer-role file
-        changes (wired via FilePickerDock's placer_file_changed signal).
-        Optional — extraction works the same without one, it just skips
-        the include: wiring described in the module docstring."""
+        """Called whenever the Config tree's current file changes (wired to
+        ConfigTreeDock's file_selected signal, 2026-08-03 — replaced
+        FilePickerDock's Placer-role slot). Optional — extraction works the
+        same without one, it just skips the include: wiring described in
+        the module docstring."""
         self._placer_path = path
         self.placer_target_label.setText(
             _("Placer file: {path}").format(path=path) if path is not None
-            else _("No placer file picked (pick one in Files, optional)"))
+            else _("No placer file picked (pick one in the Config tree, optional)"))
 
     @staticmethod
     def _slugify(text: str) -> str:
@@ -493,7 +502,14 @@ class ExtractDock(QDockWidget):
             self._apply_profile_entry(profile_key)
 
     def _on_profile_item_clicked(self, item) -> None:
-        profile_key = item.text()
+        self.pick_profile(item.text())
+
+    def pick_profile(self, profile_key: str) -> None:
+        """Public entry point for picking an extract_profiles: entry —
+        same effect as clicking it in this dock's own "Existing Profiles"
+        list, exposed so ConfigTreeDock's Extract-profiles category (2026-
+        08-03, GUI tree roadmap Этап 1) can route into the same behavior
+        without duplicating it."""
         self.profile_key_edit.setText(profile_key)
         self._apply_profile_entry(profile_key)
 
@@ -799,17 +815,9 @@ class ExtractDock(QDockWidget):
         result = self._run_extract(payload)
         self._finish_extract(result)
 
-    # include: only ever merges these top-level keys from an included file
-    # (config/includes.py's _LIST_SECTIONS/_DICT_SECTIONS) — everything
-    # else is fatal there (no defined multi-file merge behaviour). A file
-    # assigned the Extractor role can perfectly well ALSO be a full root
-    # config in its own right (registry_path/schematic_dir/...) if it was
-    # set up that way before being pointed at by this role — found live
-    # 2026-08-01: writing include: blindly in that case leaves the Placer
-    # file unloadable the next time anything reads it.
-    _INCLUDABLE_KEYS = frozenset(
-        {"rules", "clone_placements", "cells", "points", "extract_profiles", "clone_profiles", "include"})
-
-    @classmethod
-    def _non_includable_keys(cls, path: Path) -> set:
-        return set(cls._load_data(path).keys()) - cls._INCLUDABLE_KEYS
+    @staticmethod
+    def _non_includable_keys(path: Path) -> set:
+        """Thin wrapper — see gui/docks/_common.py's non_includable_keys()
+        for the shared definition (also used by ConfigTreeDock's Add-file
+        action, 2026-08-03)."""
+        return non_includable_keys(path)
