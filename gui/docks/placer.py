@@ -604,6 +604,36 @@ class PlacerDock(QDockWidget):
             _SUCCESS_STYLE)
         self.saved.emit()
 
+    # ── Starting a brand new placement (ConfigTreeDock's Add placer) ───────
+
+    def new_placement(self, placer_path: Path) -> None:
+        """Resets the form to its initial (blank) state and targets
+        placer_path — ConfigTreeDock's "Add placer" context-menu action
+        (2026-08-03) opens this form empty rather than writing a raw stub
+        straight to YAML, so the existing validated Save path
+        (_do_save -> load_clone_placement) is what actually creates the
+        entry, same as every other way a placement gets saved."""
+        self._placer_path = placer_path
+        self._selected_cell = None
+        self.cell_label.setText(_("No cell picked — pick one in the Cells tab"))
+        self.cluster_edit.setText("")
+        self.origin_mode_combo.setCurrentIndex(0)
+        self._on_origin_mode_changed()
+        self.x_edit.setText("")
+        self.y_edit.setText("")
+        self.anchor_ref_edit.setText("")
+        self.anchor_role_edit.setCurrentText("")
+        self.anchor_pad_edit.setText("")
+        self.anchor_cluster_edit.setCurrentText("")
+        self.point_edit.setText("")
+        self.shift_x_edit.setText("")
+        self.shift_y_edit.setText("")
+        self.rotation_edit.setText("")
+        self.layer_combo.setCurrentIndex(0)
+        self.mirror_checkbox.setChecked(False)
+        self._rebuild_param_rows()
+        self._show_message("")
+
     # ── Loading an already-saved placement back into the form ──────────────
 
     def load_placement(self, entry: Dict[str, Any]) -> None:

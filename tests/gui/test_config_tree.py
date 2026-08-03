@@ -8,6 +8,10 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+import yaml
+from PyQt6.QtWidgets import QMessageBox
+
+import gui.docks.config_tree as config_tree_mod
 from gui.docks.config_tree import ConfigTreeDock
 
 MINIMAL_CELL = """
@@ -187,3 +191,199 @@ def test_a_true_cycle_shows_as_a_single_error_item_not_a_crash(main_window, tmp_
 
     assert dock.tree.topLevelItemCount() == 1
     assert "cycle detected" in dock.tree.topLevelItem(0).text(0)
+
+
+# ── Context menu (2026-08-03) — file-level actions, same set regardless ──
+# of whether the file header, a category, or a leaf was right-clicked. ────
+
+def test_file_context_resolves_from_a_leaf_and_a_category(main_window, tmp_path):
+    """_file_context_for_item must find the same file whether the click
+    landed on the file header, a category under it, or a specific leaf —
+    Denis: "Если выбран файл или его десцендант..." """
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    root_item = dock.tree.topLevelItem(0)
+    cells_category = _find(root_item, "Cells")
+    leaf = cells_category.child(0)
+
+    for item in (root_item, cells_category, leaf):
+        file_path, parent_path = dock._file_context_for_item(item)
+        assert file_path == root.resolve()
+        assert parent_path is None  # root has no parent
+
+
+def test_file_context_for_a_nested_included_file(main_window, tmp_path):
+    (tmp_path / "sub.yaml").write_text(MINIMAL_CELL, encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text("include:\n  - sub.yaml\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    sub_item = dock.tree.topLevelItem(0).child(0)
+    file_path, parent_path = dock._file_context_for_item(sub_item)
+    assert file_path == (tmp_path / "sub.yaml").resolve()
+    assert parent_path == root.resolve()
+
+
+def test_add_cell_writes_a_minimal_stub_and_refreshes(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text("cells: {}\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
+                        staticmethod(lambda *a, **k: ("new_cell", True)))
+    dock._add_cell(root)
+
+    data = yaml.safe_load(root.read_text(encoding="utf-8"))
+    assert data["cells"]["new_cell"] == {"components": []}
+    assert _find(dock.tree.topLevelItem(0), "Cells").child(0).text(0) == "new_cell"
+
+
+def test_add_cell_cancelled_writes_nothing(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text("cells: {}\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
+                        staticmethod(lambda *a, **k: ("", False)))
+    dock._add_cell(root)
+
+    assert yaml.safe_load(root.read_text(encoding="utf-8")) == {"cells": {}}
+
+
+def test_add_thermal_via_pad_writes_a_minimal_stub(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text("thermal_via_arrays: []\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
+                        staticmethod(lambda *a, **k: ("thermal_1", True)))
+    dock._add_thermal_via_pad(root)
+
+    data = yaml.safe_load(root.read_text(encoding="utf-8"))
+    assert data["thermal_via_arrays"] == [{"name": "thermal_1"}]
+    assert _find(dock.tree.topLevelItem(0), "Thermal via arrays").child(0).text(0) == "thermal_1"
+
+
+def test_add_placer_emits_request_instead_of_writing_directly(main_window, tmp_path):
+    root = tmp_path / "root.yaml"
+    root.write_text("clone_placements: []\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    requested = []
+    dock.add_placer_requested.connect(requested.append)
+    dock.add_placer_requested.emit(root)
+
+    assert requested == [root]
+    # nothing written — Add placer defers to PlacerDock's own Save path
+    assert yaml.safe_load(root.read_text(encoding="utf-8")) == {"clone_placements": []}
+
+
+def test_add_included_file_creates_missing_file_and_wires_include(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text("cells: {}\n", encoding="utf-8")
+    new_file = tmp_path / "power.yaml"
+    assert not new_file.exists()
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(new_file), "")))
+    dock._add_included_file(root)
+
+    assert new_file.exists()
+    assert yaml.safe_load(root.read_text(encoding="utf-8"))["include"] == ["power.yaml"]
+    assert dock.tree.topLevelItem(0).child(0).text(0) == "power.yaml"
+
+
+def test_add_included_file_rejects_a_file_with_root_only_keys(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text("cells: {}\n", encoding="utf-8")
+    bad_file = tmp_path / "bad.yaml"
+    bad_file.write_text("layer: B.Cu\ncells: {}\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(bad_file), "")))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "warning",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok))
+    dock._add_included_file(root)
+
+    assert "include" not in yaml.safe_load(root.read_text(encoding="utf-8"))
+
+
+def test_remove_file_disables_include_after_confirmation(main_window, tmp_path, monkeypatch):
+    (tmp_path / "sub.yaml").write_text(MINIMAL_CELL, encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text("include:\n  - sub.yaml\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+    assert dock.tree.topLevelItem(0).childCount() == 1
+
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    dock._remove_file(tmp_path / "sub.yaml", root)
+
+    data = yaml.safe_load(root.read_text(encoding="utf-8"))
+    assert data["include"] == [{"path": "sub.yaml", "enabled": False}]
+    # walk_include_tree skips disabled includes -> sub.yaml no longer shown
+    assert dock.tree.topLevelItem(0).childCount() == 0
+
+
+def test_remove_file_declined_leaves_include_untouched(main_window, tmp_path, monkeypatch):
+    (tmp_path / "sub.yaml").write_text(MINIMAL_CELL, encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text("include:\n  - sub.yaml\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.No))
+    dock._remove_file(tmp_path / "sub.yaml", root)
+
+    assert yaml.safe_load(root.read_text(encoding="utf-8"))["include"] == ["sub.yaml"]
+    assert dock.tree.topLevelItem(0).childCount() == 1
+
+
+def test_context_menu_has_no_remove_action_for_root(main_window, tmp_path, monkeypatch):
+    """Root has no parent to remove itself from — the menu built for it
+    must omit "Remove this file" entirely, not just disable it."""
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QMenu, "exec", lambda self, *a, **k: None)
+    captured = {}
+    original_add_action = config_tree_mod.QMenu.addAction
+
+    def _record(self, text, *a, **k):
+        captured.setdefault("labels", []).append(text)
+        return original_add_action(self, text, *a, **k)
+
+    monkeypatch.setattr(config_tree_mod.QMenu, "addAction", _record)
+
+    root_item = dock.tree.topLevelItem(0)
+    dock._on_context_menu(dock.tree.visualItemRect(root_item).center())
+
+    assert "Remove this file" not in captured["labels"]
+    assert "Add cell..." in captured["labels"]

@@ -111,6 +111,11 @@ class DockHub:
         # (walk_include_tree() is re-run) so a brand new (or renamed)
         # placement shows up without reassigning Files.
         self.placer_dock.saved.connect(self.config_tree_dock.refresh)
+        # Config tree's "Add placer..." context-menu action -> Placer:
+        # opens the form blank, targeting the file the action was invoked
+        # on, and brings that tab to front (same raise pattern as
+        # open_fieldstool() below).
+        self.config_tree_dock.add_placer_requested.connect(self._start_new_placement)
 
         # fieldstool tab -> Components tree: an explicit Rescan/Apply there
         # refreshes this tree's schematic view (see FieldsToolDock).
@@ -159,3 +164,12 @@ class DockHub:
         is active or the dock was individually closed."""
         self.fieldstool_dock.setVisible(True)
         self.fieldstool_dock.raise_()
+
+    def _start_new_placement(self, placer_path) -> None:
+        """ConfigTreeDock's add_placer_requested delegate — resets
+        PlacerDock's form and brings its tab to front, same reasoning as
+        open_fieldstool() above (the action was invoked from the Config
+        tree tab, not the Placer tab)."""
+        self.placer_dock.new_placement(placer_path)
+        self.placer_dock.setVisible(True)
+        self.placer_dock.raise_()

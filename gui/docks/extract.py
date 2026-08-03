@@ -114,7 +114,7 @@ from .. import yaml_io
 from ..worker import start_long_op
 from ._common import (ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STYLE,
                       WARN_STYLE as _WARN_STYLE, add_list_entry, display_path,
-                      merge_write, set_combo_items, show_message)
+                      merge_write, non_includable_keys, set_combo_items, show_message)
 
 logger = logging.getLogger(__name__)
 
@@ -806,17 +806,9 @@ class ExtractDock(QDockWidget):
         result = self._run_extract(payload)
         self._finish_extract(result)
 
-    # include: only ever merges these top-level keys from an included file
-    # (config/includes.py's _LIST_SECTIONS/_DICT_SECTIONS) — everything
-    # else is fatal there (no defined multi-file merge behaviour). A file
-    # assigned the Extractor role can perfectly well ALSO be a full root
-    # config in its own right (registry_path/schematic_dir/...) if it was
-    # set up that way before being pointed at by this role — found live
-    # 2026-08-01: writing include: blindly in that case leaves the Placer
-    # file unloadable the next time anything reads it.
-    _INCLUDABLE_KEYS = frozenset(
-        {"rules", "clone_placements", "cells", "points", "extract_profiles", "clone_profiles", "include"})
-
-    @classmethod
-    def _non_includable_keys(cls, path: Path) -> set:
-        return set(cls._load_data(path).keys()) - cls._INCLUDABLE_KEYS
+    @staticmethod
+    def _non_includable_keys(path: Path) -> set:
+        """Thin wrapper — see gui/docks/_common.py's non_includable_keys()
+        for the shared definition (also used by ConfigTreeDock's Add-file
+        action, 2026-08-03)."""
+        return non_includable_keys(path)

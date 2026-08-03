@@ -23,16 +23,28 @@ clicked (Cells -> PlacerDock.set_selected_cell, Clone placements ->
 PlacerDock.load_placement, Extract profiles -> ExtractDock.pick_profile) —
 Rules/Thermal via arrays/Points/Clone profiles have no GUI edit form yet,
 shown read-only for now, same deliberate scope limit as before.
+
+Right-click context menu (2026-08-03): the SAME set of file-level actions
+(Add cell/thermal via pad/placer/included file, Remove this file) is
+offered no matter which specific item under a file you right-click — the
+file/category/leaf distinction only matters for left-click routing above,
+not for these actions, which always operate on "the nearest file
+ancestor" (Denis: "Если выбран файл или его десцендант..." — the
+descendant doesn't change WHICH file the action targets).
 """
+import os
 from pathlib import Path
 from typing import Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QDockWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (QDockWidget, QFileDialog, QInputDialog, QMenu, QMessageBox,
+                              QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from kicadstamp.config.includes import IncludeTreeNode, walk_include_tree
 from kicadstamp.exceptions import ValidationError
 from kicadstamp.i18n import _
+
+from ._common import add_include, disable_include, merge_write, non_includable_keys, upsert_list_entry
 
 # Display label per recognized section, in the order shown under a file
 # node. Order matches config/includes.py's _LIST_SECTIONS + _DICT_SECTIONS.
@@ -61,6 +73,10 @@ class ConfigTreeDock(QDockWidget):
     # Fired when an Extract profile leaf is clicked — ExtractDock listens
     # via its pick_profile() entry point.
     profile_picked = pyqtSignal(str)
+    # Fired by the context menu's "Add placer..." — PlacerDock listens via
+    # its new_placement() entry point (opens the form blank rather than
+    # writing a raw stub straight to YAML).
+    add_placer_requested = pyqtSignal(object)
 
     def __init__(self, main_window):
         super().__init__(_("Config"), main_window)
@@ -74,6 +90,8 @@ class ConfigTreeDock(QDockWidget):
         self.tree = QTreeWidget()
         self.tree.setHeaderHidden(True)
         self.tree.itemClicked.connect(self._on_clicked)
+        self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(self._on_context_menu)
         layout.addWidget(self.tree)
 
         self.setWidget(container)
@@ -102,13 +120,15 @@ class ConfigTreeDock(QDockWidget):
         except ValidationError as e:
             QTreeWidgetItem(self.tree, [str(e)])
             return
-        self._build_file_item(self.tree.invisibleRootItem(), node)
+        self._build_file_item(self.tree.invisibleRootItem(), node, parent_path=None)
         self.tree.expandAll()
 
     # ── Building the tree from an IncludeTreeNode ───────────────────────
 
-    def _build_file_item(self, parent_item, node: IncludeTreeNode) -> None:
+    def _build_file_item(self, parent_item, node: IncludeTreeNode,
+                          parent_path: Optional[Path]) -> None:
         file_item = QTreeWidgetItem(parent_item, [node.path.name])
+        file_item.setData(0, Qt.ItemDataRole.UserRole, ("file", node.path, parent_path))
         for section, label in _SECTION_LABELS.items():
             raw = node.sections.get(section)
             if not raw:
@@ -117,9 +137,9 @@ class ConfigTreeDock(QDockWidget):
             for name, payload in self._entries(raw):
                 leaf = QTreeWidgetItem(section_item, [name])
                 if section in _CLICKABLE_SECTIONS:
-                    leaf.setData(0, Qt.ItemDataRole.UserRole, (section, payload))
+                    leaf.setData(0, Qt.ItemDataRole.UserRole, ("leaf", section, payload))
         for child in node.children:
-            self._build_file_item(file_item, child)
+            self._build_file_item(file_item, child, parent_path=node.path)
 
     @staticmethod
     def _entries(raw):
@@ -146,16 +166,108 @@ class ConfigTreeDock(QDockWidget):
         for display_name, entry in sorted(named, key=lambda pair: pair[0]):
             yield display_name, entry
 
-    # ── Click routing ────────────────────────────────────────────────────
+    # ── Click routing (left-click on a leaf) ────────────────────────────
 
     def _on_clicked(self, item, column) -> None:
-        payload = item.data(0, Qt.ItemDataRole.UserRole)
-        if payload is None:
+        data = item.data(0, Qt.ItemDataRole.UserRole)
+        if data is None or data[0] != "leaf":
             return  # clicked a file/category header, not a leaf
-        section, ref = payload
+        _kind, section, ref = data
         if section == "cells":
             self.cell_picked.emit(ref)
         elif section == "clone_placements":
             self.placement_picked.emit(ref)
         elif section == "extract_profiles":
             self.profile_picked.emit(ref)
+
+    # ── Context menu (right-click anywhere under a file) ────────────────
+
+    def _file_context_for_item(self, item) -> Optional[tuple]:
+        """Walks up from `item` (inclusive) to the nearest file node —
+        every action below operates on that file regardless of whether the
+        file header itself, a category, or a leaf was actually clicked."""
+        while item is not None:
+            data = item.data(0, Qt.ItemDataRole.UserRole)
+            if data is not None and data[0] == "file":
+                return data[1], data[2]  # (file_path, parent_path)
+            item = item.parent()
+        return None
+
+    def _on_context_menu(self, pos) -> None:
+        item = self.tree.itemAt(pos)
+        if item is None:
+            return
+        file_ctx = self._file_context_for_item(item)
+        if file_ctx is None:
+            return
+        file_path, parent_path = file_ctx
+
+        menu = QMenu(self.tree)
+        menu.addAction(_("Add cell...")).triggered.connect(
+            lambda: self._add_cell(file_path))
+        menu.addAction(_("Add thermal via pad...")).triggered.connect(
+            lambda: self._add_thermal_via_pad(file_path))
+        menu.addAction(_("Add placer...")).triggered.connect(
+            lambda: self.add_placer_requested.emit(file_path))
+        menu.addAction(_("Add included file...")).triggered.connect(
+            lambda: self._add_included_file(file_path))
+        if parent_path is not None:
+            menu.addSeparator()
+            menu.addAction(_("Remove this file")).triggered.connect(
+                lambda: self._remove_file(file_path, parent_path))
+
+        menu.exec(self.tree.viewport().mapToGlobal(pos))
+
+    def _add_cell(self, file_path: Path) -> None:
+        name, ok = QInputDialog.getText(self, _("Add cell"), _("Cell name:"))
+        name = name.strip()
+        if not ok or not name:
+            return
+        merge_write(file_path, {"cells": {name: {"components": []}}}, section="cells")
+        self.refresh()
+
+    def _add_thermal_via_pad(self, file_path: Path) -> None:
+        name, ok = QInputDialog.getText(self, _("Add thermal via pad"), _("Name:"))
+        name = name.strip()
+        if not ok or not name:
+            return
+        upsert_list_entry(file_path, "thermal_via_arrays", {"name": name})
+        self.refresh()
+
+    def _add_included_file(self, file_path: Path) -> None:
+        """QFileDialog's SAVE mode (not Open) is used deliberately — it
+        lets the user type a filename that doesn't exist yet, per Denis:
+        "если включаем файл, его может реально и не быть". The dialog
+        itself never touches disk; if the chosen path doesn't exist, an
+        empty file is created here before wiring include:."""
+        chosen, _filter = QFileDialog.getSaveFileName(
+            self, _("Add included file"), str(file_path.parent), "YAML (*.yaml)")
+        if not chosen:
+            return
+        chosen_path = Path(chosen)
+        if not chosen_path.exists():
+            chosen_path.write_text("{}\n", encoding="utf-8")
+
+        bad_keys = non_includable_keys(chosen_path)
+        if bad_keys:
+            QMessageBox.warning(
+                self, _("Cannot include"),
+                _("{name} has root-config-only key(s) {keys} that include: can't merge — "
+                  "move them out, or point Root at this file directly instead.")
+                .format(name=chosen_path.name, keys=sorted(bad_keys)))
+            return
+
+        rel = Path(os.path.relpath(chosen_path, file_path.parent)).as_posix()
+        add_include(file_path, rel)
+        self.refresh()
+
+    def _remove_file(self, file_path: Path, parent_path: Path) -> None:
+        reply = QMessageBox.question(
+            self, _("Remove file"),
+            _("Remove {name!r} from {parent!r}'s include:? The file itself is not deleted — "
+              "this can be undone later by adding it again.")
+            .format(name=file_path.name, parent=parent_path.name))
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        disable_include(parent_path, file_path)
+        self.refresh()

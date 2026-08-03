@@ -14,9 +14,10 @@ import pytest
 import yaml
 
 from gui.docks._common import (ERROR_STYLE, SUCCESS_STYLE, WARN_STYLE,
-                               add_list_entry, configure_searchable,
-                               display_path, merge_write, set_combo_items,
-                               show_message, upsert_clone_placement)
+                               add_include, add_list_entry, configure_searchable,
+                               disable_include, display_path, merge_write,
+                               non_includable_keys, set_combo_items, show_message,
+                               upsert_clone_placement, upsert_list_entry)
 
 
 def _load(path: Path):
@@ -119,6 +120,108 @@ def test_upsert_clone_placement_refuses_non_list(config_path):
         encoding="utf-8")
     with pytest.raises(OSError):
         upsert_clone_placement(config_path, {"name": "A"})
+
+
+# ── upsert_list_entry (general form, 2026-08-03 — ConfigTreeDock's Add ───
+# thermal via pad; upsert_clone_placement above now delegates to this) ────
+
+def test_upsert_list_entry_replaces_by_key_and_appends(config_path):
+    config_path.write_text(
+        json.dumps({"thermal_via_arrays": [{"name": "A", "pad": "1"}]})
+        if config_path.suffix == ".json"
+        else "thermal_via_arrays:\n  - name: A\n    pad: '1'\n",
+        encoding="utf-8")
+    assert upsert_list_entry(config_path, "thermal_via_arrays", {"name": "A", "pad": "2"}) is True
+    assert upsert_list_entry(config_path, "thermal_via_arrays", {"name": "B", "pad": "1"}) is False
+    data = _load(config_path)
+    assert [e["name"] for e in data["thermal_via_arrays"]] == ["A", "B"]
+    assert data["thermal_via_arrays"][0]["pad"] == "2"  # replaced in place, not appended
+
+
+def test_upsert_list_entry_refuses_non_list(config_path):
+    config_path.write_text(
+        json.dumps({"thermal_via_arrays": "nope"}) if config_path.suffix == ".json"
+        else "thermal_via_arrays: nope\n",
+        encoding="utf-8")
+    with pytest.raises(OSError):
+        upsert_list_entry(config_path, "thermal_via_arrays", {"name": "A"})
+
+
+# ── add_include / disable_include (ConfigTreeDock's Add/Remove file, ─────
+# 2026-08-03 — comment-toggle via enabled: false, not erasing the line) ───
+
+def test_add_include_appends_new_entry(config_path):
+    assert add_include(config_path, "sub.yaml") is True
+    assert _load(config_path)["include"] == ["sub.yaml"]
+
+
+def test_add_include_is_a_noop_when_already_enabled(config_path):
+    config_path.write_text(
+        json.dumps({"include": ["sub.yaml"]}) if config_path.suffix == ".json"
+        else "include:\n  - sub.yaml\n",
+        encoding="utf-8")
+    assert add_include(config_path, "sub.yaml") is False
+    assert _load(config_path)["include"] == ["sub.yaml"]
+
+
+def test_add_include_reenables_a_disabled_entry_instead_of_duplicating(config_path):
+    config_path.write_text(
+        json.dumps({"include": [{"path": "sub.yaml", "enabled": False}]})
+        if config_path.suffix == ".json"
+        else "include:\n  - path: sub.yaml\n    enabled: false\n",
+        encoding="utf-8")
+    assert add_include(config_path, "sub.yaml") is True
+    assert _load(config_path)["include"] == ["sub.yaml"]  # back to plain form, not duplicated
+
+
+def test_disable_include_converts_string_entry_to_disabled_mapping(config_path):
+    config_path.write_text(
+        json.dumps({"include": ["sub.yaml", "other.yaml"]})
+        if config_path.suffix == ".json"
+        else "include:\n  - sub.yaml\n  - other.yaml\n",
+        encoding="utf-8")
+    target = (config_path.parent / "sub.yaml").resolve()
+    assert disable_include(config_path, target) is True
+    data = _load(config_path)
+    assert data["include"] == [{"path": "sub.yaml", "enabled": False}, "other.yaml"]
+
+
+def test_disable_include_is_a_noop_when_already_disabled(config_path):
+    config_path.write_text(
+        json.dumps({"include": [{"path": "sub.yaml", "enabled": False}]})
+        if config_path.suffix == ".json"
+        else "include:\n  - path: sub.yaml\n    enabled: false\n",
+        encoding="utf-8")
+    target = (config_path.parent / "sub.yaml").resolve()
+    assert disable_include(config_path, target) is False
+
+
+def test_disable_include_returns_false_when_target_not_included(config_path):
+    config_path.write_text(
+        json.dumps({"include": ["other.yaml"]}) if config_path.suffix == ".json"
+        else "include:\n  - other.yaml\n",
+        encoding="utf-8")
+    target = (config_path.parent / "sub.yaml").resolve()
+    assert disable_include(config_path, target) is False
+
+
+# ── non_includable_keys ──────────────────────────────────────────────────
+
+def test_non_includable_keys_flags_root_only_scalars(config_path):
+    config_path.write_text(
+        json.dumps({"cells": {}, "layer": "B.Cu", "schematic_dir": "sch"})
+        if config_path.suffix == ".json"
+        else "cells: {}\nlayer: B.Cu\nschematic_dir: sch\n",
+        encoding="utf-8")
+    assert non_includable_keys(config_path) == {"layer", "schematic_dir"}
+
+
+def test_non_includable_keys_empty_for_a_clean_subsystem_file(config_path):
+    config_path.write_text(
+        json.dumps({"cells": {}, "rules": []}) if config_path.suffix == ".json"
+        else "cells: {}\nrules: []\n",
+        encoding="utf-8")
+    assert non_includable_keys(config_path) == set()
 
 
 # ── display_path ────────────────────────────────────────────────────────
