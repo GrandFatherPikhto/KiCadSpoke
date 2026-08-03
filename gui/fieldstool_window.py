@@ -470,8 +470,11 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, _("Some files failed"),
                                  _("Restored from .bak: {failed}").format(failed=failed))
         else:
-            QMessageBox.information(self, _("Applied"),
-                                    _("{count} file(s) written.").format(count=len(written)))
+            QMessageBox.information(
+                self, _("Applied"),
+                _("{count} file(s) written. Reopen KiCad to see the updated schematic — a "
+                  "running KiCad process does not hot-reload an externally-modified file.")
+                .format(count=len(written)))
             # Reloads self._components from the schematic just written and
             # recomputes the diff against the (unchanged) live snapshot —
             # since the schematic now matches what was just applied, the

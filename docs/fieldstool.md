@@ -189,7 +189,8 @@ above:
 - If KiCad is closed: plans the current diff through the exact same offline pipeline
   `fieldstool_cli.py set` uses, shows a confirmation summary, then writes (same `.bak`/self-verify
   guards as the CLI). On success, the schematic is rescanned — since it now matches the board, the
-  diff comes out empty and Apply disables itself again.
+  diff comes out empty and Apply disables itself again. The success dialog reminds you to reopen
+  KiCad — a running process never hot-reloads an externally-modified schematic file.
 
 ## Migrated from `tools/apply_role_cluster.py`
 
