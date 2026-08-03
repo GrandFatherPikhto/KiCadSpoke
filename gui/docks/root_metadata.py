@@ -37,7 +37,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Optional
 
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QFormLayout,
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFormLayout,
                               QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget)
 
 from kicadstamp.config.models import Config
@@ -79,15 +79,20 @@ _INT_FIELDS = [
 ]
 
 
-class RootMetadataDock(QDockWidget):
+class RootMetadataDock(QWidget):
+    """A page inside DetailDock's stack (gui/docks/detail_panel.py) — used
+    to be its own QDockWidget, merged 2026-08-03 (see ExtractDock's module
+    docstring note for the same change). Layout builds directly on self
+    instead of a wrapped QDockWidget-owned container; everything else is
+    unchanged."""
+
     def __init__(self, main_window):
-        super().__init__(_("Root"), main_window)
+        super().__init__(main_window)
         self._main_window = main_window
         self._path: Optional[Path] = None
         self._present_keys: set = set()
 
-        container = QWidget()
-        layout = QVBoxLayout(container)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
         self.target_label = QLabel(_("No file picked (pick one in the Config tree)"))
@@ -140,7 +145,6 @@ class RootMetadataDock(QDockWidget):
         layout.addWidget(self.message_label)
 
         layout.addStretch(1)
-        self.setWidget(container)
 
     # ── Wiring from the Config tree ─────────────────────────────────────
 

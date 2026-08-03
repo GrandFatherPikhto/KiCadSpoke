@@ -103,7 +103,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from kipy.board_types import Via
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QFormLayout,
+from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFormLayout,
                               QGridLayout, QHBoxLayout, QLabel, QLineEdit,
                               QListWidget, QPushButton, QScrollArea,
                               QVBoxLayout, QWidget)
@@ -122,9 +122,16 @@ from ._common import (ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STY
 logger = logging.getLogger(__name__)
 
 
-class ExtractDock(QDockWidget):
+class ExtractDock(QWidget):
+    """A page inside DetailDock's stack (gui/docks/detail_panel.py) —
+    used to be its own QDockWidget, merged 2026-08-03 (Denis: "Панели:
+    Экстракт, Пласер, Рут — становятся контекстными (общая область
+    формы)"). Building the layout directly on self instead of a wrapped
+    QDockWidget-owned container is the only change from that; every widget
+    attribute/method below is unchanged."""
+
     def __init__(self, main_window, connection=None):
-        super().__init__(_("Extract"), main_window)
+        super().__init__(main_window)
         self._main_window = main_window
         # Injected BoardConnection — falls back to the owning window's when
         # not passed explicitly (keeps direct-construction callers, e.g.
@@ -142,8 +149,7 @@ class ExtractDock(QDockWidget):
         self._net_template_role_edits: Dict[str, QComboBox] = {}
         self._last_autofill_key: Optional[Tuple[frozenset, Optional[Path], Optional[Path]]] = None
 
-        container = QWidget()
-        layout = QVBoxLayout(container)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
         self.selection_label = QLabel(_("Nothing selected"))
@@ -261,8 +267,6 @@ class ExtractDock(QDockWidget):
         self.message_label = QLabel("")
         self.message_label.setWordWrap(True)
         layout.addWidget(self.message_label)
-
-        self.setWidget(container)
 
     def set_board_selection(self, raw_items: List[Any], selected_footprints: List[Selected]) -> None:
         """Called every selection-watch tick — see module docstring for why

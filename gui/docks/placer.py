@@ -92,7 +92,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 from kipy.errors import ApiError
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDockWidget,
+from PyQt6.QtWidgets import (QCheckBox, QComboBox,
                               QFormLayout, QGridLayout, QHBoxLayout, QLabel,
                               QLineEdit, QPushButton, QVBoxLayout, QWidget)
 
@@ -115,13 +115,19 @@ logger = logging.getLogger(__name__)
 _PLACEHOLDER_RE = re.compile(r"\{(\w+)\}")
 
 
-class PlacerDock(QDockWidget):
+class PlacerDock(QWidget):
+    """A page inside DetailDock's stack (gui/docks/detail_panel.py) — used
+    to be its own QDockWidget, merged 2026-08-03 (see ExtractDock's module
+    docstring note for the same change). Layout builds directly on self
+    instead of a wrapped QDockWidget-owned container; everything else is
+    unchanged."""
+
     # Fired after a successful Save — ConfigTreeDock listens to refresh its
     # Clone placements category (see gui/dock_hub.py).
     saved = pyqtSignal()
 
     def __init__(self, main_window):
-        super().__init__(_("Placer"), main_window)
+        super().__init__(main_window)
         self._main_window = main_window
         # The currently running long op (gui/worker.py) — held so the
         # parent-less QThread isn't garbage-collected mid-run.
@@ -132,8 +138,7 @@ class PlacerDock(QDockWidget):
         self._param_edits: Dict[str, QComboBox] = {}
         self._known_nets: List[str] = []
 
-        container = QWidget()
-        layout = QVBoxLayout(container)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
         self.cell_label = QLabel(_("No cell picked — pick one in the Config tree"))
@@ -234,7 +239,6 @@ class PlacerDock(QDockWidget):
         layout.addWidget(self.message_label)
 
         layout.addStretch(1)
-        self.setWidget(container)
         self._on_origin_mode_changed()
 
     # ── Wiring from the Config tree / Components tree ─────────────────────

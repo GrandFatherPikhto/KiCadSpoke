@@ -12,10 +12,11 @@ def test_wraps_a_real_fieldstool_main_window(real_main_window):
 
 
 def test_fieldstool_is_first_right_hand_tab(real_main_window):
+    """Extract/Placer/Root are pages inside the merged DetailDock
+    (2026-08-03 — see gui/docks/detail_panel.py), tabified as ONE unit
+    with fieldstool now, not three separate tabs."""
     tabbed_with_fieldstool = real_main_window.tabifiedDockWidgets(real_main_window.fieldstool_dock)
-    assert real_main_window.extract_dock in tabbed_with_fieldstool
-    assert real_main_window.placer_dock in tabbed_with_fieldstool
-    assert real_main_window.root_metadata_dock in tabbed_with_fieldstool
+    assert real_main_window._dock_hub.detail_dock in tabbed_with_fieldstool
 
 
 def test_open_fieldstool_shows_and_raises_the_dock(real_main_window):

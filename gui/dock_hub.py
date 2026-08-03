@@ -11,16 +11,21 @@ lifetime; DockHub creates/arranges/connects them and holds the references
 MainWindow re-exposes as thin forwarding properties — needed for the parts
 of the app that still reach a dock directly (notably RoleClusterTreeDock's
 lazy fieldstool lookup and the test suite).
+
+Extract/Placer/Root (extract_dock/placer_dock/root_metadata_dock) are the
+one exception: 2026-08-03 they were merged into ONE QDockWidget, DetailDock
+(gui/docks/detail_panel.py) — its own module docstring covers why. Those
+three attributes are kept as aliases straight into DetailDock's stack pages
+so every existing call site keeps working unchanged; they are plain
+QWidgets now, not QDockWidgets in their own right.
 """
 from PyQt6.QtCore import Qt
 
 from .docks.config_tree import ConfigTreeDock
-from .docks.extract import ExtractDock
+from .docks.detail_panel import DetailDock
 from .docks.fieldstool_dock import FieldsToolDock
 from .docks.log_panel import LogDock
-from .docks.placer import PlacerDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
-from .docks.root_metadata import RootMetadataDock
 
 
 class DockHub:
@@ -39,21 +44,21 @@ class DockHub:
         main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.config_tree_dock)
         main_window.tabifyDockWidget(self.tree_dock, self.config_tree_dock)
 
-        # ── right group: fieldstool, Extract-to-file, Placer ──────────────
+        # ── right group: fieldstool, Detail (Extract/Placer/Root) ─────────
         self.fieldstool_dock = FieldsToolDock(main_window, connection=connection)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fieldstool_dock)
 
-        self.extract_dock = ExtractDock(main_window, connection=connection)
-        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
-        main_window.tabifyDockWidget(self.fieldstool_dock, self.extract_dock)
-
-        self.placer_dock = PlacerDock(main_window)
-        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.placer_dock)
-        main_window.tabifyDockWidget(self.extract_dock, self.placer_dock)
-
-        self.root_metadata_dock = RootMetadataDock(main_window)
-        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.root_metadata_dock)
-        main_window.tabifyDockWidget(self.placer_dock, self.root_metadata_dock)
+        self.detail_dock = DetailDock(main_window, connection=connection)
+        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.detail_dock)
+        main_window.tabifyDockWidget(self.fieldstool_dock, self.detail_dock)
+        # Thin aliases — kept so every existing call site/test that reaches
+        # a specific panel by name (extract_dock/placer_dock/
+        # root_metadata_dock) keeps working unchanged; they're pages inside
+        # detail_dock's stack now (gui/docks/detail_panel.py), not their
+        # own QDockWidgets.
+        self.extract_dock = self.detail_dock.extract_panel
+        self.placer_dock = self.detail_dock.placer_panel
+        self.root_metadata_dock = self.detail_dock.root_panel
 
         # ── bottom: log ───────────────────────────────────────────────────
         self.log_dock = LogDock(main_window, verbose=verbose)
@@ -88,6 +93,12 @@ class DockHub:
         self.config_tree_dock.file_selected.connect(self.placer_dock.set_cells_file)
         self.config_tree_dock.file_selected.connect(self.placer_dock.set_placer_file)
         self.config_tree_dock.file_selected.connect(self.root_metadata_dock.set_target_file)
+        # file_selected fires BEFORE the more specific cell_picked/
+        # placement_picked/profile_picked signal on a leaf click (see
+        # config_tree.py's _on_clicked) — so this fallback runs first and
+        # the specific handler below (if any) wins by running after it,
+        # same emission order the auto-switch relies on.
+        self.config_tree_dock.file_selected.connect(lambda _path: self.detail_dock.show_root())
 
         # Components tree -> Placer: clicking a Cluster group node in the
         # tree fills PlacerDock's Cluster field; Config tree -> Placer/
@@ -97,8 +108,11 @@ class DockHub:
         # wiring, same target methods, unified single source).
         self.tree_dock.cluster_picked.connect(self.placer_dock.set_cluster_name)
         self.config_tree_dock.cell_picked.connect(self.placer_dock.set_selected_cell)
+        self.config_tree_dock.cell_picked.connect(self.detail_dock.show_placer)
         self.config_tree_dock.placement_picked.connect(self.placer_dock.load_placement)
+        self.config_tree_dock.placement_picked.connect(self.detail_dock.show_placer)
         self.config_tree_dock.profile_picked.connect(self.extract_dock.pick_profile)
+        self.config_tree_dock.profile_picked.connect(self.detail_dock.show_extract)
         # Placer -> Config tree: a successful Save refreshes the whole tree
         # (walk_include_tree() is re-run) so a brand new (or renamed)
         # placement shows up without reassigning Files.
@@ -159,9 +173,10 @@ class DockHub:
 
     def _start_new_placement(self, placer_path) -> None:
         """ConfigTreeDock's add_placer_requested delegate — resets
-        PlacerDock's form and brings its tab to front, same reasoning as
-        open_fieldstool() above (the action was invoked from the Config
-        tree tab, not the Placer tab)."""
+        PlacerDock's form and brings the Detail dock's Placer page to
+        front, same reasoning as open_fieldstool() above (the action was
+        invoked from the Config tree tab, not the Detail tab)."""
         self.placer_dock.new_placement(placer_path)
-        self.placer_dock.setVisible(True)
-        self.placer_dock.raise_()
+        self.detail_dock.setVisible(True)
+        self.detail_dock.raise_()
+        self.detail_dock.show_placer()

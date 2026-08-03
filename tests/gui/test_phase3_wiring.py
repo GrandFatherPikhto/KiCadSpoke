@@ -112,11 +112,14 @@ def test_cell_picked_fills_placer_selected_cell(real_main_window):
     see gui/docks/config_tree.py's cell_picked docstring) — clicking a Cell
     leaf in the real Config tree must reach PlacerDock's Cell field
     end-to-end, not just via a direct set_selected_cell() call (already
-    covered elsewhere, but never through the actual signal)."""
+    covered elsewhere, but never through the actual signal). Also brings
+    the merged Detail dock's Placer page to front (2026-08-03 —
+    gui/docks/detail_panel.py)."""
     real_main_window.config_tree_dock.cell_picked.emit("ldo_adj")
 
     assert real_main_window.placer_dock._selected_cell == "ldo_adj"
     assert "ldo_adj" in real_main_window.placer_dock.cell_label.text()
+    assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.placer_dock
 
 
 def test_placement_picked_loads_into_placer_form(real_main_window):
@@ -148,6 +151,31 @@ def test_profile_picked_fills_extract_form(real_main_window, tmp_path):
     real_main_window.config_tree_dock.profile_picked.emit("alpha_profile")
 
     assert real_main_window.extract_dock.profile_key_edit.text() == "alpha_profile"
+    assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.extract_dock
+
+
+def test_file_selected_alone_shows_root_page(real_main_window, tmp_path):
+    """A plain file/category click (file_selected fires with no matching
+    leaf signal) falls back to the Root page — Denis's chosen auto-switch
+    rule for clicks the tree can't route more specifically (2026-08-03)."""
+    real_main_window._dock_hub.detail_dock.show_placer()
+    target_file = tmp_path / "power.yaml"
+    target_file.write_text("{}\n", encoding="utf-8")
+
+    real_main_window.config_tree_dock.file_selected.emit(target_file)
+
+    assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.root_metadata_dock
+
+
+def test_cell_picked_overrides_the_file_selected_fallback(real_main_window):
+    """A Cell-leaf click fires file_selected (-> Root fallback) THEN
+    cell_picked (-> Placer) in that order (see config_tree.py's
+    _on_clicked) — the more specific signal must win, ending on Placer,
+    not Root."""
+    real_main_window.config_tree_dock.file_selected.emit(None)
+    real_main_window.config_tree_dock.cell_picked.emit("ldo_adj")
+
+    assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.placer_dock
 
 
 def test_placer_saved_refreshes_config_tree_placements(real_main_window, tmp_path):
