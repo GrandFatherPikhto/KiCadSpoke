@@ -15,6 +15,7 @@ def test_fieldstool_is_first_right_hand_tab(real_main_window):
     tabbed_with_fieldstool = real_main_window.tabifiedDockWidgets(real_main_window.fieldstool_dock)
     assert real_main_window.extract_dock in tabbed_with_fieldstool
     assert real_main_window.placer_dock in tabbed_with_fieldstool
+    assert real_main_window.root_metadata_dock in tabbed_with_fieldstool
 
 
 def test_open_fieldstool_shows_and_raises_the_dock(real_main_window):

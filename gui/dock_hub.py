@@ -20,6 +20,7 @@ from .docks.fieldstool_dock import FieldsToolDock
 from .docks.log_panel import LogDock
 from .docks.placer import PlacerDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
+from .docks.root_metadata import RootMetadataDock
 
 
 class DockHub:
@@ -49,6 +50,10 @@ class DockHub:
         self.placer_dock = PlacerDock(main_window)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.placer_dock)
         main_window.tabifyDockWidget(self.extract_dock, self.placer_dock)
+
+        self.root_metadata_dock = RootMetadataDock(main_window)
+        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.root_metadata_dock)
+        main_window.tabifyDockWidget(self.placer_dock, self.root_metadata_dock)
 
         # ── bottom: log ───────────────────────────────────────────────────
         self.log_dock = LogDock(main_window, verbose=verbose)
@@ -82,6 +87,7 @@ class DockHub:
         self.config_tree_dock.file_selected.connect(self.extract_dock.set_placer_file)
         self.config_tree_dock.file_selected.connect(self.placer_dock.set_cells_file)
         self.config_tree_dock.file_selected.connect(self.placer_dock.set_placer_file)
+        self.config_tree_dock.file_selected.connect(self.root_metadata_dock.set_target_file)
 
         # Components tree -> Placer: clicking a Cluster group node in the
         # tree fills PlacerDock's Cluster field; Config tree -> Placer/

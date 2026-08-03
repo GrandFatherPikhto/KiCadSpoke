@@ -324,11 +324,13 @@ def test_dock_hub_constructs_all_docks_and_wires_file_selected(main_window, tmp_
         assert hub.fieldstool_dock is not None
         assert hub.extract_dock is not None
         assert hub.placer_dock is not None
+        assert hub.root_metadata_dock is not None
         assert hub.log_dock is not None
 
         hub.config_tree_dock.file_selected.emit(target_file)
         assert hub.extract_dock._target_path == target_file
         assert hub.placer_dock._cells_path == target_file
+        assert hub.root_metadata_dock._path == target_file
     finally:
         _teardown_hub(hub)
 

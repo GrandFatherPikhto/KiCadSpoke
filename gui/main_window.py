@@ -156,6 +156,10 @@ class MainWindow(QMainWindow):
         return self._dock_hub.placer_dock
 
     @property
+    def root_metadata_dock(self):
+        return self._dock_hub.root_metadata_dock
+
+    @property
     def log_dock(self):
         return self._dock_hub.log_dock
 
