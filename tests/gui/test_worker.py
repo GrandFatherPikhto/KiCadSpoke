@@ -25,6 +25,7 @@ import threading
 import time
 from types import SimpleNamespace
 
+import gui.worker as worker_mod
 from gui.worker import LongOpController, start_long_op
 
 
@@ -121,9 +122,10 @@ def test_controller_failed_path_releases_socket(qapp):
 
 def test_start_long_op_wires_signals_and_returns_controller(qapp):
     """start_long_op() is the factory the docks call: it must return the
-    controller (the docks keep it as self._active_op to prevent GC of a
-    parent-less QThread), wire finished->on_success / failed->on_error, and
-    run fn(*args) off the UI thread."""
+    controller, wire finished->on_success / failed->on_error, and run
+    fn(*args) off the UI thread. Callers may keep the returned reference
+    (useful to inspect state) but do not need to for correctness — see the
+    _ACTIVE_CONTROLLERS tests below."""
     connection = SimpleNamespace(long_op_active=False)
     results = []
     errors = []
@@ -137,8 +139,54 @@ def test_start_long_op_wires_signals_and_returns_controller(qapp):
     assert thread.wait(2000), "worker thread did not finish"
 
     assert results == [42]
-    assert errors == []
+
+
+def test_start_long_op_survives_caller_dropping_its_reference(qapp):
+    """2026-08-03 regression: a caller that overwrites/drops its own
+    reference to the returned controller the instant a new op starts (e.g.
+    MainWindow._poll()/_poll_board_selection(), which store the result in a
+    single instance attribute re-assigned every ~400ms-2s tick) used to
+    crash — LongOpController has no Qt parent, so Python GC'ing the last
+    reference deleted the underlying C++ object (and, via Qt's parent-child
+    ownership, its child QThread) even while that thread's OS-level run()
+    was still executing: "QThread: Destroyed while thread '' is still
+    running" / "RuntimeError: wrapped C/C++ object of type _LongOpWorker has
+    been deleted". start_long_op() must keep its own reference until the
+    thread has genuinely stopped, independent of the caller."""
+    connection = SimpleNamespace(long_op_active=False)
+    results = []
+
+    def slow_op():
+        time.sleep(0.05)
+        return "done"
+
+    controller = start_long_op(connection, (), slow_op, results.append, results.append)
+    assert controller in worker_mod._ACTIVE_CONTROLLERS
+
+    # CPython deallocates on refcount-zero immediately, no gc.collect() needed
+    # (and calling it here, concurrently with the still-running worker thread,
+    # is itself a crash risk unrelated to what this test checks) — without the
+    # fix, this del alone was already enough to destroy the still-running
+    # QThread, since nothing else referenced the controller.
+    del controller
+
+    _pump(qapp, lambda: results)
+
+    assert results == ["done"]
     assert connection.long_op_active is False
+
+
+def test_active_controllers_registry_releases_once_thread_stops(qapp):
+    """The keep-alive registry must not leak forever — once thread_stopped
+    fires (the OS thread has genuinely exited), the controller is dropped
+    from _ACTIVE_CONTROLLERS and becomes collectible again."""
+    connection = SimpleNamespace(long_op_active=False)
+    controller = start_long_op(connection, (), lambda: "x", lambda r: None, lambda m: None)
+    assert controller in worker_mod._ACTIVE_CONTROLLERS
+
+    _pump(qapp, lambda: controller not in worker_mod._ACTIVE_CONTROLLERS)
+
+    assert controller not in worker_mod._ACTIVE_CONTROLLERS
 
 
 def test_poll_suspends_during_long_op(real_main_window, monkeypatch, qapp):

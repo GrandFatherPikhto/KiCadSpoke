@@ -32,6 +32,14 @@ therefore split by the caller into: collect-inputs (UI thread — validation
 + widget reads), run (worker — pure IPC + file IO, NO widget access),
 finish (UI thread — widget writes). This module only orchestrates the
 thread boundary; the split lives in the docks.
+
+Controller lifetime (2026-08-03 fix — see _ACTIVE_CONTROLLERS below):
+start_long_op() itself keeps every in-flight LongOpController alive until
+its QThread has genuinely stopped, regardless of what the caller does with
+the returned reference — a caller that reassigns/drops its own reference
+the moment a new op starts (e.g. MainWindow's ~400ms/2s polling ticks,
+which overwrite a single instance attribute every cycle) used to trigger
+premature C++ destruction of a still-running QThread.
 """
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional
@@ -77,6 +85,11 @@ class LongOpController(QObject):
 
     finished = pyqtSignal(object)
     failed = pyqtSignal(str)
+    # Fires once the worker QThread's event loop has ACTUALLY exited (not
+    # just once a result arrived) — the only point at which it is safe to
+    # drop the last reference to this controller. See start_long_op's
+    # docstring/module-level _ACTIVE_CONTROLLERS for why this matters.
+    thread_stopped = pyqtSignal()
 
     def __init__(self, connection: Any, widgets: Iterable[Any], parent=None):
         super().__init__(parent)
@@ -97,6 +110,7 @@ class LongOpController(QObject):
         self._worker.failed.connect(self._on_worker_failed)
         self._thread.finished.connect(self._worker.deleteLater)
         self._thread.finished.connect(self._thread.deleteLater)
+        self._thread.finished.connect(self.thread_stopped)
         self._thread.start()
 
     def _acquire(self) -> None:
@@ -130,14 +144,37 @@ class LongOpController(QObject):
         self.failed.emit(message)
 
 
+# Module-level keep-alive set (2026-08-03 fix — see below). LongOpController
+# has no Qt parent, so PyQt6 will delete its underlying C++ object (and, via
+# Qt's parent-child ownership, its child QThread) the instant Python's own
+# refcount on it hits zero — REGARDLESS of whether the QThread's OS-level
+# run() has actually returned yet. MainWindow._poll()/_poll_board_selection()
+# each start a new op every ~400ms-2s and store the returned controller in a
+# single instance attribute, overwriting the previous one — the moment that
+# overwrite happens, the PREVIOUS controller's only Python reference is
+# dropped. If its thread had merely been told to quit() (by _release(), a
+# few lines earlier in the very same event-loop turn) but hadn't yet
+# actually exited its event loop, this produced exactly the crash found
+# live: "QThread: Destroyed while thread '' is still running" /
+# "RuntimeError: wrapped C/C++ object of type _LongOpWorker has been
+# deleted" — non-deterministic (usually the old thread finishes in time,
+# sometimes it doesn't). Fix: start_long_op keeps its own strong reference
+# here, independent of whatever the caller does with the returned object,
+# and only releases it once thread_stopped confirms the OS thread has
+# genuinely exited — at that point deleting the controller is always safe.
+_ACTIVE_CONTROLLERS: set = set()
+
+
 def start_long_op(connection, widgets, fn, on_success, on_error, *args):
     """Convenience factory: builds a LongOpController, wires its finished/
     failed signals to on_success/on_error (both called on the UI thread),
-    starts the op, and returns the controller so the caller can keep a
-    reference (preventing GC of a parent-less QThread) and inspect state if
-    needed."""
+    starts the op, and returns the controller (callers may keep their own
+    reference too, e.g. to inspect state, but do not need to for correctness
+    — see _ACTIVE_CONTROLLERS above)."""
     controller = LongOpController(connection, widgets)
     controller.finished.connect(on_success)
     controller.failed.connect(on_error)
+    _ACTIVE_CONTROLLERS.add(controller)
+    controller.thread_stopped.connect(lambda: _ACTIVE_CONTROLLERS.discard(controller))
     controller.start(fn, *args)
     return controller
