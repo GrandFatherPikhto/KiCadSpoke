@@ -80,6 +80,11 @@ _GROUP_VALUE_ROLE = Qt.ItemDataRole.UserRole + 2
 
 _INVALID_REGEX_STYLE = "background-color: #ffcccc;"
 
+# Clear all/Delete selected: how many skipped refs (missing Role/Cluster
+# field) to list by name in the result message before collapsing the rest
+# into "and N more" — a batch of a few hundred shouldn't dump every ref.
+_MAX_SKIPPED_REFS_SHOWN = 10
+
 
 @dataclass
 class _Row:
@@ -536,26 +541,52 @@ class RoleClusterTreeDock(QDockWidget):
         Role AND Cluster (not just the field the tree happens to be
         grouped by right now) in ONE commit via set_field_values_bulk —
         same "batch undo in one Ctrl+Z" reasoning as PlacerDock's Cluster
-        tagging."""
+        tagging.
+
+        Footprints missing either field entirely are skipped BEFORE the
+        batch is built, not sent — set_field_value is fatal on a missing
+        field, and set_field_values_bulk wraps the whole batch in one
+        commit, so a single such footprint would otherwise roll back
+        every other footprint in the batch too (found live: 287
+        components, one missing Cluster, the entire Clear all rolled
+        back with nothing written)."""
         footprints = payload["footprints"]
-        updates = []
+        adapter = self._connection.board.adapter
+        usable = []
+        skipped_refs = []
         for fp in footprints:
+            if adapter.has_field(fp, ROLE_FIELD_NAME) and adapter.has_field(fp, CLUSTER_FIELD_NAME):
+                usable.append(fp)
+            else:
+                skipped_refs.append(fp.reference_field.text.value if fp.reference_field else "?")
+
+        updates = []
+        for fp in usable:
             updates.append((fp, ROLE_FIELD_NAME, ""))
             updates.append((fp, CLUSTER_FIELD_NAME, ""))
-        try:
-            self._connection.board.adapter.set_field_values_bulk(
-                updates, _("Clear Role/Cluster on {count} component(s)").format(count=len(footprints)))
-        except ValidationError as e:
-            return {"error": str(e)}
-        return {"count": len(footprints), "message_template": payload["message_template"]}
+        if updates:
+            try:
+                adapter.set_field_values_bulk(
+                    updates, _("Clear Role/Cluster on {count} component(s)").format(count=len(usable)))
+            except ValidationError as e:
+                return {"error": str(e)}
+        return {"count": len(usable), "message_template": payload["message_template"],
+                "skipped_refs": skipped_refs}
 
     def _finish_clear(self, result: dict) -> None:
         """UI thread: reflect the worker's result into the message label."""
         if result.get("error"):
             self._show_message(result["error"], _ERROR_STYLE)
             return
-        self._show_message(
-            result["message_template"].format(count=result["count"]), _SUCCESS_STYLE)
+        message = result["message_template"].format(count=result["count"])
+        skipped = result.get("skipped_refs") or []
+        if skipped:
+            shown = ", ".join(skipped[:_MAX_SKIPPED_REFS_SHOWN])
+            if len(skipped) > _MAX_SKIPPED_REFS_SHOWN:
+                shown += _(" and {more} more").format(more=len(skipped) - _MAX_SKIPPED_REFS_SHOWN)
+            message += " " + _("Skipped {count} without Role/Cluster field: {refs}").format(
+                count=len(skipped), refs=shown)
+        self._show_message(message, _SUCCESS_STYLE)
 
     def _on_clear_failed(self, message: str) -> None:
         self._show_message(_("Clear failed: {error}").format(error=message), _ERROR_STYLE)

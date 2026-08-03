@@ -141,17 +141,20 @@ def test_start_long_op_wires_signals_and_returns_controller(qapp):
     assert connection.long_op_active is False
 
 
-def test_poll_suspends_during_long_op(real_main_window, monkeypatch):
+def test_poll_suspends_during_long_op(real_main_window, monkeypatch, qapp):
     """While long_op_active is set, _poll() must not touch the socket at
-    all — not even a manual (button-click / startup) refresh, which would
-    interleave a connect()/refresh() into the op's in-flight REQ."""
+    all — not even a manual (button-click) refresh, which would interleave
+    a connect()/refresh() into the op's in-flight REQ. _poll() itself now
+    dispatches through start_long_op (2026-08-03 fix), so the second call's
+    effect only lands after pumping the event loop — see conftest._pump's
+    docstring for why the guard is `not long_op_active`, not "connect_calls
+    is non-empty"."""
     window = real_main_window
     window._timer.stop()  # deterministic: no auto-tick can fire mid-test
     window._selection_timer.stop()
-    # Hermetic: MainWindow.__init__ already ran a startup connect(), and if a
-    # live KiCad is reachable that succeeds (board set -> is_connected True),
-    # so _poll(manual=True) would call refresh() instead of connect() and this
-    # test would flip-flop with the environment. Force the disconnected path.
+    # No live KiCad here regardless (MainWindow no longer connects at
+    # construction time at all, see gui/main_window.py's __init__) — forced
+    # anyway so this test never depends on that.
     window.connection.board = None
 
     connect_calls = []
@@ -164,12 +167,14 @@ def test_poll_suspends_during_long_op(real_main_window, monkeypatch):
 
     window.connection.long_op_active = False
     window._poll(manual=True)
+    _pump(qapp, lambda: not window.connection.long_op_active)
     assert connect_calls == [1]
 
 
-def test_selection_tick_suspends_during_long_op(real_main_window, monkeypatch):
+def test_selection_tick_suspends_during_long_op(real_main_window, monkeypatch, qapp):
     """While long_op_active is set, the fast selection-watch tick must not
-    call get_selected_items() on the shared socket either."""
+    call get_selected_items() on the shared socket either. Same dispatch/pump
+    reasoning as test_poll_suspends_during_long_op above."""
     window = real_main_window
     window._timer.stop()
     window._selection_timer.stop()
@@ -187,4 +192,5 @@ def test_selection_tick_suspends_during_long_op(real_main_window, monkeypatch):
 
     window.connection.long_op_active = False
     window._poll_board_selection()
+    _pump(qapp, lambda: not window.connection.long_op_active)
     assert get_selected_calls == [1]

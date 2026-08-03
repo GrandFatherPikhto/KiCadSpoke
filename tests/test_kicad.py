@@ -13,6 +13,8 @@ import pytest
 # Add project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from kipy.board_types import Field
+
 from kicadstamp.kicad import KiCadBoardAdapter, IBoardAdapter
 from kicadstamp.kicad.adapter import KiCadBoardAdapter as Adapter
 
@@ -36,6 +38,7 @@ def test_adapter_has_methods():
         "get_tracks",
         "get_selected_items",
         "get_field_value",
+        "has_field",
         "get_footprint_pads",
         "get_pad_by_number",
         "get_zone_by_name",
@@ -76,6 +79,47 @@ def _make_fp(ref):
     fp = MagicMock()
     fp.reference_field.text.value = ref
     return fp
+
+
+def _fp_with_fields(**fields):
+    """A fake footprint whose texts_and_fields holds real kipy Field
+    objects (Field() with no proto builds a usable empty one — see
+    get_field_value/set_field_value, which isinstance()-check for Field
+    specifically, so a MagicMock stand-in would not match)."""
+    fp = MagicMock()
+    texts_and_fields = []
+    for name, value in fields.items():
+        f = Field()
+        f.name = name
+        f.text.value = value
+        texts_and_fields.append(f)
+    fp.texts_and_fields = texts_and_fields
+    return fp
+
+
+class TestHasField:
+    """has_field() (added 2026-08-03): distinguishes "field missing
+    entirely" from get_field_value()'s None (which also means "field
+    present but empty") — needed so a batch write can skip a footprint
+    instead of hitting set_field_value's fatal ValidationError mid-commit
+    (found live: one footprint missing Cluster rolled back an entire
+    287-component Clear all — see gui/docks/role_cluster_tree.py's
+    _run_clear)."""
+
+    def test_true_when_field_present(self):
+        adapter = Adapter.__new__(Adapter)
+        fp = _fp_with_fields(Role="MCU")
+        assert adapter.has_field(fp, "Role") is True
+
+    def test_true_when_field_present_but_empty(self):
+        adapter = Adapter.__new__(Adapter)
+        fp = _fp_with_fields(Role="")
+        assert adapter.has_field(fp, "Role") is True
+
+    def test_false_when_field_absent(self):
+        adapter = Adapter.__new__(Adapter)
+        fp = _fp_with_fields(Role="MCU")
+        assert adapter.has_field(fp, "Cluster") is False
 
 
 class TestFootprintsCache:

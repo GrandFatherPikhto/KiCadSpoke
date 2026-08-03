@@ -338,6 +338,13 @@ class MainWindow(QMainWindow):
         if self._root_sheet is None:
             QMessageBox.warning(self, _("No root sheet"), _("Pick a root sheet first."))
             return
+        # Apply requires KiCad closed anyway (check below), so there is no
+        # point holding on to a stale connection handle while it's gone —
+        # drop it before even checking; the main window's own poll (already
+        # backgrounded, see gui/main_window.py) will reconnect on its own
+        # once KiCad becomes available again, no extra "try to come back"
+        # logic needed here.
+        self.connection.board = None
         try:
             check_kicad_not_running(force=False)
         except RuntimeError:

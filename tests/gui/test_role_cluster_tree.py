@@ -19,8 +19,15 @@ class FakeSelected:
 
 
 class FakeAdapter:
-    def __init__(self):
+    def __init__(self, missing_fields=None):
         self.calls = []
+        # fp -> set of field names that footprint reports as absent (not
+        # just empty) — has_field() below consults this, defaulting every
+        # footprint to "has both fields" unless a test says otherwise.
+        self._missing_fields = missing_fields or {}
+
+    def has_field(self, fp, field_name):
+        return field_name not in self._missing_fields.get(fp, set())
 
     def set_field_values_bulk(self, updates, description):
         self.calls.append((updates, description))
@@ -337,6 +344,39 @@ def test_clear_all_confirmed_writes_every_footprint(main_window, monkeypatch):
     assert "Cleared Role/Cluster on all 2 component" in dock.message_label.text()
 
 
+def test_clear_all_skips_footprint_missing_a_field_instead_of_rolling_back_the_batch(
+        main_window, monkeypatch):
+    """Regression: found live on a real 287-component board — one footprint
+    (FB15) had no Cluster field at all, and set_field_values_bulk wraps the
+    whole batch in ONE commit, so that single footprint rolled back the
+    ENTIRE Clear all, clearing nothing. A footprint missing Role or Cluster
+    entirely must be excluded from the batch up front (and reported), not
+    sent and rolled back."""
+    monkeypatch.setattr(role_cluster_tree_mod, "start_long_op", _run_sync)
+    ok_fp = Mock()
+    missing_fp = Mock()
+    missing_fp.reference_field.text.value = "FB15"
+    board = FakeBoard()
+    board.adapter._missing_fields = {missing_fp: {"Cluster"}}
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    c1 = FakeSelected("C1", "C_IN", "Channel_1")
+    c1.fp = ok_fp
+    c2 = FakeSelected("FB15", None, None)
+    c2.fp = missing_fp
+    dock.set_footprints([c1, c2])
+
+    monkeypatch.setattr(role_cluster_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    dock._on_clear_all()
+
+    updates, _description = board.adapter.calls[0]
+    touched_fps = {fp for fp, _field, _value in updates}
+    assert touched_fps == {ok_fp}
+    assert "Cleared Role/Cluster on all 1 component" in dock.message_label.text()
+    assert "Skipped 1 without Role/Cluster field: FB15" in dock.message_label.text()
+
+
 def test_clear_all_with_nothing_on_board_shows_message(main_window, monkeypatch):
     board = FakeBoard()
     main_window.connection.board = board
@@ -368,6 +408,9 @@ def test_buttons_disabled_in_schematic_mode(main_window):
 
 def test_clear_op_surfaces_validation_error_from_adapter(main_window):
     class _FailingAdapter:
+        def has_field(self, fp, field_name):
+            return True
+
         def set_field_values_bulk(self, updates, description):
             raise ValidationError("boom: missing field")
 

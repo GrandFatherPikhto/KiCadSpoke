@@ -19,6 +19,7 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -40,6 +41,30 @@ def qapp():
     per-test."""
     app = QApplication.instance() or QApplication(sys.argv)
     yield app
+
+
+def _pump(qapp, until, timeout=5.0):
+    """Pump the Qt event loop until `until()` is truthy or the deadline
+    passes — needed for anything dispatched through gui/worker.py's
+    start_long_op (MainWindow._poll/_poll_board_selection, RoleClusterTreeDock
+    Clear all/Delete selected, PlacerDock Redraw, ...), since the actual
+    work runs on a background QThread and its completion signal is only
+    delivered while the UI-thread event loop is spinning.
+
+    IMPORTANT: `until` should check `not connection.long_op_active`, not
+    "the worker's side effect is already visible" — the side effect runs on
+    the worker thread and may be visible before the completion signal has
+    reached the UI thread and released the flag; pumping only until the
+    side effect appears can return before _release() has called
+    thread.quit(), and a later thread.wait() (teardown, or the next op's
+    start()) then hangs forever waiting for a quit that was never issued
+    while anything was pumping."""
+    deadline = time.monotonic() + timeout
+    while not until():
+        if time.monotonic() > deadline:
+            raise TimeoutError("timed out waiting for worker signal")
+        qapp.processEvents()
+        time.sleep(0.005)
 
 
 @pytest.fixture(autouse=True)

@@ -36,15 +36,25 @@ connected) — a deliberate user action, not a timer tick.
 
 A SEPARATE, faster timer watches the board's own GUI selection (board ->
 tree, the reverse of clicking a tree node) so re-selecting something by
-mouse in KiCad shows up in the tree too. Deliberately still a QTimer on the
-same (main/UI) thread, NOT a background QThread: kipy's connection is a
-plain pynng.Req0 (request/reply) socket with no locking anywhere in
-kipy/client.py — a REQ socket only ever has one request in flight, so a
-second thread calling into the same KiCadBoardAdapter concurrently with the
-main thread (e.g. a "Refresh" click landing mid-poll) would race on that one
-socket. get_selected_items() is cheap enough (one get_selection() round
-trip against the already-cached footprint list, no per-footprint Role/
-Cluster field reads) that a short interval here doesn't need a thread.
+mouse in KiCad shows up in the tree too.
+
+Both `_poll()` and `_poll_board_selection()` dispatch their actual IPC
+(connect()/refresh()/get_selected_items()) through gui/worker.py's
+start_long_op — the same background-worker mechanism Extract/Redraw already
+use — instead of calling it directly on the UI thread (2026-08-03 fix: a
+QTimer.timeout handler that blocks on a kipy call froze the whole window,
+including repaint and input, for up to the socket's full recv timeout — 20s,
+DEFAULT_TIMEOUT_MS — whenever KiCad disappeared mid-request; not a deadlock,
+just an honest ~20s hang per bad tick, but enough for the desktop to report
+"Application not responding"). kipy's connection is a plain pynng.Req0
+(request/reply) socket with no per-request timeout override (the timeout is
+fixed once, at socket-connect time — see kipy/client.py) and no locking, so
+only ONE request may be in flight at a time across the whole app —
+`long_op_active` (see connection.py) now mutually excludes a poll tick
+against a real long op AND against itself (a tick that finds the flag
+already True — real op or a still-running previous tick — just skips its
+turn silently; no queueing, at most one poll-related background thread is
+ever alive).
 
 The fast tick deliberately does NOT call board.select() itself — the full
 snapshot is cached on BoardConnection (see connection.py) and rebuilt only
@@ -69,6 +79,7 @@ from . import settings
 from .connection import BoardConnection
 from .dock_hub import DockHub
 from .tray_icon import build_tray_icon
+from .worker import start_long_op
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +139,15 @@ class MainWindow(QMainWindow):
 
         self._restore_window_state()
 
-        self._poll(manual=True)  # don't wait a full interval for the first attempt
+        # No synchronous startup connect (2026-08-03 fix, second half): a
+        # direct call here used to hang the constructor itself for up to the
+        # socket's full recv timeout whenever the socket/KiCad was in a bad
+        # state at launch (three real launches killed instantly, no log line
+        # ever printed — construction never returned). The timer started
+        # above fires its own first tick after POLL_INTERVAL_MS, already
+        # through the background path below — a one-time ~2s wait before the
+        # first connection attempt, traded deliberately for a constructor
+        # that can never block regardless of KiCad's state.
 
     # Docks are owned by DockHub — these forwarding properties keep the
     # public surface working (and RoleClusterTreeDock's lazy fieldstool
@@ -269,22 +288,34 @@ class MainWindow(QMainWindow):
         QApplication.instance().quit()
 
     def _poll(self, manual: bool = False) -> None:
-        """manual=True (button click, or the initial call at startup) always
-        does real work. manual=False (an automatic timer tick) only tries to
-        connect while disconnected — see module docstring for why an
-        already-connected idle tick is a deliberate no-op."""
-        # Phase 5.2 — a long op (Extract/Redraw) holds the shared socket;
-        # connecting/refreshing now would interleave a second request into
-        # its in-flight REQ transaction. Skip every tick, manual or not.
+        """manual=True (button click) always does real work. manual=False (an
+        automatic timer tick) only tries to connect while disconnected — see
+        module docstring for why an already-connected idle tick is a
+        deliberate no-op. Collect/decide here on the UI thread; the actual
+        IPC (connect()/refresh()) runs on a worker thread via start_long_op
+        (see module docstring for why) — this method itself never blocks."""
+        # A long op (Extract/Redraw) or another still-running poll tick holds
+        # the shared socket; connecting/refreshing now would interleave a
+        # second request into its in-flight REQ transaction. Skip silently —
+        # no queueing, the next tick tries again.
         if self.connection.long_op_active:
             return
+        if self.connection.is_connected and not manual:
+            return
+        self._active_poll = start_long_op(
+            self.connection, (), self._run_poll, self._finish_poll, self._on_poll_failed, manual)
+
+    def _run_poll(self, manual: bool) -> dict:
+        """Worker thread: connection IPC only — never touches a widget."""
         if self.connection.is_connected:
-            if not manual:
-                return
             error = self.connection.refresh()
         else:
             error = self.connection.connect()
+        return {"error": error}
 
+    def _finish_poll(self, result: dict) -> None:
+        """UI thread: reflect the worker's result into widgets."""
+        error = result["error"]
         if error:
             self.status_label.setText(_("Not connected: {error}").format(error=error))
             self._dock_hub.clear_components()
@@ -305,27 +336,51 @@ class MainWindow(QMainWindow):
 
         self.action_button.setText(_("Refresh") if self.connection.is_connected else _("Reconnect"))
 
+    def _on_poll_failed(self, message: str) -> None:
+        """Safety net — _run_poll never raises (connect()/refresh() catch
+        their own exceptions and return an error string instead), so this
+        should not normally fire."""
+        logger.error("Unexpected failure in connection-poll worker: %s", message)
+
     def _poll_board_selection(self) -> None:
-        """The fast timer's tick — see module docstring. Failure here (most
-        likely: KiCad closed between two _poll() ticks, since that one only
-        re-verifies the connection every POLL_INTERVAL_MS) is treated as a
-        connection loss: update the status bar immediately rather than
-        waiting for the slower timer to notice, but don't touch the tree's
-        component list itself — only its live-selection highlighting."""
-        # Phase 5.2 — a long op (Extract/Redraw) holds the shared socket;
-        # get_selected_items() here would interleave into its in-flight REQ.
+        """The fast timer's tick — see module docstring. Collect/decide here
+        on the UI thread; get_selected_items() runs on a worker thread via
+        start_long_op, same reasoning as _poll()."""
+        # A long op (Extract/Redraw) or another still-running poll tick holds
+        # the shared socket; get_selected_items() here would interleave into
+        # its in-flight REQ.
         if self.connection.long_op_active:
             return
         if not self.connection.is_connected:
             return
+        self._active_selection_poll = start_long_op(
+            self.connection, (), self._run_poll_selection, self._finish_poll_selection,
+            self._on_poll_selection_failed)
+
+    def _run_poll_selection(self) -> dict:
+        """Worker thread: board IPC only — never touches a widget. Failure
+        here (most likely: KiCad closed between two _poll() ticks, since that
+        one only re-verifies the connection every POLL_INTERVAL_MS) drops the
+        connection immediately rather than waiting for the slower timer to
+        notice — dropping board is a plain attribute write, not a widget
+        touch, so it is safe here on the worker thread."""
         try:
             items = self.connection.board.adapter.get_selected_items()
         except Exception as e:
-            logger.warning("Lost connection while polling board selection: %s", e)
             self.connection.board = None
-            self.status_label.setText(_("Not connected: {error}").format(error=str(e)))
+            return {"error": str(e)}
+        return {"error": None, "items": items}
+
+    def _finish_poll_selection(self, result: dict) -> None:
+        """UI thread: reflect the worker's result into widgets/docks. Does
+        not touch the tree's component list itself — only its live-selection
+        highlighting; the slower _poll() owns the component list."""
+        if result["error"]:
+            logger.warning("Lost connection while polling board selection: %s", result["error"])
+            self.status_label.setText(_("Not connected: {error}").format(error=result["error"]))
             self.action_button.setText(_("Reconnect"))
             return
+        items = result["items"]
         refs = {item.reference_field.text.value for item in items
                 if isinstance(item, FootprintInstance)}
 
@@ -352,6 +407,11 @@ class MainWindow(QMainWindow):
         # fed from this single tick too (its own 400ms timer is stopped when
         # it shares this connection).
         self._dock_hub.push_fieldstool_selection(refs)
+
+    def _on_poll_selection_failed(self, message: str) -> None:
+        """Safety net — _run_poll_selection catches its own exceptions and
+        returns them as a result dict, so this should not normally fire."""
+        logger.error("Unexpected failure in selection-poll worker: %s", message)
 
     @staticmethod
     def _raw_selection_signature(items) -> tuple:

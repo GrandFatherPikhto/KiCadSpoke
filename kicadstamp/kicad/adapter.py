@@ -172,6 +172,15 @@ class KiCadBoardAdapter(IBoardAdapter):
                 return item.text.value if item.text else None
         return None
 
+    def has_field(self, footprint: FootprintInstance, field_name: str) -> bool:
+        """True if footprint carries a field with this name at all — unlike
+        get_field_value(), which returns None both for "field missing" and
+        for "field present but empty", this distinguishes the two so a
+        caller can skip a footprint instead of hitting set_field_value's
+        fatal ValidationError mid-batch."""
+        return any(isinstance(item, Field) and item.name == field_name
+                   for item in footprint.texts_and_fields)
+
     def set_field_value(self, footprint: FootprintInstance, field_name: str, value: str) -> None:
         """
         Write counterpart of get_field_value() — sets a custom footprint
