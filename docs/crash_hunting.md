@@ -3,7 +3,9 @@
 ## Purpose
 
 This document describes the toolkit KiCadStamp uses to catch and localize two distinct, confirmed KiCad 10
-crashes (Windows and Linux/Flatpak), and the recommended order to run them in. The tools live in two places:
+crashes (Windows and Linux/Flatpak), and the recommended order to run them in. One of the two (#24970) is
+fixed upstream as of 2026-08-03 — see its own section below — the toolkit itself stays relevant for #24966
+and any future hunt. The tools live in two places:
 `kicadstamp/diagnostics/` (detailed step-by-step diagnosis via `python -m`) and `tools/` (operational scripts —
 state cleanup and crash-rate statistics across repeated runs). It also covers, at the end, how to capture and
 symbolize an actual core dump on either OS once one of the tools has reproduced a crash.
@@ -46,13 +48,20 @@ Windows port + `AS_BUSY` fix above):** 10 runs with both Schematic Editor and PC
 (10%), the rest `ok`. A separate run with only the PCB Editor open — 10/10 `ok`, 0% — a clean confirmation of
 the Schematic-Editor precondition above, this time on native Windows rather than Linux/Flatpak.
 
-### #24970 — crash in `LIB_BUFFER::GetDerivedSymbolNames`
+### #24970 — crash in `LIB_BUFFER::GetDerivedSymbolNames` — **FIXED**
 
 A separate null dereference, unrelated to the IPC path: it fires inside a `SELECTION_TOOL` coroutine while
 re-evaluating a conditional context-menu entry (`SYMBOL_EDITOR_CONTROL`) during **interactive** bulk editing
 of custom symbol fields (`Role`) across many symbols at once. It was originally attached to the #24966 thread
 by mistake — these are two distinct `_eeschema.dll` null derefs at different addresses, later split into
 separate tickets. Full write-up: `techdocs/issues/issue_24970_description.md`.
+
+**Status (2026-08-03): fixed upstream.** Closed `Done`/`fix-committed` by Seth Hillbrand, commit
+`dbb096e4`, milestone 10.0.6, labeled `needs-cherry-pick` (so it should also land in a stable
+backport, not just the 10.0.6 milestone release). This crash only ever fired inside KiCad's own
+Symbol Editor UI during a manual interactive bulk-edit — never something KiCadStamp's own IPC calls
+triggered — so no code/workaround here needs to change; once a KiCad build with this fix is in use,
+this specific crash class is simply gone.
 
 ---
 
