@@ -45,6 +45,20 @@ def load_schematic_components(root_sheet: str) -> List[SchematicComponent]:
         role = span_text[role_span[0]:role_span[1]] if role_span else None
         cluster = span_text[cluster_span[0]:cluster_span[1]] if cluster_span else None
         for ref in block.refs:
+            # KiCad's own convention: a reference starting with "#" (power
+            # symbols/PWR_FLAG — #PWR01, #FLG01, ...) marks "excluded from
+            # board" — no footprint ever exists for these, so they never
+            # show up in the live PCB tree (kipy only enumerates real
+            # footprints) and can't usefully carry a Role/Cluster tag.
+            # iter_symbol_blocks() reads every (symbol ...) instance
+            # unconditionally (it's shared with schematic_set_fields.py/
+            # schematic_rename_fields.py, which must still be able to
+            # target one directly if ever asked) — this GUI-only "one row
+            # per ref" view is where the noise actually gets filtered
+            # (found live 2026-08-03: 171 "#FLG*" rows in one real board's
+            # schematic view, none selectable on the PCB).
+            if ref.startswith("#"):
+                continue
             by_ref.setdefault(ref, []).append((role, cluster, block.file, block.start))
 
     components = []
