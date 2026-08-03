@@ -78,6 +78,7 @@ from kicadstamp.i18n import _
 from . import settings
 from .connection import BoardConnection
 from .dock_hub import DockHub
+from .kicad_processes_dialog import KicadProcessesDialog
 from .tray_icon import build_tray_icon
 from .worker import start_long_op
 
@@ -112,6 +113,14 @@ class MainWindow(QMainWindow):
         self.open_fieldstool_button = QPushButton(_("Open fieldstool"))
         self.open_fieldstool_button.clicked.connect(self.open_fieldstool)
         self.statusBar().addPermanentWidget(self.open_fieldstool_button)
+
+        # 2026-08-03 — a crashed/frozen kicad.exe left running alongside a
+        # fresh one blocked the fresh one's IPC connection; this is a
+        # shortcut for "look in Task Manager, pick the stuck one, kill it by
+        # hand", not an automated decision (see gui/kicad_processes_dialog.py).
+        self.kicad_processes_button = QPushButton(_("KiCad processes..."))
+        self.kicad_processes_button.clicked.connect(self._show_kicad_processes)
+        self.statusBar().addPermanentWidget(self.kicad_processes_button)
 
         self.statusBar().addPermanentWidget(self.action_button)
 
@@ -278,6 +287,12 @@ class MainWindow(QMainWindow):
         the status-bar button."""
         self.bring_to_front()
         self._dock_hub.open_fieldstool()
+
+    def _show_kicad_processes(self) -> None:
+        """Status-bar button — opens the manual KiCad-process picker (see
+        gui/kicad_processes_dialog.py's module docstring for why this is a
+        picker, never an automated kill)."""
+        KicadProcessesDialog(self).exec()
 
     def _quit(self) -> None:
         """Tray menu's Quit — a real quit regardless of the tray checkbox.

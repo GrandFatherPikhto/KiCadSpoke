@@ -10,8 +10,17 @@ import logging
 import os
 import subprocess
 import unicodedata
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
+
+# tasklist's console output is in the OS's OEM/console codepage, not UTF-8 —
+# cp866 is correct for a Russian-locale Windows console (verified live,
+# 2026-08-03: a Cyrillic window title round-tripped correctly). A different
+# locale's codepage would only degrade KicadProcessInfo.title into mojibake
+# (errors="replace" prevents a crash) — pid/status stay ASCII-safe either
+# way, so kill_kicad_process() is unaffected by a wrong guess here.
+_TASKLIST_ENCODING = "cp866"
 
 
 def find_non_ascii(value: str) -> list[tuple[int, str, int, str]]:
@@ -48,3 +57,82 @@ def list_kicad_pids() -> list[int]:
     except Exception as e:
         logger.debug("could not get kicad PIDs: %s", e)
     return sorted(pids)
+
+
+@dataclass
+class KicadProcessInfo:
+    pid: int
+    status: str | None = None  # "Running"/"Not Responding" — Windows only
+    title: str | None = None   # main window title — Windows only, best-effort
+
+
+def list_kicad_processes() -> list[KicadProcessInfo]:
+    """Richer counterpart to list_kicad_pids(), for a human to look at and
+    choose from (gui/kicad_processes_dialog.py) — adds responsiveness
+    status and window title where the platform can report them (Windows
+    only, via tasklist's /V columns; PID-only elsewhere, psutil has no
+    portable "is this window responding" concept). NOT used by the
+    write-safety gate above, and never feeds an automated decision — see
+    kill_kicad_process()'s docstring for why that matters."""
+    processes: list[KicadProcessInfo] = []
+    try:
+        if os.name == "nt":
+            raw = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq kicad.exe", "/FO", "CSV", "/V", "/NH"],
+                capture_output=True, timeout=10,
+            ).stdout
+            out = raw.decode(_TASKLIST_ENCODING, errors="replace")
+            for line in out.splitlines():
+                parts = [p.strip('"') for p in line.split('","')]
+                # Columns (tasklist /FO CSV /V /NH, fixed order): Image Name,
+                # PID, Session Name, Session#, Mem Usage, Status, User Name,
+                # CPU Time, Window Title.
+                if len(parts) >= 9 and parts[0].lower() == "kicad.exe":
+                    title = parts[8]
+                    processes.append(KicadProcessInfo(
+                        pid=int(parts[1]), status=parts[5],
+                        title=None if title == "N/A" else title))
+        else:
+            import psutil  # optional, see requirements.txt
+            for p in psutil.process_iter(["pid", "name"]):
+                if p.info["name"] and "kicad" in p.info["name"].lower():
+                    processes.append(KicadProcessInfo(pid=p.info["pid"]))
+    except Exception as e:
+        logger.debug("could not get kicad process details: %s", e)
+    return sorted(processes, key=lambda p: p.pid)
+
+
+def kill_kicad_process(pid: int) -> None:
+    """Force-terminates one KiCad process by PID.
+
+    Deliberately manual-only: called from gui/kicad_processes_dialog.py
+    after a human has picked one specific PID from list_kicad_processes()
+    and confirmed a destructive-action dialog — never wired to run on its
+    own. This project already decided (see docs/fieldstool.md, and the
+    Apply gate above) that closing/killing KiCad is always a user
+    instruction: kipy 0.7.1 has no way to check ANY KiCad process for
+    unsaved changes, so a "this one looks stuck, kill it" heuristic could
+    silently destroy real work in what only LOOKS like a hung session
+    (e.g. a genuinely long-running plot/export). This function only ever
+    executes a choice a human already made.
+
+    Raises RuntimeError with the OS's own diagnostic on failure (PID
+    already gone, access denied, ...).
+    """
+    try:
+        if os.name == "nt":
+            result = subprocess.run(
+                ["taskkill", "/PID", str(pid), "/F"],
+                capture_output=True, timeout=10,
+            )
+            if result.returncode != 0:
+                message = (result.stderr or result.stdout).decode(
+                    _TASKLIST_ENCODING, errors="replace").strip()
+                raise RuntimeError(message or f"taskkill exited with code {result.returncode}")
+        else:
+            import signal
+            os.kill(pid, signal.SIGKILL)
+    except RuntimeError:
+        raise
+    except Exception as e:
+        raise RuntimeError(str(e)) from e

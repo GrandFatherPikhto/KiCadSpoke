@@ -23,7 +23,15 @@ Eight docks, tabbed into two groups plus a status bar:
 - **Right** (tabbed): **fieldstool**, **Files**, **Extract**, **Placer**.
 - **Bottom**: **Log**.
 - **Status bar**: connection state, Reconnect/Refresh button, Always on top checkbox, Tray icon
-  checkbox, Open fieldstool button.
+  checkbox, Open fieldstool button, KiCad processes... button.
+
+The **KiCad processes...** button opens a picker listing every running `kicad.exe` (PID, Windows
+"Not Responding"/"Running" status, window title) — a shortcut for "look in Task Manager, pick the
+stuck one, force-close it by hand" (added after a crashed/frozen KiCad process, left running
+alongside a fresh one, blocked the fresh one's IPC connection). Deliberately never automatic: kipy
+has no way to check any KiCad process for unsaved changes, so closing one is always something a
+human picks and confirms here, never a heuristic decision the tool makes on its own (see
+`gui/kicad_processes_dialog.py`).
 
 Nothing here pushes updates from KiCad — kipy 0.7.1 has no selection/board-change events, so
 "live" means polled: a slow timer (~2s) only reconnects while disconnected and never rebuilds the
