@@ -1,16 +1,53 @@
 # tests/gui/test_role_cluster_tree.py
 from unittest.mock import Mock
 
+from PyQt6.QtCore import QItemSelectionModel
+from PyQt6.QtWidgets import QMessageBox
+
 from gui.schema_model import SchematicComponent
 
 from gui import settings
+import gui.docks.role_cluster_tree as role_cluster_tree_mod
 from gui.docks.role_cluster_tree import RoleClusterTreeDock
+from kicadstamp.exceptions import ValidationError
 
 
 class FakeSelected:
     def __init__(self, ref, role, cluster):
         self.ref, self.role, self.cluster = ref, role, cluster
         self.fp = object()
+
+
+class FakeAdapter:
+    def __init__(self):
+        self.calls = []
+
+    def set_field_values_bulk(self, updates, description):
+        self.calls.append((updates, description))
+
+
+class FakeBoard:
+    def __init__(self):
+        self.adapter = FakeAdapter()
+
+
+def _select_item(dock, item) -> None:
+    index = dock.tree.model().indexFromItem(item)
+    dock.tree.selectionModel().select(index, QItemSelectionModel.SelectionFlag.Select)
+
+
+def _run_sync(connection, widgets, fn, on_success, on_error, *args):
+    """Fake start_long_op — runs fn(*args) and on_success() immediately, on
+    the calling thread. Avoids spinning a REAL QThread in a test (which
+    outlives the test function and crashes the process on teardown) while
+    still exercising the full _on_delete_selected/_on_clear_all handler,
+    not just the lower-level _run_clear/_finish_clear pair — same reasoning
+    tests/gui/test_placer_dock.py's test_on_redraw_dispatches_to_worker
+    keeps that boundary as its own separate (dispatch-only) test instead of
+    letting a real thread run during a behavior test."""
+    result = fn(*args)
+    on_success(result)
+    return "fake-controller"
 
 
 def test_group_by_persists_across_restart(main_window):
@@ -204,3 +241,175 @@ def test_refresh_schematic_view_noop_in_live_mode_rebuilds_in_schematic_mode(rea
     ]
     dock.refresh_schematic_view()  # schematic mode -> rebuilds with the fresh list
     assert _find_item(dock.tree.model(), "R2") is not None
+
+
+# ── Delete selected / Clear all (2026-08-03) ─────────────────────────────
+
+def test_delete_selected_clears_role_and_cluster_on_selected_leaf(main_window, monkeypatch):
+    monkeypatch.setattr(role_cluster_tree_mod, "start_long_op", _run_sync)
+    board = FakeBoard()
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    c1, c2 = FakeSelected("C1", "C_IN", "Channel_1"), FakeSelected("C2", "C_IN", "Channel_2")
+    dock.set_footprints([c1, c2])
+
+    leaf = _find_item(dock.tree.model(), "C1")
+    _select_item(dock, leaf)
+    dock._on_delete_selected()
+
+    assert len(board.adapter.calls) == 1
+    updates, _description = board.adapter.calls[0]
+    assert set(updates) == {(c1.fp, "Role", ""), (c1.fp, "Cluster", "")}
+    assert "Cleared Role/Cluster on 1 component" in dock.message_label.text()
+
+
+def test_delete_selected_on_a_group_clears_every_member(main_window, monkeypatch):
+    monkeypatch.setattr(role_cluster_tree_mod, "start_long_op", _run_sync)
+    board = FakeBoard()
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    dock.group_by.setCurrentIndex(1)  # Cluster grouping -> hierarchical
+    c1 = FakeSelected("C1", "C_IN", "Channel_1/PI_FILTER")
+    c2 = FakeSelected("C2", "C_IN", "Channel_1/PI_FILTER")
+    other = FakeSelected("C3", "C_IN", "Channel_2/PI_FILTER")
+    dock.set_footprints([c1, c2, other])
+
+    group = _find_item(dock.tree.model(), "Channel_1")
+    _select_item(dock, group)
+    dock._on_delete_selected()
+
+    updates, _description = board.adapter.calls[0]
+    touched_fps = {fp for fp, _field, _value in updates}
+    assert touched_fps == {c1.fp, c2.fp}  # other cluster's member untouched
+
+
+def test_delete_selected_with_nothing_selected_shows_message(main_window):
+    board = FakeBoard()
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    dock.set_footprints([FakeSelected("C1", "C_IN", "Channel_1")])
+
+    dock._on_delete_selected()
+
+    assert board.adapter.calls == []
+    assert "Nothing selected" in dock.message_label.text()
+
+
+def test_delete_selected_not_connected_shows_message(main_window):
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    dock.set_footprints([FakeSelected("C1", "C_IN", "Channel_1")])
+    leaf = _find_item(dock.tree.model(), "C1")
+    _select_item(dock, leaf)
+
+    dock._on_delete_selected()  # main_window.connection.board is None by default
+
+    assert "Not connected" in dock.message_label.text()
+
+
+def test_clear_all_declined_writes_nothing(main_window, monkeypatch):
+    board = FakeBoard()
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    dock.set_footprints([FakeSelected("C1", "C_IN", "Channel_1")])
+
+    monkeypatch.setattr(role_cluster_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.No))
+    dock._on_clear_all()
+
+    assert board.adapter.calls == []
+
+
+def test_clear_all_confirmed_writes_every_footprint(main_window, monkeypatch):
+    monkeypatch.setattr(role_cluster_tree_mod, "start_long_op", _run_sync)
+    board = FakeBoard()
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    c1, c2 = FakeSelected("C1", "C_IN", "Channel_1"), FakeSelected("C2", "C_IN", "Channel_2")
+    dock.set_footprints([c1, c2])
+
+    monkeypatch.setattr(role_cluster_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    dock._on_clear_all()
+
+    updates, _description = board.adapter.calls[0]
+    touched_fps = {fp for fp, _field, _value in updates}
+    assert touched_fps == {c1.fp, c2.fp}
+    assert "Cleared Role/Cluster on all 2 component" in dock.message_label.text()
+
+
+def test_clear_all_with_nothing_on_board_shows_message(main_window, monkeypatch):
+    board = FakeBoard()
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+
+    called = []
+    monkeypatch.setattr(role_cluster_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: called.append(1) or QMessageBox.StandardButton.Yes))
+    dock._on_clear_all()
+
+    assert board.adapter.calls == []
+    assert not called  # never even asked — nothing to clear
+    assert "Nothing to clear" in dock.message_label.text()
+
+
+def test_buttons_disabled_in_schematic_mode(main_window):
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    assert dock.delete_selected_button.isEnabled()
+    assert dock.clear_all_button.isEnabled()
+
+    dock.mode_checkbox.setChecked(True)
+    assert not dock.delete_selected_button.isEnabled()
+    assert not dock.clear_all_button.isEnabled()
+
+    dock.mode_checkbox.setChecked(False)
+    assert dock.delete_selected_button.isEnabled()
+    assert dock.clear_all_button.isEnabled()
+
+
+def test_clear_op_surfaces_validation_error_from_adapter(main_window):
+    class _FailingAdapter:
+        def set_field_values_bulk(self, updates, description):
+            raise ValidationError("boom: missing field")
+
+    class _FailingBoard:
+        adapter = _FailingAdapter()
+
+    main_window.connection.board = _FailingBoard()
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    c1 = FakeSelected("C1", "C_IN", "Channel_1")
+    dock.set_footprints([c1])
+
+    dock._do_clear([c1.fp], "Cleared {count}")
+
+    assert "boom" in dock.message_label.text()
+
+
+def test_on_delete_selected_dispatches_to_worker(main_window, monkeypatch):
+    """The button handler must NOT block the UI thread — it collects/
+    validates on the UI thread then hands off to start_long_op, same
+    discipline as PlacerDock's Redraw (see gui/worker.py)."""
+    board = FakeBoard()
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    c1 = FakeSelected("C1", "C_IN", "Channel_1")
+    dock.set_footprints([c1])
+    leaf = _find_item(dock.tree.model(), "C1")
+    _select_item(dock, leaf)
+
+    captured = {}
+
+    def _fake_start(connection, widgets, fn, on_success, on_error, *args):
+        captured["connection"] = connection
+        captured["widgets"] = widgets
+        captured["args"] = args
+        return "fake-controller"
+
+    monkeypatch.setattr(role_cluster_tree_mod, "start_long_op", _fake_start)
+
+    dock._on_delete_selected()
+
+    assert dock._active_op == "fake-controller"
+    assert captured["connection"] is main_window.connection
+    assert captured["widgets"] == (dock.delete_selected_button, dock.clear_all_button)
+    assert captured["args"][0]["footprints"] == [c1.fp]
+    assert board.adapter.calls == []  # not actually run — dispatch only
