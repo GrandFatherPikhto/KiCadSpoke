@@ -40,10 +40,11 @@ was no real independence left to preserve):
 - **GUI-only pieces → `gui/`, flat**: `gui/schema_model.py` (`load_schematic_components()` — flattens
   the schematic into one row per refdes for the Components tree; `fieldstool_cli.py` never needs
   this per-ref view), `gui/fieldstool_window.py` (the `MainWindow` embedded as the fieldstool tab —
-  see [The fieldstool tab](#the-fieldstool-tab) below), `gui/docks/pending.py` (`PendingRegistry` +
-  `PendingChangesDock` — a `QDockWidget`, so it lives alongside the rest of `gui/docks/`). Its own
-  settings file (`gui/fieldstool_gui_state.json`) reuses `gui/settings.py`'s `Settings` class with a
-  different path, rather than a second near-identical settings module.
+  see [The fieldstool tab](#the-fieldstool-tab) below), `gui/docks/pending.py`
+  (`compute_pending_edits()` + `PendingChangesDock` — a `QDockWidget`, shared with the rest of
+  `gui/docks/`, tabbed with Log at the main window's bottom). Its own settings file
+  (`gui/fieldstool_gui_state.json`) reuses `gui/settings.py`'s `Settings` class with a different
+  path, rather than a second near-identical settings module.
 
 None of this changed *behavior* — pure move-and-rename, same logic, same tests (relocated
 alongside).
@@ -168,18 +169,27 @@ above:
     **group** node (every refdes in that Role/Cluster group at once, for a group-rename without
     retyping refdes) there instead, no live board selection needed. Clicking calls straight into
     this window's own `_on_tree_leaf_picked()`/`_on_group_picked()` and brings this tab to front.
-- **Stage** — writes the current Role/Cluster form values into a JSON pending-changes queue, one
-  entry per target refdes. Nothing touches `.kicad_sch` yet. The queue persists (`<root
-  sheet>.pending.json`, next to the schematic) — safe to close the GUI and come back later.
+- **Stage** — writes the current Role/Cluster form values straight onto the picked target(s)' live
+  board footprint, over IPC (the same mechanism the main GUI's Components tree uses for **Clear
+  all**/**Delete selected**) — nothing touches `.kicad_sch` yet. There is no separate staging queue
+  to persist: whatever is currently on the live board (via Stage, Clear all, Delete selected,
+  PlacerDock's Cluster tagging — any of them) already *is* the pending state (2026-08-03 redesign —
+  the earlier JSON-backed queue could drift out of sync with the board, e.g. Clear all writing to
+  the board but staging nothing, leaving Apply stuck disabled with no way to apply the erasure).
 
 ### 2. Apply (KiCad must be closed)
 
+- **Pending changes** (`gui/docks/pending.py`, tabbed with Log at the main window's bottom) shows
+  the current diff: every refdes whose live-board Role/Cluster differs from the schematic's last
+  Rescan, recomputed fresh on every Rescan and every ~2s poll tick — never stored, so it can't go
+  stale relative to the board.
 - Checks for a running KiCad process — if found, shows an **instruction** dialog ("save your work
   and close KiCad, then Apply again"). This is never automated (see [Why this write pipeline stays
   separate](#why-this-write-pipeline-stays-separate-from-kicadstampguis)).
-- If KiCad is closed: plans every staged edit through the exact same offline pipeline
+- If KiCad is closed: plans the current diff through the exact same offline pipeline
   `fieldstool_cli.py set` uses, shows a confirmation summary, then writes (same `.bak`/self-verify
-  guards as the CLI). On success, the pending queue is cleared and the tree is rescanned.
+  guards as the CLI). On success, the schematic is rescanned — since it now matches the board, the
+  diff comes out empty and Apply disables itself again.
 
 ## Migrated from `tools/apply_role_cluster.py`
 
@@ -191,7 +201,7 @@ library plus a `rename` mode that didn't exist there. `root_sheet:` (hierarchy w
 ## Tests
 
 `tests/test_schematic_*.py` (offline core — parsing, discovery, editing, `set`, `rename`) plus
-`tests/gui/test_schema_model.py`, `tests/gui/test_pending_dock.py` (registry + `QDockWidget`,
+`tests/gui/test_schema_model.py`, `tests/gui/test_pending_dock.py` (the diff function + `QDockWidget`,
 offscreen) and `tests/gui/test_fieldstool_window.py` (the embedded tab's own `MainWindow`, same
-pattern as the rest of [`tests/gui/`](./gui.md#tests)), including a full staging → Apply → write
+pattern as the rest of [`tests/gui/`](./gui.md#tests)), including a full Stage → Apply → write
 round trip against a synthetic `.kicad_sch`. No live KiCad needed anywhere.

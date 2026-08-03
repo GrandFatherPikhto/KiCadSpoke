@@ -7,8 +7,10 @@ repo) to prove the whole staging -> Apply -> write chain actually
 round-trips, not just that each piece is individually plausible.
 """
 from pathlib import Path
+from unittest.mock import Mock
 
 from gui import fieldstool_window as fieldstool_window_mod
+from kicadstamp.explore import Selected
 from tests.fieldstool_fixtures import sch_file, symbol_block
 from tests.gui.conftest import _FakeConnection
 
@@ -17,6 +19,46 @@ def _write_root(tmp_path, *blocks):
     root = tmp_path / "root.kicad_sch"
     root.write_text(sch_file(*blocks), encoding="utf-8")
     return root
+
+
+def _selected(ref, role, cluster):
+    return Selected(ref=ref, role=role, cluster=cluster, sheet=[], nets={}, fp=None)
+
+
+class _FakeAdapter:
+    def __init__(self):
+        self.calls = []
+        self._fps = {}
+
+    def get_footprint(self, ref):
+        return self._fps.setdefault(ref, Mock())
+
+    def set_field_values_bulk(self, updates, description):
+        self.calls.append((updates, description))
+
+
+class _FakeBoard:
+    def __init__(self):
+        self.adapter = _FakeAdapter()
+
+
+def _run_sync(connection, widgets, fn, on_success, on_error, *args):
+    """Fake start_long_op — runs fn(*args) and on_success() immediately, on
+    the calling thread (same reasoning as tests/gui/test_role_cluster_tree.py's
+    own _run_sync: avoids spinning a real QThread that outlives the test)."""
+    result = fn(*args)
+    on_success(result)
+    return "fake-controller"
+
+
+def _connect_board(fieldstool_window, monkeypatch):
+    """Wires a fake connected board + synchronous start_long_op — _on_stage()
+    now writes to the live board over IPC (2026-08-03 redesign), so it needs
+    both to run at all instead of hanging on a real "Not connected" dialog."""
+    monkeypatch.setattr(fieldstool_window_mod, "start_long_op", _run_sync)
+    board = _FakeBoard()
+    fieldstool_window.connection.board = board
+    return board
 
 
 def test_set_root_sheet_populates_components_and_combos(fieldstool_window, tmp_path):
@@ -102,17 +144,20 @@ def test_leaf_picked_clears_combos_when_targets_differ(fieldstool_window, tmp_pa
     assert fieldstool_window.cluster_combo.currentText() == ""
 
 
-def test_stage_writes_to_pending_registry(fieldstool_window, tmp_path):
+def test_stage_writes_role_cluster_to_the_live_board(fieldstool_window, tmp_path, monkeypatch):
+    """2026-08-03 redesign — Stage writes straight to the board over IPC
+    (same mechanism RoleClusterTreeDock's Clear all uses) instead of a JSON
+    queue; Apply's diff picks it up once the board's snapshot reflects it."""
     root = _write_root(tmp_path, symbol_block(["R1"], role="OLD"))
     fieldstool_window._set_root_sheet(root)
+    board = _connect_board(fieldstool_window, monkeypatch)
 
     fieldstool_window._set_targets(["R1"])
     fieldstool_window.role_combo.setCurrentText("NEW")
     fieldstool_window._on_stage()
 
-    entries = fieldstool_window._pending_registry.entries()
-    assert len(entries) == 1
-    assert entries[0].ref == "R1" and entries[0].field == "Role" and entries[0].new_value == "NEW"
+    updates, _description = board.adapter.calls[0]
+    assert (board.adapter._fps["R1"], "Role", "NEW") in updates
 
 
 def test_stage_with_no_target_does_nothing(fieldstool_window, tmp_path):
@@ -121,17 +166,21 @@ def test_stage_with_no_target_does_nothing(fieldstool_window, tmp_path):
 
     fieldstool_window._set_targets([])
     fieldstool_window.role_combo.setCurrentText("NEW")
-    fieldstool_window._on_stage()  # no targets -> loop body never runs
+    fieldstool_window._on_stage()  # no targets -> returns before touching the board
 
-    assert fieldstool_window._pending_registry.entries() == []
+    assert fieldstool_window._pending_edits == []
 
 
 def test_apply_blocked_when_kicad_running(fieldstool_window, tmp_path, monkeypatch):
     root = _write_root(tmp_path, symbol_block(["R1"], role="OLD"))
     fieldstool_window._set_root_sheet(root)
+    _connect_board(fieldstool_window, monkeypatch)
     fieldstool_window._set_targets(["R1"])
     fieldstool_window.role_combo.setCurrentText("NEW")
     fieldstool_window._on_stage()
+    # Simulate the main GUI's next poll tick picking up the board write —
+    # _on_stage() itself doesn't recompute the diff (see its docstring).
+    fieldstool_window.set_live_snapshot([_selected("R1", "NEW", None)])
 
     monkeypatch.setattr(fieldstool_window_mod, "check_kicad_not_running",
                         lambda force: (_ for _ in ()).throw(RuntimeError("kicad running")))
@@ -146,7 +195,7 @@ def test_apply_blocked_when_kicad_running(fieldstool_window, tmp_path, monkeypat
 
     assert write_calls == []  # never reached the write path
     assert shown == ["info"]
-    assert len(fieldstool_window._pending_registry.entries()) == 1  # still staged, nothing consumed
+    assert len(fieldstool_window._pending_edits) == 1  # still pending, nothing consumed
 
 
 def test_apply_with_nothing_pending_shows_message(fieldstool_window, tmp_path, monkeypatch):
@@ -165,9 +214,11 @@ def test_apply_with_nothing_pending_shows_message(fieldstool_window, tmp_path, m
 def test_apply_succeeds_writes_file_and_clears_pending(fieldstool_window, tmp_path, monkeypatch):
     root = _write_root(tmp_path, symbol_block(["R1"], role="OLD"))
     fieldstool_window._set_root_sheet(root)
+    _connect_board(fieldstool_window, monkeypatch)
     fieldstool_window._set_targets(["R1"])
     fieldstool_window.role_combo.setCurrentText("NEW")
     fieldstool_window._on_stage()
+    fieldstool_window.set_live_snapshot([_selected("R1", "NEW", None)])
 
     monkeypatch.setattr(fieldstool_window_mod, "check_kicad_not_running", lambda force: None)
     monkeypatch.setattr(fieldstool_window_mod.QMessageBox, "question",
@@ -179,7 +230,7 @@ def test_apply_succeeds_writes_file_and_clears_pending(fieldstool_window, tmp_pa
     fieldstool_window._on_apply()
 
     assert '"Role" "NEW"' in root.read_text(encoding="utf-8")
-    assert fieldstool_window._pending_registry.entries() == []
+    assert fieldstool_window._pending_edits == []  # _rescan() found the schematic now matches the board
     assert shown == ["info"]
     assert Path(str(root) + ".bak").exists()
 

@@ -1,21 +1,33 @@
 # gui/docks/pending.py
 """
-PendingRegistry — JSON-backed queue of staged field assignments (ref,
-field, new_value), built up while KiCad is open (staging never touches
-.kicad_sch), applied all at once later while KiCad is closed (see
-docs/fieldstool.md). Renaming a whole tree group just stages one entry
-per member ref — by the time anything reaches Apply it's already plain
-refdes -> {field: value}, the same shape kicadstamp.schematic_set_fields
-always used (see its plan_set_edits_for_root()).
+Pending changes — 2026-08-03 redesign. Used to be a JSON-backed staging
+queue (PendingRegistry) you built up by hand while KiCad was open, applied
+later. Retired: it could drift out of sync with the live board on its own
+(found live — Clear all/Delete selected wrote Role/Cluster straight to the
+board over IPC but never staged anything, so Apply had nothing to do and
+stayed disabled even though the board had genuinely changed).
 
-PendingRegistry itself has no Qt/kipy dependency (testable without a
-QApplication) — PendingChangesDock below is the thin Qt wrapper around it.
+New model: whatever is currently on the live board (via IPC — Clear all,
+Delete selected, fieldstool's own Stage button, PlacerDock's Cluster
+tagging, ANY of them) already IS the accumulated pending state — there is
+nothing left to separately track. compute_pending_edits() below just diffs
+that live state against the schematic's last-known Role/Cluster and returns
+whatever differs; Apply writes exactly that diff into the schematic via
+kicadstamp.schematic_set_fields.plan_set_edits_for_root() (unchanged). This
+can never drift, because it is never stored — recomputed fresh from two
+already-cached sources every time (gui.schema_model.SchematicComponent list,
+refreshed by an explicit Rescan; BoardConnection.snapshot, refreshed by the
+main GUI's ~2s poll), so it costs no new IPC/file reads.
+
+Deliberately no persistence and no undo/remove-from-pending action: if the
+live board's Role/Cluster genuinely differs from the schematic, that is
+simply a fact about the board right now, not a staged decision to revoke —
+to not apply a change, revert the field's value on the board itself (Ctrl+Z
+in KiCad works immediately after an edit).
 """
-import json
 import logging
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -24,62 +36,44 @@ logger = logging.getLogger(__name__)
 class PendingEdit:
     ref: str
     field: str
-    new_value: str
+    old_value: str  # currently in the schematic
+    new_value: str  # currently on the live board
 
 
-class PendingRegistry:
-    """Keyed by (ref, field) — staging the same (ref, field) again
-    overwrites the earlier pending value rather than duplicating it (the
-    last thing you picked in the GUI is what Apply should use)."""
+def compute_pending_edits(components, snapshot) -> List[PendingEdit]:
+    """components: List[gui.schema_model.SchematicComponent] (from
+    load_schematic_components(), i.e. the schematic's last Rescan).
+    snapshot: List[kicadstamp.explore.Selected] (BoardConnection.snapshot,
+    i.e. the board's last poll tick). Only refs present in BOTH are
+    comparable — a ref only on the board (not yet in this schematic tree at
+    all) or only in the schematic (not currently on the board) has nothing
+    to diff. A component whose OWN blocks disagree on Role/Cluster
+    (SchematicComponent.divergent — a pre-existing schema inconsistency,
+    not caused by this diff) is compared against its first block's value
+    like everywhere else that reads .role/.cluster; if that differs from
+    the board, Apply's own plan_set_edits_for_root() will simply unify all
+    of that ref's blocks to the board's value, which is a reasonable
+    resolution, not a bug."""
+    by_ref = {c.ref: c for c in components}
+    edits: List[PendingEdit] = []
+    for s in snapshot:
+        c = by_ref.get(s.ref)
+        if c is None:
+            continue
+        if (s.role or "") != (c.role or ""):
+            edits.append(PendingEdit(s.ref, "Role", c.role or "", s.role or ""))
+        if (s.cluster or "") != (c.cluster or ""):
+            edits.append(PendingEdit(s.ref, "Cluster", c.cluster or "", s.cluster or ""))
+    return sorted(edits, key=lambda e: (e.ref, e.field))
 
-    def __init__(self, path: Path):
-        self.path = path
-        self._entries: Dict[Tuple[str, str], str] = {}
-        self.load()
 
-    def load(self) -> None:
-        if not self.path.exists():
-            return
-        try:
-            with open(self.path, "r", encoding="utf-8") as f:
-                raw = json.load(f)
-            self._entries = {(e["ref"], e["field"]): e["new_value"] for e in raw}
-        except (OSError, json.JSONDecodeError, KeyError) as e:
-            logger.warning("Failed to read %s, starting empty: %s", self.path, e)
-            self._entries = {}
-
-    def save(self) -> None:
-        raw = [{"ref": ref, "field": field, "new_value": value}
-               for (ref, field), value in sorted(self._entries.items())]
-        try:
-            with open(self.path, "w", encoding="utf-8") as f:
-                json.dump(raw, f, indent=2, ensure_ascii=False)
-        except OSError as e:
-            logger.warning("Failed to write %s: %s", self.path, e)
-
-    def stage(self, ref: str, field: str, new_value: str) -> None:
-        self._entries[(ref, field)] = new_value
-        self.save()
-
-    def remove(self, ref: str, field: str) -> None:
-        self._entries.pop((ref, field), None)
-        self.save()
-
-    def clear(self) -> None:
-        self._entries.clear()
-        self.save()
-
-    def entries(self) -> List[PendingEdit]:
-        return [PendingEdit(ref, field, value)
-                for (ref, field), value in sorted(self._entries.items())]
-
-    def as_fields_cfg(self) -> Dict[str, Dict[str, str]]:
-        """refdes -> {field: value} — the shape
-        kicadstamp.schematic_set_fields.plan_set_edits_for_root() consumes."""
-        cfg: Dict[str, Dict[str, str]] = {}
-        for (ref, field), value in self._entries.items():
-            cfg.setdefault(ref, {})[field] = value
-        return cfg
+def edits_to_fields_cfg(edits: List[PendingEdit]) -> Dict[str, Dict[str, str]]:
+    """refdes -> {field: value} — the shape
+    kicadstamp.schematic_set_fields.plan_set_edits_for_root() consumes."""
+    cfg: Dict[str, Dict[str, str]] = {}
+    for e in edits:
+        cfg.setdefault(e.ref, {})[e.field] = e.new_value
+    return cfg
 
 
 try:
@@ -88,76 +82,49 @@ try:
                                  QVBoxLayout, QWidget)
 
     from kicadstamp.i18n import _
-except ImportError:  # pragma: no cover — PendingRegistry above is usable without PyQt6
+except ImportError:  # pragma: no cover — the functions above are usable without PyQt6
     QDockWidget = object
 
 
 class PendingChangesDock(QDockWidget):
-    """Table of staged edits, remove-selected/clear-all, and an Apply
-    button MainWindow wires (see gui/fieldstool_window.py) — Apply itself
-    needs the root_sheet path and the KiCad-running guard, which this dock
-    deliberately doesn't know about."""
+    """Read-only table of the current schematic-vs-board diff (see
+    compute_pending_edits above) + an Apply button MainWindow wires (see
+    gui/fieldstool_window.py) — Apply itself needs the root_sheet path and
+    the KiCad-running guard, which this dock deliberately doesn't know
+    about. Fed wholesale by set_edits() every time either side of the diff
+    changes (Rescan, or the main GUI's ~2s poll) — never mutated in place,
+    same "just show me the latest" discipline as the rest of this GUI."""
 
-    def __init__(self, main_window, registry: PendingRegistry):
+    def __init__(self, main_window):
         super().__init__(_("Pending changes"), main_window)
         self._main_window = main_window
-        self.registry = registry
         self.on_apply_clicked = None  # Callable[[], None], set by MainWindow
 
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(4, 4, 4, 4)
 
-        self.table = QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels([_("Ref"), _("Field"), _("New value")])
+        self.table = QTableWidget(0, 4)
+        self.table.setHorizontalHeaderLabels(
+            [_("Ref"), _("Field"), _("Schematic (current)"), _("Board (new)")])
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         layout.addWidget(self.table)
 
         button_row = QHBoxLayout()
-        self.remove_button = QPushButton(_("Remove selected"))
-        self.remove_button.clicked.connect(self._on_remove_selected)
-        button_row.addWidget(self.remove_button)
-        self.clear_button = QPushButton(_("Clear all"))
-        self.clear_button.clicked.connect(self._on_clear)
-        button_row.addWidget(self.clear_button)
         self.apply_button = QPushButton(_("Apply..."))
         self.apply_button.clicked.connect(lambda: self.on_apply_clicked and self.on_apply_clicked())
         button_row.addWidget(self.apply_button)
         layout.addLayout(button_row)
 
         self.setWidget(container)
-        self.refresh()
+        self.set_edits([])
 
-    def stage(self, ref: str, field: str, new_value: str) -> None:
-        self.registry.stage(ref, field, new_value)
-        self.refresh()
-
-    def stage_group(self, refs: List[str], field: str, new_value: str) -> None:
-        """Group-rename entry point: one pending entry per member ref, see
-        module docstring — this is the mechanism a tree group-rename
-        action (gui.fieldstool_window.MainWindow._on_group_picked) feeds
-        into."""
-        for ref in refs:
-            self.registry.stage(ref, field, new_value)
-        self.refresh()
-
-    def refresh(self) -> None:
-        entries = self.registry.entries()
-        self.table.setRowCount(len(entries))
-        for row, e in enumerate(entries):
+    def set_edits(self, edits: List[PendingEdit]) -> None:
+        self.table.setRowCount(len(edits))
+        for row, e in enumerate(edits):
             self.table.setItem(row, 0, QTableWidgetItem(e.ref))
             self.table.setItem(row, 1, QTableWidgetItem(e.field))
-            self.table.setItem(row, 2, QTableWidgetItem(e.new_value))
-        self.apply_button.setEnabled(bool(entries))
-
-    def _on_remove_selected(self) -> None:
-        for row in sorted({idx.row() for idx in self.table.selectedIndexes()}, reverse=True):
-            ref = self.table.item(row, 0).text()
-            field = self.table.item(row, 1).text()
-            self.registry.remove(ref, field)
-        self.refresh()
-
-    def _on_clear(self) -> None:
-        self.registry.clear()
-        self.refresh()
+            self.table.setItem(row, 2, QTableWidgetItem(e.old_value))
+            self.table.setItem(row, 3, QTableWidgetItem(e.new_value))
+        self.apply_button.setEnabled(bool(edits))

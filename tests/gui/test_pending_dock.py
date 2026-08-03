@@ -1,130 +1,140 @@
 # tests/gui/test_pending_dock.py
-from gui.docks.pending import PendingChangesDock, PendingRegistry
+from gui.docks.pending import (PendingChangesDock, PendingEdit,
+                                compute_pending_edits, edits_to_fields_cfg)
+from gui.schema_model import SchematicComponent
+from kicadstamp.explore import Selected
 
 
-# ── PendingRegistry — no Qt dependency, testable without a QApplication ─────
-
-def test_stage_and_entries(tmp_path):
-    reg = PendingRegistry(tmp_path / "pending.json")
-    reg.stage("R1", "Role", "NEW_A")
-    reg.stage("R2", "Cluster", "Cl_B")
-
-    entries = reg.entries()
-    assert len(entries) == 2
-    assert {(e.ref, e.field, e.new_value) for e in entries} == {
-        ("R1", "Role", "NEW_A"), ("R2", "Cluster", "Cl_B")}
+def _component(ref, role, cluster, divergent=False):
+    return SchematicComponent(ref=ref, role=role, cluster=cluster, file="x.kicad_sch",
+                              block_start=0, divergent=divergent)
 
 
-def test_restaging_same_ref_field_overwrites(tmp_path):
-    reg = PendingRegistry(tmp_path / "pending.json")
-    reg.stage("R1", "Role", "FIRST")
-    reg.stage("R1", "Role", "SECOND")
-
-    entries = reg.entries()
-    assert len(entries) == 1 and entries[0].new_value == "SECOND"
+def _selected(ref, role, cluster):
+    return Selected(ref=ref, role=role, cluster=cluster, sheet=[], nets={}, fp=None)
 
 
-def test_remove(tmp_path):
-    reg = PendingRegistry(tmp_path / "pending.json")
-    reg.stage("R1", "Role", "A")
-    reg.stage("R2", "Role", "B")
-    reg.remove("R1", "Role")
+# ── compute_pending_edits — no Qt dependency, testable without a QApplication ──
 
-    assert [e.ref for e in reg.entries()] == ["R2"]
+def test_no_edits_when_board_matches_schematic():
+    components = [_component("R1", "ROLE_A", "CL_A")]
+    snapshot = [_selected("R1", "ROLE_A", "CL_A")]
 
-
-def test_clear(tmp_path):
-    reg = PendingRegistry(tmp_path / "pending.json")
-    reg.stage("R1", "Role", "A")
-    reg.clear()
-    assert reg.entries() == []
+    assert compute_pending_edits(components, snapshot) == []
 
 
-def test_persists_across_instances(tmp_path):
-    path = tmp_path / "pending.json"
-    reg1 = PendingRegistry(path)
-    reg1.stage("R1", "Role", "A")
+def test_role_diff_detected():
+    components = [_component("R1", "ROLE_A", "CL_A")]
+    snapshot = [_selected("R1", "ROLE_B", "CL_A")]
 
-    reg2 = PendingRegistry(path)
-    assert [e.ref for e in reg2.entries()] == ["R1"]
+    edits = compute_pending_edits(components, snapshot)
 
-
-def test_missing_file_starts_empty(tmp_path):
-    reg = PendingRegistry(tmp_path / "does_not_exist.json")
-    assert reg.entries() == []
+    assert edits == [PendingEdit("R1", "Role", "ROLE_A", "ROLE_B")]
 
 
-def test_corrupt_file_starts_empty_not_fatal(tmp_path):
-    path = tmp_path / "pending.json"
-    path.write_text("{not valid json", encoding="utf-8")
-    reg = PendingRegistry(path)
-    assert reg.entries() == []
+def test_cluster_diff_detected():
+    components = [_component("R1", "ROLE_A", "CL_A")]
+    snapshot = [_selected("R1", "ROLE_A", "CL_B")]
+
+    edits = compute_pending_edits(components, snapshot)
+
+    assert edits == [PendingEdit("R1", "Cluster", "CL_A", "CL_B")]
 
 
-def test_as_fields_cfg_groups_by_ref():
-    reg = PendingRegistry.__new__(PendingRegistry)
-    reg._entries = {("R1", "Role"): "A", ("R1", "Cluster"): "B", ("R2", "Role"): "C"}
+def test_both_fields_diff_detected():
+    components = [_component("R1", "ROLE_A", "CL_A")]
+    snapshot = [_selected("R1", "ROLE_B", "CL_B")]
 
-    cfg = reg.as_fields_cfg()
-    assert cfg == {"R1": {"Role": "A", "Cluster": "B"}, "R2": {"Role": "C"}}
+    edits = compute_pending_edits(components, snapshot)
 
-
-# ── PendingChangesDock — the Qt wrapper around PendingRegistry ──────────────
-
-def _dock(main_window, tmp_path):
-    registry = PendingRegistry(tmp_path / "pending.json")
-    return PendingChangesDock(main_window, registry)
+    assert edits == [PendingEdit("R1", "Cluster", "CL_A", "CL_B"),
+                      PendingEdit("R1", "Role", "ROLE_A", "ROLE_B")]
 
 
-def test_stage_populates_table(qapp, main_window, tmp_path):
-    dock = _dock(main_window, tmp_path)
-    dock.stage("R1", "Role", "R_A")
+def test_erasing_on_the_board_is_a_diff_too():
+    """Regression: Clear all blanks Role/Cluster on the live board — that
+    must show up as a pending edit (new_value == ''), not be swallowed as
+    "nothing changed" just because it's now falsy."""
+    components = [_component("R1", "ROLE_A", "CL_A")]
+    snapshot = [_selected("R1", None, None)]
+
+    edits = compute_pending_edits(components, snapshot)
+
+    assert edits == [PendingEdit("R1", "Cluster", "CL_A", ""),
+                      PendingEdit("R1", "Role", "ROLE_A", "")]
+
+
+def test_ref_only_on_board_is_ignored():
+    """Not yet in the schematic tree this session (or a stale/removed part
+    number) — nothing to diff against."""
+    components = []
+    snapshot = [_selected("R1", "ROLE_A", "CL_A")]
+
+    assert compute_pending_edits(components, snapshot) == []
+
+
+def test_ref_only_in_schematic_is_ignored():
+    """Not currently on the board — nothing to diff against."""
+    components = [_component("R1", "ROLE_A", "CL_A")]
+    snapshot = []
+
+    assert compute_pending_edits(components, snapshot) == []
+
+
+def test_edits_sorted_by_ref_then_field():
+    components = [_component("R2", "A", "A"), _component("R1", "A", "A")]
+    snapshot = [_selected("R2", "B", "B"), _selected("R1", "B", "B")]
+
+    edits = compute_pending_edits(components, snapshot)
+
+    assert [(e.ref, e.field) for e in edits] == [
+        ("R1", "Cluster"), ("R1", "Role"), ("R2", "Cluster"), ("R2", "Role")]
+
+
+def test_edits_to_fields_cfg_groups_by_ref():
+    edits = [PendingEdit("R1", "Role", "A", "NEW_A"), PendingEdit("R1", "Cluster", "B", "NEW_B"),
+             PendingEdit("R2", "Role", "C", "NEW_C")]
+
+    cfg = edits_to_fields_cfg(edits)
+
+    assert cfg == {"R1": {"Role": "NEW_A", "Cluster": "NEW_B"}, "R2": {"Role": "NEW_C"}}
+
+
+# ── PendingChangesDock — the Qt wrapper, fed by set_edits() ─────────────────
+
+def test_set_edits_populates_table(qapp, main_window):
+    dock = PendingChangesDock(main_window)
+    dock.set_edits([PendingEdit("R1", "Role", "OLD", "NEW")])
 
     assert dock.table.rowCount() == 1
     assert dock.table.item(0, 0).text() == "R1"
     assert dock.table.item(0, 1).text() == "Role"
-    assert dock.table.item(0, 2).text() == "R_A"
+    assert dock.table.item(0, 2).text() == "OLD"
+    assert dock.table.item(0, 3).text() == "NEW"
     assert dock.apply_button.isEnabled()
 
 
-def test_stage_group_stages_one_row_per_ref(qapp, main_window, tmp_path):
-    dock = _dock(main_window, tmp_path)
-    dock.stage_group(["R1", "R2", "R3"], "Cluster", "Cl_A")
-
-    assert dock.table.rowCount() == 3
-    assert {dock.table.item(r, 0).text() for r in range(3)} == {"R1", "R2", "R3"}
-
-
-def test_apply_button_disabled_when_empty(qapp, main_window, tmp_path):
-    dock = _dock(main_window, tmp_path)
+def test_apply_button_disabled_when_empty(qapp, main_window):
+    dock = PendingChangesDock(main_window)
     assert not dock.apply_button.isEnabled()
 
 
-def test_clear_empties_table_and_disables_apply(qapp, main_window, tmp_path):
-    dock = _dock(main_window, tmp_path)
-    dock.stage("R1", "Role", "R_A")
-    dock._on_clear()
+def test_set_edits_empty_disables_apply_and_clears_table(qapp, main_window):
+    dock = PendingChangesDock(main_window)
+    dock.set_edits([PendingEdit("R1", "Role", "OLD", "NEW")])
+
+    dock.set_edits([])
 
     assert dock.table.rowCount() == 0
     assert not dock.apply_button.isEnabled()
 
 
-def test_remove_selected_removes_only_that_row(qapp, main_window, tmp_path):
-    dock = _dock(main_window, tmp_path)
-    dock.stage("R1", "Role", "A")
-    dock.stage("R2", "Role", "B")
-    dock.table.selectRow(0)
-    dock._on_remove_selected()
-
-    assert dock.table.rowCount() == 1
-    assert dock.table.item(0, 0).text() == "R2"
-
-
-def test_apply_button_click_calls_callback(qapp, main_window, tmp_path):
-    dock = _dock(main_window, tmp_path)
-    dock.stage("R1", "Role", "A")
+def test_apply_button_click_calls_callback(qapp, main_window):
+    dock = PendingChangesDock(main_window)
+    dock.set_edits([PendingEdit("R1", "Role", "OLD", "NEW")])
     calls = []
     dock.on_apply_clicked = lambda: calls.append(True)
+
     dock.apply_button.click()
 
     assert calls == [True]

@@ -9,10 +9,11 @@ docs/fieldstool.md):
    (one kipy client, one REQ socket) here — this window never creates or
    polls a connection of its own. The main GUI's single 2s/400ms poll
    drives this window through the public set_connection_status()/
-   set_live_selection() hooks below (Phase 5.1 — a second, independent
-   timer on the same connection would interleave requests mid-flight on
-   kipy's REQ socket). Because PCB/schematic selection cross-probe in
-   KiCad, a selection made in Eeschema reaches set_live_selection() too.
+   set_live_selection()/set_live_snapshot() hooks below (Phase 5.1 — a
+   second, independent timer on the same connection would interleave
+   requests mid-flight on kipy's REQ socket). Because PCB/schematic
+   selection cross-probe in KiCad, a selection made in Eeschema reaches
+   set_live_selection() too.
 
    The main GUI's own Components tree (gui/docks/role_cluster_tree.py) can
    ALSO pick a target without any live selection at all — its "Not yet
@@ -25,11 +26,19 @@ docs/fieldstool.md):
    BoardConnection and polling timers) existed until 2026-08-02, when it
    was retired as pure duplication of the embedded tab.
 
-   Staging only ever writes to PendingRegistry (JSON) — nothing touches
-   .kicad_sch yet.
-2. Apply (KiCad must be closed): converts the whole pending queue into
-   real edits via kicadstamp.schematic_set_fields.plan_set_edits_for_root()
-   + kicadstamp.schematic_editing.write_files() — the same offline pipeline
+   2026-08-03 redesign: Stage writes Role/Cluster straight to the LIVE
+   BOARD over IPC (same mechanism RoleClusterTreeDock's Clear all/Delete
+   selected already use) — there is no separate JSON staging queue anymore
+   (see gui/docks/pending.py's module docstring for why the old
+   PendingRegistry was retired: it could drift out of sync with the board,
+   found live when Clear all wrote to the board but staged nothing, leaving
+   Apply permanently disabled with no way to apply the erasure).
+2. Apply (KiCad must be closed): diffs the schematic's last-known Role/
+   Cluster (self._components) against the live board's last-known values
+   (self._live_snapshot) via gui.docks.pending.compute_pending_edits(), and
+   writes exactly that diff via
+   kicadstamp.schematic_set_fields.plan_set_edits_for_root() +
+   kicadstamp.schematic_editing.write_files() — the same offline pipeline
    the CLI's `set` subcommand uses. Gated by check_kicad_not_running() — if
    KiCad is running, this is an INSTRUCTION dialog, never automated
    (confirmed 2026-08-01: kipy has no app-level quit/save-all call to
@@ -51,14 +60,16 @@ from PyQt6.QtWidgets import (QComboBox, QFileDialog, QFormLayout,
                               QHBoxLayout, QLabel, QMainWindow, QMessageBox,
                               QPushButton, QVBoxLayout, QWidget)
 
-from kicadstamp.exceptions import FieldsToolError
+from kicadstamp.exceptions import FieldsToolError, ValidationError
+from kicadstamp.explore import Selected
 from kicadstamp.i18n import _
 from kicadstamp.schematic_editing import check_kicad_not_running, write_files
 from kicadstamp.schematic_set_fields import plan_set_edits_for_root
 
-from .docks.pending import PendingChangesDock, PendingRegistry
+from .docks.pending import PendingChangesDock, PendingEdit, compute_pending_edits, edits_to_fields_cfg
 from .schema_model import SchematicComponent, load_schematic_components
 from .settings import Settings
+from .worker import start_long_op
 
 # Own state file, separate from gui/gui_state.json (gui/settings.py's
 # default singleton) — reuses the same Settings class (atomic write,
@@ -79,7 +90,7 @@ settings = _FieldstoolSettings()
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, connection):
+    def __init__(self, connection, pending_dock: Optional[PendingChangesDock] = None):
         super().__init__()
         self.setWindowTitle(_("fieldstool"))
         self.resize(420, 700)
@@ -91,6 +102,12 @@ class MainWindow(QMainWindow):
         self._root_sheet: Optional[Path] = None
         self._current_targets: List[str] = []
         self._components: List[SchematicComponent] = []
+        # Last live-board snapshot pushed by the main GUI's ~2s poll (see
+        # set_live_snapshot below) — together with self._components, this is
+        # the whole input to the schematic-vs-board diff (gui.docks.pending.
+        # compute_pending_edits). Empty until the first poll tick.
+        self._live_snapshot: List[Selected] = []
+        self._pending_edits: List[PendingEdit] = []
         # Set by gui/docks/fieldstool_dock.py when the window is embedded
         # as the fieldstool tab (the only way it runs in production — the
         # standalone fieldstool_gui.py entry point was retired 2026-08-02;
@@ -141,9 +158,15 @@ class MainWindow(QMainWindow):
         edit_layout.addWidget(self.stage_button)
         layout.addWidget(edit_box)
 
-        self._pending_registry = PendingRegistry(FIELDSTOOL_SETTINGS_PATH.parent / "no_project.pending.json")
-        self.pending_dock = PendingChangesDock(self, self._pending_registry)
-        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.pending_dock)
+        # Only construct+dock our own PendingChangesDock when embedded
+        # without one injected (direct/test construction, see module
+        # docstring) — the embedding DockHub instead builds ONE shared
+        # instance and docks it at the main window's bottom (tabbed with
+        # Log), passing it in here so RoleClusterTreeDock's live-board
+        # writes and this window's own Stage write into the same diff view.
+        self.pending_dock = pending_dock if pending_dock is not None else PendingChangesDock(self)
+        if pending_dock is None:
+            self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.pending_dock)
         self.pending_dock.on_apply_clicked = self._on_apply
 
         self.setCentralWidget(central)
@@ -168,11 +191,6 @@ class MainWindow(QMainWindow):
         self.root_label.setText(str(path))
         settings.set("root_sheet", str(path))
 
-        pending_path = path.with_suffix(".pending.json")
-        self._pending_registry = PendingRegistry(pending_path)
-        self.pending_dock.registry = self._pending_registry
-        self.pending_dock.refresh()
-
         self._rescan()
 
     def _rescan(self) -> None:
@@ -190,18 +208,31 @@ class MainWindow(QMainWindow):
         self._components = components
         roles = {c.role for c in components if c.role}
         clusters = {c.cluster for c in components if c.cluster}
-        # Union in still-unapplied Role/Cluster values from the pending queue too —
-        # they won't be in the schematic on disk until Apply (KiCad closed), so a
-        # rescan alone would never surface a value you just staged this session.
-        for e in self._pending_registry.entries():
-            if e.field == "Role":
-                roles.add(e.new_value)
-            elif e.field == "Cluster":
-                clusters.add(e.new_value)
+        # Union in whatever's currently on the live board too — a value set
+        # there (Stage, Clear all, Cluster tagging, ...) won't be in the
+        # schematic on disk until Apply, so a rescan alone would never
+        # surface it as a pickable combo item this session.
+        for s in self._live_snapshot:
+            if s.role:
+                roles.add(s.role)
+            if s.cluster:
+                clusters.add(s.cluster)
         self._set_combo_items(self.role_combo, sorted(roles))
         self._set_combo_items(self.cluster_combo, sorted(clusters))
+        self._recompute_pending()
         if self.on_components_changed:
             self.on_components_changed()
+
+    def _recompute_pending(self) -> None:
+        """Recomputes the schematic-vs-board diff and pushes it to
+        pending_dock — cheap (no new IPC/file reads, both inputs are
+        already-cached: self._components from the last Rescan,
+        self._live_snapshot from the last poll tick), so this can safely
+        run on every trigger (Rescan, or a fresh live snapshot) without
+        the "expensive work belongs behind an explicit action" concern
+        that applies to the reads themselves."""
+        self._pending_edits = compute_pending_edits(self._components, self._live_snapshot)
+        self.pending_dock.set_edits(self._pending_edits)
 
     @property
     def components(self) -> List[SchematicComponent]:
@@ -291,25 +322,73 @@ class MainWindow(QMainWindow):
             adapter.select_items(footprints)
 
     def _on_stage(self) -> None:
+        """"Stage" now writes Role/Cluster straight to the live board over
+        IPC (2026-08-03 redesign, see module docstring) instead of a JSON
+        queue — the board itself IS the pending state; Apply's diff picks
+        this up once the main GUI's next ~2s poll tick refreshes
+        BoardConnection.snapshot (same short lag Clear all/Delete selected
+        already have — not instant, but not worth a forced extra IPC
+        round-trip here just to shave ~2s off a change you're about to
+        Apply anyway)."""
         role = self.role_combo.currentText().strip()
         cluster = self.cluster_combo.currentText().strip()
         if not role and not cluster:
             QMessageBox.warning(self, _("Nothing to stage"),
                                 _("Set Role and/or Cluster first."))
             return
-        for ref in self._current_targets:
-            if role:
-                self.pending_dock.stage(ref, "Role", role)
-            if cluster:
-                self.pending_dock.stage(ref, "Cluster", cluster)
+        if not self._current_targets:
+            return
+        if not self.connection.is_connected:
+            QMessageBox.warning(self, _("Not connected"), _("Connect to KiCad first."))
+            return
+        # A background long op (Extract/Redraw) or another poll tick holds
+        # the shared socket; writing now would interleave into its
+        # in-flight REQ transaction.
+        if self.connection.long_op_active:
+            return
+        payload = {"refs": list(self._current_targets), "role": role, "cluster": cluster}
+        self._active_stage_op = start_long_op(
+            self.connection, (self.stage_button,), self._run_stage, self._finish_stage,
+            self._on_stage_failed, payload)
+
+    def _run_stage(self, payload: dict) -> dict:
+        """Worker thread: board IPC only — never touches a widget."""
+        adapter = self.connection.board.adapter
+        footprints = [fp for fp in (adapter.get_footprint(ref) for ref in payload["refs"])
+                      if fp is not None]
+        result = {"error": None, "role": payload["role"], "cluster": payload["cluster"]}
+        if not footprints:
+            return result
+        updates = []
+        for fp in footprints:
+            if payload["role"]:
+                updates.append((fp, "Role", payload["role"]))
+            if payload["cluster"]:
+                updates.append((fp, "Cluster", payload["cluster"]))
+        try:
+            adapter.set_field_values_bulk(
+                updates, _("Set Role/Cluster on {count} component(s)").format(count=len(footprints)))
+        except ValidationError as e:
+            return {"error": str(e)}
+        return result
+
+    def _finish_stage(self, result: dict) -> None:
+        """UI thread: reflect the worker's result into widgets."""
+        if result["error"]:
+            QMessageBox.critical(self, _("Could not set fields"), result["error"])
+            return
         # Reflect a brand-new Role/Cluster value in the dropdown right away —
         # don't make the user hit Rescan just to reuse what they typed a moment ago.
-        if role:
-            self._add_combo_item_if_missing(self.role_combo, role)
-        if cluster:
-            self._add_combo_item_if_missing(self.cluster_combo, cluster)
+        if result["role"]:
+            self._add_combo_item_if_missing(self.role_combo, result["role"])
+        if result["cluster"]:
+            self._add_combo_item_if_missing(self.cluster_combo, result["cluster"])
 
-    # ── Live connection (staging only — never writes) ──────────────────────
+    def _on_stage_failed(self, message: str) -> None:
+        QMessageBox.critical(self, _("Could not set fields"), message)
+
+    # ── Live connection (Stage writes Role/Cluster to the board; Apply writes
+    #    the schematic — see module docstring) ───────────────────────────────
 
     def set_connection_status(self, error: Optional[str]) -> None:
         """Public — the single point that reflects the shared connection's
@@ -319,7 +398,7 @@ class MainWindow(QMainWindow):
         its own."""
         self.status_label.setText(
             _("Not connected: {error}").format(error=error) if error
-            else _("Connected (staging only — this tool never writes over IPC)"))
+            else _("Connected"))
 
     def set_live_selection(self, refs: List[str]) -> None:
         """Public — the single point that turns a live PCB selection into
@@ -331,6 +410,15 @@ class MainWindow(QMainWindow):
             return
         self._set_targets(sorted(refs))
         self._prefill_combos_for_refs(sorted(refs))
+
+    def set_live_snapshot(self, snapshot: List[Selected]) -> None:
+        """Public — the single point that reflects the shared connection's
+        live board snapshot here, so the schematic-vs-board diff (Apply)
+        stays current without this window polling on its own. Called from
+        the main GUI's ~2s poll (through gui/docks/fieldstool_dock.py), same
+        pattern as set_connection_status()/set_live_selection()."""
+        self._live_snapshot = snapshot
+        self._recompute_pending()
 
     # ── Apply (KiCad must be closed — instruction, not automation) ─────────
 
@@ -355,7 +443,7 @@ class MainWindow(QMainWindow):
                   "docs/fieldstool.md for why)."))
             return
 
-        fields_cfg = self._pending_registry.as_fields_cfg()
+        fields_cfg = edits_to_fields_cfg(self._pending_edits)
         try:
             edits_by_file, file_texts, report = plan_set_edits_for_root(
                 str(self._root_sheet), fields_cfg)
@@ -384,6 +472,8 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.information(self, _("Applied"),
                                     _("{count} file(s) written.").format(count=len(written)))
-            self._pending_registry.clear()
-            self.pending_dock.refresh()
+            # Reloads self._components from the schematic just written and
+            # recomputes the diff against the (unchanged) live snapshot —
+            # since the schematic now matches what was just applied, the
+            # diff comes out empty and Apply disables itself again.
             self._rescan()

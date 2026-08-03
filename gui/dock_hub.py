@@ -26,6 +26,7 @@ from .docks.config_tree import ConfigTreeDock
 from .docks.detail_panel import DetailDock
 from .docks.fieldstool_dock import FieldsToolDock
 from .docks.log_panel import LogDock
+from .docks.pending import PendingChangesDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
 
 
@@ -45,8 +46,15 @@ class DockHub:
         main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.config_tree_dock)
         main_window.tabifyDockWidget(self.tree_dock, self.config_tree_dock)
 
+        # ── bottom: Pending changes (constructed here — shared between
+        # RoleClusterTreeDock's live-board writes and fieldstool's own
+        # Stage/Apply, see gui/docks/pending.py — docked further down,
+        # tabbed with Log) ─────────────────────────────────────────────────
+        self.pending_dock = PendingChangesDock(main_window)
+
         # ── right group: fieldstool, Detail (Extract/Placer/Root) ─────────
-        self.fieldstool_dock = FieldsToolDock(main_window, connection=connection)
+        self.fieldstool_dock = FieldsToolDock(
+            main_window, connection=connection, pending_dock=self.pending_dock)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fieldstool_dock)
 
         self.detail_dock = DetailDock(main_window, connection=connection)
@@ -62,9 +70,11 @@ class DockHub:
         self.root_metadata_dock = self.detail_dock.root_panel
         self.thermal_via_dock = self.detail_dock.thermal_via_panel
 
-        # ── bottom: log ───────────────────────────────────────────────────
+        # ── bottom: Pending changes, Log ────────────────────────────────────
+        main_window.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.pending_dock)
         self.log_dock = LogDock(main_window, verbose=verbose)
         main_window.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock)
+        main_window.tabifyDockWidget(self.pending_dock, self.log_dock)
 
         self._wire()
 
@@ -167,6 +177,13 @@ class DockHub:
         ExtractDock and the embedded fieldstool, whose own selection timer is
         stopped when it shares the main connection)."""
         self.fieldstool_dock.push_live_selection(refs)
+
+    def push_fieldstool_snapshot(self, snapshot) -> None:
+        """Feed the freshly rebuilt live-board snapshot into the embedded
+        fieldstool window, so its Pending-changes diff (schematic vs board
+        Role/Cluster) stays current without a poll of its own (see
+        gui/main_window.py's _poll, same reasoning as push_snapshot)."""
+        self.fieldstool_dock.push_live_snapshot(snapshot)
 
     def push_fieldstool_connection_status(self, error) -> None:
         """Mirror the shared connection's state into the embedded

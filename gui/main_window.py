@@ -195,6 +195,10 @@ class MainWindow(QMainWindow):
     def log_dock(self):
         return self._dock_hub.log_dock
 
+    @property
+    def pending_dock(self):
+        return self._dock_hub.pending_dock
+
     def _restore_window_state(self) -> None:
         """Plain x/y/width/height ints in gui_state.json, not Qt's own
         saveGeometry()/restoreGeometry() (a QByteArray blob — would need
@@ -343,6 +347,7 @@ class MainWindow(QMainWindow):
             snapshot = self.connection.snapshot
             self.status_label.setText(_("Connected — {count} components").format(count=len(snapshot)))
             self._dock_hub.push_snapshot(snapshot, self.connection.board)
+            self._dock_hub.push_fieldstool_snapshot(snapshot)
 
         # Phase 5.1 — the embedded fieldstool shares this connection and no
         # longer runs its own connect/refresh poll, so mirror the status we

@@ -72,16 +72,21 @@ below). Click one to feed the **Placer** dock's Cell field.
 The first right-hand tab embeds [fieldstool](fieldstool.md)'s own GUI whole, wrapped in one dock
 (`gui/docks/fieldstool_dock.py`) — there is no second process/window, this is now the only way
 fieldstool runs (a standalone `fieldstool_gui.py` entry point existed until 2026-08-02, retired as
-pure duplication of this tab). It has its own internal Pending changes queue at its bottom, and
-shares this GUI's own `BoardConnection` and single 2s/400ms poll (one kipy client, one REQ socket —
-a second independent timer on the same connection would interleave requests mid-flight). It has no
+pure duplication of this tab). Its **Pending changes** dock (2026-08-03: the schematic-vs-board
+Role/Cluster diff — see [fieldstool.md](fieldstool.md#2-apply-kicad-must-be-closed)) is shared with
+the main window, tabbed with **Log** at the bottom, not a dock local to this tab anymore. It shares
+this GUI's own `BoardConnection` and single 2s/400ms poll (one kipy client, one REQ socket — a
+second independent timer on the same connection would interleave requests mid-flight). It has no
 Components tree of its own — the main [Components tree](#components-tree)'s "Not yet applied" mode
 covers that job when embedded here (fieldstool's own tree, `fieldstool/gui/tree.py`, was retired
 2026-08-01).
 
 This replaced **Bulk edit** (also retired 2026-08-01), which used to set Role/Cluster directly over
-live PCB IPC from this tab's slot — that write was PCB-only and got silently reverted by KiCad's
-own "Update PCB from Schematic", since `Role`/`Cluster` actually originate in the schematic symbol.
+live PCB IPC from this tab's slot with no further persistence step — that write was PCB-only and got
+silently reverted by KiCad's own "Update PCB from Schematic", since `Role`/`Cluster` actually
+originate in the schematic symbol. fieldstool's own Stage button (and the main Components tree's
+Clear all/Delete selected) write over the same kind of live IPC today too, but Apply's schematic
+diff is what actually persists the change into `.kicad_sch` — the missing step Bulk edit never had.
 fieldstool edits `.kicad_sch` directly instead, which survives that resync — see
 [fieldstool.md](fieldstool.md) for the full design and why it needs KiCad closed to Apply.
 
