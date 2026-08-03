@@ -1,12 +1,13 @@
 # gui/docks/extract.py
 """
 ExtractDock — build a Cell template from whatever's currently selected on
-the board and write it into the file picked in the Files dock. Wraps
+the board and write it into whichever file is currently selected in the
+Config tree (gui/docks/config_tree.py). Wraps
 kicadstamp.template_extraction.extract_template_from_selection() plus
 kicadstamp_cli.py's cmd_extract merge-into-existing-file behaviour — NOT
 kicadstamp.author.dump_template(), which always overwrites the whole file
-(fine for a script regenerating its own dedicated file, wrong here: a file
-picked in the Files dock is very likely already home to other cells).
+(fine for a script regenerating its own dedicated file, wrong here: the
+currently selected file is very likely already home to other cells).
 
 Fed by the same selection-watch timer as the tree/bulk-edit docks (see
 MainWindow._poll_board_selection) — but unlike those, which only need
@@ -37,9 +38,11 @@ params=={} that check fails for every single alias (found live 2026-08-01,
 "net '{X}' has a placeholder with no parameter" on every extract attempt
 that used an alias).
 
-Both the cell-output file and the extract_profiles file are chosen in the
-Files dock now (its Cells/Extractor role slots — see file_picker.py),
-pushed here via set_target_file()/set_profile_file(). This dock used to
+Both the cell-output file and the extract_profiles file follow the SAME
+currently-selected file in the Config tree (2026-08-03 — used to be two
+independent FilePickerDock role slots, Cells/Extractor; collapsed into one
+since browsing to a file already implies "write here" for both), pushed
+here via set_target_file()/set_profile_file(). This dock used to
 have its own separate "Change profile file..." QFileDialog button for the
 profile file alone, which meant two different ways to pick a file for two
 closely related purposes — reported as confusing live 2026-08-01.
@@ -158,7 +161,7 @@ class ExtractDock(QDockWidget):
         form.addRow(_("Cell name:"), self.name_edit)
         layout.addLayout(form)
 
-        self.target_label = QLabel(_("No target file picked (pick one in Files)"))
+        self.target_label = QLabel(_("No target file picked (pick one in the Config tree)"))
         self.target_label.setWordWrap(True)
         layout.addWidget(self.target_label)
 
@@ -242,11 +245,11 @@ class ExtractDock(QDockWidget):
         profile_form.addRow(_("Profile key:"), self.profile_key_edit)
         layout.addLayout(profile_form)
 
-        self.profile_target_label = QLabel(_("No profile file picked (pick one in Files)"))
+        self.profile_target_label = QLabel(_("No profile file picked (pick one in the Config tree)"))
         self.profile_target_label.setWordWrap(True)
         layout.addWidget(self.profile_target_label)
 
-        self.placer_target_label = QLabel(_("No placer file picked (pick one in Files, optional)"))
+        self.placer_target_label = QLabel(_("No placer file picked (pick one in the Config tree, optional)"))
         self.placer_target_label.setWordWrap(True)
         layout.addWidget(self.placer_target_label)
 
@@ -293,37 +296,39 @@ class ExtractDock(QDockWidget):
         set_combo_items(self.origin_via_net_combo, via_nets)
 
     def set_target_file(self, path: Optional[Path]) -> None:
-        """Called by MainWindow whenever the Files dock's Cells-role file
-        changes (wired via FilePickerDock's cells_file_changed signal)."""
+        """Called whenever the Config tree's current file changes (wired to
+        ConfigTreeDock's file_selected signal, 2026-08-03 — replaced
+        FilePickerDock's Cells-role slot; see gui/docks/config_tree.py's
+        module docstring)."""
         self._target_path = path
         self.target_label.setText(
             _("Target: {path}").format(path=path) if path is not None
-            else _("No target file picked (pick one in Files)"))
+            else _("No target file picked (pick one in the Config tree)"))
         self._refresh_existing_lists()
         self._update_button_state()
 
     def set_profile_file(self, path: Optional[Path]) -> None:
-        """Called by MainWindow whenever the Files dock's Extractor-role
-        file changes (wired via FilePickerDock's extractor_file_changed
-        signal) —
-        replaces this dock's former standalone file-dialog button, so all
-        three file roles (Cells/Extractor/Placer) are picked from one
-        place (see file_picker.py)."""
+        """Called whenever the Config tree's current file changes (wired to
+        ConfigTreeDock's file_selected signal, 2026-08-03 — replaced
+        FilePickerDock's Extractor-role slot; both Cells and Extractor now
+        always follow the SAME currently-browsed file, collapsing what
+        used to be two independently-assignable roles into one)."""
         self._profile_path = path
         self.profile_target_label.setText(
             _("Profile file: {path}").format(path=path) if path is not None
-            else _("No profile file picked (pick one in Files)"))
+            else _("No profile file picked (pick one in the Config tree)"))
         self._refresh_existing_lists()
 
     def set_placer_file(self, path: Optional[Path]) -> None:
-        """Called by MainWindow whenever the Files dock's Placer-role file
-        changes (wired via FilePickerDock's placer_file_changed signal).
-        Optional — extraction works the same without one, it just skips
-        the include: wiring described in the module docstring."""
+        """Called whenever the Config tree's current file changes (wired to
+        ConfigTreeDock's file_selected signal, 2026-08-03 — replaced
+        FilePickerDock's Placer-role slot). Optional — extraction works the
+        same without one, it just skips the include: wiring described in
+        the module docstring."""
         self._placer_path = path
         self.placer_target_label.setText(
             _("Placer file: {path}").format(path=path) if path is not None
-            else _("No placer file picked (pick one in Files, optional)"))
+            else _("No placer file picked (pick one in the Config tree, optional)"))
 
     @staticmethod
     def _slugify(text: str) -> str:

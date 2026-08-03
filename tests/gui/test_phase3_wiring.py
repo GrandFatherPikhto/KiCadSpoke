@@ -4,9 +4,10 @@ Phase 3 (gui optimization roadmap, handoff_gui_optimization_2026_08_01.md):
 real pyqtSignals replacing callable-attribute wiring (3.1) + BoardConnection
 injection so docks stop reaching into main_window.connection deep (3.2).
 These tests pin down the composition-root wiring in gui/main_window.py — the
-Files dock's role signals reaching every listener, restore_roles() re-firing
-a previous session's assignments, and the two connection-taking docks using
-the injected object instead of main_window.connection.
+Config tree's file_selected signal reaching every listener (2026-08-03,
+replaced FilePickerDock's three independent role signals entirely — see
+gui/docks/config_tree.py's module docstring), and the two connection-taking
+docks using the injected object instead of main_window.connection.
 """
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -45,68 +46,38 @@ def _write(path):
     path.write_text("{}\n", encoding="utf-8")
 
 
-def test_cells_role_reaches_extract_and_placer(real_main_window, tmp_path):
-    cells_file = tmp_path / "cells.yaml"
-    _write(cells_file)
+def test_config_tree_file_selected_reaches_extract_and_placer(real_main_window, tmp_path):
+    """file_selected (fired by ANY click in the Config tree, see
+    gui/docks/config_tree.py's module docstring) feeds every one of
+    ExtractDock's/PlacerDock's file targets at once — this REPLACES the
+    three independent FilePickerDock role signals (Cells/Extractor/
+    Placer), which no longer exist."""
+    target_file = tmp_path / "power.yaml"
+    _write(target_file)
 
-    real_main_window.file_picker_dock.picked_path = cells_file
-    real_main_window.file_picker_dock._assign_role("cells")
+    real_main_window.config_tree_dock.file_selected.emit(target_file)
 
-    assert real_main_window.extract_dock._target_path == cells_file
-    assert real_main_window.placer_dock._cells_path == cells_file
-    # Config tree's root is bridged to the Placer role only (see
-    # ConfigTreeDock.set_root_file's docstring) — the Cells role alone
-    # doesn't touch it.
-    assert real_main_window.config_tree_dock._root_path is None
-
-
-def test_extractor_role_reaches_extract_dock_profile(real_main_window, tmp_path):
-    extractor_file = tmp_path / "profiles.yaml"
-    _write(extractor_file)
-
-    real_main_window.file_picker_dock.picked_path = extractor_file
-    real_main_window.file_picker_dock._assign_role("extractor")
-
-    assert real_main_window.extract_dock._profile_path == extractor_file
+    assert real_main_window.extract_dock._target_path == target_file
+    assert real_main_window.extract_dock._profile_path == target_file
+    assert real_main_window.extract_dock._placer_path == target_file
+    assert real_main_window.placer_dock._cells_path == target_file
+    assert real_main_window.placer_dock._placer_path == target_file
 
 
-def test_placer_role_reaches_extract_placer_and_config_tree_root(real_main_window, tmp_path):
-    placer_file = tmp_path / "placer.yaml"
-    _write(placer_file)
-
-    real_main_window.file_picker_dock.picked_path = placer_file
-    real_main_window.file_picker_dock._assign_role("placer")
-
-    assert real_main_window.extract_dock._placer_path == placer_file
-    assert real_main_window.placer_dock._placer_path == placer_file
-    assert real_main_window.config_tree_dock._root_path == placer_file
-
-
-def test_restore_roles_reaches_all_listeners_after_restart(qapp, tmp_path):
-    """A previous session's role assignments must reach every listener even
-    though they were restored before the signal connections existed —
-    restore_roles() re-fires them through the same signals."""
-    cells_file = tmp_path / "cells.yaml"
-    extractor_file = tmp_path / "extractor.yaml"
-    placer_file = tmp_path / "placer.yaml"
-    _write(cells_file)
-    _write(extractor_file)
-    _write(placer_file)
+def test_config_tree_restores_last_root_after_restart(qapp, tmp_path):
+    """A previous session's root file must be restored on startup —
+    ConfigTreeDock._restore_last_root(), the replacement for
+    FilePickerDock's restore_roles()."""
+    root_file = tmp_path / "root.yaml"
+    _write(root_file)
 
     data = settings.load()
-    data["cells_file"] = str(cells_file)
-    data["extractor_file"] = str(extractor_file)
-    data["placer_file"] = str(placer_file)
+    data["last_root_file"] = str(root_file)
     settings.save(data)
 
     window = MainWindow(timeout_ms=10, verbose=False)
     try:
-        assert window.extract_dock._target_path == cells_file
-        assert window.placer_dock._cells_path == cells_file
-        assert window.extract_dock._profile_path == extractor_file
-        assert window.extract_dock._placer_path == placer_file
-        assert window.placer_dock._placer_path == placer_file
-        assert window.config_tree_dock._root_path == placer_file
+        assert window.config_tree_dock._root_path == root_file
     finally:
         window._timer.stop()
         window._selection_timer.stop()
@@ -334,39 +305,30 @@ def test_main_window_exposes_all_docks_through_the_hub(real_main_window):
     assert real_main_window.tree_dock is hub.tree_dock
     assert real_main_window.config_tree_dock is hub.config_tree_dock
     assert real_main_window.fieldstool_dock is hub.fieldstool_dock
-    assert real_main_window.file_picker_dock is hub.file_picker_dock
     assert real_main_window.extract_dock is hub.extract_dock
     assert real_main_window.placer_dock is hub.placer_dock
     assert real_main_window.log_dock is hub.log_dock
 
 
-def test_dock_hub_constructs_all_docks_and_wires_roles(main_window, tmp_path):
-    """A standalone DockHub builds every dock on any QMainWindow and its
-    role signals reach every listener — the composition root works without
-    a real MainWindow too."""
-    cells_file = tmp_path / "cells.yaml"
-    _write(cells_file)
+def test_dock_hub_constructs_all_docks_and_wires_file_selected(main_window, tmp_path):
+    """A standalone DockHub builds every dock on any QMainWindow and the
+    Config tree's file_selected signal reaches every listener — the
+    composition root works without a real MainWindow too."""
+    target_file = tmp_path / "power.yaml"
+    _write(target_file)
 
     hub = DockHub(main_window, connection=main_window.connection, verbose=False)
     try:
         assert hub.tree_dock is not None
         assert hub.config_tree_dock is not None
         assert hub.fieldstool_dock is not None
-        assert hub.file_picker_dock is not None
         assert hub.extract_dock is not None
         assert hub.placer_dock is not None
         assert hub.log_dock is not None
 
-        hub.file_picker_dock.picked_path = cells_file
-        hub.file_picker_dock._assign_role("cells")
-        assert hub.extract_dock._target_path == cells_file
-        assert hub.placer_dock._cells_path == cells_file
-
-        # Config tree's root is bridged to the Placer role only (see
-        # ConfigTreeDock.set_root_file's docstring).
-        hub.file_picker_dock.picked_path = cells_file
-        hub.file_picker_dock._assign_role("placer")
-        assert hub.config_tree_dock._root_path == cells_file
+        hub.config_tree_dock.file_selected.emit(target_file)
+        assert hub.extract_dock._target_path == target_file
+        assert hub.placer_dock._cells_path == target_file
     finally:
         _teardown_hub(hub)
 

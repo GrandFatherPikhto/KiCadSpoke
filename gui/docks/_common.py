@@ -35,10 +35,11 @@ from .. import yaml_io
 
 logger = logging.getLogger(__name__)
 
-# Project root — the value FilePickerDock's file-tree is rooted at (it
-# used to derive its own copy: gui/docks/file_picker.py). Single
-# definition here so display_path() and the dock that owns the tree
-# share one source of truth.
+# Project root — used by display_path() below to show paths relative to it
+# when possible. Used to also be where FilePickerDock's file-tree was
+# rooted (gui/docks/file_picker.py, removed 2026-08-03 — see
+# handoff_2026_08_03_gui_tree_risks_resolved.md — replaced by ConfigTreeDock's
+# "Open Root file" action, a plain QFileDialog with no directory browser).
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # Message-label styles — one definition shared by every dock's status

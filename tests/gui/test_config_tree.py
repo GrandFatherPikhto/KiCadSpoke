@@ -12,6 +12,7 @@ import yaml
 from PyQt6.QtWidgets import QMessageBox
 
 import gui.docks.config_tree as config_tree_mod
+from gui import settings
 from gui.docks.config_tree import ConfigTreeDock
 
 MINIMAL_CELL = """
@@ -387,3 +388,77 @@ def test_context_menu_has_no_remove_action_for_root(main_window, tmp_path, monke
 
     assert "Remove this file" not in captured["labels"]
     assert "Add cell..." in captured["labels"]
+
+
+# ── Open Root file + Recent (2026-08-03) — replaces FilePickerDock ───────
+
+def test_open_root_via_dialog_sets_root_and_remembers_it(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getOpenFileName",
+                        staticmethod(lambda *a, **k: (str(root), "")))
+    dock._on_open_root()
+
+    assert dock._root_path == root
+    assert dock.tree.topLevelItem(0).text(0) == "root.yaml"
+    assert settings.state.get("last_root_file") == str(root)
+    assert settings.state.get("recent_root_files") == [str(root)]
+
+
+def test_open_root_dialog_cancelled_leaves_root_untouched(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getOpenFileName",
+                        staticmethod(lambda *a, **k: ("", "")))
+    dock._on_open_root()
+
+    assert dock._root_path == root
+
+
+def test_recent_list_most_recent_first_and_deduplicated(main_window, tmp_path):
+    a = tmp_path / "a.yaml"
+    b = tmp_path / "b.yaml"
+    a.write_text("cells: {}\n", encoding="utf-8")
+    b.write_text("cells: {}\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(a)
+    dock.set_root_file(b)
+    dock.set_root_file(a)  # re-opening a must move it back to front, not duplicate
+
+    assert settings.state.get("recent_root_files") == [str(a), str(b)]
+    assert dock.recent_combo.count() == 2
+    assert dock.recent_combo.itemData(0) == str(a)
+    assert dock.recent_combo.itemData(1) == str(b)
+
+
+def test_selecting_a_recent_entry_reopens_it(main_window, tmp_path):
+    a = tmp_path / "a.yaml"
+    a.write_text(MINIMAL_CELL, encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(a)
+    dock.set_root_file(None)
+    assert dock.tree.topLevelItemCount() == 0
+
+    dock._on_recent_selected(0)  # only entry: a.yaml
+
+    assert dock._root_path == a
+    assert dock.tree.topLevelItem(0).text(0) == "a.yaml"
+
+
+def test_restores_last_root_file_on_construction(main_window, tmp_path):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    settings.state.set("last_root_file", str(root))
+
+    dock = ConfigTreeDock(main_window)
+
+    assert dock._root_path == root
+    assert dock.tree.topLevelItem(0).text(0) == "root.yaml"

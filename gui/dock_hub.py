@@ -17,7 +17,6 @@ from PyQt6.QtCore import Qt
 from .docks.config_tree import ConfigTreeDock
 from .docks.extract import ExtractDock
 from .docks.fieldstool_dock import FieldsToolDock
-from .docks.file_picker import FilePickerDock
 from .docks.log_panel import LogDock
 from .docks.placer import PlacerDock
 from .docks.role_cluster_tree import RoleClusterTreeDock
@@ -39,17 +38,13 @@ class DockHub:
         main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.config_tree_dock)
         main_window.tabifyDockWidget(self.tree_dock, self.config_tree_dock)
 
-        # ── right group: fieldstool, Files, Extract-to-file, Placer ───────
+        # ── right group: fieldstool, Extract-to-file, Placer ──────────────
         self.fieldstool_dock = FieldsToolDock(main_window, connection=connection)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fieldstool_dock)
 
-        self.file_picker_dock = FilePickerDock(main_window)
-        main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.file_picker_dock)
-        main_window.tabifyDockWidget(self.fieldstool_dock, self.file_picker_dock)
-
         self.extract_dock = ExtractDock(main_window, connection=connection)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.extract_dock)
-        main_window.tabifyDockWidget(self.file_picker_dock, self.extract_dock)
+        main_window.tabifyDockWidget(self.fieldstool_dock, self.extract_dock)
 
         self.placer_dock = PlacerDock(main_window)
         main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.placer_dock)
@@ -75,27 +70,18 @@ class DockHub:
         """Every dock-to-dock connection (real pyqtSignals — a role can
         legitimately have more than one listener)."""
 
-        # Files -> Extract/Placer: ExtractDock's cell-output file and
-        # PlacerDock's placeholder discovery follow the Cells role;
-        # ExtractDock's extract_profiles file follows the Extractor role;
-        # ExtractDock's and PlacerDock's Placer file follow the Placer
-        # role — all assigned via "Use selected" in the Files dock.
-        self.file_picker_dock.cells_file_changed.connect(self.extract_dock.set_target_file)
-        self.file_picker_dock.cells_file_changed.connect(self.placer_dock.set_cells_file)
-        self.file_picker_dock.extractor_file_changed.connect(self.extract_dock.set_profile_file)
-        self.file_picker_dock.placer_file_changed.connect(self.extract_dock.set_placer_file)
-        self.file_picker_dock.placer_file_changed.connect(self.placer_dock.set_placer_file)
-        # Config tree's root — bridged to the Placer role for now (see
-        # ConfigTreeDock.set_root_file's docstring): it's the file
-        # ExtractDock already wires Cells/Extractor includes into after a
-        # successful extract ("placer — это точка сборки"), the closest
-        # existing thing to a single root file until a dedicated "Open
-        # Root file" action replaces this whole Files dock (Этап 2).
-        self.file_picker_dock.placer_file_changed.connect(self.config_tree_dock.set_root_file)
-        # Roles restored from a previous session must reach the listeners
-        # above — restore_roles() re-fires the current values through the
-        # same signals (they were restored before these connections existed).
-        self.file_picker_dock.restore_roles()
+        # Config tree -> Extract/Placer (2026-08-03, replaces FilePickerDock
+        # entirely — see gui/docks/config_tree.py's module docstring):
+        # file_selected fires on every click anywhere in the tree, and
+        # feeds ALL of ExtractDock's/PlacerDock's file targets at once —
+        # what used to be three independently-assigned roles (Cells/
+        # Extractor/Placer) collapse into "whichever file is currently
+        # being browsed".
+        self.config_tree_dock.file_selected.connect(self.extract_dock.set_target_file)
+        self.config_tree_dock.file_selected.connect(self.extract_dock.set_profile_file)
+        self.config_tree_dock.file_selected.connect(self.extract_dock.set_placer_file)
+        self.config_tree_dock.file_selected.connect(self.placer_dock.set_cells_file)
+        self.config_tree_dock.file_selected.connect(self.placer_dock.set_placer_file)
 
         # Components tree -> Placer: clicking a Cluster group node in the
         # tree fills PlacerDock's Cluster field; Config tree -> Placer/

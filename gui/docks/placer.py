@@ -136,7 +136,7 @@ class PlacerDock(QDockWidget):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(4, 4, 4, 4)
 
-        self.cell_label = QLabel(_("No cell picked — pick one in the Cells tab"))
+        self.cell_label = QLabel(_("No cell picked — pick one in the Config tree"))
         self.cell_label.setWordWrap(True)
         layout.addWidget(self.cell_label)
 
@@ -237,7 +237,7 @@ class PlacerDock(QDockWidget):
         self.setWidget(container)
         self._on_origin_mode_changed()
 
-    # ── Wiring from the Files dock / Cells tab / Components tree ──────────
+    # ── Wiring from the Config tree / Components tree ─────────────────────
 
     def set_cells_file(self, path: Optional[Path]) -> None:
         self._cells_path = path
@@ -615,7 +615,7 @@ class PlacerDock(QDockWidget):
         entry, same as every other way a placement gets saved."""
         self._placer_path = placer_path
         self._selected_cell = None
-        self.cell_label.setText(_("No cell picked — pick one in the Cells tab"))
+        self.cell_label.setText(_("No cell picked — pick one in the Config tree"))
         self.cluster_edit.setText("")
         self.origin_mode_combo.setCurrentIndex(0)
         self._on_origin_mode_changed()
