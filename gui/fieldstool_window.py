@@ -156,12 +156,24 @@ class MainWindow(QMainWindow):
         self.target_label = QLabel(_("Nothing selected"))
         self.target_label.setWordWrap(True)
         edit_layout.addWidget(self.target_label)
+        self.pending_label = QLabel("")
+        self.pending_label.setWordWrap(True)
+        self.pending_label.setStyleSheet("color: #a60;")
+        edit_layout.addWidget(self.pending_label)
         form = QFormLayout()
         self.role_combo = QComboBox()
         self.role_combo.setEditable(True)
+        # Enter in either field stages immediately — same guards as clicking
+        # Stage itself (2026-08-04, Denis: "долго Stage жать"). Deliberately
+        # NOT on focus-out: losing focus also happens by clicking elsewhere
+        # (e.g. a different component in the tree), which would stage an
+        # unrelated or half-typed value onto the live board with no explicit
+        # user action asking for a write.
+        self.role_combo.lineEdit().returnPressed.connect(self._on_stage)
         form.addRow(_("Role:"), self.role_combo)
         self.cluster_combo = QComboBox()
         self.cluster_combo.setEditable(True)
+        self.cluster_combo.lineEdit().returnPressed.connect(self._on_stage)
         form.addRow(_("Cluster:"), self.cluster_combo)
         edit_layout.addLayout(form)
         self.stage_button = QPushButton(_("Stage"))
@@ -249,6 +261,12 @@ class MainWindow(QMainWindow):
         Apply), not just the two call sites that used to fire it directly."""
         self._pending_edits = compute_pending_edits(self._components, self._live_snapshot)
         self.pending_dock.set_edits(self._pending_edits)
+        # Refreshes the pending indicator for whatever is CURRENTLY selected
+        # on every trigger (a fresh poll tick right after Stage, not just a
+        # re-click) — never touches the combos themselves here, since that
+        # would clobber in-progress typing; only _prefill_combos_for_refs
+        # (an explicit re-pick) is allowed to do that.
+        self._update_pending_indicator(self._current_targets)
         if self.on_components_changed:
             self.on_components_changed()
 
@@ -315,22 +333,58 @@ class MainWindow(QMainWindow):
         self._prefill_combos_for_refs(refs)
 
     def _prefill_combos_for_refs(self, refs: List[str]) -> None:
-        """Role/Cluster combos reflect the picked target(s)' EXISTING value
-        (from the parsed schematic, self._components) when it's uniform
-        across all of them — cleared when it differs, rather than a
-        "(mixed)" placeholder that could get accidentally staged as a
-        literal value if Stage is clicked without editing it first. Called
-        from every way a target gets picked (tree leaf/group click, live
-        board-selection cross-probe) — previously only group clicks filled
-        anything at all, and only the one field being grouped by."""
+        """Role/Cluster combos reflect the picked target(s)' EFFECTIVE
+        current value — the live board's value when the live snapshot has
+        seen this ref, else the parsed schematic's (self._components) —
+        when it's uniform across all of them; cleared when it differs,
+        rather than a "(mixed)" placeholder that could get accidentally
+        staged as a literal value if Stage is clicked without editing it
+        first. Called from every way a target gets picked (tree leaf/group
+        click, live board-selection cross-probe) — previously only group
+        clicks filled anything at all, and only the one field being grouped
+        by.
+
+        FIXED (2026-08-04, Denis live: "прописал роли... но когда кликаю
+        эти диоды, ...роль... не видно"): used to read self._components
+        unconditionally, i.e. the schematic's last-Rescan value — a target
+        already Staged but not yet Applied has its NEW value only on the
+        live board, so re-selecting it kept showing the OLD, pre-Stage
+        value, forcing edits "blind". The live board already IS the
+        accumulated pending state (see gui/docks/pending.py's module
+        docstring) — reading it here first makes the combo reflect
+        whatever was actually last staged, Applied or not."""
         by_ref = {c.ref: c for c in self._components}
-        picked = [by_ref[ref] for ref in refs if ref in by_ref]
-        if not picked:
+        live_by_ref = {s.ref: s for s in self._live_snapshot}
+        picked_refs = [ref for ref in refs if ref in by_ref]
+        if not picked_refs:
             return
-        roles = {c.role for c in picked}
-        clusters = {c.cluster for c in picked}
-        self.role_combo.setCurrentText(next(iter(roles)) or "" if len(roles) == 1 else "")
-        self.cluster_combo.setCurrentText(next(iter(clusters)) or "" if len(clusters) == 1 else "")
+
+        def effective(ref: str, field: str) -> str:
+            live = live_by_ref.get(ref)
+            if live is not None:
+                return getattr(live, field) or ""
+            return getattr(by_ref[ref], field) or ""
+
+        roles = {effective(ref, "role") for ref in picked_refs}
+        clusters = {effective(ref, "cluster") for ref in picked_refs}
+        self.role_combo.setCurrentText(next(iter(roles)) if len(roles) == 1 else "")
+        self.cluster_combo.setCurrentText(next(iter(clusters)) if len(clusters) == 1 else "")
+        self._update_pending_indicator(picked_refs)
+
+    def _update_pending_indicator(self, refs: List[str]) -> None:
+        """Small note under the target label naming which of the picked
+        refs still differ from the schematic (pending_refs — the same
+        Apply diff Pending changes shows) — the counterpart to the prefill
+        fix above: the combo now shows the right value, but a value staged
+        live and not yet Applied still isn't in the schematic, so it's
+        worth flagging rather than looking identical to an already-durable
+        one."""
+        diverged = sorted(set(refs) & self.pending_refs)
+        if diverged:
+            self.pending_label.setText(
+                _("Not yet applied to schematic: {refs}").format(refs=", ".join(diverged)))
+        else:
+            self.pending_label.setText("")
 
     def _push_selection_to_board(self, refs: List[str]) -> None:
         """Target picked (leaf/group click, from either the live-selection

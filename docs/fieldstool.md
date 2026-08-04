@@ -159,8 +159,14 @@ above:
   collapses to one row, flagged divergent if its units disagree on Role/Cluster — the schema allows
   this, nothing enforces it stays in sync).
 - **Picking a target** — two ways, either fills the **Role**/**Cluster** combo boxes with the
-  picked target(s)' existing value when it's uniform across all of them (read from the parsed
-  schematic), and clears them — not left showing a stale value — when it differs:
+  picked target(s)' EFFECTIVE current value — the live board's value when the live snapshot has
+  seen this ref (2026-08-04: a target already Staged but not yet Applied has its new value only on
+  the live board; re-selecting it used to show the schematic's stale, pre-Stage value, forcing
+  edits "blind" — Denis live: "прописал роли... но когда кликаю эти диоды, ...роль... не видно"),
+  else the parsed schematic's — uniform across all of them fills, differs clears (not left showing
+  a stale value). A small note under the target label names any picked ref that still differs from
+  the schematic (the same Apply diff Pending changes shows), refreshed on every poll tick too, not
+  just on re-click:
   - **Select something in KiCad itself** (Eeschema *or* Pcbnew — the shared connection watches the
     PCB selection, and since PCB/schematic selection cross-probe in KiCad, a schematic-side
     selection shows up here too).
@@ -173,7 +179,11 @@ above:
     this window's own `_on_tree_leaf_picked()`/`_on_group_picked()` and brings this tab to front.
 - **Stage** — writes the current Role/Cluster form values straight onto the picked target(s)' live
   board footprint, over IPC (the same mechanism the main GUI's Components tree uses for **Clear
-  all**/**Delete selected**) — nothing touches `.kicad_sch` yet. There is no separate staging queue
+  all**/**Delete selected**) — nothing touches `.kicad_sch` yet. Pressing **Enter** in either the
+  Role or Cluster field does the same thing as clicking the button (2026-08-04, Denis: "долго Stage
+  жать") — deliberately not on focus-out, since losing focus also happens by clicking a different
+  component, which would stage an unrelated or half-typed value with no explicit write action asked
+  for. There is no separate staging queue
   to persist: whatever is currently on the live board (via Stage, Clear all, Delete selected,
   PlacerDock's Cluster tagging — any of them) already *is* the pending state (2026-08-03 redesign —
   the earlier JSON-backed queue could drift out of sync with the board, e.g. Clear all writing to

@@ -138,6 +138,71 @@ def test_leaf_picked_prefills_both_combos_from_existing_values(fieldstool_window
     assert fieldstool_window.cluster_combo.currentText() == "Cl_A"
 
 
+def test_leaf_picked_prefers_the_live_board_value_over_the_stale_schematic_one(
+        fieldstool_window, tmp_path):
+    """2026-08-04, Denis live: "прописал роли... но когда кликаю эти диоды,
+    ...роль... не видно" — a ref already Staged but not yet Applied has its
+    NEW value only on the live board; re-selecting it must show that, not
+    the schematic's pre-Stage value."""
+    root = _write_root(tmp_path, symbol_block(["D5"], role="OLD_ROLE", cluster="OLD_CLUSTER"))
+    fieldstool_window._set_root_sheet(root)
+    fieldstool_window.set_live_snapshot([_selected("D5", "NEW_ROLE", "NEW_CLUSTER")])
+
+    fieldstool_window._on_tree_leaf_picked(["D5"])
+
+    assert fieldstool_window.role_combo.currentText() == "NEW_ROLE"
+    assert fieldstool_window.cluster_combo.currentText() == "NEW_CLUSTER"
+
+
+def test_leaf_picked_falls_back_to_schematic_value_when_ref_not_in_live_snapshot(
+        fieldstool_window, tmp_path):
+    root = _write_root(tmp_path, symbol_block(["R1"], role="R_A", cluster="Cl_A"))
+    fieldstool_window._set_root_sheet(root)
+    fieldstool_window.set_live_snapshot([_selected("OTHER_REF", "X", "Y")])
+
+    fieldstool_window._on_tree_leaf_picked(["R1"])
+
+    assert fieldstool_window.role_combo.currentText() == "R_A"
+    assert fieldstool_window.cluster_combo.currentText() == "Cl_A"
+
+
+def test_leaf_picked_shows_pending_indicator_when_live_diverges_from_schematic(
+        fieldstool_window, tmp_path):
+    root = _write_root(tmp_path, symbol_block(["D5"], role="OLD_ROLE"))
+    fieldstool_window._set_root_sheet(root)
+    fieldstool_window.set_live_snapshot([_selected("D5", "NEW_ROLE", None)])
+
+    fieldstool_window._on_tree_leaf_picked(["D5"])
+
+    assert "D5" in fieldstool_window.pending_label.text()
+
+
+def test_leaf_picked_clears_pending_indicator_when_live_matches_schematic(
+        fieldstool_window, tmp_path):
+    root = _write_root(tmp_path, symbol_block(["R1"], role="R_A"))
+    fieldstool_window._set_root_sheet(root)
+    fieldstool_window.set_live_snapshot([_selected("R1", "R_A", None)])
+
+    fieldstool_window._on_tree_leaf_picked(["R1"])
+
+    assert fieldstool_window.pending_label.text() == ""
+
+
+def test_pending_indicator_updates_on_a_fresh_poll_tick_without_a_reclick(
+        fieldstool_window, tmp_path):
+    """_recompute_pending() (fired on every set_live_snapshot(), e.g. the
+    poll tick right after Stage writes) must refresh the indicator for
+    whatever is CURRENTLY selected, not just on the next explicit click."""
+    root = _write_root(tmp_path, symbol_block(["D5"], role="OLD_ROLE"))
+    fieldstool_window._set_root_sheet(root)
+    fieldstool_window._on_tree_leaf_picked(["D5"])
+    assert fieldstool_window.pending_label.text() == ""
+
+    fieldstool_window.set_live_snapshot([_selected("D5", "NEW_ROLE", None)])
+
+    assert "D5" in fieldstool_window.pending_label.text()
+
+
 def test_leaf_picked_clears_combos_when_targets_differ(fieldstool_window, tmp_path):
     root = _write_root(
         tmp_path,
@@ -171,6 +236,34 @@ def test_stage_writes_role_cluster_to_the_live_board(fieldstool_window, tmp_path
 
     updates, _description = board.adapter.calls[0]
     assert (board.adapter._fps["R1"], "Role", "NEW") in updates
+
+
+def test_enter_in_role_combo_stages_immediately(fieldstool_window, tmp_path, monkeypatch):
+    """2026-08-04, Denis: "долго Stage жать" — Enter in either field must
+    do exactly what clicking Stage does, guards included."""
+    root = _write_root(tmp_path, symbol_block(["R1"], role="OLD"))
+    fieldstool_window._set_root_sheet(root)
+    board = _connect_board(fieldstool_window, monkeypatch)
+
+    fieldstool_window._set_targets(["R1"])
+    fieldstool_window.role_combo.setCurrentText("NEW")
+    fieldstool_window.role_combo.lineEdit().returnPressed.emit()
+
+    updates, _description = board.adapter.calls[0]
+    assert (board.adapter._fps["R1"], "Role", "NEW") in updates
+
+
+def test_enter_in_cluster_combo_stages_immediately(fieldstool_window, tmp_path, monkeypatch):
+    root = _write_root(tmp_path, symbol_block(["R1"], role="OLD"))
+    fieldstool_window._set_root_sheet(root)
+    board = _connect_board(fieldstool_window, monkeypatch)
+
+    fieldstool_window._set_targets(["R1"])
+    fieldstool_window.cluster_combo.setCurrentText("NEW_CLUSTER")
+    fieldstool_window.cluster_combo.lineEdit().returnPressed.emit()
+
+    updates, _description = board.adapter.calls[0]
+    assert (board.adapter._fps["R1"], "Cluster", "NEW_CLUSTER") in updates
 
 
 def test_stage_success_fires_on_board_written_callback(fieldstool_window, tmp_path, monkeypatch):
