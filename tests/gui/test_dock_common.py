@@ -311,3 +311,18 @@ def test_show_message_sets_label_and_logs_by_style(qapp, caplog):
         assert caplog.records[-1].levelname == "INFO"
         show_message(label, "", "", dock_logger)  # clears the label, no log record
         assert label.text() == ""
+
+
+def test_show_message_truncates_a_multiline_block_to_its_first_line(qapp, caplog):
+    from PyQt6.QtWidgets import QLabel
+    label = QLabel()
+    dock_logger = logging.getLogger("gui.docks.test_dock_common")
+    block = "\n" + "=" * 70 + "\n  FATAL ERROR: net mismatch\n" + "=" * 70 + "\n"
+    with caplog.at_level(logging.DEBUG, logger="gui.docks.test_dock_common"):
+        show_message(label, block, ERROR_STYLE, dock_logger)
+        # Label shows only the first non-blank line, with a pointer to the
+        # Log dock — not the whole "=" * 70-bordered box (2026-08-04: that
+        # was blowing the dock tall enough to not fit on screen).
+        assert label.text() == "FATAL ERROR: net mismatch (see Log for details)"
+        assert label.toolTip() == block  # full text still one hover away
+        assert caplog.records[-1].message == block  # Log dock still gets it in full

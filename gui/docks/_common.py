@@ -291,18 +291,45 @@ def configure_searchable(combo: QComboBox) -> None:
     completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
 
 
+# Chars a pure "=====" / "-----" separator/border line is made of — skipped
+# when picking the label's one-line preview (kicadstamp.exceptions' FATAL
+# ERROR box opens with a "=" * 70 border, which isn't a useful preview on
+# its own).
+_SEPARATOR_CHARS = set("=-*_~")
+
+
+def _first_meaningful_line(text: str) -> str:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped and set(stripped) - _SEPARATOR_CHARS:
+            return stripped
+    return ""
+
+
 def show_message(label: QLabel, text: str, style: str = "",
                  log: Optional[logging.Logger] = None) -> None:
-    """Sets an inline status label AND mirrors the message into the Log
-    dock (see gui/docks/log_panel.py) at the matching level, so error/
+    """Sets an inline status label AND mirrors the FULL message into the
+    Log dock (see gui/docks/log_panel.py) at the matching level, so error/
     warning messages survive after the label itself gets overwritten by
     the next action — requested live 2026-08-01 ("для списка ошибок
     сделать внизу отдельное окошко"). `style` is one of
     ERROR_STYLE/WARN_STYLE/SUCCESS_STYLE ('' -> plain info); the
     caller's logger is passed through so log records keep the source
-    dock's own logger name."""
+    dock's own logger name.
+
+    The label itself only ever shows one line (2026-08-04: some backend
+    errors, e.g. kicadstamp.exceptions' FATAL ERROR box, are a multi-line
+    "=" * 70-bordered block — dumping that whole thing into a word-wrapped
+    label was blowing the dock up so tall the tab no longer fit on screen).
+    Anything past the first non-blank line is truncated, with the full
+    text still one hover away via the tooltip and, as before, in the Log
+    dock in full."""
     label.setStyleSheet(style)
-    label.setText(text)
+    preview = _first_meaningful_line(text)
+    if preview != text.strip():
+        preview += _(" (see Log for details)")
+    label.setText(preview)
+    label.setToolTip(text)
     if not text:
         return
     record_log = log if log is not None else logger
