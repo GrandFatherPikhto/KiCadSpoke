@@ -1,5 +1,37 @@
 # tests/gui/test_log_panel.py
 import logging
+import threading
+
+from tests.gui.conftest import _pump
+
+
+def test_logging_from_a_background_thread_is_queued_not_touched_synchronously(qapp, log_dock):
+    """Regression (found live 2026-08-04): a Windows access violation with a
+    full Python traceback landing in append_line() — a logger call made from
+    inside a gui/worker.py-backgrounded operation (PlacerDock's Redraw, via
+    apply_pipeline.py) ran _QtLogHandler.emit() on THAT worker thread, which
+    used to call append_line() (a QWidget touch) directly — undefined
+    behavior off the UI thread in Qt. Logging is now routed through a
+    pyqtSignal, which Qt automatically queues onto the receiver's (UI)
+    thread whenever the emitting thread differs. Proven here two ways: the
+    text is NOT yet present right after the background thread finishes
+    logging (the old, buggy behavior would have appended it synchronously,
+    right there), and only appears once the UI event loop gets a chance to
+    process the queued signal."""
+    test_logger = logging.getLogger("kicadstamp.gui_test.background_thread")
+
+    def worker():
+        test_logger.info("logged from a background thread")
+
+    thread = threading.Thread(target=worker)
+    thread.start()
+    thread.join()
+
+    assert "logged from a background thread" not in log_dock.text.toPlainText()
+
+    _pump(qapp, lambda: "logged from a background thread" in log_dock.text.toPlainText())
+
+    assert "logged from a background thread" in log_dock.text.toPlainText()
 
 
 def test_level_filtering_and_verbose_toggle(log_dock):

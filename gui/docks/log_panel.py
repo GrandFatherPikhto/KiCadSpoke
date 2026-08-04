@@ -29,6 +29,7 @@ kicadstamp_gui.py already set up.
 import html
 import logging
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QTextDocument
 from PyQt6.QtWidgets import (QCheckBox, QDockWidget, QHBoxLayout, QLineEdit,
                               QPlainTextEdit, QPushButton, QVBoxLayout, QWidget)
@@ -49,18 +50,36 @@ class _QtLogHandler(logging.Handler):
         self._dock = dock
 
     def emit(self, record: logging.LogRecord) -> None:
-        # Same thread as every kipy call in this app (see main_window.py's
-        # module docstring on why there's no QThread here) — appending
-        # straight to the widget from within emit() is safe, no queuing
-        # needed.
+        # FIXED (2026-08-04): this used to call self._dock.append_line()
+        # directly, on the assumption that logging always happens on the
+        # same thread as the GUI ("no QThread here" — true when this
+        # comment was written, false since gui/worker.py's start_long_op
+        # moved poll/Extract/Redraw/Stage/Clear all onto background
+        # QThreads). A logger.info/warning/... call from ANY of that
+        # backgrounded code runs this emit() ON THAT WORKER THREAD, and
+        # append_line() touches a QPlainTextEdit — a QWidget may only be
+        # touched from the UI thread; doing so from a worker thread is
+        # undefined behavior in Qt. Found live: a silent Windows access
+        # violation with a full Python traceback landing exactly here
+        # (apply_pipeline.py's logger.info() inside PlacerDock's
+        # backgrounded Redraw). Routed through a signal instead — emitting a
+        # signal is thread-safe from any thread, and Qt automatically queues
+        # the connected slot onto the RECEIVER's thread (the dock, always
+        # the UI thread) when the emitting thread differs, so append_line()
+        # itself only ever runs on the UI thread regardless of which thread
+        # logged the message.
         try:
             message = self.format(record)
         except Exception:
             message = record.getMessage()
-        self._dock.append_line(message, record.levelno)
+        self._dock.log_line.emit(message, record.levelno)
 
 
 class LogDock(QDockWidget):
+    # See _QtLogHandler.emit()'s docstring — the thread-safe bridge from
+    # "logged on any thread" to "appended on the UI thread".
+    log_line = pyqtSignal(str, int)
+
     def __init__(self, main_window, verbose: bool = False):
         super().__init__(_("Log"), main_window)
         self._main_window = main_window
@@ -99,6 +118,7 @@ class LogDock(QDockWidget):
 
         self.setWidget(container)
 
+        self.log_line.connect(self.append_line)
         self._handler = _QtLogHandler(self)
         self._handler.setFormatter(logging.Formatter(
             "%(asctime)s %(levelname)s %(name)s: %(message)s", "%H:%M:%S"))
