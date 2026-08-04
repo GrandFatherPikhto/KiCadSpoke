@@ -119,6 +119,12 @@ dedicated file per role is just the default habit, not a requirement enforced an
 Builds a `Cell` from whatever's currently selected on the board (components, vias, tracks) and
 writes it into the Cells file — the GUI equivalent of `kicadstamp_cli.py extract`.
 
+**Origin**/**Net aliases**/**Net template role**/**Existing** below live in a tab widget
+(2026-08-04: previously stacked in one long column, whose minimum height was the SUM of every
+section's own — the dock couldn't shrink below that even when most of it didn't apply right now).
+A `QTabWidget` only sizes for the current page, so the dock resizes freely; **Net template role**'s
+tab is hidden outright (not just its content) until it actually applies.
+
 - **Cell name** — defaults to the current selection's Cluster, slugified (`PWR/DAC0` →
   `pwr_dac0`), if nothing's been extracted from this Cluster before; if an existing Cells/
   Extractor key already matches, that wins instead. Never overwrites something you've typed.

@@ -181,6 +181,40 @@ def test_net_alias_positional_fallback_on_rail_swap(main_window, tmp_path):
     assert dock._net_alias_edits["GND"].text() == ""
 
 
+def test_tabs_have_the_expected_labels(main_window, tmp_path):
+    """2026-08-04 (Denis: "плашка отказывается переразмериваться") — Origin/
+    Net aliases/Net template role/Existing moved from one long stacked
+    QVBoxLayout into a QTabWidget, so the dock's minimum height is that of
+    ONE page, not the sum of all of them."""
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+
+    assert [dock._tabs.tabText(i) for i in range(dock._tabs.count())] == [
+        "Origin", "Net aliases", "Net template role", "Existing"]
+
+
+def test_net_template_role_tab_hidden_until_ambiguous(main_window, tmp_path):
+    """The tab (not just the section widget) is what gets shown/hidden now
+    — setTabVisible() replaced the old setVisible() on the section itself
+    (see _update_net_template_role_rows). A role only becomes ambiguous
+    once 2+ of its pads' nets have a non-empty alias (see that method's
+    docstring), not merely by selecting a bridging component."""
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+    assert dock._tabs.isTabVisible(dock._role_net_tab_index) is False
+
+    dock.set_board_selection([], [FakeSelected("FB6", "PI_FILTER_FB", "X", {"1": "-2V5", "2": "-2V5_DIRTY"})])
+    assert dock._tabs.isTabVisible(dock._role_net_tab_index) is False  # no aliases typed yet
+
+    dock._net_alias_edits["-2V5"].setText("PWR_IN")
+    dock._net_alias_edits["-2V5_DIRTY"].setText("PWR_OUT")
+    assert dock._tabs.isTabVisible(dock._role_net_tab_index) is True
+
+
 def test_net_template_role_blocks_extraction_until_resolved(main_window, tmp_path, monkeypatch):
     cells_file = tmp_path / "cells.yaml"
     _write_yaml(cells_file, {})

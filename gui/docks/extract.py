@@ -102,11 +102,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from kipy.board_types import Via
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFormLayout,
                               QGridLayout, QHBoxLayout, QLabel, QLineEdit,
                               QListWidget, QPushButton, QScrollArea,
-                              QVBoxLayout, QWidget)
+                              QTabWidget, QVBoxLayout, QWidget)
 
 from kicadstamp.exceptions import PlacerError
 from kicadstamp.explore import Selected
@@ -129,6 +129,16 @@ class ExtractDock(QWidget):
     формы)"). Building the layout directly on self instead of a wrapped
     QDockWidget-owned container is the only change from that; every widget
     attribute/method below is unchanged."""
+
+    # Fired after a successful Extract that wrote a cell (and/or a profile)
+    # to disk — ConfigTreeDock listens to refresh (see gui/dock_hub.py),
+    # same pattern as PlacerDock.saved/ThermalViaDock.saved. FIXED
+    # (2026-08-04, Denis live: "создал новый экстракт и cell, список в
+    # конфиге не обновляется" — ExtractDock never had this signal at all,
+    # unlike the other two write-capable docks, so a newly extracted cell
+    # never showed up in the Config tree until an unrelated action
+    # happened to trigger ConfigTreeDock.refresh()).
+    saved = pyqtSignal()
 
     def __init__(self, main_window, connection=None):
         super().__init__(main_window)
@@ -171,13 +181,27 @@ class ExtractDock(QWidget):
         self.target_label.setWordWrap(True)
         layout.addWidget(self.target_label)
 
+        # Tabbed instead of stacked (2026-08-04, Denis: "плашка отказывается
+        # переразмериваться" — a QVBoxLayout's minimum height is the SUM of
+        # every section's own minimum, Origin+Net aliases+Net template
+        # role+Existing all stacked at once forced the window taller than
+        # it could ever shrink to. A QTabWidget only sizes for the CURRENT
+        # page, not the sum of all of them, so the dock can actually be
+        # resized down now. Every widget attribute below keeps its old
+        # name — only which layout it's added to changed, nothing that
+        # reads/writes them elsewhere needed touching.
+        self._tabs = QTabWidget()
+        layout.addWidget(self._tabs, 1)
+
+        origin_page = QWidget()
+        origin_page_layout = QVBoxLayout(origin_page)
         origin_form = QFormLayout()
         self.origin_mode_combo = QComboBox()
         self.origin_mode_combo.addItems(
             [_("Bounding box (default)"), _("Component role"), _("Via net")])
         self.origin_mode_combo.currentIndexChanged.connect(self._on_origin_mode_changed)
         origin_form.addRow(_("Origin:"), self.origin_mode_combo)
-        layout.addLayout(origin_form)
+        origin_page_layout.addLayout(origin_form)
 
         self._origin_role_row = QWidget()
         role_row = QHBoxLayout(self._origin_role_row)
@@ -190,7 +214,7 @@ class ExtractDock(QWidget):
         self.origin_pad_edit.setPlaceholderText(_("pad (optional)"))
         role_row.addWidget(QLabel(_("Pad:")))
         role_row.addWidget(self.origin_pad_edit)
-        layout.addWidget(self._origin_role_row)
+        origin_page_layout.addWidget(self._origin_role_row)
         self._origin_role_row.setVisible(False)
 
         self._origin_via_row = QWidget()
@@ -200,35 +224,43 @@ class ExtractDock(QWidget):
         self.origin_via_net_combo.setEditable(True)
         via_row.addWidget(QLabel(_("Net:")))
         via_row.addWidget(self.origin_via_net_combo, 1)
-        layout.addWidget(self._origin_via_row)
+        origin_page_layout.addWidget(self._origin_via_row)
         self._origin_via_row.setVisible(False)
+        origin_page_layout.addStretch(1)
+        self._tabs.addTab(origin_page, _("Origin"))
 
-        layout.addWidget(QLabel(_("Net aliases (blank = keep literal):")))
+        aliases_page = QWidget()
+        aliases_page_layout = QVBoxLayout(aliases_page)
+        aliases_page_layout.addWidget(QLabel(_("Net aliases (blank = keep literal):")))
         self._nets_container = QWidget()
         self._nets_layout = QGridLayout(self._nets_container)
         self._nets_layout.setContentsMargins(0, 0, 0, 0)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(self._nets_container)
-        layout.addWidget(scroll, 1)
+        aliases_page_layout.addWidget(scroll, 1)
+        self._tabs.addTab(aliases_page, _("Net aliases"))
 
         self._role_net_section = QWidget()
         role_net_section_layout = QVBoxLayout(self._role_net_section)
-        role_net_section_layout.setContentsMargins(0, 0, 0, 0)
         role_net_section_layout.addWidget(
             QLabel(_("Net template role (bridging component — pick which aliased net is the template):")))
         self._role_net_layout = QGridLayout()
         self._role_net_layout.setContentsMargins(0, 0, 0, 0)
         role_net_section_layout.addLayout(self._role_net_layout)
-        layout.addWidget(self._role_net_section)
-        self._role_net_section.setVisible(False)
+        role_net_section_layout.addStretch(1)
+        self._role_net_tab_index = self._tabs.addTab(self._role_net_section, _("Net template role"))
+        # Hidden until _update_cluster_warning() finds an ambiguous bridging
+        # component — a whole hidden TAB now (setTabVisible), replacing the
+        # old setVisible(False) on the section widget itself (see the sole
+        # other call site of this, near _role_net_tab_index below).
+        self._tabs.setTabVisible(self._role_net_tab_index, False)
 
-        layout.addWidget(QLabel(_("Existing (click to reuse a name):")))
-        existing_row = QHBoxLayout()
+        existing_page = QWidget()
+        existing_row = QHBoxLayout(existing_page)
         cells_col = QVBoxLayout()
         cells_col.addWidget(QLabel(_("Cells:")))
         self.cells_list = QListWidget()
-        self.cells_list.setMaximumHeight(80)
         self.cells_list.itemClicked.connect(self._on_cell_item_clicked)
         cells_col.addWidget(self.cells_list)
         existing_row.addLayout(cells_col)
@@ -236,11 +268,10 @@ class ExtractDock(QWidget):
         profiles_col = QVBoxLayout()
         profiles_col.addWidget(QLabel(_("Profiles:")))
         self.profiles_list = QListWidget()
-        self.profiles_list.setMaximumHeight(80)
         self.profiles_list.itemClicked.connect(self._on_profile_item_clicked)
         profiles_col.addWidget(self.profiles_list)
         existing_row.addLayout(profiles_col)
-        layout.addLayout(existing_row)
+        self._tabs.addTab(existing_page, _("Existing"))
 
         self.save_profile_checkbox = QCheckBox(_("Also save as extract_profile"))
         layout.addWidget(self.save_profile_checkbox)
@@ -550,7 +581,7 @@ class ExtractDock(QWidget):
             self._role_net_layout.addWidget(combo, row, 1)
             self._net_template_role_edits[role] = combo
 
-        self._role_net_section.setVisible(bool(ambiguous))
+        self._tabs.setTabVisible(self._role_net_tab_index, bool(ambiguous))
 
     def _update_selection_label(self) -> None:
         if not self._raw_items:
@@ -796,6 +827,7 @@ class ExtractDock(QWidget):
         else:
             self._show_message("; ".join(messages), _SUCCESS_STYLE)
         self._refresh_existing_lists()
+        self.saved.emit()
 
     def _start_extract_op(self, payload: Dict[str, Any]) -> None:
         self._active_op = start_long_op(
