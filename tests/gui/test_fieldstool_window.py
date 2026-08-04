@@ -29,20 +29,30 @@ def _selected(ref, role, cluster):
 
 
 class _FakeAdapter:
-    def __init__(self):
+    def __init__(self, missing_fields=()):
+        """missing_fields: {(ref, field_name), ...} — has_field() answers
+        False for exactly these pairs, True for everything else (matches
+        every real footprint having the field, the common case)."""
         self.calls = []
         self._fps = {}
+        self._missing_fields = set(missing_fields)
 
     def get_footprint(self, ref):
-        return self._fps.setdefault(ref, Mock())
+        fp = self._fps.setdefault(ref, Mock())
+        fp.reference_field.text.value = ref
+        return fp
+
+    def has_field(self, fp, field_name):
+        ref = fp.reference_field.text.value
+        return (ref, field_name) not in self._missing_fields
 
     def set_field_values_bulk(self, updates, description):
         self.calls.append((updates, description))
 
 
 class _FakeBoard:
-    def __init__(self):
-        self.adapter = _FakeAdapter()
+    def __init__(self, missing_fields=()):
+        self.adapter = _FakeAdapter(missing_fields)
 
 
 def _run_sync(connection, widgets, fn, on_success, on_error, *args):
@@ -54,12 +64,12 @@ def _run_sync(connection, widgets, fn, on_success, on_error, *args):
     return "fake-controller"
 
 
-def _connect_board(fieldstool_window, monkeypatch):
+def _connect_board(fieldstool_window, monkeypatch, missing_fields=()):
     """Wires a fake connected board + synchronous start_long_op — _on_stage()
     now writes to the live board over IPC (2026-08-03 redesign), so it needs
     both to run at all instead of hanging on a real "Not connected" dialog."""
     monkeypatch.setattr(fieldstool_window_mod, "start_long_op", _run_sync)
-    board = _FakeBoard()
+    board = _FakeBoard(missing_fields)
     fieldstool_window.connection.board = board
     return board
 
@@ -179,6 +189,49 @@ def test_stage_success_fires_on_board_written_callback(fieldstool_window, tmp_pa
     fieldstool_window._on_stage()
 
     assert calls == [1]
+
+
+def test_stage_skips_a_target_missing_the_field_but_writes_the_rest(
+        fieldstool_window, tmp_path, monkeypatch):
+    """2026-08-04 (handoff_2026_08_04_arch_review_handoff_and_cluster_bug.md,
+    'Разрыв B'): FB3-like case — a footprint missing Cluster used to make
+    set_field_value's fatal ValidationError roll back the WHOLE batch.
+    Stage must now skip just that (ref, field) pair and still write the
+    rest, same has_field guard Clear all already uses."""
+    root = _write_root(tmp_path, symbol_block(["R1", "R2"], role="OLD"))
+    fieldstool_window._set_root_sheet(root)
+    board = _connect_board(fieldstool_window, monkeypatch, missing_fields={("R2", "Cluster")})
+
+    fieldstool_window._set_targets(["R1", "R2"])
+    fieldstool_window.role_combo.setCurrentText("NEW_ROLE")
+    fieldstool_window.cluster_combo.setCurrentText("NEW_CLUSTER")
+    warned = []
+    monkeypatch.setattr(fieldstool_window_mod.QMessageBox, "warning",
+                        staticmethod(lambda *a, **k: warned.append(a[2])))
+
+    fieldstool_window._on_stage()
+
+    updates, _description = board.adapter.calls[0]
+    assert (board.adapter._fps["R1"], "Role", "NEW_ROLE") in updates
+    assert (board.adapter._fps["R1"], "Cluster", "NEW_CLUSTER") in updates
+    assert (board.adapter._fps["R2"], "Role", "NEW_ROLE") in updates
+    assert not any(u[1] == "Cluster" and u[0] is board.adapter._fps["R2"] for u in updates)
+    assert len(warned) == 1 and "R2 (Cluster)" in warned[0]
+
+
+def test_stage_with_every_target_missing_the_field_writes_nothing_but_does_not_fail(
+        fieldstool_window, tmp_path, monkeypatch):
+    root = _write_root(tmp_path, symbol_block(["R1"], role="OLD"))
+    fieldstool_window._set_root_sheet(root)
+    board = _connect_board(fieldstool_window, monkeypatch, missing_fields={("R1", "Cluster")})
+
+    fieldstool_window._set_targets(["R1"])
+    fieldstool_window.cluster_combo.setCurrentText("NEW_CLUSTER")
+    monkeypatch.setattr(fieldstool_window_mod.QMessageBox, "warning", staticmethod(lambda *a, **k: None))
+
+    fieldstool_window._on_stage()
+
+    assert board.adapter.calls == []  # set_field_values_bulk never called — nothing to write
 
 
 def test_stage_with_no_target_does_nothing(fieldstool_window, tmp_path):

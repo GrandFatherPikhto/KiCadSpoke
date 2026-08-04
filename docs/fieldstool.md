@@ -178,6 +178,10 @@ above:
   PlacerDock's Cluster tagging — any of them) already *is* the pending state (2026-08-03 redesign —
   the earlier JSON-backed queue could drift out of sync with the board, e.g. Clear all writing to
   the board but staging nothing, leaving Apply stuck disabled with no way to apply the erasure).
+  A target whose footprint doesn't have the field yet (Role and/or Cluster) is skipped rather than
+  blocking the rest of the batch (2026-08-04, same `has_field` guard Clear all/Delete selected use)
+  — a warning names exactly which target/field was skipped; see [Ensure fields...](#2-apply-kicad-must-be-closed)
+  or [Why fields must already exist on the target](#why-fields-must-already-exist-on-the-target).
 
 ### 2. Apply (KiCad must be closed)
 

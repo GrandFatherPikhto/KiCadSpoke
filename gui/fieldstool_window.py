@@ -384,24 +384,43 @@ class MainWindow(QMainWindow):
             self._on_stage_failed, payload)
 
     def _run_stage(self, payload: dict) -> dict:
-        """Worker thread: board IPC only — never touches a widget."""
+        """Worker thread: board IPC only — never touches a widget.
+
+        Skips a (footprint, field) pair the footprint doesn't have, instead
+        of letting set_field_value's fatal ValidationError roll back the
+        WHOLE batch over one stale/incomplete component (2026-08-04 handoff:
+        handoff_2026_08_04_arch_review_handoff_and_cluster_bug.md, "Разрыв
+        B" — FB3 missing Cluster used to block Role/Cluster from reaching
+        the other 5 targets too) — same has_field guard RoleClusterTreeDock.
+        _run_clear already uses for Clear all, just per-field instead of
+        per-footprint since Stage may be setting only Role, only Cluster,
+        or both."""
         adapter = self.connection.board.adapter
         footprints = [fp for fp in (adapter.get_footprint(ref) for ref in payload["refs"])
                       if fp is not None]
-        result = {"error": None, "role": payload["role"], "cluster": payload["cluster"]}
+        result = {"error": None, "role": payload["role"], "cluster": payload["cluster"],
+                  "skipped": []}
         if not footprints:
             return result
         updates = []
+        skipped = []
         for fp in footprints:
-            if payload["role"]:
-                updates.append((fp, "Role", payload["role"]))
-            if payload["cluster"]:
-                updates.append((fp, "Cluster", payload["cluster"]))
-        try:
-            adapter.set_field_values_bulk(
-                updates, _("Set Role/Cluster on {count} component(s)").format(count=len(footprints)))
-        except ValidationError as e:
-            return {"error": str(e)}
+            ref = fp.reference_field.text.value if fp.reference_field else "?"
+            for field, value in (("Role", payload["role"]), ("Cluster", payload["cluster"])):
+                if not value:
+                    continue
+                if adapter.has_field(fp, field):
+                    updates.append((fp, field, value))
+                else:
+                    skipped.append(f"{ref} ({field})")
+        result["skipped"] = skipped
+        if updates:
+            touched = len({id(u[0]) for u in updates})
+            try:
+                adapter.set_field_values_bulk(
+                    updates, _("Set Role/Cluster on {count} component(s)").format(count=touched))
+            except ValidationError as e:
+                return {"error": str(e)}
         return result
 
     def _finish_stage(self, result: dict) -> None:
@@ -415,6 +434,13 @@ class MainWindow(QMainWindow):
             self._add_combo_item_if_missing(self.role_combo, result["role"])
         if result["cluster"]:
             self._add_combo_item_if_missing(self.cluster_combo, result["cluster"])
+        skipped = result.get("skipped") or []
+        if skipped:
+            QMessageBox.warning(
+                self, _("Some fields were skipped"),
+                _("These targets have no such field on their footprint yet — nothing was "
+                  "written for them (use Ensure fields... below, or add the field by hand, "
+                  "then Update PCB from Schematic):\n{refs}").format(refs="\n".join(skipped)))
         if self.on_board_written:
             self.on_board_written()
 
