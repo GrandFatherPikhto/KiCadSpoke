@@ -394,12 +394,16 @@ class MainWindow(QMainWindow):
         here (most likely: KiCad closed between two _poll() ticks, since that
         one only re-verifies the connection every POLL_INTERVAL_MS) drops the
         connection immediately rather than waiting for the slower timer to
-        notice — dropping board is a plain attribute write, not a widget
-        touch, so it is safe here on the worker thread."""
+        notice — connection.disconnect() (which also closes the underlying
+        kipy socket, see its docstring) is a plain attribute write plus a
+        socket close, neither of which is a widget touch, so it is safe here
+        on the worker thread; the socket being closed is this very same
+        thread's own, already broken (that's why we're in this except
+        clause) — no cross-thread concern."""
         try:
             items = self.connection.board.adapter.get_selected_items()
         except Exception as e:
-            self.connection.board = None
+            self.connection.disconnect()
             return {"error": str(e)}
         return {"error": None, "items": items}
 

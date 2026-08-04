@@ -91,6 +91,14 @@ class _FakeConnection:
         # the same attribute the real BoardConnection exposes.
         self.long_op_active = False
 
+    def disconnect(self) -> None:
+        """Mirrors the real BoardConnection.disconnect() (2026-08-04) at the
+        observable level a test cares about — board becomes None. The real
+        one also closes the underlying kipy socket (see its docstring), an
+        implementation detail this fake has no equivalent for and doesn't
+        need to replicate."""
+        self.board = None
+
     @property
     def is_connected(self) -> bool:
         # The embedded fieldstool window checks connection.is_connected in

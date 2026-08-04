@@ -70,6 +70,33 @@ class KiCadBoardAdapter(IBoardAdapter):
         self._footprints_cache = None
         logger.info(_("Board obtained"))
 
+    def close(self) -> None:
+        """Explicitly closes the underlying kipy client's pynng socket
+        instead of leaving that to the garbage collector. Found live
+        (2026-08-04): a silent Windows access violation with NO Python frame
+        on the crashing thread (pure native code) — the GUI creates a brand
+        new kipy.KiCad() (and pynng.Req0 socket) on every reconnect
+        (BoardConnection.connect(), called every time KiCad drops and comes
+        back), but never closed the previous one. Across many reconnects in
+        one long-lived GUI session, several live sockets pile up and get
+        finalized by the GC at unpredictable points on unpredictable
+        threads — a plausible trigger for a native crash in a C-extension
+        async socket library (pynng). kipy 0.7.1 exposes no public close()
+        on KiCad/KiCadClient (checked kicad.py/client.py directly) — this
+        reaches into KiCadClient's private _conn, so failure here must never
+        propagate (the socket may already be broken, which is often exactly
+        why this is being called)."""
+        client = getattr(self._kicad, "_client", None)
+        if client is None or not getattr(client, "_connected", False):
+            return
+        conn = getattr(client, "_conn", None)
+        if conn is None:
+            return
+        try:
+            conn.close()
+        except Exception:
+            logger.debug(_("Closing previous kipy connection failed (ignored)"), exc_info=True)
+
     # --- Search ---
     def get_footprint(self, ref: str) -> FootprintInstance | None:
         for fp in self.get_footprints():

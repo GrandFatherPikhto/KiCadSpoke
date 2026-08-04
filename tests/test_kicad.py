@@ -32,6 +32,7 @@ def test_adapter_has_methods():
     methods = [
         # Core access methods
         "refresh_board",
+        "close",
         "get_footprint",
         "get_footprints",
         "get_vias",
@@ -213,6 +214,57 @@ class TestFootprintsCache:
         assert first[0] is pre_flip_fp
         assert second[0] is post_flip_fp
         assert adapter._board.get_footprints.call_count == 2
+
+
+class TestClose:
+    """close() (added 2026-08-04): explicitly closes the underlying kipy
+    client's pynng socket instead of leaving that to the garbage collector —
+    see the method's own docstring for the native-crash motivation (a silent
+    Windows access violation with no Python frame on the crashing thread,
+    found live after many reconnects piled up several never-closed sockets
+    in one long-lived GUI session). kipy 0.7.1 exposes no public close(), so
+    this reaches into KiCadClient's private _conn — these tests pin down
+    that reach against the real private-attribute shape."""
+
+    def test_closes_the_connection_when_connected(self):
+        adapter = Adapter.__new__(Adapter)
+        conn = MagicMock()
+        client = MagicMock()
+        client._connected = True
+        client._conn = conn
+        adapter._kicad = MagicMock()
+        adapter._kicad._client = client
+
+        adapter.close()
+
+        conn.close.assert_called_once()
+
+    def test_noop_when_never_connected(self):
+        """_conn doesn't even exist on a real KiCadClient until _connect()
+        has run once — must not raise AttributeError."""
+        adapter = Adapter.__new__(Adapter)
+        client = MagicMock()
+        client._connected = False
+        del client._conn  # real KiCadClient has no _conn attribute at all yet
+        adapter._kicad = MagicMock()
+        adapter._kicad._client = client
+
+        adapter.close()  # must not raise
+
+    def test_swallows_a_close_failure(self):
+        """The socket may already be broken (that's often exactly why close()
+        is being called) — a failure here must never propagate and block the
+        caller's own cleanup/reconnect."""
+        adapter = Adapter.__new__(Adapter)
+        conn = MagicMock()
+        conn.close.side_effect = RuntimeError("already broken")
+        client = MagicMock()
+        client._connected = True
+        client._conn = conn
+        adapter._kicad = MagicMock()
+        adapter._kicad._client = client
+
+        adapter.close()  # must not raise
 
 
 class TestSetFieldValuesBulk:

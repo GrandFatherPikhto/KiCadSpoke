@@ -61,6 +61,7 @@ class BoardConnection:
         """Attempts a fresh connection. Returns None on success, or an error
         message on failure — never raises, so a QTimer tick doesn't need a
         try/except at every call site."""
+        self.disconnect()  # closes any stale board first — see its docstring
         try:
             board = Board.connect(timeout_ms=self.timeout_ms)
         except Exception as e:
@@ -77,7 +78,7 @@ class BoardConnection:
             self._rebuild_snapshot()
         except Exception as e:
             logger.warning("Snapshot after connect failed, dropping connection: %s", e)
-            self.board = None
+            self.disconnect()
             return str(e)
         logger.info("Connected to KiCad")
         return None
@@ -95,5 +96,18 @@ class BoardConnection:
             return None
         except Exception as e:
             logger.warning("Refresh failed, dropping connection: %s", e)
-            self.board = None
+            self.disconnect()
             return str(e)
+
+    def disconnect(self) -> None:
+        """Explicitly drops the current board, closing its underlying kipy
+        client first (KiCadBoardAdapter.close()) instead of leaving that to
+        the garbage collector — see that method's docstring for why (a
+        silent native access-violation crash found live 2026-08-04, most
+        likely from an unclosed pynng socket finalized at an unpredictable
+        point after many reconnects in one long-lived GUI session). Safe to
+        call whether or not a board is currently held — every place that
+        used to do `self.board = None` directly now goes through this."""
+        if self.board is not None:
+            self.board.adapter.close()
+        self.board = None

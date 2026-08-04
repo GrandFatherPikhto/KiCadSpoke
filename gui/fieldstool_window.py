@@ -468,11 +468,12 @@ class MainWindow(QMainWindow):
             return
         # Apply requires KiCad closed anyway (check below), so there is no
         # point holding on to a stale connection handle while it's gone —
-        # drop it before even checking; the main window's own poll (already
-        # backgrounded, see gui/main_window.py) will reconnect on its own
-        # once KiCad becomes available again, no extra "try to come back"
-        # logic needed here.
-        self.connection.board = None
+        # drop it before even checking (disconnect() also closes the
+        # underlying kipy socket instead of leaving that to the GC, see its
+        # docstring); the main window's own poll (already backgrounded, see
+        # gui/main_window.py) will reconnect on its own once KiCad becomes
+        # available again, no extra "try to come back" logic needed here.
+        self.connection.disconnect()
         try:
             check_kicad_not_running(force=False)
         except RuntimeError:
