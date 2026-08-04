@@ -55,7 +55,7 @@ def test_cell_click_discovers_placeholders(main_window, tmp_path):
 
 def test_build_entry_dict_absolute_xy_round_trips_through_loader(main_window, tmp_path):
     dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
-    dock.cluster_edit.setText("Channel_2_PI_Filter")
+    dock.cluster_edit.setCurrentText("Channel_2_PI_Filter")
     dock.x_edit.setText("10.5")
     dock.y_edit.setText("-3.2")
     dock._param_edits["PWR_IN"].setCurrentText("+3V3_CH2")
@@ -73,7 +73,7 @@ def test_build_entry_dict_absolute_xy_round_trips_through_loader(main_window, tm
 
 def test_anchor_ref_and_role_together_is_blocked(main_window, tmp_path):
     dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
-    dock.cluster_edit.setText("X")
+    dock.cluster_edit.setCurrentText("X")
     dock.origin_mode_combo.setCurrentIndex(1)
     dock.anchor_ref_edit.setText("U1")
     dock.anchor_role_edit.setCurrentText("SOME_ROLE")
@@ -84,7 +84,7 @@ def test_anchor_ref_and_role_together_is_blocked(main_window, tmp_path):
 
 def test_anchor_role_with_pad_and_shift(main_window, tmp_path):
     dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
-    dock.cluster_edit.setText("X")
+    dock.cluster_edit.setCurrentText("X")
     dock.origin_mode_combo.setCurrentIndex(1)
     dock.anchor_role_edit.setCurrentText("SOME_ROLE")
     dock.anchor_pad_edit.setText("1")
@@ -102,7 +102,7 @@ def test_anchor_role_with_pad_and_shift(main_window, tmp_path):
 
 def test_point_mode_requires_a_name(main_window, tmp_path):
     dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
-    dock.cluster_edit.setText("X")
+    dock.cluster_edit.setCurrentText("X")
     dock.origin_mode_combo.setCurrentIndex(2)
 
     assert dock._build_entry_dict() is None
@@ -115,7 +115,7 @@ def test_point_mode_requires_a_name(main_window, tmp_path):
 
 def test_save_upserts_by_name_without_duplicating(main_window, tmp_path):
     dock, _, placer_file = _make_cell_and_dock(main_window, tmp_path)
-    dock.cluster_edit.setText("Channel_2_PI_Filter")
+    dock.cluster_edit.setCurrentText("Channel_2_PI_Filter")
     dock.x_edit.setText("1")
     dock.y_edit.setText("2")
     entry = dock._build_entry_dict()
@@ -142,7 +142,7 @@ def test_redraw_requires_cell_reachable_via_placer_config(main_window, tmp_path,
     include: wiring (load_config's cfg.cells) — picking a cell name in
     the list alone isn't enough if include: was never pointed at it."""
     dock, cells_file, placer_file = _make_cell_and_dock(main_window, tmp_path)
-    dock.cluster_edit.setText("Channel_2_PI_Filter")
+    dock.cluster_edit.setCurrentText("Channel_2_PI_Filter")
     dock.x_edit.setText("1")
     dock.y_edit.setText("2")
 
@@ -162,7 +162,7 @@ def test_redraw_preserves_other_placements_for_registry_safety(main_window, tmp_
     (kicadstamp/registry.py). A synthetic single-placement config here
     would make Redraw silently prune everyone else's vias/tracks."""
     dock, cells_file, placer_file = _make_cell_and_dock(main_window, tmp_path)
-    dock.cluster_edit.setText("Channel_2_PI_Filter")
+    dock.cluster_edit.setCurrentText("Channel_2_PI_Filter")
     dock.x_edit.setText("10")
     dock.y_edit.setText("5")
     dock._param_edits["PWR_IN"].setCurrentText("+3V3_CH2")
@@ -253,7 +253,7 @@ def test_load_placement_round_trips_absolute_xy(main_window, tmp_path):
 
     dock.load_placement(entry)
 
-    assert dock.cluster_edit.text() == "Channel_2_PI_Filter"
+    assert dock.cluster_edit.currentText() == "Channel_2_PI_Filter"
     assert dock._selected_cell == "pi_filter"
     assert dock.origin_mode_combo.currentIndex() == 0
     assert dock.x_edit.text() == "10.5"
@@ -358,8 +358,33 @@ def test_refresh_known_roles_populates_from_snapshot(main_window):
 
     roles = [dock.anchor_role_edit.itemText(i) for i in range(dock.anchor_role_edit.count())]
     clusters = [dock.anchor_cluster_edit.itemText(i) for i in range(dock.anchor_cluster_edit.count())]
+    cluster_field_items = [dock.cluster_edit.itemText(i) for i in range(dock.cluster_edit.count())]
     assert roles == ["ROLE_A"]
     assert clusters == ["C1", "C2"]
+    assert cluster_field_items == ["C1", "C2"]
+
+
+def test_cluster_edit_is_a_searchable_dropdown_that_still_accepts_free_text(main_window):
+    """2026-08-04, Denis: "а мы можем сделать кластер в пласере выпадающим?
+    Так было бы удобнее..." — Cluster is now a QComboBox populated with
+    known cluster names (see refresh_known_roles above), but must stay
+    editable so a brand new cluster/clone_placement name (one that doesn't
+    exist on the board yet) can still be typed in, same as the anchor
+    Role/Cluster combos already work."""
+    class _Row:
+        def __init__(self, ref, role, cluster):
+            self.ref = ref
+            self.role = role
+            self.cluster = cluster
+
+    dock = PlacerDock(main_window)
+    dock.refresh_known_roles([_Row("R1", "ROLE_A", "Existing_Cluster")])
+
+    dock.cluster_edit.setCurrentText("Existing_Cluster")
+    assert dock.cluster_edit.currentText() == "Existing_Cluster"
+
+    dock.cluster_edit.setCurrentText("Brand_New_Cluster")
+    assert dock.cluster_edit.currentText() == "Brand_New_Cluster"
 
 
 def test_on_redraw_dispatches_to_worker(main_window, tmp_path, monkeypatch):
@@ -369,7 +394,7 @@ def test_on_redraw_dispatches_to_worker(main_window, tmp_path, monkeypatch):
     start_long_op. PlacerDock has no injected connection, so the shared
     socket comes from the main window."""
     dock, cells_file, placer_file = _make_cell_and_dock(main_window, tmp_path)
-    dock.cluster_edit.setText("Channel_2_PI_Filter")
+    dock.cluster_edit.setCurrentText("Channel_2_PI_Filter")
     dock.x_edit.setText("1")
     dock.y_edit.setText("2")
 

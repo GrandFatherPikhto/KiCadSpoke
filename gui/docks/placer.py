@@ -146,8 +146,9 @@ class PlacerDock(QWidget):
         layout.addWidget(self.cell_label)
 
         form = QFormLayout()
-        self.cluster_edit = QLineEdit()
-        self.cluster_edit.setPlaceholderText(_("Cluster / clone_placement name"))
+        self.cluster_edit = QComboBox()
+        configure_searchable(self.cluster_edit)
+        self.cluster_edit.lineEdit().setPlaceholderText(_("Cluster / clone_placement name"))
         form.addRow(_("Cluster:"), self.cluster_edit)
         layout.addLayout(form)
 
@@ -266,20 +267,23 @@ class PlacerDock(QWidget):
         Cell-list
         move (2026-08-01: "раз уж у нас есть список Cluster то при выборе
         кластера надо сразу автоматически заполнять поле кластер")."""
-        self.cluster_edit.setText(name)
+        self.cluster_edit.setCurrentText(name)
 
     def refresh_known_roles(self, snapshot) -> None:
-        """Populates the anchor Role/Cluster combos with distinct values
-        already used on the board — "если выбираем по роли то надо и
-        поле anchor cluster да и лист" (2026-08-01). Called by MainWindow
-        at the same ~2s full-poll cadence as the rest of the docks (not
-        the 400ms selection-watch tick — the known-value list barely
-        changes tick to tick). `snapshot` is the cached
+        """Populates the Cluster/anchor Role/anchor Cluster combos with
+        distinct values already used on the board — "если выбираем по
+        роли то надо и поле anchor cluster да и лист" (2026-08-01);
+        Cluster itself made a searchable dropdown too, same reasoning,
+        2026-08-04 ("а мы можем сделать кластер в пласере выпадающим?").
+        Called by MainWindow at the same ~2s full-poll cadence as the rest
+        of the docks (not the 400ms selection-watch tick — the known-value
+        list barely changes tick to tick). `snapshot` is the cached
         BoardConnection.snapshot the caller already built — this used to
         call board.select() itself, a second full snapshot build per
         refresh (1.2 in techdocs/handoff/)."""
         roles = sorted({s.role for s in snapshot if s.role})
         clusters = sorted({s.cluster for s in snapshot if s.cluster})
+        set_combo_items(self.cluster_edit, clusters)
         set_combo_items(self.anchor_role_edit, roles)
         set_combo_items(self.anchor_cluster_edit, clusters)
 
@@ -356,7 +360,7 @@ class PlacerDock(QWidget):
             return None
 
     def _build_entry_dict(self) -> Optional[Dict[str, Any]]:
-        name = self.cluster_edit.text().strip()
+        name = self.cluster_edit.currentText().strip()
         if not name:
             self._show_message(_("Cluster name is required."), _ERROR_STYLE)
             return None
@@ -620,7 +624,7 @@ class PlacerDock(QWidget):
         self._placer_path = placer_path
         self._selected_cell = None
         self.cell_label.setText(_("No cell picked — pick one in the Config tree"))
-        self.cluster_edit.setText("")
+        self.cluster_edit.setCurrentText("")
         self.origin_mode_combo.setCurrentIndex(0)
         self._on_origin_mode_changed()
         self.x_edit.setText("")
@@ -649,7 +653,7 @@ class PlacerDock(QWidget):
         scratch (2026-08-02: "таб пласеров... там где дерево компонент и
         экстракторов")."""
         self._show_message("")
-        self.cluster_edit.setText(str(entry.get("name", "")))
+        self.cluster_edit.setCurrentText(str(entry.get("name", "")))
         if "cell" in entry:
             self.set_selected_cell(entry["cell"])
 
