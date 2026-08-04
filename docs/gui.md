@@ -203,6 +203,15 @@ running `kicadstamp_gui.py` a second time while one is already running doesn't o
 window — it raises the existing one instead and exits immediately. This guard is always active,
 independent of the Tray icon checkbox.
 
+The checkbox state persists across restarts (`gui_state.json`'s `tray_enabled`) — if it was checked
+in an earlier session, a later launch starts with it already checked, so the title-bar X hides
+instead of quits from the very first close, with no on-screen reminder that this is what will
+happen. On Windows specifically, a freshly-shown tray icon commonly lands in the hidden/overflow
+tray (the "^" arrow next to the clock) rather than the visible row — "window vanished, no icon
+anywhere I can see" does **not** mean the process died; check the overflow arrow first. If the icon
+still can't be found, re-running `kicadstamp_gui.py` (the single-instance guard above) raises the
+existing hidden window without starting a second process — no need to hunt it down in Task Manager.
+
 ## Open fieldstool
 
 The status-bar **Open fieldstool** button (and the tray menu's identical item) un-hides the main
