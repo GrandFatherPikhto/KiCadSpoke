@@ -230,8 +230,6 @@ class MainWindow(QMainWindow):
         self._set_combo_items(self.role_combo, sorted(roles))
         self._set_combo_items(self.cluster_combo, sorted(clusters))
         self._recompute_pending()
-        if self.on_components_changed:
-            self.on_components_changed()
 
     def _recompute_pending(self) -> None:
         """Recomputes the schematic-vs-board diff and pushes it to
@@ -240,9 +238,16 @@ class MainWindow(QMainWindow):
         self._live_snapshot from the last poll tick), so this can safely
         run on every trigger (Rescan, or a fresh live snapshot) without
         the "expensive work belongs behind an explicit action" concern
-        that applies to the reads themselves."""
+        that applies to the reads themselves. Also the single place that
+        notifies on_components_changed — the main GUI's Components tree in
+        "Not yet applied" mode now filters by pending_refs (see below), so
+        it needs telling on every trigger this fires from (a fresh poll
+        tick/Stage write changes which refs are pending, not just Rescan/
+        Apply), not just the two call sites that used to fire it directly."""
         self._pending_edits = compute_pending_edits(self._components, self._live_snapshot)
         self.pending_dock.set_edits(self._pending_edits)
+        if self.on_components_changed:
+            self.on_components_changed()
 
     @property
     def components(self) -> List[SchematicComponent]:
@@ -253,6 +258,20 @@ class MainWindow(QMainWindow):
         attribute — a stable public interface for a value that is refreshed
         wholesale on every rescan and never mutated in place."""
         return self._components
+
+    @property
+    def pending_refs(self) -> set:
+        """Refs that currently have at least one Role/Cluster discrepancy
+        between the schematic and the live board (see _pending_edits) — what
+        "Not yet applied" actually means. Added 2026-08-03: that tree mode
+        used to list EVERY schematic component regardless of whether it had
+        anything outstanding (its original job was just "pick a fieldstool
+        target without a live board selection"), which read as a bug once
+        Pending changes existed alongside it — Denis, live: components stayed
+        listed there after a successful Apply even though nothing was left
+        to apply. The tree now filters by this set instead of showing
+        dock.components wholesale."""
+        return {e.ref for e in self._pending_edits}
 
     @staticmethod
     def _set_combo_items(combo: QComboBox, items: List[str]) -> None:

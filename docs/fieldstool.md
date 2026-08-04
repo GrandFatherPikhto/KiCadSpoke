@@ -165,9 +165,11 @@ above:
     PCB selection, and since PCB/schematic selection cross-probe in KiCad, a schematic-side
     selection shows up here too).
   - The main GUI's own [Components tree](./gui.md#components-tree), switched to **Not yet applied**
-    mode, reads this window's `self._components` directly — click a **leaf** (one refdes) or a
+    mode, reads this window's `self._components` — filtered to `pending_refs` (2026-08-03: only refs
+    with an actual schematic-vs-board discrepancy right now, so a component whose values already
+    match doesn't stay listed as "not yet applied" forever). Click a **leaf** (one refdes) or a
     **group** node (every refdes in that Role/Cluster group at once, for a group-rename without
-    retyping refdes) there instead, no live board selection needed. Clicking calls straight into
+    retyping refdes) there instead of a live board selection. Clicking calls straight into
     this window's own `_on_tree_leaf_picked()`/`_on_group_picked()` and brings this tab to front.
 - **Stage** — writes the current Role/Cluster form values straight onto the picked target(s)' live
   board footprint, over IPC (the same mechanism the main GUI's Components tree uses for **Clear

@@ -51,12 +51,18 @@ Two data sources, one tree, toggled by the **Not yet applied** checkbox:
   something in KiCad's own PCB editor highlights it here. Clicking a **Cluster group node** (only in
   Cluster grouping, only a group — not a leaf) also fills the Placer dock's Cluster field.
 - **Checked — not yet applied (schematic).** Same tree, same grouping/filter UI, but the data comes
-  from the [fieldstool tab](#fieldstool-tab)'s own already-parsed `.kicad_sch` component list instead
-  of the live board — so you can pick a fieldstool target (a component that might not even be placed
-  on the PCB yet) without needing a live board selection at all. Divergent multi-unit refs (units
-  disagreeing on Role/Cluster) get a ⚠ marker. Clicking a leaf or group here stages that target into
-  fieldstool (same as clicking used to inside fieldstool's own, now-retired, internal tree) and
-  brings the fieldstool tab to front. Refreshes automatically whenever fieldstool's own Rescan runs.
+  from the [fieldstool tab](#fieldstool-tab)'s own already-parsed `.kicad_sch` component list — and,
+  since 2026-08-03, only the refs that currently have an actual Role/Cluster discrepancy between the
+  schematic and the live board (the same diff Pending changes shows). A component whose schematic and
+  board values already agree — including right after a successful Apply — no longer shows up here at
+  all (found live: components used to stay listed even with nothing left to apply, which read as a
+  bug once Pending changes existed alongside this view). A component never seen on the live board this
+  session (no live snapshot entry to compare against) is also not shown, even if it's genuinely on the
+  schematic — there's nothing to diff it against. Divergent multi-unit refs (units disagreeing on
+  Role/Cluster within the schematic itself) get a ⚠ marker. Clicking a leaf or group here stages that
+  target into fieldstool (same as clicking used to inside fieldstool's own, now-retired, internal
+  tree) and brings the fieldstool tab to front. Refreshes automatically whenever fieldstool's own
+  Rescan runs, or the schematic-vs-board diff changes (a fresh poll tick, or a Stage/Clear all write).
 
 The grouping choice and the live/schematic toggle are both remembered across restarts. **Filter**
 matches ref/role/cluster in either mode; **regex** switches from substring to a case-insensitive

@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from gui.schema_model import SchematicComponent
+from kicadstamp.explore import Selected
 
 from gui import settings
 from gui.dock_hub import DockHub
@@ -104,7 +105,7 @@ def test_tree_cluster_picked_fills_placer_cluster_field(real_main_window):
     real_main_window.tree_dock._on_clicked(
         real_main_window.tree_dock.tree.model().indexFromItem(top_level))
 
-    assert real_main_window.placer_dock.cluster_edit.text() == "Channel_1"
+    assert real_main_window.placer_dock.cluster_edit.currentText() == "Channel_1"
 
 
 def test_cell_picked_fills_placer_selected_cell(real_main_window):
@@ -131,7 +132,7 @@ def test_placement_picked_loads_into_placer_form(real_main_window):
     entry = {"name": "spoke_1", "cell": "ldo_adj", "xy": [1.5, 2.5]}
     real_main_window.config_tree_dock.placement_picked.emit(entry)
 
-    assert real_main_window.placer_dock.cluster_edit.text() == "spoke_1"
+    assert real_main_window.placer_dock.cluster_edit.currentText() == "spoke_1"
     assert real_main_window.placer_dock._selected_cell == "ldo_adj"
     assert real_main_window.placer_dock.x_edit.text() == "1.5"
     assert real_main_window.placer_dock.y_edit.text() == "2.5"
@@ -264,7 +265,7 @@ def test_tree_dock_uses_injected_connection_for_board_highlight(main_window):
         def select_items(self, footprints):
             selected.append(footprints)
 
-    injected = SimpleNamespace(board=SimpleNamespace(adapter=_FakeAdapter()))
+    injected = SimpleNamespace(board=SimpleNamespace(adapter=_FakeAdapter()), long_op_active=False)
     dock = RoleClusterTreeDock(main_window, connection=injected)
     fp = object()
     dock.set_footprints([_FakeSelected("C1", "C_IN", "Channel_1/PI_FILTER")])
@@ -286,15 +287,23 @@ def test_fieldstool_components_changed_refreshes_tree(real_main_window):
     bound method at connect() time): swap the fieldstool window's component
     list, emit the signal, and assert the tree rebuilt with the new data."""
     dock = real_main_window.tree_dock
-    real_main_window.fieldstool_dock.window._components = [
+    window = real_main_window.fieldstool_dock.window
+    window._components = [
         SchematicComponent("R1", "R_A", "Cl_A", "root.kicad_sch", 0, divergent=False),
     ]
+    # "Not yet applied" mode filters by pending_refs (2026-08-03) — needs a
+    # live snapshot value that actually disagrees with the schematic for R1
+    # to show up at all.
+    window.set_live_snapshot([Selected(ref="R1", role="R_B", cluster="Cl_A",
+                                       sheet=[], nets={}, fp=None)])
     dock.mode_checkbox.setChecked(True)  # schematic mode -> _rebuild shows R1
     assert _find_item(dock.tree.model(), "R1") is not None
 
-    real_main_window.fieldstool_dock.window._components = [
+    window._components = [
         SchematicComponent("R2", "R_A", "Cl_A", "root.kicad_sch", 0, divergent=False),
     ]
+    window.set_live_snapshot([Selected(ref="R2", role="R_B", cluster="Cl_A",
+                                       sheet=[], nets={}, fp=None)])
     real_main_window.fieldstool_dock.components_changed.emit()
 
     assert _find_item(dock.tree.model(), "R2") is not None

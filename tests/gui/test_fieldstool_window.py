@@ -255,6 +255,32 @@ def test_apply_succeeds_writes_file_and_clears_pending(fieldstool_window, tmp_pa
     assert Path(str(root) + ".bak").exists()
 
 
+def test_pending_refs_reflects_only_refs_with_a_discrepancy(fieldstool_window, tmp_path):
+    """pending_refs (2026-08-03) is what the main GUI's Components tree
+    filters "Not yet applied" mode by — R1's live Role disagrees with its
+    schematic value and must be included; R2's matches and must not."""
+    root = _write_root(
+        tmp_path,
+        symbol_block(["R1"], role="OLD"),
+        symbol_block(["R2"], role="SAME"),
+    )
+    fieldstool_window._set_root_sheet(root)
+
+    fieldstool_window.set_live_snapshot([
+        _selected("R1", "NEW", None),
+        _selected("R2", "SAME", None),
+    ])
+
+    assert fieldstool_window.pending_refs == {"R1"}
+
+
+def test_pending_refs_empty_before_any_live_snapshot(fieldstool_window, tmp_path):
+    root = _write_root(tmp_path, symbol_block(["R1"], role="OLD"))
+    fieldstool_window._set_root_sheet(root)
+
+    assert fieldstool_window.pending_refs == set()
+
+
 def _report(count):
     return [EditReport(file="x.kicad_sch", refs=[f"R{i}"], field="Role",
                        old_value="OLD", new_value="NEW", kind="replace")

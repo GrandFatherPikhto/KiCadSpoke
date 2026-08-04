@@ -63,6 +63,15 @@ class FieldsToolDock(QDockWidget):
         GUI's tree never touches the private `_components`."""
         return self.window.components
 
+    @property
+    def pending_refs(self):
+        """Refs with an outstanding schematic-vs-board discrepancy right
+        now — delegates to the embedded window's own public property (see
+        its docstring). The main GUI's Components tree filters its "Not yet
+        applied" mode by this instead of showing every schematic component
+        unconditionally."""
+        return self.window.pending_refs
+
     def pick_group(self, field: str, value: str, refs: List[str]) -> None:
         """Route a group-node click from the main GUI's Components tree into
         fieldstool's existing _on_group_picked() staging/combo-fill logic."""

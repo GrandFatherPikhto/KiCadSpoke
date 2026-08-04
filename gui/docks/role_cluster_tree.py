@@ -15,7 +15,11 @@ Two modes, toggled by the "Not yet applied" checkbox:
 - Schematic ("not yet applied", checked) — data comes from fieldstool's
   already-parsed SchematicComponent list (gui/docks/fieldstool_dock.py's
   embedded fieldstool MainWindow, read fresh at every rebuild, never
-  cached here) — for picking a fieldstool target without needing a live
+  cached here), FILTERED to only refs with an actual schematic-vs-board
+  discrepancy right now (fieldstool_window.pending_refs — 2026-08-03; used
+  to list every schematic component unconditionally, which meant a
+  component stayed listed here even after a successful Apply left nothing
+  outstanding). For picking a fieldstool target without needing a live
   board selection, the same job fieldstool's own now-deleted internal tree
   used to do. A click calls straight into fieldstool's existing
   _on_tree_leaf_picked()/_on_group_picked() (reusing its staging/combo-fill
@@ -268,13 +272,25 @@ class RoleClusterTreeDock(QDockWidget):
     def _current_rows(self) -> List[_Row]:
         if not self.mode_checkbox.isChecked():
             return [_Row(s.ref, s.role, s.cluster) for s in self._selected]
-        # Public accessor on fieldstool's MainWindow (see gui/fieldstool_
-        # window.py's components property) — not the private `_components`,
-        # which is refreshed wholesale and owned by that window.
+        # Public accessors on fieldstool's MainWindow (see gui/fieldstool_
+        # window.py's components/pending_refs properties) — not the private
+        # `_components`/`_pending_edits`, which are refreshed wholesale and
+        # owned by that window.
         dock = self._fieldstool()
         if dock is None:
             return []
-        return [_Row(c.ref, c.role, c.cluster, divergent=c.divergent) for c in dock.components]
+        # Filtered to refs with an actual schematic-vs-board discrepancy —
+        # this mode used to list every schematic component unconditionally
+        # (its original job was just "pick a target without a live board
+        # selection"), which read as a real bug once Pending changes existed
+        # alongside it: components stayed listed here after a successful
+        # Apply even though nothing was left to apply (Denis, live,
+        # 2026-08-03). No live snapshot at all (never connected this
+        # session) means pending_refs is empty and this mode shows nothing —
+        # accepted tradeoff, see the fieldstool_window.pending_refs docstring.
+        pending_refs = dock.pending_refs
+        return [_Row(c.ref, c.role, c.cluster, divergent=c.divergent)
+                for c in dock.components if c.ref in pending_refs]
 
     def _fieldstool(self):
         """The embedded fieldstool dock, resolved lazily — this dock is
@@ -455,6 +471,18 @@ class RoleClusterTreeDock(QDockWidget):
 
             board = self._connection.board
             if board is None or not refs:
+                return
+            # A background long op (poll, Extract/Redraw, or — since
+            # 2026-08-03 — the refresh MainWindow.request_refresh() fires
+            # right after a Stage/Clear all write) holds the shared kipy
+            # socket; a synchronous select_items() call here would
+            # interleave into its in-flight REQ transaction. Found live:
+            # "ConnectionError: Error receiving reply from KiCad: Operation
+            # canceled" on a tree click that happened to land mid-poll — the
+            # request_refresh fix made that window much easier to hit.
+            # fieldstool_window.py's _push_selection_to_board() already
+            # guards the identical call the same way.
+            if self._connection.long_op_active:
                 return
             footprints = [s.fp for s in self._selected if s.ref in refs]
             board.adapter.select_items(footprints)

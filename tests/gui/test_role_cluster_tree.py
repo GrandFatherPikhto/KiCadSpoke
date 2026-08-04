@@ -5,11 +5,21 @@ from PyQt6.QtCore import QItemSelectionModel
 from PyQt6.QtWidgets import QMessageBox
 
 from gui.schema_model import SchematicComponent
+from kicadstamp.explore import Selected
 
 from gui import settings
 import gui.docks.role_cluster_tree as role_cluster_tree_mod
 from gui.docks.role_cluster_tree import RoleClusterTreeDock
 from kicadstamp.exceptions import ValidationError
+
+
+def _diverged(ref, role, cluster):
+    """A live-board Selected whose Role disagrees with the schematic value
+    passed alongside it — the minimum needed to put `ref` into fieldstool_
+    window.pending_refs, which "Not yet applied" mode now filters by
+    (2026-08-03: it used to list every schematic component unconditionally)."""
+    return Selected(ref=ref, role=(role or "") + "_DIVERGED", cluster=cluster,
+                    sheet=[], nets={}, fp=None)
 
 
 class FakeSelected:
@@ -21,6 +31,7 @@ class FakeSelected:
 class FakeAdapter:
     def __init__(self, missing_fields=None):
         self.calls = []
+        self.select_items_calls = []
         # fp -> set of field names that footprint reports as absent (not
         # just empty) — has_field() below consults this, defaulting every
         # footprint to "has both fields" unless a test says otherwise.
@@ -31,6 +42,9 @@ class FakeAdapter:
 
     def set_field_values_bulk(self, updates, description):
         self.calls.append((updates, description))
+
+    def select_items(self, items):
+        self.select_items_calls.append(items)
 
 
 class FakeBoard:
@@ -103,6 +117,40 @@ def test_clicking_a_cluster_group_node_fires_cluster_picked_signal(main_window):
     assert picked == ["Channel_1", "Channel_1/PI_FILTER"]
 
 
+def test_leaf_click_selects_the_footprint_on_the_live_board(main_window):
+    board = FakeBoard()
+    main_window.connection.board = board
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    c1 = FakeSelected("C1", "C_IN", "Channel_1")
+    dock.set_footprints([c1])
+
+    leaf = _find_item(dock.tree.model(), "C1")
+    dock._on_clicked(dock.tree.model().indexFromItem(leaf))
+
+    assert board.adapter.select_items_calls == [[c1.fp]]
+
+
+def test_leaf_click_does_not_touch_the_board_during_a_long_op(main_window):
+    """Regression: found live — "ConnectionError: Error receiving reply from
+    KiCad: Operation canceled" on a tree click. select_items() ran
+    synchronously with no long_op_active guard, unlike fieldstool_window.py's
+    identical _push_selection_to_board() — a click landing while a
+    background poll/Extract/Redraw holds the shared kipy socket interleaved
+    into its in-flight REQ transaction and corrupted it. Became much easier
+    to hit once MainWindow.request_refresh() started firing a background
+    poll right after every Stage/Clear all write (2026-08-03)."""
+    board = FakeBoard()
+    main_window.connection.board = board
+    main_window.connection.long_op_active = True
+    dock = RoleClusterTreeDock(main_window, connection=main_window.connection)
+    dock.set_footprints([FakeSelected("C1", "C_IN", "Channel_1")])
+
+    leaf = _find_item(dock.tree.model(), "C1")
+    dock._on_clicked(dock.tree.model().indexFromItem(leaf))
+
+    assert board.adapter.select_items_calls == []
+
+
 def test_collapse_all_survives_a_later_rebuild(main_window):
     # Regression test for the "snaps back open on the next poll tick" bug:
     # _rebuild() runs on every set_footprints() call (simulating a ~2s poll
@@ -169,9 +217,11 @@ def test_schematic_mode_not_restored_in_init_but_restore_method_works(real_main_
 
 def test_schematic_leaf_click_routes_to_fieldstool_and_opens_tab(real_main_window):
     dock = real_main_window.tree_dock
-    real_main_window.fieldstool_dock.window._components = [
+    window = real_main_window.fieldstool_dock.window
+    window._components = [
         SchematicComponent("R1", "R_A", "Cl_A", "root.kicad_sch", 0, divergent=False),
     ]
+    window.set_live_snapshot([_diverged("R1", "R_A", "Cl_A")])
     dock.mode_checkbox.setChecked(True)
 
     leaf_picked = Mock()
@@ -188,9 +238,11 @@ def test_schematic_leaf_click_routes_to_fieldstool_and_opens_tab(real_main_windo
 
 def test_schematic_group_click_uses_hierarchical_cluster_value(real_main_window):
     dock = real_main_window.tree_dock
-    real_main_window.fieldstool_dock.window._components = [
+    window = real_main_window.fieldstool_dock.window
+    window._components = [
         SchematicComponent("R1", "R_A", "Channel_1/PI_FILTER", "root.kicad_sch", 0, divergent=False),
     ]
+    window.set_live_snapshot([_diverged("R1", "R_A", "Channel_1/PI_FILTER")])
     dock.mode_checkbox.setChecked(True)
     dock.group_by.setCurrentIndex(1)  # Cluster grouping -> hierarchical, matches live mode
 
@@ -206,19 +258,47 @@ def test_schematic_group_click_uses_hierarchical_cluster_value(real_main_window)
 
 def test_schematic_divergent_component_gets_warning_marker(real_main_window):
     dock = real_main_window.tree_dock
-    real_main_window.fieldstool_dock.window._components = [
+    window = real_main_window.fieldstool_dock.window
+    window._components = [
         SchematicComponent("R1", "R_A", "Cl_A", "root.kicad_sch", 0, divergent=True),
     ]
+    window.set_live_snapshot([_diverged("R1", "R_A", "Cl_A")])
     dock.mode_checkbox.setChecked(True)
 
     assert _find_item(dock.tree.model(), "R1 ⚠") is not None
 
 
+def test_schematic_mode_hides_a_component_with_no_pending_discrepancy(real_main_window):
+    """2026-08-03: "Not yet applied" used to list every schematic component
+    unconditionally — found live: a component stayed listed there even after
+    a successful Apply left nothing outstanding ("по факту, поскольку
+    изменения на схеме уже применились и плата обновилась, они уже не
+    должны оставаться в списке Not yet applied"). Now filtered to
+    pending_refs: R1 has a live-board discrepancy and must show up, R2's
+    live value already matches its schematic value and must not."""
+    dock = real_main_window.tree_dock
+    window = real_main_window.fieldstool_dock.window
+    window._components = [
+        SchematicComponent("R1", "R_A", "Cl_A", "root.kicad_sch", 0, divergent=False),
+        SchematicComponent("R2", "R_A", "Cl_A", "root.kicad_sch", 0, divergent=False),
+    ]
+    window.set_live_snapshot([
+        _diverged("R1", "R_A", "Cl_A"),
+        Selected(ref="R2", role="R_A", cluster="Cl_A", sheet=[], nets={}, fp=None),
+    ])
+    dock.mode_checkbox.setChecked(True)
+
+    assert _find_item(dock.tree.model(), "R1") is not None
+    assert _find_item(dock.tree.model(), "R2") is None
+
+
 def test_set_footprints_does_not_clobber_active_schematic_view(real_main_window):
     dock = real_main_window.tree_dock
-    real_main_window.fieldstool_dock.window._components = [
+    window = real_main_window.fieldstool_dock.window
+    window._components = [
         SchematicComponent("SCH1", "R_A", "Cl_A", "root.kicad_sch", 0, divergent=False),
     ]
+    window.set_live_snapshot([_diverged("SCH1", "R_A", "Cl_A")])
     dock.mode_checkbox.setChecked(True)
     assert _find_item(dock.tree.model(), "SCH1") is not None
 
@@ -230,7 +310,8 @@ def test_set_footprints_does_not_clobber_active_schematic_view(real_main_window)
 
 def test_refresh_schematic_view_noop_in_live_mode_rebuilds_in_schematic_mode(real_main_window):
     dock = real_main_window.tree_dock
-    real_main_window.fieldstool_dock.window._components = [
+    window = real_main_window.fieldstool_dock.window
+    window._components = [
         SchematicComponent("R1", "R_A", "Cl_A", "root.kicad_sch", 0, divergent=False),
     ]
 
@@ -243,9 +324,10 @@ def test_refresh_schematic_view_noop_in_live_mode_rebuilds_in_schematic_mode(rea
     assert dock.tree.model() is model_before
 
     dock.mode_checkbox.setChecked(True)
-    real_main_window.fieldstool_dock.window._components = [
+    window._components = [
         SchematicComponent("R2", "R_A", "Cl_A", "root.kicad_sch", 0, divergent=False),
     ]
+    window.set_live_snapshot([_diverged("R2", "R_A", "Cl_A")])
     dock.refresh_schematic_view()  # schematic mode -> rebuilds with the fresh list
     assert _find_item(dock.tree.model(), "R2") is not None
 
