@@ -261,6 +261,97 @@ def test_add_cell_cancelled_writes_nothing(main_window, tmp_path, monkeypatch):
     assert yaml.safe_load(root.read_text(encoding="utf-8")) == {"cells": {}}
 
 
+def test_rename_action_present_for_a_leaf_absent_for_a_category(main_window, tmp_path):
+    """2026-08-04, Denis: "А мы можем добавить конекстное меню в конфиг
+    чтобы переименовать плэейсменты, целлы, профили извлечения и т.д.?" —
+    Rename only makes sense on an actual entry, not a category header or
+    the file node itself."""
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    cells_category = _find(dock.tree.topLevelItem(0), "Cells")
+    leaf = cells_category.child(0)
+
+    assert leaf.data(0, config_tree_mod.Qt.ItemDataRole.UserRole)[0] == "leaf"
+    assert cells_category.data(0, config_tree_mod.Qt.ItemDataRole.UserRole) is None
+
+
+def test_rename_cell_updates_the_dict_key_and_refreshes_the_tree(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
+                        staticmethod(lambda *a, **k: ("renamed_cell", True)))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "information",
+                        staticmethod(lambda *a, **k: None))
+
+    dock._on_rename(root, "cells", "one_role")
+
+    data = yaml.safe_load(root.read_text(encoding="utf-8"))
+    assert "renamed_cell" in data["cells"]
+    assert "one_role" not in data["cells"]
+    assert _find(dock.tree.topLevelItem(0), "Cells").child(0).text(0) == "renamed_cell"
+
+
+def test_rename_cell_cascades_a_reference_in_another_file(main_window, tmp_path, monkeypatch):
+    (tmp_path / "cells.yaml").write_text(MINIMAL_CELL, encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        "include:\n  - cells.yaml\n"
+        "clone_placements:\n  - name: spoke_1\n    cell: one_role\n",
+        encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
+                        staticmethod(lambda *a, **k: ("renamed_cell", True)))
+    shown = []
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "information",
+                        staticmethod(lambda self_, title, text: shown.append(text)))
+
+    dock._on_rename(tmp_path / "cells.yaml", "cells", "one_role")
+
+    assert yaml.safe_load(root.read_text(encoding="utf-8"))["clone_placements"][0]["cell"] == \
+        "renamed_cell"
+    assert len(shown) == 1 and "root.yaml" in shown[0]  # summary names the other changed file
+
+
+def test_rename_declined_leaves_the_file_untouched(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
+                        staticmethod(lambda *a, **k: ("", False)))
+
+    dock._on_rename(root, "cells", "one_role")
+
+    assert "one_role" in yaml.safe_load(root.read_text(encoding="utf-8"))["cells"]
+
+
+def test_rename_collision_shows_a_warning_and_writes_nothing(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text("cells:\n  a: {}\n  b: {}\n", encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
+                        staticmethod(lambda *a, **k: ("b", True)))
+    warned = []
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "warning",
+                        staticmethod(lambda *a, **k: warned.append(1)))
+
+    dock._on_rename(root, "cells", "a")
+
+    assert warned == [1]
+    assert yaml.safe_load(root.read_text(encoding="utf-8"))["cells"] == {"a": {}, "b": {}}
+
+
 def test_add_thermal_via_pad_emits_request_instead_of_writing_directly(main_window, tmp_path):
     root = tmp_path / "root.yaml"
     root.write_text("thermal_via_arrays: []\n", encoding="utf-8")

@@ -48,6 +48,16 @@ file/category/leaf distinction only matters for left-click routing above,
 not for these actions, which always operate on "the nearest file
 ancestor" (Denis: "Если выбран файл или его десцендант..." — the
 descendant doesn't change WHICH file the action targets).
+
+Rename (2026-08-04, Denis: "А мы можем добавить конекстное меню в конфиг
+чтобы переименовать плэейсменты, целлы, профили извлечения и т.д.?") —
+appears ONLY when right-clicking an actual leaf (unlike the file-level
+actions above), covers all 7 sections including the 3 with no edit form
+(a bare rename needs none), and for cells:/points: specifically also
+rewrites every cell:/anchor_point: reference to the old name anywhere in
+the whole include: graph, not just the one file the entry is declared in
+— see gui/docks/rename.py for the full cross-reference audit this is
+based on and why the other 5 sections need no cascading at all.
 """
 import os
 from pathlib import Path
@@ -65,6 +75,7 @@ from kicadstamp.i18n import _
 from .. import settings
 from ._common import (add_include, disable_include, display_path, merge_write,
                       non_includable_keys)
+from .rename import CASCADE_FIELD, rename_entry
 
 # Recent root files, most-recent-first, capped at this many entries — same
 # "remember a handful of recently used paths" idea FilePickerDock's
@@ -85,10 +96,6 @@ _SECTION_LABELS = {
     "extract_profiles": _("Extract profiles"),
     "clone_profiles": _("Clone profiles"),
 }
-
-# Sections with a real leaf-click destination (see module docstring) — the
-# rest are listed but inert (no existing form to route into yet).
-_CLICKABLE_SECTIONS = {"cells", "clone_placements", "extract_profiles", "thermal_via_arrays"}
 
 
 class ConfigTreeDock(QDockWidget):
@@ -247,8 +254,12 @@ class ConfigTreeDock(QDockWidget):
             section_item = QTreeWidgetItem(file_item, [label])
             for name, payload in self._entries(raw):
                 leaf = QTreeWidgetItem(section_item, [name])
-                if section in _CLICKABLE_SECTIONS:
-                    leaf.setData(0, Qt.ItemDataRole.UserRole, ("leaf", section, payload))
+                # Always set, not just for _CLICKABLE_SECTIONS — the
+                # context menu's Rename action (2026-08-04) needs to
+                # identify a leaf's section regardless of whether left-click
+                # routes it anywhere yet (Rules/Points/Clone profiles have
+                # no edit form, but a bare rename doesn't need one).
+                leaf.setData(0, Qt.ItemDataRole.UserRole, ("leaf", section, payload))
         for child in node.children:
             self._build_file_item(file_item, child, parent_path=node.path)
 
@@ -320,6 +331,15 @@ class ConfigTreeDock(QDockWidget):
         file_path, parent_path = file_ctx
 
         menu = QMenu(self.tree)
+
+        leaf_data = item.data(0, Qt.ItemDataRole.UserRole)
+        if leaf_data is not None and leaf_data[0] == "leaf":
+            _kind, section, _payload = leaf_data
+            old_name = item.text(0)
+            menu.addAction(_("Rename...")).triggered.connect(
+                lambda: self._on_rename(file_path, section, old_name))
+            menu.addSeparator()
+
         menu.addAction(_("Add cell...")).triggered.connect(
             lambda: self._add_cell(file_path))
         menu.addAction(_("Add thermal via pad...")).triggered.connect(
@@ -334,6 +354,34 @@ class ConfigTreeDock(QDockWidget):
                 lambda: self._remove_file(file_path, parent_path))
 
         menu.exec(self.tree.viewport().mapToGlobal(pos))
+
+    def _on_rename(self, file_path: Path, section: str, old_name: str) -> None:
+        """Renames a leaf entry — for cells:/points: (see gui/docks/
+        rename.py's CASCADE_FIELD) this also rewrites every cell:/
+        anchor_point: reference to it anywhere in the whole include: graph,
+        not just file_path itself, so the entry's own file is resolved
+        again from the CURRENT root (self._root_path), not assumed to be
+        the graph root."""
+        new_name, ok = QInputDialog.getText(
+            self, _("Rename"), _("New name for {old!r}:").format(old=old_name), text=old_name)
+        new_name = new_name.strip()
+        if not ok or not new_name or new_name == old_name:
+            return
+        try:
+            changed = rename_entry(self._root_path, file_path, section, old_name, new_name)
+        except OSError as e:
+            QMessageBox.warning(self, _("Rename failed"), str(e))
+            return
+
+        self.refresh()
+        message = _("Renamed {old!r} to {new!r} — {count} file(s) updated: {files}").format(
+            old=old_name, new=new_name, count=len(changed),
+            files=", ".join(display_path(p) for p in changed))
+        if section not in CASCADE_FIELD:
+            message += " " + _(
+                "If any CLI command uses --only/--profile {old!r}, update that separately — "
+                "this only rewrites YAML files, it can't see command-line usage.").format(old=old_name)
+        QMessageBox.information(self, _("Renamed"), message)
 
     def _add_cell(self, file_path: Path) -> None:
         name, ok = QInputDialog.getText(self, _("Add cell"), _("Cell name:"))
