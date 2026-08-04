@@ -51,14 +51,25 @@ SUCCESS_STYLE = "color: #070;"
 
 def _read_data(path: Path) -> dict:
     """Read an existing config file's YAML/JSON content (or {} when it
-    doesn't exist yet). Raises on read/parse errors instead of returning
-    {} — the merge-write helpers are on the docks' write path, where a
-    broken file must surface to the user, not be silently treated as
-    empty (unlike gui/yaml_io.load_data)."""
+    doesn't exist yet). Raises OSError on read/parse errors instead of
+    returning {} — the merge-write helpers are on the docks' write path,
+    where a broken file must surface to the user, not be silently treated
+    as empty (unlike gui/yaml_io.load_data). FIXED (2026-08-04): a malformed
+    file used to raise the raw yaml.YAMLError/json.JSONDecodeError instead
+    — neither is an OSError, so every caller's `except OSError` (e.g.
+    PlacerDock._do_save's, written against exactly this docstring's
+    promise) missed it, and the raw exception propagated uncaught out of a
+    Qt slot, which PyQt6 aborts the whole process on by default. Found
+    live: Placer's Save crashed the entire GUI over one stray character in
+    an unrelated part of the target YAML file."""
     if not path.exists():
         return {}
     with open(path, "r", encoding="utf-8") as f:
-        return (json.load(f) if path.suffix.lower() == ".json" else yaml.safe_load(f)) or {}
+        try:
+            return (json.load(f) if path.suffix.lower() == ".json" else yaml.safe_load(f)) or {}
+        except (json.JSONDecodeError, yaml.YAMLError) as e:
+            raise OSError(_("{path} is not valid {kind}: {error}").format(
+                path=path, kind="JSON" if path.suffix.lower() == ".json" else "YAML", error=e)) from e
 
 
 def _write_data(path: Path, data: dict) -> None:

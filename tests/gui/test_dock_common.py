@@ -18,6 +18,7 @@ from gui.docks._common import (ERROR_STYLE, SUCCESS_STYLE, WARN_STYLE,
                                disable_include, display_path, merge_write,
                                non_includable_keys, set_combo_items, show_message,
                                upsert_clone_placement, upsert_list_entry)
+import gui.docks._common as common_mod
 
 
 def _load(path: Path):
@@ -74,6 +75,39 @@ def test_merge_write_section_merges_only_that_nested_dict(config_path):
 def test_merge_write_creates_missing_file(config_path):
     assert merge_write(config_path, {"cell": {"x": 1}}) is False
     assert _load(config_path) == {"cell": {"x": 1}}
+
+
+# ── _read_data on a malformed file ──────────────────────────────────────
+
+def test_merge_write_raises_os_error_on_malformed_yaml(tmp_path):
+    """Regression (found live 2026-08-04): a malformed target file used to
+    raise the raw yaml.YAMLError instead of OSError — every write-path
+    caller (e.g. PlacerDock._do_save) only catches OSError (per _read_data's
+    own documented contract), so the raw exception propagated uncaught out
+    of a Qt slot and PyQt6 aborted the whole GUI process over one broken
+    file."""
+    path = tmp_path / "config.yaml"
+    path.write_text("cells: [1, 2\n  a: 3\n", encoding="utf-8")
+
+    with pytest.raises(OSError):
+        merge_write(path, {"cell": {"x": 1}})
+
+
+def test_merge_write_raises_os_error_on_malformed_json(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text("{not valid json", encoding="utf-8")
+
+    with pytest.raises(OSError):
+        merge_write(path, {"cell": {"x": 1}})
+
+
+def test_read_data_os_error_message_names_the_broken_file(tmp_path):
+    path = tmp_path / "config.yaml"
+    path.write_text("cells: [1, 2\n  a: 3\n", encoding="utf-8")
+
+    with pytest.raises(OSError) as excinfo:
+        common_mod._read_data(path)
+    assert str(path) in str(excinfo.value)
 
 
 # ── add_list_entry ──────────────────────────────────────────────────────
