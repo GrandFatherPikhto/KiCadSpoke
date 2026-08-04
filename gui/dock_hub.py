@@ -141,11 +141,12 @@ class DockHub:
         self.config_tree_dock.profile_picked.connect(self.detail_dock.show_extract)
         self.config_tree_dock.thermal_via_picked.connect(self.thermal_via_dock.load_entry)
         self.config_tree_dock.thermal_via_picked.connect(self.detail_dock.show_thermal_via)
-        # Placer/Thermal via -> Config tree: a successful Save refreshes the
-        # whole tree (walk_include_tree() is re-run) so a brand new (or
-        # renamed) entry shows up without reassigning Files.
+        # Placer/Thermal via/Extract -> Config tree: a successful Save
+        # refreshes the whole tree (walk_include_tree() is re-run) so a
+        # brand new (or renamed) entry shows up without reassigning Files.
         self.placer_dock.saved.connect(self.config_tree_dock.refresh)
         self.thermal_via_dock.saved.connect(self.config_tree_dock.refresh)
+        self.extract_dock.saved.connect(self.config_tree_dock.refresh)
         # Config tree's "Add placer.../Add thermal via pad..." context-menu
         # actions -> Placer/Thermal via: open the form blank, targeting the
         # file the action was invoked on, and bring that tab to front (same

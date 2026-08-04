@@ -208,6 +208,29 @@ def test_placer_saved_refreshes_config_tree_placements(real_main_window, tmp_pat
     assert placements.child(0).text(0) == "spoke_1"
 
 
+def test_extract_saved_refreshes_config_tree_cells(real_main_window, tmp_path):
+    """ExtractDock -> ConfigTreeDock wiring (saved -> refresh) — FIXED
+    2026-08-04 (Denis live: "создал новый экстракт и cell, список в
+    конфиге не обновляется"): ExtractDock never had a saved signal at all,
+    unlike PlacerDock/ThermalViaDock, so a freshly extracted cell never
+    showed up in the Config tree without an unrelated action happening to
+    trigger refresh() first. Same real-widget-state assertion style as
+    test_placer_saved_refreshes_config_tree_placements above."""
+    cells_file = tmp_path / "cells.yaml"
+    _write(cells_file)
+    real_main_window.config_tree_dock.set_root_file(cells_file)
+    root_item = real_main_window.config_tree_dock.tree.topLevelItem(0)
+    assert root_item.childCount() == 0
+
+    cells_file.write_text("cells:\n  ldo_adj_2vp:\n    components: []\n", encoding="utf-8")
+    real_main_window.extract_dock.saved.emit()
+
+    root_item = real_main_window.config_tree_dock.tree.topLevelItem(0)
+    cells = root_item.child(0)
+    assert cells.text(0) == "Cells"
+    assert cells.child(0).text(0) == "ldo_adj_2vp"
+
+
 # ── 3.2: docks use the injected BoardConnection, not main_window.connection ──
 
 def test_extract_dock_uses_injected_connection_when_given(main_window):
