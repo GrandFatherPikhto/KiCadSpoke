@@ -99,6 +99,7 @@ class PendingChangesDock(QDockWidget):
         super().__init__(_("Pending changes"), main_window)
         self._main_window = main_window
         self.on_apply_clicked = None  # Callable[[], None], set by MainWindow
+        self.on_ensure_fields_clicked = None  # Callable[[], None], set by MainWindow
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -115,6 +116,16 @@ class PendingChangesDock(QDockWidget):
         self.apply_button = QPushButton(_("Apply..."))
         self.apply_button.clicked.connect(lambda: self.on_apply_clicked and self.on_apply_clicked())
         button_row.addWidget(self.apply_button)
+        # Always enabled (unlike Apply, which needs a live diff) — this
+        # scans the whole schematic tree for a structural gap (a component
+        # missing Role/Cluster entirely, see schematic_set_fields.
+        # plan_ensure_fields_for_root's docstring for how FB3 got found
+        # live 2026-08-04), which has nothing to do with the board/
+        # schematic diff table above.
+        self.ensure_fields_button = QPushButton(_("Ensure fields..."))
+        self.ensure_fields_button.clicked.connect(
+            lambda: self.on_ensure_fields_clicked and self.on_ensure_fields_clicked())
+        button_row.addWidget(self.ensure_fields_button)
         layout.addLayout(button_row)
 
         self.setWidget(container)

@@ -61,11 +61,13 @@ from PyQt6.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QFileDialog,
                               QMainWindow, QMessageBox, QPushButton, QVBoxLayout,
                               QWidget)
 
+from kicadstamp.constants import CLUSTER_FIELD_NAME, ROLE_FIELD_NAME
 from kicadstamp.exceptions import FieldsToolError, ValidationError
 from kicadstamp.explore import Selected
 from kicadstamp.i18n import _
 from kicadstamp.schematic_editing import check_kicad_not_running, write_files
-from kicadstamp.schematic_set_fields import plan_set_edits_for_root
+from kicadstamp.schematic_set_fields import (plan_ensure_fields_for_root,
+                                             plan_set_edits_for_root)
 
 from .docks.pending import PendingChangesDock, PendingEdit, compute_pending_edits, edits_to_fields_cfg
 from .schema_model import SchematicComponent, load_schematic_components
@@ -178,6 +180,7 @@ class MainWindow(QMainWindow):
         if pending_dock is None:
             self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.pending_dock)
         self.pending_dock.on_apply_clicked = self._on_apply
+        self.pending_dock.on_ensure_fields_clicked = self._on_ensure_fields
 
         self.setCentralWidget(central)
 
@@ -533,4 +536,60 @@ class MainWindow(QMainWindow):
             # recomputes the diff against the (unchanged) live snapshot —
             # since the schematic now matches what was just applied, the
             # diff comes out empty and Apply disables itself again.
+            self._rescan()
+
+    def _on_ensure_fields(self) -> None:
+        """2026-08-04: Denis found FB3 had Role but no Cluster property at
+        all in the schematic — a one-off gap, not caused by Clear all/Stage
+        (those only ever touch the live board, never .kicad_sch, see
+        kicadstamp.kicad.adapter.set_field_value's docstring). This sweeps
+        the whole schematic tree once via plan_ensure_fields_for_root(),
+        adding an empty Role/Cluster property to every component missing
+        one — never touching a component that already has the field,
+        whatever its current value. Same KiCad-closed/confirm/write/
+        rescan shape as _on_apply above, since it's the same offline
+        schematic-editing pipeline underneath; afterwards the user reopens
+        KiCad and runs Update PCB from Schematic (F8) themselves — this
+        never touches the board."""
+        if self._root_sheet is None:
+            QMessageBox.warning(self, _("No root sheet"), _("Pick a root sheet first."))
+            return
+        self.connection.disconnect()
+        try:
+            check_kicad_not_running(force=False)
+        except RuntimeError:
+            QMessageBox.information(
+                self, _("Close KiCad first"),
+                _("KiCad appears to be running. Save your work and close KiCad, then click "
+                  "Ensure fields again — this tool never closes KiCad for you (see "
+                  "docs/fieldstool.md for why)."))
+            return
+
+        try:
+            edits_by_file, file_texts, report = plan_ensure_fields_for_root(
+                str(self._root_sheet), [ROLE_FIELD_NAME, CLUSTER_FIELD_NAME])
+        except FieldsToolError as e:
+            QMessageBox.critical(self, _("Cannot ensure fields"), str(e))
+            return
+
+        if not report:
+            QMessageBox.information(
+                self, _("Nothing to add"),
+                _("Every component already has {role!r} and {cluster!r}.")
+                .format(role=ROLE_FIELD_NAME, cluster=CLUSTER_FIELD_NAME))
+            return
+
+        if not self._confirm_apply(report):
+            return
+
+        written, failed = write_files(edits_by_file, file_texts)
+        if failed:
+            QMessageBox.critical(self, _("Some files failed"),
+                                 _("Restored from .bak: {failed}").format(failed=failed))
+        else:
+            QMessageBox.information(
+                self, _("Fields added"),
+                _("{count} file(s) written. Reopen KiCad and run Update PCB from Schematic "
+                  "(F8) to sync the new fields down to the board.")
+                .format(count=len(written)))
             self._rescan()

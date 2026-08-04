@@ -7,7 +7,8 @@ import pytest
 import yaml
 
 from kicadstamp.exceptions import FieldsToolError
-from kicadstamp.schematic_set_fields import plan_set_edits, plan_set_edits_for_root
+from kicadstamp.schematic_set_fields import (plan_ensure_fields_for_root, plan_set_edits,
+                                             plan_set_edits_for_root)
 from tests.fieldstool_fixtures import sch_file, symbol_block
 
 
@@ -105,3 +106,53 @@ def test_plan_set_missing_root_sheet_key_is_fatal(tmp_path):
     config.write_text(yaml.safe_dump({"fields": {"R1": {"Role": "X"}}}), encoding="utf-8")
     with pytest.raises(FieldsToolError, match="root_sheet"):
         plan_set_edits(config)
+
+
+# ── plan_ensure_fields_for_root (2026-08-04: FB3 had Role but no Cluster
+# property at all — fills a structural gap, never overwrites a value) ──────
+
+def test_plan_ensure_fields_inserts_a_wholly_missing_field(tmp_path):
+    root = tmp_path / "root.kicad_sch"
+    root.write_text(sch_file(symbol_block(["FB3"], role="PI_FILTER_FB")), encoding="utf-8")
+
+    edits_by_file, file_texts, report = plan_ensure_fields_for_root(str(root), ["Role", "Cluster"])
+
+    assert len(report) == 1  # Role already present — only Cluster is missing
+    assert report[0].field == "Cluster" and report[0].kind == "insert"
+    assert report[0].old_value is None and report[0].new_value == ""
+
+
+def test_plan_ensure_fields_never_touches_an_existing_value(tmp_path):
+    """Unlike plan_set_edits_for_root, a present-but-different (or even
+    present-but-empty) value must never be overwritten — this only ever
+    fills a field that's entirely absent."""
+    root = tmp_path / "root.kicad_sch"
+    root.write_text(
+        sch_file(symbol_block(["FB1"], role="PI_FLT_FB", cluster="Pi_Filter_P5V")),
+        encoding="utf-8")
+
+    edits_by_file, file_texts, report = plan_ensure_fields_for_root(str(root), ["Role", "Cluster"])
+
+    assert report == []
+
+
+def test_plan_ensure_fields_is_a_noop_when_every_field_already_present(tmp_path):
+    root = tmp_path / "root.kicad_sch"
+    root.write_text(sch_file(symbol_block(["FB4"], role="", cluster="")), encoding="utf-8")
+
+    edits_by_file, file_texts, report = plan_ensure_fields_for_root(str(root), ["Role", "Cluster"])
+
+    assert report == []
+
+
+def test_plan_ensure_fields_fills_each_block_of_a_multi_unit_symbol_independently(tmp_path):
+    root = tmp_path / "root.kicad_sch"
+    root.write_text(
+        sch_file(symbol_block(["U1"], role="A"), symbol_block(["U1"])),  # 2nd block: no fields at all
+        encoding="utf-8")
+
+    edits_by_file, file_texts, report = plan_ensure_fields_for_root(str(root), ["Role", "Cluster"])
+
+    # 1st block: only Cluster missing. 2nd block: both Role and Cluster missing.
+    assert len(report) == 3
+    assert sorted(r.field for r in report) == ["Cluster", "Cluster", "Role"]

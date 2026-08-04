@@ -138,3 +138,16 @@ def test_apply_button_click_calls_callback(qapp, main_window):
     dock.apply_button.click()
 
     assert calls == [True]
+
+
+def test_ensure_fields_button_click_calls_callback(qapp, main_window):
+    """Unlike Apply, Ensure fields has nothing to do with the diff table —
+    always enabled, always wired straight through to its own callback."""
+    dock = PendingChangesDock(main_window)
+    calls = []
+    dock.on_ensure_fields_clicked = lambda: calls.append(True)
+
+    assert dock.ensure_fields_button.isEnabled()
+    dock.ensure_fields_button.click()
+
+    assert calls == [True]

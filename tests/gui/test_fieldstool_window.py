@@ -255,6 +255,60 @@ def test_apply_succeeds_writes_file_and_clears_pending(fieldstool_window, tmp_pa
     assert Path(str(root) + ".bak").exists()
 
 
+def test_ensure_fields_blocked_when_kicad_running(fieldstool_window, tmp_path, monkeypatch):
+    root = _write_root(tmp_path, symbol_block(["FB3"], role="PI_FILTER_FB"))  # no Cluster
+    fieldstool_window._set_root_sheet(root)
+
+    monkeypatch.setattr(fieldstool_window_mod, "check_kicad_not_running",
+                        lambda force: (_ for _ in ()).throw(RuntimeError("kicad running")))
+    write_calls = []
+    monkeypatch.setattr(fieldstool_window_mod, "write_files",
+                        lambda *a, **k: write_calls.append(1) or ([], []))
+    shown = []
+    monkeypatch.setattr(fieldstool_window_mod.QMessageBox, "information",
+                        staticmethod(lambda *a, **k: shown.append("info")))
+
+    fieldstool_window._on_ensure_fields()
+
+    assert write_calls == []
+    assert shown == ["info"]
+
+
+def test_ensure_fields_with_nothing_missing_shows_message(fieldstool_window, tmp_path, monkeypatch):
+    root = _write_root(tmp_path, symbol_block(["R1"], role="OLD", cluster="SOME"))
+    fieldstool_window._set_root_sheet(root)
+
+    monkeypatch.setattr(fieldstool_window_mod, "check_kicad_not_running", lambda force: None)
+    shown = []
+    monkeypatch.setattr(fieldstool_window_mod.QMessageBox, "information",
+                        staticmethod(lambda *a, **k: shown.append("info")))
+
+    fieldstool_window._on_ensure_fields()
+    assert shown == ["info"]
+
+
+def test_ensure_fields_adds_a_missing_cluster_property_without_touching_role(
+        fieldstool_window, tmp_path, monkeypatch):
+    """The FB3 case: Role present, Cluster entirely absent — Ensure fields
+    must add an empty Cluster property and leave Role's own value alone."""
+    root = _write_root(tmp_path, symbol_block(["FB3"], role="PI_FILTER_FB"))
+    fieldstool_window._set_root_sheet(root)
+
+    monkeypatch.setattr(fieldstool_window_mod, "check_kicad_not_running", lambda force: None)
+    monkeypatch.setattr(fieldstool_window, "_confirm_apply", lambda report: True)
+    shown = []
+    monkeypatch.setattr(fieldstool_window_mod.QMessageBox, "information",
+                        staticmethod(lambda *a, **k: shown.append("info")))
+
+    fieldstool_window._on_ensure_fields()
+
+    text = root.read_text(encoding="utf-8")
+    assert '"Role" "PI_FILTER_FB"' in text  # untouched
+    assert '"Cluster" ""' in text  # newly added, empty
+    assert shown == ["info"]
+    assert Path(str(root) + ".bak").exists()
+
+
 def test_pending_refs_reflects_only_refs_with_a_discrepancy(fieldstool_window, tmp_path):
     """pending_refs (2026-08-03) is what the main GUI's Components tree
     filters "Not yet applied" mode by — R1's live Role disagrees with its

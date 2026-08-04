@@ -126,3 +126,49 @@ def plan_set_edits_for_root(
                 report.append(EditReport(b.file, sorted(b.refs), field, None, value, "insert"))
 
     return edits_by_file, file_texts, report
+
+
+def plan_ensure_fields_for_root(
+    root_sheet_path: str, field_names: list[str],
+) -> tuple[dict[str, list[Edit]], dict[str, str], list[EditReport]]:
+    """Adds each of field_names, with an empty value, to every symbol block
+    that doesn't already carry it — never touches a block where the field
+    is already present, whatever its value (unlike plan_set_edits_for_root
+    above, which would overwrite an existing value to match a requested
+    one; this one only ever fills a genuine gap).
+
+    2026-08-04, Denis: found live that FB3 had Role but no Cluster property
+    at all in the schematic — a one-off gap from however it was originally
+    drawn, not something any kicadstamp code path caused (Clear all/Stage
+    only ever touch the live BOARD via kipy, see kicadstamp/kicad/
+    adapter.py's set_field_value — they never write .kicad_sch, and even
+    there a missing field is a hard stop, never auto-created). This sweeps
+    the whole schematic tree once so every component ends up with at least
+    an empty Role/Cluster property to work with — F8 (Update PCB from
+    Schematic) then has something to sync down to every footprint, not
+    just the ones that happened to have the field already.
+
+    Iterates all_blocks directly rather than grouping by ref first (unlike
+    plan_set_edits_for_root, which must resolve conflicting per-ref values
+    on a shared multi-instance block) — there's no value to conflict over
+    here, every insertion is unconditionally "", so each block's own
+    missing fields are just filled independently. A multi-unit symbol
+    (several blocks, one ref) still gets each of its own blocks checked
+    separately, same as any other field."""
+    files, file_texts, all_blocks = load_schematic_tree(root_sheet_path)
+
+    edits_by_file: dict[str, list[Edit]] = {f: [] for f in files}
+    report: list[EditReport] = []
+    for b in all_blocks:
+        span_text = file_texts[b.file][b.start:b.end]
+        for field in field_names:
+            if find_property_value_span(span_text, field) is not None:
+                continue
+            insert_at, prefix = find_insertion_point(span_text)
+            x, y = find_symbol_at(span_text)
+            block_text = PROPERTY_BLOCK_TEMPLATE.format(
+                prefix=prefix, field=field, value="", x=x, y=y)
+            edits_by_file[b.file].append((b.start + insert_at, b.start + insert_at, block_text))
+            report.append(EditReport(b.file, sorted(b.refs), field, None, "", "insert"))
+
+    return edits_by_file, file_texts, report

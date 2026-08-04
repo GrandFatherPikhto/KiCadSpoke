@@ -193,6 +193,26 @@ above:
   guards as the CLI). On success, the schematic is rescanned — since it now matches the board, the
   diff comes out empty and Apply disables itself again. The success dialog reminds you to reopen
   KiCad — a running process never hot-reloads an externally-modified schematic file.
+- **Ensure fields...** (same dock, next to Apply) — a separate sweep for a different problem:
+  2026-08-04, found live that one component (`FB3`) had a `Role` property in the schematic but no
+  `Cluster` property block at all — not caused by Clear all/Stage (those only ever write to the
+  live *board* over IPC, never `.kicad_sch`, and even there a missing field is a hard stop, never
+  silently created — see [Cluster/Role must already exist on the target](#why-fields-must-already-exist-on-the-target)
+  below). Ensure fields walks the whole schematic tree and adds an empty `Role`/`Cluster` property
+  to every component missing one outright, leaving every already-present value (even an empty one)
+  completely untouched. Same KiCad-closed gate, confirmation summary, and `.bak`/self-verify write
+  path as Apply — afterwards, reopen KiCad and run **Update PCB from Schematic** (F8) yourself to
+  sync the newly-added fields down to the footprints; this action never touches the board.
+
+## Why fields must already exist on the target
+
+`kicadstamp.kicad.adapter.set_field_value()` (the live-board write Stage/Clear all/Delete
+selected/PlacerDock's Cluster tagging all funnel through) is fatal if the target footprint has no
+field with that name at all — it never creates one from scratch, because there is no sensible
+default position/layer/schematic-symbol sync for a brand-new field on a live PCB footprint. If you
+hit `FATAL ERROR: cannot set field 'Cluster'`, that refdes's footprint genuinely lacks the field —
+run **Ensure fields...** above (or add it once by hand, in Symbol Properties or the library symbol
+itself) and **Update PCB from Schematic** (F8) before trying again.
 
 ## Migrated from `tools/apply_role_cluster.py`
 
