@@ -293,7 +293,28 @@ def test_configure_searchable_makes_combo_editable_noinsert(qapp):
     completer = combo.completer()
     assert completer is not None
     assert completer.completionMode() == QCompleter.CompletionMode.PopupCompletion
-    assert completer.caseSensitivity() == Qt.CaseSensitivity.CaseInsensitive
+    # CaseSensitive (2026-08-04): every actual Role/Cluster/Net comparison
+    # elsewhere in the project is a plain case-sensitive `==`/dict key — a
+    # case-insensitive completer used to silently rewrite a differently-
+    # cased typed value (e.g. "C_Out_Bulk") to an existing item's stored
+    # casing ("C_OUT_BULK") on Enter/focus-out, before the caller ever read
+    # currentText().
+    assert completer.caseSensitivity() == Qt.CaseSensitivity.CaseSensitive
+
+
+def test_configure_searchable_does_not_silently_rewrite_a_differently_cased_value(qapp):
+    """Regression for the exact bug found live: typing a new value that
+    differs only in case from an existing item must survive Enter/focus-
+    out verbatim, not snap back to the existing item's casing."""
+    from PyQt6.QtWidgets import QComboBox
+    combo = QComboBox()
+    combo.addItem("C_OUT_BULK")
+    configure_searchable(combo)
+    combo.setCurrentText("C_Out_Bulk")
+
+    combo.lineEdit().returnPressed.emit()
+
+    assert combo.currentText() == "C_Out_Bulk"
 
 
 def test_show_message_sets_label_and_logs_by_style(qapp, caplog):

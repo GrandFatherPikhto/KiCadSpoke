@@ -282,11 +282,22 @@ def configure_searchable(combo: QComboBox) -> None:
     сделать выпадашками (комбобоксами с поиском)"). NoInsert keeps this
     a picker, not a whitelist — typed text that isn't in the list is
     still accepted as the field's value, it just doesn't get added as a
-    new permanent entry."""
+    new permanent entry.
+
+    CaseSensitive (2026-08-04, Denis live: typed "C_Out_Bulk" for a new
+    Role, fieldstool silently turned it back into the existing "C_OUT_
+    BULK") — every actual comparison of these values elsewhere (config
+    matching, the schematic-vs-board diff, tree grouping, rename) is a
+    plain case-sensitive `==`/dict key, so a case-INsensitive completer
+    was the odd one out: on Enter/focus-out, Qt's own combo box logic
+    snaps whatever you typed to an existing item's stored casing the
+    moment it matches case-insensitively — silently substituting a
+    different value than the one you actually typed, before the caller
+    ever reads currentText()."""
     combo.setEditable(True)
     combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
     completer = combo.completer()
-    completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+    completer.setCaseSensitivity(Qt.CaseSensitivity.CaseSensitive)
     completer.setFilterMode(Qt.MatchFlag.MatchContains)
     completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
 

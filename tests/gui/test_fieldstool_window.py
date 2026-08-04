@@ -238,6 +238,26 @@ def test_stage_writes_role_cluster_to_the_live_board(fieldstool_window, tmp_path
     assert (board.adapter._fps["R1"], "Role", "NEW") in updates
 
 
+def test_role_combo_does_not_silently_rewrite_a_differently_cased_typed_value(
+        fieldstool_window, tmp_path, monkeypatch):
+    """2026-08-04, Denis live: typed "C_Out_Bulk" instead of the existing
+    "C_OUT_BULK" and fieldstool staged the OLD value back — Qt's default
+    combo completer is case-insensitive and silently snaps typed text to
+    an existing item's casing on Enter, before _run_stage ever reads
+    currentText(). configure_searchable() (now case-sensitive, see
+    gui/docks/_common.py) fixes this."""
+    root = _write_root(tmp_path, symbol_block(["R1"], role="C_OUT_BULK"))
+    fieldstool_window._set_root_sheet(root)
+    board = _connect_board(fieldstool_window, monkeypatch)
+
+    fieldstool_window._set_targets(["R1"])
+    fieldstool_window.role_combo.setCurrentText("C_Out_Bulk")
+    fieldstool_window.role_combo.lineEdit().returnPressed.emit()
+
+    updates, _description = board.adapter.calls[0]
+    assert (board.adapter._fps["R1"], "Role", "C_Out_Bulk") in updates
+
+
 def test_enter_in_role_combo_stages_immediately(fieldstool_window, tmp_path, monkeypatch):
     """2026-08-04, Denis: "долго Stage жать" — Enter in either field must
     do exactly what clicking Stage does, guards included."""

@@ -69,6 +69,7 @@ from kicadstamp.schematic_editing import check_kicad_not_running, write_files
 from kicadstamp.schematic_set_fields import (plan_ensure_fields_for_root,
                                              plan_set_edits_for_root)
 
+from .docks._common import configure_searchable
 from .docks.pending import PendingChangesDock, PendingEdit, compute_pending_edits, edits_to_fields_cfg
 from .schema_model import SchematicComponent, load_schematic_components
 from .settings import Settings
@@ -162,7 +163,13 @@ class MainWindow(QMainWindow):
         edit_layout.addWidget(self.pending_label)
         form = QFormLayout()
         self.role_combo = QComboBox()
-        self.role_combo.setEditable(True)
+        # CaseSensitive search-as-you-type (2026-08-04, Denis live: typed
+        # "C_Out_Bulk", fieldstool silently turned it back into the
+        # existing "C_OUT_BULK") — see configure_searchable()'s docstring;
+        # every actual Role/Cluster comparison elsewhere is case-sensitive,
+        # so Qt's default case-INsensitive combo completer was quietly
+        # substituting a different value than the one actually typed.
+        configure_searchable(self.role_combo)
         # Enter in either field stages immediately — same guards as clicking
         # Stage itself (2026-08-04, Denis: "долго Stage жать"). Deliberately
         # NOT on focus-out: losing focus also happens by clicking elsewhere
@@ -172,7 +179,7 @@ class MainWindow(QMainWindow):
         self.role_combo.lineEdit().returnPressed.connect(self._on_stage)
         form.addRow(_("Role:"), self.role_combo)
         self.cluster_combo = QComboBox()
-        self.cluster_combo.setEditable(True)
+        configure_searchable(self.cluster_combo)
         self.cluster_combo.lineEdit().returnPressed.connect(self._on_stage)
         form.addRow(_("Cluster:"), self.cluster_combo)
         edit_layout.addLayout(form)
