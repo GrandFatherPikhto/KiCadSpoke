@@ -56,24 +56,45 @@ rewrites every cell:/anchor_point: reference to the old name anywhere in
 the whole include: graph, not just the one file the entry is declared in
 — see gui/docks/rename.py for the full cross-reference audit this is
 based on and why the other 5 sections need no cascading at all.
+
+Delete (2026-08-05, Denis: "надо в контекстном меню... возможность
+удалять cell, export, via_thermal_pad, rules и т.д. любую сущность. После
+удаления делаем backup файл") — also leaf-only, one entry at a time. Backs
+up the whole owning file (timestamped, never overwrites an earlier backup)
+before writing. For cells:/points: — the same CASCADE_FIELD pair rename
+uses — the whole include: graph is scanned for references first; if any
+exist the confirm dialog lists them and asks whether to delete those
+referencing entries too (declining cancels the whole delete). See
+gui/docks/entity_delete.py.
+
+Export (2026-08-05, same request) — works on the tree's current selection
+(ExtendedSelection, turned on for this alone), so several leaves across
+different files/sections can be exported together. Pure copy — the
+originals are untouched — into a file picked via a Save dialog; an
+existing non-empty target additionally offers Merge (default, via the same
+merge_write()/upsert_list_entry() every other write path uses) vs.
+Overwrite (replaces the target file's whole content). See gui/docks/
+entity_export.py.
 """
 import os
 from pathlib import Path
 from typing import Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import (QComboBox, QDockWidget, QFileDialog, QHBoxLayout, QInputDialog,
-                              QLabel, QMenu, QMessageBox, QPushButton, QTreeWidget,
+from PyQt6.QtWidgets import (QAbstractItemView, QComboBox, QDockWidget, QFileDialog, QHBoxLayout,
+                              QInputDialog, QLabel, QMenu, QMessageBox, QPushButton, QTreeWidget,
                               QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from kicadstamp.config.includes import IncludeTreeNode, walk_include_tree
 from kicadstamp.exceptions import ValidationError
 from kicadstamp.i18n import _
 
-from .. import settings
+from .. import settings, yaml_io
 from ._common import (add_include, disable_include, display_path, merge_write,
                       non_includable_keys)
-from .rename import CASCADE_FIELD, rename_entry
+from .entity_delete import delete_entry, find_references
+from .entity_export import ExportItem, export_entries
+from .rename import CASCADE_FIELD, collect_graph_files, rename_entry
 
 # Recent root files, most-recent-first, capped at this many entries — same
 # "remember a handful of recently used paths" idea FilePickerDock's
@@ -179,6 +200,12 @@ class ConfigTreeDock(QDockWidget):
 
         self.tree = QTreeWidget()
         self.tree.setHeaderHidden(True)
+        # Multi-select (2026-08-05) — only Export needs several leaves
+        # selected at once (Denis: "экспортировать сущность (выделенные
+        # сущности)"); Delete stays one entry at a time (see _on_delete),
+        # and left-click routing (_on_clicked) is unaffected by selection
+        # mode either way.
+        self.tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.tree.itemClicked.connect(self._on_clicked)
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._on_context_menu)
@@ -368,6 +395,14 @@ class ConfigTreeDock(QDockWidget):
             return
         file_path, parent_path = file_ctx
 
+        # Right-clicking outside the current selection replaces it with
+        # just this item — standard tree UX, and what makes a plain
+        # single right-click on one leaf (the common case) behave exactly
+        # like before ExtendedSelection was turned on for Export.
+        if item not in self.tree.selectedItems():
+            self.tree.clearSelection()
+            item.setSelected(True)
+
         menu = QMenu(self.tree)
 
         leaf_data = item.data(0, Qt.ItemDataRole.UserRole)
@@ -376,6 +411,15 @@ class ConfigTreeDock(QDockWidget):
             old_name = item.text(0)
             menu.addAction(_("Rename...")).triggered.connect(
                 lambda: self._on_rename(file_path, section, old_name))
+            menu.addAction(_("Delete...")).triggered.connect(
+                lambda: self._on_delete(file_path, section, old_name))
+            menu.addSeparator()
+
+        selected_leaves = self._selected_export_items()
+        if selected_leaves:
+            label = _("Export selected...") if len(selected_leaves) > 1 else _("Export...")
+            menu.addAction(label).triggered.connect(
+                lambda: self._on_export(selected_leaves))
             menu.addSeparator()
 
         menu.addAction(_("Add cell...")).triggered.connect(
@@ -424,6 +468,115 @@ class ConfigTreeDock(QDockWidget):
                 "If any CLI command uses --only/--profile {old!r}, update that separately — "
                 "this only rewrites YAML files, it can't see command-line usage.").format(old=old_name)
         QMessageBox.information(self, _("Renamed"), message)
+
+    def _on_delete(self, file_path: Path, section: str, name: str) -> None:
+        """Removes a leaf entry (one at a time — see the tree's
+        ExtendedSelection docstring, Export is the multi-entity one, not
+        this). Backs up file_path (and, for a cascade, every other file it
+        touches) before writing — see gui/docks/entity_delete.py. For
+        cells:/points: (CASCADE_FIELD), the whole include: graph is scanned
+        for references FIRST: with none found this is a plain confirm; with
+        some found the dialog lists them and asks whether to also delete
+        those referencing entries (Denis, 2026-08-05: "Предупреждать.
+        Спросить, удалить ли связанные ссылки? Если да, их тоже удалить.")
+        — declining cancels the whole delete rather than leaving a
+        dangling reference behind."""
+        field_name = CASCADE_FIELD.get(section)
+        refs = {}
+        if field_name and self._root_path is not None:
+            refs = find_references(collect_graph_files(self._root_path), field_name, name)
+
+        cascade = False
+        if refs:
+            lines = "\n".join(
+                _("{file}: {entries}").format(file=display_path(path), entries=", ".join(descs))
+                for path, descs in refs.items())
+            reply = QMessageBox.question(
+                self, _("Delete {name!r}").format(name=name),
+                _("{name!r} is still referenced by:\n{refs}\n\n"
+                  "Also delete these referencing entries? Cancel leaves everything untouched.")
+                .format(name=name, refs=lines),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            cascade = True
+        else:
+            reply = QMessageBox.question(
+                self, _("Delete {name!r}").format(name=name),
+                _("Delete {name!r} from {section}: in {file}?")
+                .format(name=name, section=section, file=display_path(file_path)))
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        report = delete_entry(self._root_path, file_path, section, name, cascade=cascade)
+        self.refresh()
+
+        message = _("Deleted {name!r}. Backed up: {backups}.").format(
+            name=name, backups=", ".join(display_path(p) for p in report["backups"]))
+        if report["cascade_files"]:
+            message += " " + _("Also removed references from: {files}.").format(
+                files=", ".join(display_path(p) for p in report["cascade_files"]))
+        QMessageBox.information(self, _("Deleted"), message)
+
+    def _selected_export_items(self) -> list:
+        """Currently selected tree leaves, as ExportItem tuples — file/
+        category headers in the selection are ignored (Export only makes
+        sense for actual entries)."""
+        items = []
+        for tree_item in self.tree.selectedItems():
+            data = tree_item.data(0, Qt.ItemDataRole.UserRole)
+            if data is None or data[0] != "leaf":
+                continue
+            file_ctx = self._file_context_for_item(tree_item)
+            if file_ctx is None:
+                continue
+            _kind, section, payload = data
+            items.append(ExportItem(source_path=file_ctx[0], section=section,
+                                    name=tree_item.text(0), payload=payload))
+        return items
+
+    def _on_export(self, items: list) -> None:
+        """Copies `items` into a separate file — the originals are left
+        exactly as they are (Denis, 2026-08-05: "Запись остаётся на месте.
+        Просто экспортирует выделенное в отдельный файл. Перенос пока не
+        делаем."). Merge is the default and only choice when the target is
+        new/empty; an existing non-empty target additionally offers
+        Overwrite (Denis: "галочку в экспортном диалоге завести: смержить,
+        перезаписать")."""
+        chosen, _filter = QFileDialog.getSaveFileName(
+            self, _("Export to..."), str(self._root_path.parent if self._root_path else ""),
+            "YAML (*.yaml *.yml)")
+        if not chosen:
+            return
+        target_path = Path(chosen)
+        if not target_path.exists():
+            target_path.write_text("{}\n", encoding="utf-8")
+
+        overwrite = False
+        if yaml_io.load_data(target_path):
+            box = QMessageBox(self)
+            box.setWindowTitle(_("Export"))
+            box.setText(_("{name} already has content — merge the exported entries into it, "
+                          "or overwrite the whole file?").format(name=target_path.name))
+            merge_btn = box.addButton(_("Merge"), QMessageBox.ButtonRole.AcceptRole)
+            overwrite_btn = box.addButton(_("Overwrite"), QMessageBox.ButtonRole.DestructiveRole)
+            box.addButton(QMessageBox.StandardButton.Cancel)
+            box.exec()
+            clicked = box.clickedButton()
+            if clicked not in (merge_btn, overwrite_btn):
+                return
+            overwrite = clicked is overwrite_btn
+
+        try:
+            export_entries(target_path, items, overwrite=overwrite)
+        except OSError as e:
+            QMessageBox.warning(self, _("Export failed"), str(e))
+            return
+        QMessageBox.information(
+            self, _("Exported"),
+            _("Exported {count} entr{suffix} to {name}").format(
+                count=len(items), suffix=_("y") if len(items) == 1 else _("ies"),
+                name=display_path(target_path)))
 
     def _add_cell(self, file_path: Path) -> None:
         name, ok = QInputDialog.getText(self, _("Add cell"), _("Cell name:"))

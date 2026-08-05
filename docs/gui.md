@@ -114,6 +114,30 @@ To assign a role: click a file in the tree, then **"Use selected"** on the role'
 `cell_files:` were folded into `include:` on 2026-08-02 — see [docs/config.md](config.md)). A
 dedicated file per role is just the default habit, not a requirement enforced anywhere.
 
+## Config tree
+
+A tree mirroring the actual `include:` file graph from a single root config file — pick it via
+**Open Root file...**/**New Root file...**/the **Recent** dropdown. Every file node shows its own
+sections (Cells/Clone placements/Thermal via arrays/Points/Rules/Extract profiles/Clone profiles)
+and its own included files, recursively.
+
+Right-click any entry for:
+- **Rename...** — renames the entry; for Cells/Points, also rewrites every reference to it
+  (`cell:`/`anchor_point:`) anywhere in the whole include: graph, not just the file it's declared in.
+- **Delete...** — removes the entry, after backing up the whole file it lived in (timestamped, next
+  to the original — a repeated delete never overwrites an earlier backup). For Cells/Points, the
+  whole include: graph is scanned for references first; if any are found, the confirmation lists
+  them and asks whether to delete those referencing entries too (declining cancels the delete
+  entirely rather than leaving a dangling reference).
+- **Export.../Export selected...** — select one or more entries (multi-select is enabled just for
+  this) and copy them into a separate file via a Save dialog. The originals are left untouched. If
+  the target file already has content, you're asked whether to merge the exported entries into it
+  or overwrite the whole file.
+
+Right-click a file node for **Add cell.../Add point.../Add rule.../Add placer.../Add thermal via
+pad.../Add included file...**, plus **Remove this file** (soft-disables its `include:` entry,
+doesn't delete the file) when it's not the root.
+
 ## Extract
 
 Builds a `Cell` from whatever's currently selected on the board (components, vias, tracks) and

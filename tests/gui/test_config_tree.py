@@ -701,3 +701,251 @@ def test_restores_last_root_file_on_construction(main_window, tmp_path):
 
     assert dock._root_path == root
     assert dock.tree.topLevelItem(0).text(0) == "root.yaml"
+
+
+# ── Delete (2026-08-05) ───────────────────────────────────────────────────
+
+def test_delete_action_present_for_a_leaf(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QMenu, "exec", lambda self, *a, **k: None)
+    captured = []
+    original_add_action = config_tree_mod.QMenu.addAction
+    monkeypatch.setattr(config_tree_mod.QMenu, "addAction",
+                        lambda self, text, *a, **k: (captured.append(text),
+                                                     original_add_action(self, text, *a, **k))[1])
+
+    leaf = _find(dock.tree.topLevelItem(0), "Cells").child(0)
+    dock._on_context_menu(dock.tree.visualItemRect(leaf).center())
+
+    assert "Delete..." in captured
+
+
+def test_delete_without_references_confirms_and_removes_with_backup(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "information",
+                        staticmethod(lambda *a, **k: None))
+
+    dock._on_delete(root, "cells", "one_role")
+
+    assert yaml.safe_load(root.read_text(encoding="utf-8"))["cells"] == {}
+    assert list(tmp_path.glob("root.yaml.bak.*"))
+    assert dock.tree.topLevelItem(0).childCount() == 0  # empty Cells section, no leaf shown
+
+
+def test_delete_declined_leaves_the_file_untouched(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.No))
+
+    dock._on_delete(root, "cells", "one_role")
+
+    assert "one_role" in yaml.safe_load(root.read_text(encoding="utf-8"))["cells"]
+    assert not list(tmp_path.glob("root.yaml.bak.*"))
+
+
+def test_delete_with_a_reference_asks_about_cascade_and_removes_both_on_yes(
+        main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        MINIMAL_CELL + "\nclone_placements:\n  - name: spoke_1\n    cell: one_role\n",
+        encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    shown = []
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda self_, title, text, *a, **k:
+                                     (shown.append(text), QMessageBox.StandardButton.Yes)[1]))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "information",
+                        staticmethod(lambda *a, **k: None))
+
+    dock._on_delete(root, "cells", "one_role")
+
+    data = yaml.safe_load(root.read_text(encoding="utf-8"))
+    assert data["cells"] == {}
+    assert data["clone_placements"] == []  # cascade removed the referencing spoke too
+    assert len(shown) == 1 and "spoke_1" in shown[0]  # dialog listed the reference
+
+
+def test_delete_with_a_reference_declined_cancels_the_whole_delete(
+        main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        MINIMAL_CELL + "\nclone_placements:\n  - name: spoke_1\n    cell: one_role\n",
+        encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "question",
+                        staticmethod(lambda *a, **k: QMessageBox.StandardButton.Cancel))
+
+    dock._on_delete(root, "cells", "one_role")
+
+    data = yaml.safe_load(root.read_text(encoding="utf-8"))
+    assert "one_role" in data["cells"]  # nothing removed at all
+    assert data["clone_placements"][0]["cell"] == "one_role"
+    assert not list(tmp_path.glob("root.yaml.bak.*"))
+
+
+# ── Export (2026-08-05) ──────────────────────────────────────────────────
+
+def test_export_multi_select_enabled(main_window):
+    from PyQt6.QtWidgets import QAbstractItemView
+    dock = ConfigTreeDock(main_window)
+    assert dock.tree.selectionMode() == QAbstractItemView.SelectionMode.ExtendedSelection
+
+
+def test_selected_export_items_ignores_file_and_category_headers(main_window, tmp_path):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    root_item = dock.tree.topLevelItem(0)
+    cells_category = _find(root_item, "Cells")
+    leaf = cells_category.child(0)
+    root_item.setSelected(True)
+    cells_category.setSelected(True)
+    leaf.setSelected(True)
+
+    items = dock._selected_export_items()
+
+    assert len(items) == 1
+    assert items[0].section == "cells" and items[0].name == "one_role"
+
+
+def test_export_action_label_switches_to_plural_for_multiple_leaves(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        "cells:\n  a: {}\n  b: {}\n", encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    cells_category = _find(dock.tree.topLevelItem(0), "Cells")
+    cells_category.child(0).setSelected(True)
+    cells_category.child(1).setSelected(True)
+
+    monkeypatch.setattr(config_tree_mod.QMenu, "exec", lambda self, *a, **k: None)
+    captured = []
+    original_add_action = config_tree_mod.QMenu.addAction
+    monkeypatch.setattr(config_tree_mod.QMenu, "addAction",
+                        lambda self, text, *a, **k: (captured.append(text),
+                                                     original_add_action(self, text, *a, **k))[1])
+
+    dock._on_context_menu(dock.tree.visualItemRect(cells_category.child(0)).center())
+
+    assert "Export selected..." in captured
+
+
+def test_on_export_to_a_new_file_merges_without_prompting(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    target = tmp_path / "out.yaml"
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    leaf = _find(dock.tree.topLevelItem(0), "Cells").child(0)
+    leaf.setSelected(True)
+
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(target), "")))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "information",
+                        staticmethod(lambda *a, **k: None))
+
+    dock._on_export(dock._selected_export_items())
+
+    assert "one_role" in yaml.safe_load(target.read_text(encoding="utf-8"))["cells"]
+    assert yaml.safe_load(root.read_text(encoding="utf-8")) == \
+        yaml.safe_load(MINIMAL_CELL)  # the source is untouched — pure copy
+
+
+def test_on_export_to_a_non_empty_file_merges_when_merge_is_chosen(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    target = tmp_path / "out.yaml"
+    target.write_text("cells:\n  existing: {}\n", encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    leaf = _find(dock.tree.topLevelItem(0), "Cells").child(0)
+    leaf.setSelected(True)
+
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(target), "")))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "exec", lambda self: None)
+    # QMessageBox.buttons() is NOT insertion order — Qt reorders by platform
+    # convention (confirmed live: Merge/Cancel/Overwrite, not Merge/
+    # Overwrite/Cancel) — match by the button's own text instead of index.
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "clickedButton",
+                        lambda self: next(b for b in self.buttons() if b.text() == "Merge"))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "information",
+                        staticmethod(lambda *a, **k: None))
+
+    dock._on_export(dock._selected_export_items())
+
+    data = yaml.safe_load(target.read_text(encoding="utf-8"))
+    assert set(data["cells"].keys()) == {"existing", "one_role"}
+
+
+def test_on_export_to_a_non_empty_file_overwrites_when_overwrite_is_chosen(
+        main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    target = tmp_path / "out.yaml"
+    target.write_text("cells:\n  existing: {}\ninclude:\n  - somewhere.yaml\n", encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    leaf = _find(dock.tree.topLevelItem(0), "Cells").child(0)
+    leaf.setSelected(True)
+
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(target), "")))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "exec", lambda self: None)
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "clickedButton",
+                        lambda self: next(b for b in self.buttons() if b.text() == "Overwrite"))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "information",
+                        staticmethod(lambda *a, **k: None))
+
+    dock._on_export(dock._selected_export_items())
+
+    data = yaml.safe_load(target.read_text(encoding="utf-8"))
+    assert set(data["cells"].keys()) == {"one_role"}
+    assert "include" not in data
+
+
+def test_on_export_cancelled_dialog_writes_nothing(main_window, tmp_path, monkeypatch):
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+    target = tmp_path / "out.yaml"
+    target.write_text("cells:\n  existing: {}\n", encoding="utf-8")
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    leaf = _find(dock.tree.topLevelItem(0), "Cells").child(0)
+    leaf.setSelected(True)
+
+    monkeypatch.setattr(config_tree_mod.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(target), "")))
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "exec", lambda self: None)
+    monkeypatch.setattr(config_tree_mod.QMessageBox, "clickedButton",
+                        lambda self: self.button(QMessageBox.StandardButton.Cancel))
+
+    dock._on_export(dock._selected_export_items())
+
+    data = yaml.safe_load(target.read_text(encoding="utf-8"))
+    assert data["cells"] == {"existing": {}}  # untouched — Cancel aborted the export

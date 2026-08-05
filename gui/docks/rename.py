@@ -58,8 +58,9 @@ LIST_SECTIONS = ("clone_placements", "thermal_via_arrays", "rules")
 
 # rules: entries fall back to net: as their effective name when name: is
 # absent (config/models.py's rule_effective_name()) — the only section with
-# a fallback identifying field.
-_FALLBACK_KEY = {"rules": "net"}
+# a fallback identifying field. Public (2026-08-05): gui/docks/entity_delete.py
+# needs the same "name or net" identity to match a rules: entry for removal.
+FALLBACK_KEY = {"rules": "net"}
 
 
 def collect_graph_files(root_path: Path) -> List[Path]:
@@ -145,10 +146,10 @@ def rename_dict_entry(path: Path, section: str, old_name: str, new_name: str) ->
 def rename_list_entry(path: Path, section: str, old_name: str, new_name: str) -> None:
     """clone_placements:/thermal_via_arrays:/rules: — list of dicts, entry
     matched by its effective name (name:, or net: for a nameless rules:
-    entry — see _FALLBACK_KEY), then name: is set/created on it. For a
+    entry — see FALLBACK_KEY), then name: is set/created on it. For a
     rules: entry matched only by net:, this is what actually gives it an
     explicit name: for the first time, distinct from its net:."""
-    fallback_key = _FALLBACK_KEY.get(section)
+    fallback_key = FALLBACK_KEY.get(section)
     data = _read_data(path)
     items = data.get(section) or []
 
