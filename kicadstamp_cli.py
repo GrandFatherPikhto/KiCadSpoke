@@ -163,6 +163,13 @@ def main() -> int:
                                        "without this such roles get empty net_template and need manual edit. "
                                        "Fatal if the role does not actually have that net on its pads, "
                                        "or if the literal is not registered in --net-template/params."))
+    extract_parser.add_argument("--rule-net", action="append", metavar="LITERAL",
+                                help=_("Write this via/track net as null instead of its literal name "
+                                       "(e.g. '+3V3') — at apply time a ManualSpoke-placed cell's via/"
+                                       "track with net: null inherits the enclosing Rule's own net "
+                                       "(spoke_layout.py's 'via.net or rule_net'), so this makes the "
+                                       "cell reusable across Rules on different nets. Can be repeated. "
+                                       "Fatal if the same net is also in --param/--net-template."))
     origin_group = extract_parser.add_mutually_exclusive_group()
     origin_group.add_argument("--origin-by-via-net", metavar="NET",
                               help=_("Template origin — position of via on this net (instead of bbox); "

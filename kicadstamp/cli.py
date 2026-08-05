@@ -36,13 +36,13 @@ def cmd_extract(args) -> None:
     adapter.refresh_board()
 
     direct_args_given = bool(args.name or args.output or args.param or args.net_template
-                             or args.net_template_role
+                             or args.net_template_role or args.rule_net
                              or args.origin_by_via_net or args.origin_by_component_role
                              or args.origin_by_component_pad)
     if args.profile and direct_args_given:
         raise PlacerError(_("[error] --profile cannot be combined with --name/--output/--param/--net-template/"
-                            "--net-template-role/--origin-by-*: either all from profile or all as explicit flags, "
-                            "not mixed."))
+                            "--net-template-role/--rule-net/--origin-by-*: either all from profile or all as "
+                            "explicit flags, not mixed."))
 
     if args.profile:
         if not args.profiles:
@@ -60,6 +60,7 @@ def cmd_extract(args) -> None:
         params = dict(prof.get("params", {}) or {})
         net_template_map = dict(prof.get("net_template", {}) or {})
         net_template_role = dict(prof.get("net_template_role", {}) or {})
+        rule_nets = set(prof.get("rule_nets", []) or [])
         origin_via_net = prof.get("origin_by_via_net")
         origin_component_role = prof.get("origin_by_component_role")
         origin_component_pad = prof.get("origin_by_component_pad")
@@ -95,12 +96,14 @@ def cmd_extract(args) -> None:
                 raise PlacerError(_("--net-template-role {item!r} — need format ROLE=LITERAL").format(item=item))
             role_key, literal = item.split("=", 1)
             net_template_role[role_key] = literal
+        rule_nets = set(args.rule_net or [])
         origin_via_net = args.origin_by_via_net
         origin_component_role = args.origin_by_component_role
         origin_component_pad = args.origin_by_component_pad
 
     extract_template(adapter, name=name, output=output, params=params,
                      net_template_map=net_template_map, net_template_role=net_template_role,
+                     rule_nets=rule_nets,
                      origin_via_net=origin_via_net,
                      origin_component_role=origin_component_role,
                      origin_component_pad=origin_component_pad)

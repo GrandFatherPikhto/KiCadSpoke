@@ -384,6 +384,93 @@ def test_on_extract_dispatches_to_worker(main_window, tmp_path, monkeypatch):
     assert payload["target_path"] == cells_file
     assert payload["placer_path"] is None
     assert payload["params"] == {}
+    assert payload["rule_nets"] == set()
     assert payload["origin_kwargs"] == {}
     assert payload["net_template_role"] == {}
     assert payload["raw_items"] == dock._raw_items
+
+
+# ── Rule net checkbox (2026-08-05) ──────────────────────────────────────────
+
+def test_checking_rule_net_clears_and_disables_the_alias_edit(main_window, tmp_path):
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+    dock.set_board_selection([], [FakeSelected("D1", "SOME_ROLE", "X", {"1": "+3V3_VCCIO"})])
+
+    edit = dock._net_alias_edits["+3V3_VCCIO"]
+    edit.setText("PWR")
+    dock._rule_net_checkboxes["+3V3_VCCIO"].setChecked(True)
+
+    assert edit.text() == ""
+    assert edit.isEnabled() is False
+
+    dock._rule_net_checkboxes["+3V3_VCCIO"].setChecked(False)
+    assert edit.isEnabled() is True
+
+
+def test_collect_inputs_includes_checked_rule_nets(main_window, tmp_path):
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+    dock.set_board_selection([], [
+        FakeSelected("D1", "SOME_ROLE", "X", {"1": "+3V3_VCCIO", "2": "GND"}),
+    ])
+    dock._rule_net_checkboxes["+3V3_VCCIO"].setChecked(True)
+    dock.name_edit.setText("some_cell")
+    dock._raw_items = [object()]
+    main_window.connection.board = FakeBoard()
+
+    payload = dock._collect_extract_inputs()
+
+    assert payload["rule_nets"] == {"+3V3_VCCIO"}
+    assert "GND" not in payload["rule_nets"]
+
+
+def test_extract_persists_rule_nets_into_the_profile(main_window, tmp_path, monkeypatch):
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    extractor_file = tmp_path / "extractor.yaml"
+    _write_yaml(extractor_file, {})
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+    dock.set_profile_file(extractor_file)
+    dock.set_board_selection([], [FakeSelected("D1", "SOME_ROLE", "X", {"1": "+3V3_VCCIO"})])
+    dock._rule_net_checkboxes["+3V3_VCCIO"].setChecked(True)
+
+    monkeypatch.setattr(extract_mod, "extract_template_from_selection", _fake_extract)
+    main_window.connection.board = FakeBoard()
+
+    dock.name_edit.setText("some_cell")
+    dock.save_profile_checkbox.setChecked(True)
+    dock.profile_key_edit.setText("some_profile")
+    dock._raw_items = [object()]
+    dock._do_extract()
+
+    profile = yaml.safe_load(extractor_file.read_text())["extract_profiles"]["some_profile"]
+    assert profile["rule_nets"] == ["+3V3_VCCIO"]
+
+
+def test_clicking_profile_re_checks_its_rule_nets(main_window, tmp_path):
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    extractor_file = tmp_path / "extractor.yaml"
+    _write_yaml(extractor_file, {
+        "extract_profiles": {
+            "some_profile": {"output": "cells.yaml", "rule_nets": ["+3V3_VCCIO"]},
+        }
+    })
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+    dock.set_profile_file(extractor_file)
+    dock.set_board_selection([], [
+        FakeSelected("D1", "SOME_ROLE", "X", {"1": "+3V3_VCCIO", "2": "GND"}),
+    ])
+
+    item = dock.profiles_list.findItems("some_profile", Qt.MatchFlag.MatchExactly)[0]
+    dock.profiles_list.itemClicked.emit(item)
+
+    assert dock._rule_net_checkboxes["+3V3_VCCIO"].isChecked() is True
+    assert dock._rule_net_checkboxes["GND"].isChecked() is False

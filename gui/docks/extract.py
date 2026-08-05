@@ -38,6 +38,22 @@ params=={} that check fails for every single alias (found live 2026-08-01,
 "net '{X}' has a placeholder with no parameter" on every extract attempt
 that used an alias).
 
+"Rule net" checkbox next to each net row (2026-08-05, Denis: "давай
+сделаем явный чекбокс [для null]. Это правильная фича. Она замыкает
+использование rules") — a THIRD, mutually exclusive option alongside
+"leave literal" (blank alias, unchecked) and "alias it" ({ALIAS}, for
+ClonePlacement reuse): checking it writes via.net/track.net: null for that
+net instead of the literal or an alias. At apply time a ManualSpoke-placed
+cell's via/track with net: null inherits the enclosing Rule's own net
+(kicadstamp/geometry/spoke_layout.py: `via.net or rule_net`) — the SAME
+cell can then be reused, unmodified, across several Rules on different
+power rails, which {ALIAS}/net_template CANNOT do here (ManualSpoke has no
+params: field to resolve a template against at all — see
+extract_template_from_selection()'s own docstring on rule_nets). Checking
+the box clears+disables that row's alias edit (and vice versa); collected
+into rule_nets, persisted as extract_profiles: rule_nets: [...] alongside
+params/net_template_role.
+
 Both the cell-output file and the extract_profiles file follow the SAME
 currently-selected file in the Config tree (2026-08-03 — used to be two
 independent FilePickerDock role slots, Cells/Extractor; collapsed into one
@@ -156,6 +172,7 @@ class ExtractDock(QWidget):
         self._profile_path: Optional[Path] = None
         self._placer_path: Optional[Path] = None
         self._net_alias_edits: Dict[str, QLineEdit] = {}
+        self._rule_net_checkboxes: Dict[str, QCheckBox] = {}
         self._net_template_role_edits: Dict[str, QComboBox] = {}
         self._last_autofill_key: Optional[Tuple[frozenset, Optional[Path], Optional[Path]]] = None
 
@@ -449,8 +466,8 @@ class ExtractDock(QWidget):
 
     def _apply_profile_entry(self, profile_key: str) -> None:
         """Pulls one extract_profiles entry's params/net_template_role/
-        origin_by_* into the alias/role/Origin fields — shared by the
-        cluster auto-match above and by explicitly clicking a profile in
+        rule_nets/origin_by_* into the alias/role/Origin fields — shared by
+        the cluster auto-match above and by explicitly clicking a profile in
         the "Existing" list (see __init__): a manual pick deserves exactly
         the same pull an automatic match gets, not just the name (reported
         live 2026-08-01: names were "picked up" — via clicking, since this
@@ -474,6 +491,15 @@ class ExtractDock(QWidget):
             empty_edits = [e for e in self._net_alias_edits.values() if not e.text().strip()]
             for alias, edit in zip(unmatched_aliases, empty_edits):
                 edit.setText(alias)
+
+        # rule_nets — direct literal match only (no rail-swap heuristic like
+        # aliases get above: a rule net has no alias name to bridge through,
+        # it's just "this net = null", so it either matches today's net
+        # exactly or it doesn't).
+        for net_literal in (profile_entry.get("rule_nets") or []):
+            checkbox = self._rule_net_checkboxes.get(net_literal)
+            if checkbox is not None and not checkbox.isChecked():
+                checkbox.setChecked(True)
 
         # net_template_role is role -> literal, and role IS stable across a
         # rail swap (unlike the literal itself) — so rather than reusing
@@ -607,13 +633,14 @@ class ExtractDock(QWidget):
 
     def _rebuild_net_aliases(self) -> None:
         """One row per distinct net found on the selected components' pads.
-        Preserves whatever the user already typed for a net that's still
-        present — the selection-watch tick fires every ~400ms, so without
-        this, in-progress typing would be wiped just like the tree/bulk-edit
-        docks had to guard against."""
+        Preserves whatever the user already typed/checked for a net that's
+        still present — the selection-watch tick fires every ~400ms, so
+        without this, in-progress typing would be wiped just like the
+        tree/bulk-edit docks had to guard against."""
         nets = sorted({net for s in self._selected_footprints for net in s.nets.values()})
-        previous = {net: edit.text() for net, edit in self._net_alias_edits.items()}
-        if set(nets) == set(previous):
+        previous_alias = {net: edit.text() for net, edit in self._net_alias_edits.items()}
+        previous_rule_net = {net: cb.isChecked() for net, cb in self._rule_net_checkboxes.items()}
+        if set(nets) == set(previous_alias):
             return
 
         while self._nets_layout.count():
@@ -623,15 +650,36 @@ class ExtractDock(QWidget):
                 widget.deleteLater()
 
         self._net_alias_edits = {}
+        self._rule_net_checkboxes = {}
         for row, net in enumerate(nets):
             self._nets_layout.addWidget(QLabel(net), row, 0)
             edit = QLineEdit()
             edit.setPlaceholderText(_("alias, e.g. PWR_IN"))
-            edit.setText(previous.get(net, ""))
+            edit.setText(previous_alias.get(net, ""))
             edit.textChanged.connect(self._update_net_template_role_rows)
             self._nets_layout.addWidget(edit, row, 1)
             self._net_alias_edits[net] = edit
+
+            checkbox = QCheckBox(_("Rule net (null)"))
+            checkbox.setToolTip(
+                _("Write this via/track net as null instead of a literal — at apply time a "
+                  "ManualSpoke-placed cell inherits the enclosing Rule's own net for it, so the "
+                  "cell can be reused across Rules on different nets."))
+            checkbox.setChecked(previous_rule_net.get(net, False))
+            checkbox.toggled.connect(lambda checked, e=edit: self._on_rule_net_toggled(e, checked))
+            self._nets_layout.addWidget(checkbox, row, 2)
+            self._rule_net_checkboxes[net] = checkbox
+            self._on_rule_net_toggled(edit, checkbox.isChecked())
         self._update_net_template_role_rows()
+
+    @staticmethod
+    def _on_rule_net_toggled(edit: QLineEdit, checked: bool) -> None:
+        """Rule net and alias are mutually exclusive for one net (see module
+        docstring) — checking the box clears+disables the alias edit rather
+        than just leaving a stale, now-ignored alias typed next to it."""
+        if checked:
+            edit.setText("")
+        edit.setDisabled(checked)
 
     def _update_button_state(self) -> None:
         self.extract_button.setEnabled(bool(self._raw_items) and self._target_path is not None)
@@ -677,6 +725,8 @@ class ExtractDock(QWidget):
         if board is None:
             self._show_message(_("Not connected."), _ERROR_STYLE)
             return None
+
+        rule_nets = {net for net, cb in self._rule_net_checkboxes.items() if cb.isChecked()}
 
         params: Dict[str, str] = {}
         for net_literal, edit in self._net_alias_edits.items():
@@ -729,6 +779,7 @@ class ExtractDock(QWidget):
             "profile_path": self._profile_path,
             "placer_path": self._placer_path,
             "params": params,
+            "rule_nets": rule_nets,
             "origin_kwargs": origin_kwargs,
             "net_template_role": net_template_role,
             "board": board,
@@ -746,6 +797,7 @@ class ExtractDock(QWidget):
             template_dict = extract_template_from_selection(
                 payload["board"].adapter, name, params=payload["params"],
                 items=payload["raw_items"], net_template_role=payload["net_template_role"],
+                rule_nets=payload["rule_nets"],
                 annotations=annotations, **payload["origin_kwargs"])
         except PlacerError as e:
             return {"error": str(e)}
@@ -769,6 +821,8 @@ class ExtractDock(QWidget):
                 entry["params"] = payload["params"]
             if payload["net_template_role"]:
                 entry["net_template_role"] = payload["net_template_role"]
+            if payload["rule_nets"]:
+                entry["rule_nets"] = sorted(payload["rule_nets"])
             for key, value in payload["origin_kwargs"].items():
                 # Function kwargs (origin_component_role) vs. profile YAML
                 # keys (origin_by_component_role) differ by "by_" — see

@@ -306,6 +306,50 @@ class TestNetTemplateRole:
         assert by_role["PI_FILTER_FB"]["net_template"] == "{PWR_IN}"
 
 
+class TestRuleNets:
+    """rule_nets (2026-08-05, Denis: "давай сделаем явный чекбокс [для null].
+    Это правильная фича. Она замыкает использование rules") — a via/track
+    net in rule_nets is written as null instead of its literal, so a
+    ManualSpoke-placed cell using it inherits the enclosing Rule's own net
+    at apply time (spoke_layout.py's `via.net or rule_net`)."""
+
+    def test_via_net_in_rule_nets_is_written_as_null(self):
+        via_pwr = _make_via(0, 0, "+3V3_VCCIO")
+        via_gnd = _make_via(1, 0, "GND")
+        adapter = MagicMock()
+        adapter.get_selected_items.return_value = [via_pwr, via_gnd]
+
+        result = extract_template_from_selection(
+            adapter, "t", rule_nets={"+3V3_VCCIO"})
+
+        vias_by_net = {v["net"] for v in result["t"]["vias"]}
+        assert None in vias_by_net  # the PWR via
+        assert "GND" in vias_by_net  # GND untouched — not in rule_nets
+
+    def test_net_in_both_rule_nets_and_net_template_map_is_fatal(self):
+        via = _make_via(0, 0, "+5V_DIRTY")
+        adapter = MagicMock()
+        adapter.get_selected_items.return_value = [via]
+
+        with pytest.raises(ValidationError):
+            extract_template_from_selection(
+                adapter, "t", params={"PWR_IN": "+5V_DIRTY"},
+                net_template_map={"+5V_DIRTY": "{PWR_IN}"},
+                rule_nets={"+5V_DIRTY"})
+
+    def test_rule_nets_does_not_affect_unrelated_nets(self):
+        via_pwr = _make_via(0, 0, "+3V3_VCCIO")
+        via_other = _make_via(1, 0, "+1V2_VCCINT")
+        adapter = MagicMock()
+        adapter.get_selected_items.return_value = [via_pwr, via_other]
+
+        result = extract_template_from_selection(
+            adapter, "t", rule_nets={"+3V3_VCCIO"})
+
+        nets = {v["net"] for v in result["t"]["vias"]}
+        assert nets == {None, "+1V2_VCCINT"}
+
+
 class TestRenderUncertainComments:
     """render_uncertain_comments — текстовая пост-обработка yaml.dump()
     вывода cmd_extract: закомментированная строка-подсказка после блока

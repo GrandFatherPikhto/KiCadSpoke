@@ -156,7 +156,12 @@ tab is hidden outright (not just its content) until it actually applies.
   optional pad) / Via net.
 - **Net aliases** — one row per net found on the selected components' pads. A non-empty alias
   becomes a `{PLACEHOLDER}` in the written Cell (feeds `params:` for round-trip resolution — see
-  [docs/config.md](config.md) on `net_template`/`params`).
+  [docs/config.md](config.md) on `net_template`/`params`). Each row also has a **"Rule net (null)"**
+  checkbox (2026-08-05), mutually exclusive with the alias field — checking it writes that net's
+  via/track as `net: null` instead, so a cell placed via `rules:`/ManualSpoke inherits whichever
+  Rule's own net it's placed under (see [docs/config.md](config.md) on `rule_nets:`) — the mechanism
+  for reusing the SAME cell across several Rules on different power rails, which `{PLACEHOLDER}`
+  aliasing can't do here (ManualSpoke has no `params:` to resolve a template against).
 - **Net template role** — appears only when a component's pads touch **2 or more already-aliased
   nets** (a bridging part — inductor, ferrite bead, fuse spanning two rails). The tool can't guess
   which one is "the" role's net_template in that case; extraction is blocked until you pick.

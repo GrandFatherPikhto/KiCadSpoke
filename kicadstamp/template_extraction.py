@@ -203,6 +203,7 @@ def extract_template_from_selection(
     origin_component_role: str | None = None,
     origin_component_pad: str | None = None,
     net_template_role: dict[str, str] | None = None,
+    rule_nets: set[str] | None = None,
     items: list[Any] | None = None,
     annotations: list[tuple[str, str, str]] | None = None,
 ) -> dict[str, Any]:
@@ -247,6 +248,18 @@ def extract_template_from_selection(
     No guessing here either: if the role is in net_template_role but the
     specified net is not actually on the component's pads — fatal, not silent.
 
+    rule_nets — OPTIONAL (see --rule-net in CLI), a set of literal net names
+    to write as via.net/track.net: null instead of the literal (or an alias)
+    — the SAME null a ManualSpoke-placed cell's via/track already treats as
+    "inherit the enclosing Rule's own net" (kicadstamp/geometry/
+    spoke_layout.py's _resolve_via/_resolve_track: `via.net or rule_net`).
+    Only meaningful for a cell meant to be reused across several Rules with
+    DIFFERENT nets (e.g. the same decoupling-cap-pair cell placed once per
+    power rail) — component net_template is untouched by this (ManualSpoke
+    placement never reads it, only ClonePlacement does). Fatal if a net is in
+    BOTH rule_nets and net_template_map/params — a net cannot be simultaneously
+    "always the rule's own net" and "always resolved from this specific param".
+
     annotations — OPTIONAL output parameter (list appended to in place, same
     "explicit opt-in" shape as items above). When given, every case where
     net_template could not be determined unambiguously (see "N nets from
@@ -259,6 +272,7 @@ def extract_template_from_selection(
     params = params or {}
     net_template_role = net_template_role or {}
     net_template_map = dict(net_template_map or {})
+    rule_nets = set(rule_nets or ())
     # Auto‑inference for the simple case: if the literal net name EQUALS a
     # param value exactly (not part of a longer string), net_template can be
     # derived automatically — no need for explicit --net-template.
@@ -266,6 +280,15 @@ def extract_template_from_selection(
     for key, value in params.items():
         if value not in net_template_map:
             net_template_map[value] = f"{{{key}}}"
+
+    both = rule_nets & set(net_template_map)
+    if both:
+        raise ValidationError(format_fatal_error(
+            _("net(s) {nets} are in both --rule-net and --param/--net-template")
+            .format(nets=sorted(both)),
+            [_("a net can't be both \"always the enclosing Rule's own net\" and "
+               "\"always resolved from this param\" — pick one per net")]
+        ))
     items = items if items is not None else adapter.get_selected_items()
     footprints = [i for i in items if isinstance(i, FootprintInstance)]
     vias = [i for i in items if isinstance(i, Via)]
@@ -397,7 +420,9 @@ def extract_template_from_selection(
         along_mm = round((v.position.x - origin.x) / MM, 4)
         across_mm = round((v.position.y - origin.y) / MM, 4)
         via_net = v.net.name if v.net else None
-        if via_net is not None and net_template_map:
+        if via_net in rule_nets:
+            via_net = None
+        elif via_net is not None and net_template_map:
             via_net = parametrize_net(via_net, net_template_map, params)
         spoke_vias.append({
             "offset_along_mm": along_mm,
@@ -416,7 +441,9 @@ def extract_template_from_selection(
         end_along_mm = round((t.end.x - origin.x) / MM, 4)
         end_across_mm = round((t.end.y - origin.y) / MM, 4)
         track_net = t.net.name if t.net else None
-        if track_net is not None and net_template_map:
+        if track_net in rule_nets:
+            track_net = None
+        elif track_net is not None and net_template_map:
             track_net = parametrize_net(track_net, net_template_map, params)
         entry = {
             "start_along_mm": start_along_mm,

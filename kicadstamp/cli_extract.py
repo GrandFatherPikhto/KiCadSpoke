@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # origin_by_via_net/origin_by_component_role/origin_by_component_pad) and
 # clone-extract's --profile branch (net/pcb/channel/output).
 _EXTRACT_PROFILE_KNOWN_KEYS = {
-    'name', 'output', 'params', 'net_template', 'net_template_role',
+    'name', 'output', 'params', 'net_template', 'net_template_role', 'rule_nets',
     'origin_by_via_net', 'origin_by_component_role', 'origin_by_component_pad',
 }
 _CLONE_EXTRACT_PROFILE_KNOWN_KEYS = {'net', 'pcb', 'channel', 'output'}
@@ -91,6 +91,7 @@ def extract_template(adapter: KiCadBoardAdapter, *, name: str, output: str,
                      params: dict[str, Any] | None = None,
                      net_template_map: dict[str, str] | None = None,
                      net_template_role: dict[str, str] | None = None,
+                     rule_nets: set[str] | None = None,
                      origin_via_net: str | None = None,
                      origin_component_role: str | None = None,
                      origin_component_pad: str | None = None) -> dict[str, Any]:
@@ -118,6 +119,7 @@ def extract_template(adapter: KiCadBoardAdapter, *, name: str, output: str,
         origin_component_role=origin_component_role,
         origin_component_pad=origin_component_pad,
         net_template_role=net_template_role or {},
+        rule_nets=rule_nets or set(),
         annotations=annotations,
     )
 

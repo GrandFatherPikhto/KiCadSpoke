@@ -107,7 +107,10 @@ cells:
 
 - `vias:` — `offset_along_mm`/`offset_across_mm` (local), `net:` (`null`/omitted means "inherit the
   rule's net" — only `rules:`/ManualSpoke supports that; `clone_placements:` fatals on a via with no
-  net, since it has no single "rule net" to fall back to), `drill_mm`, `diameter_mm`.
+  net, since it has no single "rule net" to fall back to), `drill_mm`, `diameter_mm`. Same `null`
+  convention for `tracks:`' own `net:` below. The GUI Extract dock's per-net **"Rule net (null)"**
+  checkbox (2026-08-05) writes exactly this — see `extract_profiles:`' `rule_nets:` below for the
+  CLI/profile-file equivalent (`--rule-net`).
 - `components:` — `role:` (matched against the board's `Role` custom field, **not** a refdes — the
   same role can resolve to a different real component every time the cell is placed), local
   offset+angle, its own `vias:` (same shape, nested under the component), optional `layer:` (only
@@ -433,9 +436,18 @@ extract_profiles:
 ```
 
 `extract_profiles:` entries accept: `name`, `output`, `params`, `net_template`, `net_template_role`,
-`origin_by_via_net`, `origin_by_component_role`, `origin_by_component_pad` — unknown keys are a fatal
-error (a typo'd key, e.g. `origin-by-via-net` with the wrong separator, used to be silently ignored).
-`clone_profiles:` (for `clone-extract`) accepts: `net`, `pcb`, `channel`, `output`.
+`rule_nets`, `origin_by_via_net`, `origin_by_component_role`, `origin_by_component_pad` — unknown keys
+are a fatal error (a typo'd key, e.g. `origin-by-via-net` with the wrong separator, used to be silently
+ignored). `clone_profiles:` (for `clone-extract`) accepts: `net`, `pcb`, `channel`, `output`.
+
+`rule_nets:` (2026-08-05, `--rule-net LITERAL`, repeatable) — a list of literal net names to write as
+`net: null` on any matching via/track instead of the literal (or an alias) — see the `vias:` note
+above on what `null` means there. Only useful for a cell meant to be placed via **`rules:`**/
+ManualSpoke on more than one `Rule` with a DIFFERENT net each (e.g. a decoupling-cap-pair cell reused
+once per power rail) — `net_template`/`params` (`{PLACEHOLDER}`) is the mechanism for the OTHER case,
+reuse across `clone_placements:`, and does nothing for `rules:`/ManualSpoke (`ManualSpoke` has no
+`params:` field to resolve a template against at all). Fatal if the same net is in both `rule_nets:`
+and `params`/`net_template` — pick one per net.
 
 `output:` can be set once at the file's own root as a fallback for every profile inside it, if they
 all write to the same cells file — a profile that needs a different one still overrides it directly.
