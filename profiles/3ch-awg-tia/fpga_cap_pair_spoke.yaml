@@ -1,0 +1,94 @@
+cells:
+  fpga_cap_pair_spoke:
+    vias:
+    - offset_along_mm: 1.0
+      offset_across_mm: 0.5
+      net: null
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 0.0
+      offset_across_mm: -5.2
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 0.0
+      offset_across_mm: -6.2
+      net: null
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    - offset_along_mm: 0.0
+      offset_across_mm: 1.7
+      net: GND
+      drill_mm: 0.3
+      diameter_mm: 0.6
+    components:
+    - role: C_OUT_BYPASS
+      offset_along_mm: 0.0
+      offset_across_mm: 0.0
+      angle_deg: -90.0
+    - role: C_OUT_BULK
+      offset_along_mm: 0.0
+      offset_across_mm: -3.0
+      angle_deg: 90.0
+    tracks:
+    - start_along_mm: 0.0
+      start_across_mm: 0.5675
+      end_along_mm: 0.0
+      end_across_mm: 1.7
+      width_mm: 0.65
+      net: GND
+    - start_along_mm: 0.0
+      start_across_mm: -3.8625
+      end_along_mm: 0.0
+      end_across_mm: -5.2
+      width_mm: 0.65
+      net: GND
+    - start_along_mm: -0.2021
+      start_across_mm: -6.2
+      end_along_mm: 0.0
+      end_across_mm: -6.2
+      width_mm: 0.65
+      net: null
+    - start_along_mm: -1.0
+      start_across_mm: -3.1375
+      end_along_mm: -1.0
+      end_across_mm: -5.4021
+      width_mm: 0.65
+      net: null
+    - start_along_mm: 1.0
+      start_across_mm: 0.5
+      end_along_mm: 1.0
+      end_across_mm: 0.1225
+      width_mm: 0.65
+      net: null
+    - start_along_mm: 0.31
+      start_across_mm: -0.5675
+      end_along_mm: 0.0
+      end_across_mm: -0.5675
+      width_mm: 0.65
+      net: null
+    - start_along_mm: 0.0
+      start_across_mm: -0.5675
+      end_along_mm: 0.0
+      end_across_mm: -2.1375
+      width_mm: 0.65
+      net: null
+    - start_along_mm: 0.0
+      start_across_mm: -2.1375
+      end_along_mm: -1.0
+      end_across_mm: -3.1375
+      width_mm: 0.65
+      net: null
+    - start_along_mm: -1.0
+      start_across_mm: -5.4021
+      end_along_mm: -0.2021
+      end_across_mm: -6.2
+      width_mm: 0.65
+      net: null
+    - start_along_mm: 1.0
+      start_across_mm: 0.1225
+      end_along_mm: 0.31
+      end_across_mm: -0.5675
+      width_mm: 0.65
+      net: null
+    layer: B.Cu

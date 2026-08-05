@@ -1,0 +1,12 @@
+layer: B.Cu
+schematic_dir: ../../test_boards/3CH-AWG-TIA
+registry_path: registry/3ch-awg-tia.json
+track_registry_path: registry/3ch-awg-tia.tracks.json
+log_file: logs/3ch-awg-tia.log
+operation_log_dir: logs/operation
+schematic_files:
+- ../../test_boards/3CH-AWG-TIA/3CH-AWG-TIA.kicad_sch
+include:
+- cells.yaml
+- fpga_cap_pair_spoke.yaml
+- fpga_spokes.yaml
