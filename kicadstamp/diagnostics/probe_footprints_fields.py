@@ -1,13 +1,21 @@
 """
-Проба: поддерживает ли kicad-python (kipy) чтение/запись пользовательских
-полей у футпринта, РАЗМЕЩЁННОГО НА ПЛАТЕ (FootprintInstance), а не только
-у определения в библиотеке.
+probe_footprints_fields.py — probes whether kipy can read/write custom fields
+on a placed footprint (FootprintInstance), not just its library definition.
 
-Известная неопределённость на момент написания:
-- футпринты в формате .kicad_pcb поддерживают именованные поля с версии KiCad 8
-- но пользователь kicad-python сообщал (на версии 0.3.0), что API футпринтов
-  на плате не поддерживает пользовательские поля вовсе
-Проверяем честно, на вашей версии 0.7.1, а не гадаем.
+Input:
+    None (connects to the live board and inspects the first footprint).
+
+Expected:
+    Prints which field APIs exist (get_fields/fields/get_field_by_name) and
+    whether a custom field (KicadSpokeRole) can actually be read and written.
+
+Live KiCad:
+    Yes — requires a running KiCad with the target board open.
+    CAUTION: this probe WRITES a test field (KicadSpokeRole=TEST_ROLE) to the
+    first footprint on the board — it is not read-only.
+
+Run:
+    python -m kicadstamp.diagnostics.probe_footprints_fields
 """
 
 from kipy import KiCad

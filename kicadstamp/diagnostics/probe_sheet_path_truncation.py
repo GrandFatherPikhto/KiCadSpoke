@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """
-probe_sheet_path_truncation.py — проверка: sheet_path.path заканчивается
-(или начинается) собственным уникальным UUID символа, а не только цепочкой
-листов? Пробуем path[:-1] (без последнего) и path[1:] (без первого),
-сравниваем со человекочитаемым путём из локальных цепей — какой вариант
-группирует компонентов ОДНОГО и ТОГО ЖЕ листа под ОДИНАКОВЫЙ ключ.
+probe_sheet_path_truncation.py — checks whether sheet_path.path starts or
+ends with the symbol's own unique UUID.
 
-Запуск: python probe_sheet_path_truncation.py > sheet_truncation.txt
+Input:
+    None (reads the live board; redirect stdout to a file for later diffing).
+
+Expected:
+    Groups components by path[:-1] (drop last) and path[1:] (drop first) and
+    compares both groupings against the human-readable path derived from local
+    nets — whichever variant keys all components of one sheet identically wins.
+
+Live KiCad:
+    Yes — requires a running KiCad with the board open.
+
+Run:
+    python -m kicadstamp.diagnostics.probe_sheet_path_truncation > sheet_truncation.txt
 """
 import sys
 import io

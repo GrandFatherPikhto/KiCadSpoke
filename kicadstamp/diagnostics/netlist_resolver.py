@@ -1,7 +1,20 @@
 #!/usr/bin/env python3
 """
-probe_sheet_path_deep.py — глубокое исследование fp.sheet_path через kipy.
-Выводит все доступные атрибуты и пытается восстановить иерархию.
+netlist_resolver.py — deep dump of fp.sheet_path attributes via kipy.
+
+Input:
+    None (reads the live board).
+
+Expected:
+    For the first 20 footprints: prints every non-underscore attribute of
+    sheet_path (path, proto, path_human_readable, uuid, ...) to see whether
+    enough hierarchy information survives to rebuild the sheet tree.
+
+Live KiCad:
+    Yes — requires a running KiCad with the target board open.
+
+Run:
+    python -m kicadstamp.diagnostics.netlist_resolver
 """
 import kipy
 from kipy.board_types import FootprintInstance

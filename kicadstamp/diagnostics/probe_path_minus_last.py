@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 """
-probe_path_minus_last.py — чистая финальная проверка: path[:-1]
-(sheet_path.path без последнего элемента — предположительно, своего
-UUID символа) сгруппированный через РЕАЛЬНЫЙ словарь {uuid: Sheetname}
-из .kicad_sch (а не через шумные имена локальных цепей, как раньше).
+probe_path_minus_last.py — checks whether sheet_path.path[:-1] groups
+components of the same sheet under one key.
 
-Запуск: python probe_path_minus_last.py <путь_к_папке_проекта>
-(KiCad с этой платой должен быть открыт)
+Input:
+    Path to the project directory containing *.kicad_sch files.
+
+Expected:
+    Groups components by sheet_path.path with the last element removed
+    (assumed to be the symbol's own UUID) and labels each group with a real
+    {uuid: Sheetname} map parsed from the .kicad_sch files — instead of the
+    noisy local-net names used by earlier probes.
+
+Live KiCad:
+    Yes — requires a running KiCad with the board open.
+
+Run:
+    python -m kicadstamp.diagnostics.probe_path_minus_last <project_dir>
 """
 import sys
 import io

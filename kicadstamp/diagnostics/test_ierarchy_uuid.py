@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+"""
+test_ierarchy_uuid.py — prints each footprint's sheet_path.path raw form.
+
+Input:
+    None (reads the live board).
+
+Expected:
+    For every footprint: refdes and the repr of sheet_path.path, to see whether
+    it is a tuple of UUID objects (and how to stringify them).
+
+Live KiCad:
+    Yes — requires a running KiCad with the board open.
+
+Run:
+    python -m kicadstamp.diagnostics.test_ierarchy_uuid
+"""
 import kipy
 kc = kipy.KiCad()
 board = kc.get_board()

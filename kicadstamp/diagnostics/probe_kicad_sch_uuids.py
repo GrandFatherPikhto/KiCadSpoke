@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 """
-probe_kicad_sch_uuids.py — последняя проверка идеи UUID-моста.
+probe_kicad_sch_uuids.py — two-step check of the UUID-bridge idea.
 
-Шаг 1 (файлы, живой KiCad не нужен): сканирует все *.kicad_sch в
-указанной директории, парсит sexpdata напрямую (тот же формат, что уже
-читает kicadstamp.cloner), достаёт из каждого (sheet ...) блока
-uuid + property "Sheetname" — то есть словарь {uuid: имя} из ПЕРВЫХ РУК,
-не через kipy и не через path_human_readable.
+Input:
+    Path to the project directory containing *.kicad_sch files.
 
-Шаг 2 (нужен живой KiCad): читает sheet_path.path каждого футпринта через
-kipy и сверяет — сколько из этих UUID реально встречается в словаре
-из шага 1. Если пересечение большое — UUID из kipy РЕАЛЬНО совпадают
-с UUID из .kicad_sch, просто предыдущие пробы обрезали не с той стороны
-или сравнивали не то; если пересечение нулевое — UUID из kipy это что-то
-другое (например, свой UUID символа), и мост окончательно закрыт.
+Expected:
+    Step 1 (no live KiCad): parses every *.kicad_sch with sexpdata and builds
+    {uuid: Sheetname} from the (sheet ...) blocks. Step 2 (live KiCad): reads
+    each footprint's sheet_path.path UUIDs via kipy and reports how many are
+    found in that map — a large overlap means kipy UUIDs really match the
+    schematic UUIDs; a zero overlap closes the bridge idea for good.
 
-Запуск: python probe_kicad_sch_uuids.py <путь_к_папке_проекта>
-(KiCad с этой платой должен быть открыт — для шага 2)
+Live KiCad:
+    Partially — step 1 reads local files only; step 2 needs a running KiCad
+    with the board open.
+
+Run:
+    python -m kicadstamp.diagnostics.probe_kicad_sch_uuids <project_dir>
 """
 import sys
 import io

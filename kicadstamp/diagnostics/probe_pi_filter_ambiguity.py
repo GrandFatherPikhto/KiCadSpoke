@@ -1,26 +1,34 @@
 #!/usr/bin/env python3
 """
-probe_pi_filter_ambiguity.py — для заданных refdes печатает Role, Cluster и
-полный человекочитаемый путь по листам схемы (тот же механизм, что
-resolve_sheet_path_names/_fp_on_sheet в clone_role_resolver.py) — чтобы
-понять, почему anchor_sheet/anchor_cluster не сужают неоднозначных
-кандидатов до одного (см. FATAL ERROR ambiguity в выводе --apply, список
-кандидатов там же).
+probe_pi_filter_ambiguity.py — prints Role/Cluster/human-readable sheet path
+and nets for chosen refs.
 
-Запуск: python diagnostics/probe_pi_filter_ambiguity.py [REF ...]
-(без аргументов — дефолт C139/C143/C148)
+Input:
+    Optional refdes arguments (default: C139/C143/C148).
+
+Expected:
+    For each target ref: ROLE/CLUSTER field values, resolved sheet-path names,
+    and the sorted pad nets — the same data clone_role_resolver uses, to see
+    why anchor_sheet/anchor_cluster do not narrow ambiguous candidates down to
+    one (see the FATAL ERROR ambiguity list in --apply output).
+
+Live KiCad:
+    Yes — requires a running KiCad with the board open.
+
+Run:
+    python -m kicadstamp.diagnostics.probe_pi_filter_ambiguity [REF ...]
 """
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from kicadstamp.config import load_config
 from kicadstamp.kicad.adapter import KiCadBoardAdapter
 from kicadstamp.sheet_names import resolve_sheet_path_names
 from kicadstamp.constants import ROLE_FIELD_NAME, CLUSTER_FIELD_NAME
 
-CONFIG_PATH = str(Path(__file__).resolve().parents[1] / "boards" / "3ch-awg-tia" / "3ch-awg-tia.yaml")
+CONFIG_PATH = str(Path(__file__).resolve().parents[2] / "boards" / "3ch-awg-tia" / "3ch-awg-tia.yaml")
 DEFAULT_TARGET_REFS = {"C139", "C143", "C148"}
 
 

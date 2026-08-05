@@ -10,20 +10,59 @@
 
 ## Структура
 
+Все диагностические скрипты живут в едином пространстве имён `kicadstamp/diagnostics/`
+(включая зонды, ранее разбросанные по верхнеуровневой папке `diagnostics/`).
+Дерево ниже помечает требование каждого скрипта к KiCad:
+
+- `[LIVE]` — требуется запущенный KiCad с открытой платой.
+- `[LIVE+WRITE]` — также пишет / мутирует плату.
+- `[FILES]` — читает только локальные файлы, без IPC.
+
 ```
 kicadstamp/diagnostics/
-├── diagnose_first_write_crash.py  # Диагностика краша KiCad на первой IPC-записи (issue #24966)
-├── diagnostic_charset.py          # Поиск не-ASCII символов (гомоглифов) в Role/Cluster по всей плате
-├── diagnostic_keepout.py          # Анализ keepout и пересечений
-├── get_pad_bbox.py                # Bounding box пада
-├── get_selected_component.py      # Детальная информация о выделенных компонентах
-├── get_selection.py               # Список выделенных объектов
-├── test_create_one_via.py         # Создание одной via
-├── test_custom_fields.py          # Проверка чтения поля Role
-├── test_flip_one_cap.py           # Проверка флипа одного компонента
-├── test_move_one_cap.py           # Проверка перемещения одного компонента
-└── test_pad_mirror_convention.py  # Проверка конвенции зеркалирования пада
+├── diagnose_first_write_crash.py  # Диагностика краша KiCad на первой IPC-записи (issue #24966) [LIVE]
+├── diagnostic_charset.py          # Поиск не-ASCII символов (гомоглифов) в Role/Cluster по всей плате [LIVE]
+├── diagnostic_keepout.py          # Анализ keepout и пересечений [LIVE]
+├── get_pad_bbox.py                # Bounding box пада [LIVE]
+├── get_selected_component.py      # Детальная информация о выделенных компонентах [LIVE]
+├── get_selection.py               # Список выделенных объектов [LIVE]
+├── test_create_one_via.py         # Создание одной via [LIVE+WRITE]
+├── test_custom_fields.py          # Проверка чтения поля Role [LIVE]
+├── test_flip_one_cap.py           # Проверка флипа одного компонента [LIVE+WRITE]
+├── test_move_one_cap.py           # Проверка перемещения одного компонента [LIVE+WRITE]
+├── test_pad_mirror_convention.py  # Проверка конвенции зеркалирования пада [LIVE]
+├── diagnose_points.py             # Грубый зонд для kipy-типа "Points" [LIVE]
+├── group_by_sheet_path.py         # Группировка компонентов по цепочке sheet_path UUID [LIVE]
+├── kipy_uuild_resolver.py         # Список всех цепей с подключёнными refdes [LIVE]
+├── local_net_ierarchy.py          # Дампит все локальные (иерархические) имена цепей [LIVE]
+├── netlist_resolver.py            # Глубокий дамп атрибутов fp.sheet_path [LIVE]
+├── probe_footprints_fields.py     # Чтение/запись кастомных полей на размещённом футпринте [LIVE+WRITE]
+├── probe_kicad_sch_uuids.py       # Двухшаговый UUID-мост vs *.kicad_sch [FILES / LIVE шаг 2]
+├── probe_path_minus_last.py       # Группировка sheet_path.path[:-1] vs {uuid: Sheetname} [LIVE]
+├── probe_pi_filter_ambiguity.py   # Role/Cluster/sheet-path/цепи для refdes (неоднозначность) [LIVE]
+├── probe_sheet_path_truncation.py # Группировка path[:-1]/path[1:] vs пути локальных цепей [LIVE]
+├── probe_uuid_stability.py        # Переживает ли fp.id.value переаннотацию? [LIVE]
+├── probe_uuid_to_sheet_name.py    # {цепочка UUID -> человекочитаемый путь} из локальных цепей [LIVE]
+├── resolve_paths.py               # Человекочитаемые пути листов из .net-файла [LIVE]
+├── role_resolver.py               # Сырой proto-дамп sheet_path [LIVE]
+├── test_ierarchy.py               # Футпринты vs карта листов схемы [LIVE]
+├── test_ierarchy_uuid.py          # Сырая форма sheet_path.path [LIVE]
+├── test_sheet_path.py             # path_human_readable на живой плате [LIVE]
+└── unersolved_components.py       # Поканальный разбор (Channel_0/1/2) по цепям [LIVE]
 ```
+
+### Конвенция шапки
+
+Каждый скрипт в этой директории открывается модульным docstring'ом, в котором в указанном порядке указывается:
+
+- **Input** — что нужно скрипту (аргументы, путь конфига, живая плата, ...).
+- **Expected** — что он печатает / проверяет / пишет.
+- **Live KiCad** — требуется ли запущенный KiCad с открытой платой
+  (`Yes`), только для части запуска (`Partially`) или не требуется вовсе (`No`).
+- **Run** — каноническая команда `python -m kicadstamp.diagnostics.<скрипт> ...`.
+
+Поле `Live KiCad` — авторитетный пофайловый маркер live-only зондов;
+дерево структуры выше использует ту же легенду (`[LIVE]` / `[LIVE+WRITE]` / `[FILES]`).
 
 ---
 
@@ -298,14 +337,16 @@ python -m kicadstamp.diagnostics.test_pad_mirror_convention C6 --pad 2
 
 - **Запускайте с `--verbose`** для отладки, если скрипт поддерживает этот флаг.
 - **Всегда запускайте из корня проекта** с использованием `python -m kicadstamp.diagnostics.<имя_скрипта>`.
-- **Убедитесь, что KiCad открыт** и активна нужная плата.
+- **Убедитесь, что KiCad открыт** и активна нужная плата — если только в шапке скрипта не указано
+  `Live KiCad: No` / `[FILES]` (без живой сессии запускаются только скрипты, читающие локальные
+  файлы).
 - Для скриптов, работающих с выделением, выделите нужные объекты в PCB-редакторе **перед** запуском.
 
 ---
 
 ## Примечания
 
-- Скрипты **не изменяют плату** (кроме `test_move_one_cap`, `test_flip_one_cap`, `test_create_one_via`, которые могут её мутировать). Используйте их на тестовых платах или убедитесь, что у вас есть резервная копия.
+- Скрипты **не изменяют плату** (кроме `test_move_one_cap`, `test_flip_one_cap`, `test_create_one_via` и `probe_footprints_fields`, которые могут её мутировать). Используйте их на тестовых платах или убедитесь, что у вас есть резервная копия.
 - `diagnose_first_write_crash.py` плату не мутирует (запись — no-op), но на уязвимой сессии (см. issue
   #24966) сама попытка записи может **уронить процесс KiCad целиком**. Сохраните открытые файлы перед
   запуском полной лесенки (без `--until 8`).
@@ -320,8 +361,9 @@ python -m kicadstamp.diagnostics.test_pad_mirror_convention C6 --pad 2
 
 1. Разместите его в `kicadstamp/diagnostics/`.
 2. Используйте актуальный API `kicadstamp` (адаптер, геометрию, конфигурацию).
-3. Добавьте описание в этот документ.
-4. Обеспечьте, чтобы скрипт не изменял плату (или предупреждал об этом), если он не предназначен для мутации.
+3. Задайте конвенцию шапки: `Input` / `Expected` / `Live KiCad` / `Run`.
+4. Добавьте описание в этот документ (с маркером `[LIVE]` / `[LIVE+WRITE]` / `[FILES]`).
+5. Обеспечьте, чтобы скрипт не изменял плату (или предупреждал об этом), если он не предназначен для мутации.
 
 ---
 

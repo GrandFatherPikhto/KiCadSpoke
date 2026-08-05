@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
 """
-group_by_sheet_path.py — группирует компоненты по UUID цепочкам sheet_path.
-Показывает, какие компоненты принадлежат одному экземпляру листа.
+group_by_sheet_path.py — groups board components by their sheet_path UUID chain.
 
-Запуск: python group_by_sheet_path.py
+Input:
+    None (reads the live board).
+
+Expected:
+    Prints the total component count, the number of unique sheet groups, and
+    for each group the UUID chain, component count, and example refs — showing
+    which components belong to the same sheet instance.
+
+Live KiCad:
+    Yes — requires a running KiCad with the target board open.
+
+Run:
+    python -m kicadstamp.diagnostics.group_by_sheet_path
 """
 import sys
 from collections import defaultdict

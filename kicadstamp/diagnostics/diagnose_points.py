@@ -1,4 +1,21 @@
 #!/usr/bin/env python3
+"""
+diagnose_points.py — brute-force probe for the kipy "Points" object type.
+
+Input:
+    None (connects to the running KiCad session).
+
+Expected:
+    Logs how many objects each numeric kipy item type (0..29) returns and the
+    Python class of the first item — to locate where the Points enum type lives
+    and whether Points are reachable through get_items.
+
+Live KiCad:
+    Yes — requires a running KiCad with the target board open.
+
+Run:
+    python -m kicadstamp.diagnostics.diagnose_points
+"""
 import sys
 import logging
 import kipy

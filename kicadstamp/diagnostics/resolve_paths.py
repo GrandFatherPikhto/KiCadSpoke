@@ -1,13 +1,26 @@
 #!/usr/bin/env python3
 """
-resolve_sheet_paths.py — восстанавливает человекочитаемые пути листов
-для компонентов на плате, используя .net файл.
-Запуск из корня проекта: python resolve_sheet_paths.py
+resolve_paths.py — restores human-readable sheet paths for board components
+using a .net file.
+
+Input:
+    A "project.net" netlist in the current working directory.
+
+Expected:
+    Builds {UUID chain -> human-readable sheet path} from the netlist via
+    kicadstamp.cloner.netlist.parse_netlist, then prints for every board
+    footprint its refdes and human-readable path.
+
+Live KiCad:
+    Yes — requires a running KiCad with the board open.
+
+Run:
+    python -m kicadstamp.diagnostics.resolve_paths
 """
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from kicadstamp.cloner.netlist import parse_netlist
 import kipy

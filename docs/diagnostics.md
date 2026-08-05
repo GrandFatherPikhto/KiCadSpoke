@@ -14,20 +14,59 @@ via `python -m`.
 
 ## Structure
 
+All diagnostic scripts live in the **single namespace** `kicadstamp/diagnostics/`
+(including the probes previously scattered in the top-level `diagnostics/` folder).
+The tree below marks each script's KiCad requirement:
+
+- `[LIVE]` — requires a running KiCad with the board open.
+- `[LIVE+WRITE]` — also writes / mutates the board.
+- `[FILES]` — reads local files only, no IPC.
+
 ```
 kicadstamp/diagnostics/
-├── diagnose_first_write_crash.py  # Diagnoses the KiCad crash on the first IPC write (issue #24966)
-├── diagnostic_charset.py          # Finds non-ASCII characters (homoglyphs) in Role/Cluster board-wide
-├── diagnostic_keepout.py          # Keepout and overlap analysis
-├── get_pad_bbox.py                # Pad bounding box
-├── get_selected_component.py      # Detailed info on selected components
-├── get_selection.py               # List of selected objects
-├── test_create_one_via.py         # Creates a single via
-├── test_custom_fields.py          # Verifies reading the Role field
-├── test_flip_one_cap.py           # Verifies flipping a single component
-├── test_move_one_cap.py           # Verifies moving a single component
-└── test_pad_mirror_convention.py  # Verifies the pad-mirroring convention
+├── diagnose_first_write_crash.py  # Diagnoses the KiCad crash on the first IPC write (issue #24966) [LIVE]
+├── diagnostic_charset.py          # Finds non-ASCII characters (homoglyphs) in Role/Cluster board-wide [LIVE]
+├── diagnostic_keepout.py          # Keepout and overlap analysis [LIVE]
+├── get_pad_bbox.py                # Pad bounding box [LIVE]
+├── get_selected_component.py      # Detailed info on selected components [LIVE]
+├── get_selection.py               # List of selected objects [LIVE]
+├── test_create_one_via.py         # Creates a single via [LIVE+WRITE]
+├── test_custom_fields.py          # Verifies reading the Role field [LIVE]
+├── test_flip_one_cap.py           # Verifies flipping a single component [LIVE+WRITE]
+├── test_move_one_cap.py           # Verifies moving a single component [LIVE+WRITE]
+├── test_pad_mirror_convention.py  # Verifies the pad-mirroring convention [LIVE]
+├── diagnose_points.py             # Brute-force probe for the kipy "Points" type [LIVE]
+├── group_by_sheet_path.py         # Groups components by their sheet_path UUID chain [LIVE]
+├── kipy_uuild_resolver.py         # Lists every net with the refs connected [LIVE]
+├── local_net_ierarchy.py          # Dumps all local (hierarchical) net names [LIVE]
+├── netlist_resolver.py            # Deep dump of fp.sheet_path attributes [LIVE]
+├── probe_footprints_fields.py     # Read/write of custom fields on a placed footprint [LIVE+WRITE]
+├── probe_kicad_sch_uuids.py       # Two-step UUID bridge vs *.kicad_sch [FILES / LIVE step 2]
+├── probe_path_minus_last.py       # sheet_path.path[:-1] grouping vs {uuid: Sheetname} [LIVE]
+├── probe_pi_filter_ambiguity.py   # Role/Cluster/sheet-path/nets for refs (ambiguity) [LIVE]
+├── probe_sheet_path_truncation.py # path[:-1]/path[1:] grouping vs local-net paths [LIVE]
+├── probe_uuid_stability.py        # fp.id.value survives re-annotation? [LIVE]
+├── probe_uuid_to_sheet_name.py    # {UUID chain -> human path} from local nets [LIVE]
+├── resolve_paths.py               # Human sheet paths from a .net file [LIVE]
+├── role_resolver.py               # Raw proto dump of sheet_path [LIVE]
+├── test_ierarchy.py               # Footprints vs schematic sheet map [LIVE]
+├── test_ierarchy_uuid.py          # Raw sheet_path.path form [LIVE]
+├── test_sheet_path.py             # path_human_readable on a live board [LIVE]
+└── unersolved_components.py       # Per-component channel (Channel_0/1/2) by nets [LIVE]
 ```
+
+### Header convention
+
+Every script in this directory opens with a module docstring stating, in this order:
+
+- **Input** — what the script needs (arguments, config path, a live board, ...).
+- **Expected** — what it prints / verifies / writes.
+- **Live KiCad** — whether a running KiCad with the board open is required
+  (`Yes`), only for part of the run (`Partially`), or not at all (`No`).
+- **Run** — the canonical `python -m kicadstamp.diagnostics.<script> ...` command.
+
+The `Live KiCad` field is the authoritative per-file marker of live-only probes;
+the structure tree above uses the same legend (`[LIVE]` / `[LIVE+WRITE]` / `[FILES]`).
 
 ---
 
@@ -316,7 +355,9 @@ python -m kicadstamp.diagnostics.test_pad_mirror_convention C6 --pad 2
 
 - **Run with `--verbose`** for debugging, if the script supports the flag.
 - **Always run from the project root** using `python -m kicadstamp.diagnostics.<script_name>`.
-- **Make sure KiCad is open** with the relevant board active.
+- **Make sure KiCad is open** with the relevant board active — unless the script's header says
+  `Live KiCad: No` / `[FILES]` (the only scripts that run without a live session are the local-file
+  readers).
 - For scripts that work with the selection, select the relevant objects in the PCB editor **before**
   running them.
 
@@ -325,7 +366,8 @@ python -m kicadstamp.diagnostics.test_pad_mirror_convention C6 --pad 2
 ## Notes
 
 - The scripts **do not modify the board** (except for `test_move_one_cap`, `test_flip_one_cap`,
-  `test_create_one_via`, which can mutate it). Use them on test boards or make sure you have a backup.
+  `test_create_one_via`, and `probe_footprints_fields`, which can mutate it). Use them on test
+  boards or make sure you have a backup.
 - `diagnose_first_write_crash.py` does not mutate the board (the write is a no-op), but on an affected
   session (see issue #24966) the write attempt itself can **crash the KiCad process entirely**. Save open
   files before running the full ladder (without `--until 8`).
@@ -341,8 +383,9 @@ To add a new diagnostic script:
 
 1. Place it in `kicadstamp/diagnostics/`.
 2. Use the current `kicadstamp` API (adapter, geometry, config).
-3. Add a description to this document.
-4. Make sure the script doesn't modify the board (or warns about it), unless it's meant to mutate.
+3. Give it the header convention: `Input` / `Expected` / `Live KiCad` / `Run`.
+4. Add a description to this document (with the `[LIVE]` / `[LIVE+WRITE]` / `[FILES]` marker).
+5. Make sure the script doesn't modify the board (or warns about it), unless it's meant to mutate.
 
 ---
 

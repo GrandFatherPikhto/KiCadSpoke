@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
 """
-resolve_channel_by_net.py — определяет канал (Channel_0/1/2) для каждого
-компонента на основе анализа цепей, к которым подключены его пады.
+unersolved_components.py — determines each component's channel
+(Channel_0/1/2) from the hierarchical nets on its pads.
 
-Запуск: python resolve_channel_by_net.py
+Input:
+    None (reads the live board).
+
+Expected:
+    For every footprint: refdes and the resolved channel (or MULTI:... when it
+    touches several channels, or None when it has no hierarchical nets), then a
+    per-channel grouping of unresolved/ambiguous components.
+
+Live KiCad:
+    Yes — requires a running KiCad with the board open.
+
+Run:
+    python -m kicadstamp.diagnostics.unersolved_components
 """
 import kipy
 import re

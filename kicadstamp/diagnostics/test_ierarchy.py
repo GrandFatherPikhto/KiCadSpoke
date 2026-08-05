@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+"""
+test_ierarchy.py — matches board footprints' sheet_path against a sheet map
+built from the live schematic.
+
+Input:
+    None (reads the live board and schematic).
+
+Expected:
+    Walks the schematic sheet tree, builds {full UUID path -> human-readable
+    path}, then prints each footprint with its matched path (or reports a
+    mismatch) — verifying that schematic sheet UUIDs line up with board
+    sheet_path UUIDs.
+
+Live KiCad:
+    Yes — requires a running KiCad with the board and schematic open.
+
+Run:
+    python -m kicadstamp.diagnostics.test_ierarchy
+"""
 import kipy
 
 kc = kipy.KiCad()

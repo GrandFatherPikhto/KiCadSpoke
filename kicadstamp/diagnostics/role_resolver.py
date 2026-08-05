@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+"""
+role_resolver.py — raw proto dump of each footprint's sheet_path.
+
+Input:
+    None (reads the live board).
+
+Expected:
+    For every footprint: refdes and the string form of sheet_path.proto — a
+    quick one-shot look at what the proto representation actually contains.
+
+Live KiCad:
+    Yes — requires a running KiCad with the board open.
+
+Run:
+    python -m kicadstamp.diagnostics.role_resolver
+"""
 import kipy
 from kipy.board_types import FootprintInstance
 

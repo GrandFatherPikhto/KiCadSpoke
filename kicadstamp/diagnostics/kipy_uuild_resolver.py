@@ -1,7 +1,19 @@
 #!/usr/bin/env python3
 """
-list_nets.py — получить список всех цепей с платы через kipy.
-Запуск: python list_nets.py
+kipy_uuild_resolver.py — lists every net on the board with the refs connected.
+
+Input:
+    None (reads the live board).
+
+Expected:
+    For each net: name, code, count of connected components, and the refs list
+    (deduplicated) — a quick net-connectivity overview via kipy.
+
+Live KiCad:
+    Yes — requires a running KiCad with the target board open.
+
+Run:
+    python -m kicadstamp.diagnostics.kipy_uuild_resolver
 """
 import kipy
 from collections import defaultdict

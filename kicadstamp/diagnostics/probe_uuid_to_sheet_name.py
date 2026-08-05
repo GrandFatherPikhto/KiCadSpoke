@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 """
-probe_uuid_to_sheet_name.py — строим словарь {sheet_path (UUID-цепочка,
-как строка) -> человекочитаемый путь листа}, беря имя из ЛОКАЛЬНЫХ цепей
-(начинаются с '/') компонентов этого же листа, и проверяем, действительно
-ли UUID-цепочка стабильно совпадает у ВСЕХ компонентов одного и того же
-(под)листа — независимо от того, сидят ли они сами на локальной цепи.
+probe_uuid_to_sheet_name.py — builds {sheet_path UUID chain -> human-readable
+path} using names taken from the local nets of same-sheet components.
 
-Идея: если это подтвердится, можно подписывать человекочитаемым именем
-ЛЮБОЙ футпринт по его sheet_path, даже если сам он только на GND/+3V3 и
-ни разу не касается локальной иерархической метки — имя берём у соседей.
+Input:
+    None (reads the live board).
 
-Запуск: python probe_uuid_to_sheet_name.py
-(KiCad должен быть открыт с платой, где есть клонированные листы)
+Expected:
+    Prints, for each sheet UUID chain, the human-readable path reconstructed
+    from '/'-prefixed local nets, and whether ALL components of that sheet
+    agree on the same key — testing the idea that any footprint can be
+    labelled by its neighbours' local-net path, even when it only sits on
+    GND/+3V3.
+
+Live KiCad:
+    Yes — requires a board with cloned sheets for a meaningful run.
+
+Run:
+    python -m kicadstamp.diagnostics.probe_uuid_to_sheet_name
 """
 import sys
 import io
