@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 from kipy.board_types import FootprintInstance
 
 from kicadstamp.constants import ROLE_FIELD_NAME, CLUSTER_FIELD_NAME
-from kicadstamp.explore import Board
+from kicadstamp.explore import Board, selection_signature
 
 
 def _make_pad(number, net_name):
@@ -190,3 +190,36 @@ class TestSelectItems:
         assert items == [fps[0]]
         adapter.get_vias.assert_not_called()
         adapter.get_tracks.assert_not_called()
+
+
+# ── selection_signature ─────────────────────────────────────────────────
+
+def test_selection_signature_footprints_key_on_refdes():
+    assert selection_signature([_make_fp("R1"), _make_fp("R2")]) == (
+        ("fp", "R1"), ("fp", "R2"))
+
+
+def test_selection_signature_non_footprints_key_by_type_and_net():
+    class _Via:
+        def __init__(self, net):
+            self.net = type("_Net", (), {"name": net})()
+
+    class _Track:
+        def __init__(self, net):
+            self.net = type("_Net", (), {"name": net})()
+
+    class _NoNet:
+        pass
+
+    assert selection_signature([_Via("GND"), _Track("+5V"), _NoNet()]) == (
+        ("_Via", "GND"), ("_Track", "+5V"), ("_NoNet", None))
+
+
+def test_selection_signature_mixed_and_stable():
+    items = [_make_fp("R1"), _make_via("GND")]
+    assert selection_signature(items) == (("fp", "R1"), ("MagicMock", "GND"))
+    assert selection_signature(items) == selection_signature(items)
+
+
+def test_selection_signature_empty():
+    assert selection_signature([]) == ()

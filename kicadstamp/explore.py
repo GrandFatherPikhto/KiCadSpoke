@@ -22,6 +22,24 @@ from .placement.services.component_pool import cluster_prefix_match
 from .sheet_names import build_sheet_name_map, resolve_sheet_path_names
 
 
+def selection_signature(items) -> tuple:
+    """Cheap, stable identity for a raw get_selected_items()/select_items()
+    list — just enough to tell "selection changed" from "same selection, new
+    tick", with no field reads or extra IPC. Footprints key on their refdes,
+    vias/tracks on (type, net name). Moved out of gui/main_window.py's
+    _raw_selection_signature (Phase 2 of the gui god-file decomposition) —
+    it is pure, selection-related logic that belongs in core; MainWindow now
+    calls this directly."""
+    parts = []
+    for item in items:
+        if isinstance(item, FootprintInstance):
+            parts.append(("fp", item.reference_field.text.value))
+        else:
+            parts.append((type(item).__name__,
+                          getattr(getattr(item, "net", None), "name", None)))
+    return tuple(parts)
+
+
 @dataclass
 class Selected:
     """One footprint matched by Board.select() — plus the raw fp handle as

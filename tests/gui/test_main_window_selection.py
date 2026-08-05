@@ -20,8 +20,11 @@ from tests.gui.conftest import _pump
 class _FakeFootprint:
     """Looks like a FootprintInstance well enough for the tick — the test
     monkeypatches main_window_mod.FootprintInstance to this class so the
-    isinstance() checks (refs comprehension + _raw_selection_signature)
-    treat it as a footprint."""
+    refs comprehension's isinstance() check treats it as a footprint. (The
+    selection signature moved to kicadstamp.explore.selection_signature in
+    Phase 2 of the god-file decomposition and uses the REAL FootprintInstance,
+    so these fakes key by type name there — still deterministic, which is all
+    the early-exit tests rely on.)"""
 
     def __init__(self, ref):
         text = type("_Text", (), {"value": ref})()

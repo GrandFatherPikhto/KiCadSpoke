@@ -287,8 +287,11 @@ def test_non_includable_keys_empty_for_a_clean_subsystem_file(config_path):
 # ── display_path ────────────────────────────────────────────────────────
 
 def test_display_path_relative_inside_project_and_absolute_outside(tmp_path, monkeypatch):
-    from gui.docks import _common
-    monkeypatch.setattr(_common, "PROJECT_ROOT", tmp_path)
+    # display_path lives in core now (kicadstamp/config_writer.py, Phase 2 of
+    # the god-file decomposition) — patch ITS module global, not the gui facade's
+    # re-export (which the function never reads).
+    from kicadstamp import config_writer
+    monkeypatch.setattr(config_writer, "PROJECT_ROOT", tmp_path)
     inside = tmp_path / "boards" / "cell.yaml"
     inside.parent.mkdir()
     assert display_path(inside) == str(Path("boards/cell.yaml"))

@@ -73,6 +73,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (QApplication, QCheckBox, QLabel, QMainWindow,
                               QMenu, QPushButton, QSystemTrayIcon)
 
+from kicadstamp.explore import selection_signature
 from kicadstamp.i18n import _
 
 from . import settings
@@ -437,7 +438,7 @@ class MainWindow(QMainWindow):
         # matters as much as the footprint refs (vias/tracks drive
         # ExtractDock's via-net origin combo), so the signature covers the
         # whole get_selected_items() list, not just refs.
-        signature = (refs, self._raw_selection_signature(items),
+        signature = (refs, selection_signature(items),
                      self.connection.snapshot_version)
         if signature == self._last_selection_signature:
             return
@@ -457,17 +458,3 @@ class MainWindow(QMainWindow):
         returns them as a result dict, so this should not normally fire."""
         logger.error("Unexpected failure in selection-poll worker: %s", message)
 
-    @staticmethod
-    def _raw_selection_signature(items) -> tuple:
-        """Cheap, stable identity for the raw get_selected_items() list —
-        just enough to tell "selection changed" from "same selection, new
-        tick", with no field reads or extra IPC. Footprints key on their
-        refdes, vias/tracks on (type, net name)."""
-        parts = []
-        for item in items:
-            if isinstance(item, FootprintInstance):
-                parts.append(("fp", item.reference_field.text.value))
-            else:
-                parts.append((type(item).__name__,
-                              getattr(getattr(item, "net", None), "name", None)))
-        return tuple(parts)

@@ -112,7 +112,6 @@ already right there, so Cell name is never left blank purely because
 nothing's been extracted from it before.
 """
 import logging
-import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -124,16 +123,15 @@ from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFormLayout,
                               QListWidget, QPushButton, QScrollArea,
                               QTabWidget, QVBoxLayout, QWidget)
 
-from kicadstamp.exceptions import PlacerError
 from kicadstamp.explore import Selected
+from kicadstamp.extract_writer import run_extract_to_file
 from kicadstamp.i18n import _
 from kicadstamp.template_extraction import extract_template_from_selection
 
 from .. import yaml_io
 from ..worker import start_long_op
 from ._common import (ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STYLE,
-                      WARN_STYLE as _WARN_STYLE, add_list_entry, display_path,
-                      merge_write, non_includable_keys, set_combo_items, show_message)
+                      WARN_STYLE as _WARN_STYLE, set_combo_items, show_message)
 
 logger = logging.getLogger(__name__)
 
@@ -787,82 +785,28 @@ class ExtractDock(QWidget):
 
     def _run_extract(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Worker thread: board IPC + file writes only — never touches a
-        widget. Returns {"messages": [...], "annotations": [...]} on
-        success, or {"error": str} for the expected failure modes (an
-        unexpected exception is caught by _LongOpWorker and reported through
-        the failed signal instead)."""
-        name = payload["name"]
-        annotations: List[Tuple[str, str, str]] = []
-        try:
-            template_dict = extract_template_from_selection(
-                payload["board"].adapter, name, params=payload["params"],
-                items=payload["raw_items"], net_template_role=payload["net_template_role"],
-                rule_nets=payload["rule_nets"],
-                annotations=annotations, **payload["origin_kwargs"])
-        except PlacerError as e:
-            return {"error": str(e)}
-
-        try:
-            cell_overwritten = merge_write(
-                payload["target_path"], {"cells": template_dict}, section="cells")
-        except OSError as e:
-            return {"error": _("Write failed: {error}").format(error=e)}
-
-        messages = [_("{action} {name!r} in {path}").format(
-            action=_("Overwrote") if cell_overwritten else _("Wrote"),
-            name=name, path=payload["target_path"])]
-
-        if payload["save_profile"]:
-            profile_key = payload["profile_key"]
-            entry: Dict[str, Any] = {"output": display_path(payload["target_path"])}
-            if profile_key != name:
-                entry["name"] = name
-            if payload["params"]:
-                entry["params"] = payload["params"]
-            if payload["net_template_role"]:
-                entry["net_template_role"] = payload["net_template_role"]
-            if payload["rule_nets"]:
-                entry["rule_nets"] = sorted(payload["rule_nets"])
-            for key, value in payload["origin_kwargs"].items():
-                # Function kwargs (origin_component_role) vs. profile YAML
-                # keys (origin_by_component_role) differ by "by_" — see
-                # kicadstamp_cli.py's cmd_extract profile branch.
-                entry[f"origin_by_{key[len('origin_'):]}"] = value
-            try:
-                profile_overwritten = merge_write(
-                    payload["profile_path"],
-                    {"extract_profiles": {profile_key: entry}}, section="extract_profiles")
-            except OSError as e:
-                return {"error": _("Cell written, but profile write failed: {error}").format(error=e)}
-            messages.append(_("{action} profile {key!r} in {path}").format(
-                action=_("overwrote") if profile_overwritten else _("wrote"),
-                key=profile_key, path=payload["profile_path"]))
-
-        placer_path = payload["placer_path"]
-        if placer_path is not None:
-            try:
-                if payload["target_path"] != placer_path:
-                    rel = Path(os.path.relpath(payload["target_path"], placer_path.parent)).as_posix()
-                    if add_list_entry(placer_path, "include", rel):
-                        messages.append(_("added {rel!r} to include: in {path}").format(
-                            rel=rel, path=placer_path))
-                if payload["save_profile"] and payload["profile_path"] != placer_path:
-                    bad_keys = self._non_includable_keys(payload["profile_path"])
-                    if bad_keys:
-                        messages.append(
-                            _("skipped adding to include: — {path} has root-config-only key(s) "
-                              "{keys} that include: can't merge (move them to the Placer file "
-                              "itself, or point Placer at this same file)")
-                            .format(path=display_path(payload["profile_path"]), keys=sorted(bad_keys)))
-                    else:
-                        rel = Path(os.path.relpath(payload["profile_path"], placer_path.parent)).as_posix()
-                        if add_list_entry(placer_path, "include", rel):
-                            messages.append(_("added {rel!r} to include: in {path}").format(
-                                rel=rel, path=placer_path))
-            except OSError as e:
-                messages.append(_("placer file wiring failed: {error}").format(error=e))
-
-        return {"messages": messages, "annotations": annotations}
+        widget. Thin wrapper over kicadstamp.extract_writer.
+        run_extract_to_file() — the transformative/profile/placer-wiring
+        logic moved to core (Phase 2 of the gui god-file decomposition);
+        extract_template_from_selection is passed in at call time so tests
+        can monkeypatch this module's copy. Returns {"messages": [...],
+        "annotations": [...]} on success, or {"error": str} for the expected
+        failure modes (an unexpected exception is caught by _LongOpWorker and
+        reported through the failed signal instead)."""
+        return run_extract_to_file(
+            payload["board"].adapter,
+            name=payload["name"],
+            params=payload["params"],
+            items=payload["raw_items"],
+            net_template_role=payload["net_template_role"],
+            rule_nets=payload["rule_nets"],
+            origin_kwargs=payload["origin_kwargs"],
+            target_path=payload["target_path"],
+            save_profile=payload["save_profile"],
+            profile_key=payload["profile_key"],
+            profile_path=payload["profile_path"],
+            placer_path=payload["placer_path"],
+            extract_fn=extract_template_from_selection)
 
     def _finish_extract(self, result: Dict[str, Any]) -> None:
         """UI thread: reflect the worker's result into the message label and
@@ -901,9 +845,3 @@ class ExtractDock(QWidget):
         result = self._run_extract(payload)
         self._finish_extract(result)
 
-    @staticmethod
-    def _non_includable_keys(path: Path) -> set:
-        """Thin wrapper — see gui/docks/_common.py's non_includable_keys()
-        for the shared definition (also used by ConfigTreeDock's Add-file
-        action, 2026-08-03)."""
-        return non_includable_keys(path)
