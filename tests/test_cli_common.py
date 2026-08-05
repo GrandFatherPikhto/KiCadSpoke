@@ -3,6 +3,7 @@
 (PlacerError→1 / ApiError→1 / Exception→2), shared by kicadstamp_cli.py's
 main() and author.cli_main()."""
 import logging
+from pathlib import Path
 
 import pytest
 from kipy.errors import ApiError, ApiStatusCode
@@ -81,7 +82,7 @@ class TestPeekLogFile:
 
     def test_absolute_log_file_kept_as_is(self, tmp_path):
         path = self._write(tmp_path, "log_file: C:/tmp/run.log\n")
-        assert peek_log_file(path) == "C:/tmp/run.log"
+        assert peek_log_file(path) == str(Path("C:/tmp/run.log"))
 
     def test_no_log_file_returns_none(self, tmp_path):
         path = self._write(tmp_path, "layer: B.Cu\n")
