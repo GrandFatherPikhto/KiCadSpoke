@@ -140,11 +140,11 @@ class ViaPlanner:
                 logger.debug(_("thermal_via_arrays entry {name!r}: retired, skipped")
                              .format(name=tva.name))
                 continue
-            keepout = self._build_keepout(target_fp, planned_components, planned_vias=vias)
-            logger.debug(_("Keepout for {name!r}: {count} rectangles")
-                         .format(name=tva.name, count=len(keepout)))
+            # _plan_thermal_vias builds its own keepout (with the thermal pad
+            # itself excluded) — the outer build here was dead weight: an extra
+            # get_bounding_boxes IPC batch per thermal array entry (F2).
             vias.extend(self._plan_thermal_vias(
-                planned_components, target_fp, keepout, existing_vias, tva, planned_vias=vias))
+                planned_components, target_fp, existing_vias, tva, planned_vias=vias))
 
         logger.info(_("plan_vias completed: {count} vias").format(count=len(vias)))
         return vias
@@ -186,7 +186,6 @@ class ViaPlanner:
         self,
         planned: list[PlacedComponentInfo],
         target_fp: FootprintInstance,
-        keepout: list[Rect],
         existing_vias: list | None,
         tva: ThermalViaArrayConfig,
         planned_vias: list[ViaCommand] | None = None,
@@ -216,6 +215,8 @@ class ViaPlanner:
 
         exclude = {(target_fp.reference_field.text.value, tva.pad)}
         keepout_excl = self._build_keepout(target_fp, planned, exclude=exclude, planned_vias=planned_vias)
+        logger.debug(_("Keepout for {name!r}: {count} rectangles")
+                     .format(name=tva.name, count=len(keepout_excl)))
         via_radius = tva.diameter_mm / 2.0 * MM
         # anchor_id/index give thermal vias a real registry_key (found 2026-07-28:
         # they never had one, so PlacementRegistry.reconcile() always treated them

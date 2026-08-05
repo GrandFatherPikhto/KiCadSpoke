@@ -26,10 +26,9 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
 from kicadstamp import __version__
-from kicadstamp.config import load_config
 from kicadstamp.apply_pipeline import cmd_apply
 from kicadstamp.cli import cmd_clone_extract, cmd_extract, cmd_undo
-from kicadstamp.cli_common import run_cli
+from kicadstamp.cli_common import peek_log_file, run_cli
 from kicadstamp.logging_setup import setup_logging
 from kicadstamp.constants import DEFAULT_TIMEOUT_MS, DEFAULT_BATCH_SIZE
 from kicadstamp.i18n import _
@@ -191,22 +190,23 @@ def main() -> int:
                     "apply, undo, extract, clone-extract."), file=sys.stderr)
         raise
 
-    # Load config early (only for apply) to pick up log_file from config if --log-file not given.
-    cfg = None
-    ctx = None
-    if args.command == "apply":
-        try:
-            cfg, ctx = load_config(args.config)
-        except Exception:
-            cfg = None
-            ctx = None
+    # Pick up log_file from the config before setup_logging() — but WITHOUT a
+    # full validated load here. That happens exactly once, inside the apply
+    # pipeline (run_apply), where errors surface properly through run_cli.
+    # peek_log_file() reads only the root YAML's log_file key and never raises
+    # (it logs a warning instead) — the old code ran a full load_config() here
+    # and swallowed every exception: it wasted a parse+include-resolution on
+    # the failure path and silently dropped why the config's log_file wasn't
+    # honored.
+    log_file = getattr(args, "log_file", None)
+    if log_file is None and args.command == "apply":
+        log_file = peek_log_file(args.config)
 
-    log_file = getattr(args, "log_file", None) or (cfg.log_file if cfg else None)
     setup_logging(verbose=getattr(args, "verbose", False), log_file=log_file)
 
     def _dispatch() -> None:
         if args.command == "apply":
-            report = cmd_apply(args, cfg=cfg, ctx=ctx)
+            report = cmd_apply(args)
             if report:
                 print("\n".join(report))
         elif args.command == "undo":

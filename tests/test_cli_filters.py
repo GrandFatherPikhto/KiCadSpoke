@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Tests for the pure (no KiCad adapter) apply filters: retired/--only/--cluster —
-kicadstamp_cli.py:drop_disabled_rules/apply_only_filter/apply_cluster_filter.
+kicadstamp/apply_pipeline.py:drop_disabled_rules/apply_only_filter/apply_cluster_filter.
+CONTRACT: every filter returns a DERIVED Config (copy-on-write via
+dataclasses.replace) and never mutates the input object — a preloaded cfg (e.g.
+the GUI's shared object) is never the config applied/modified by a run.
 Order matters: retired wins UNCONDITIONALLY, before --only/--cluster (see the
 Rule docstring in config/models.py) — --only cannot resurrect a retired rule."""
 import sys
@@ -67,7 +70,7 @@ class TestDropDisabledRules:
             Rule(net="GND", spokes=[], anchor_role="FPGA", retired=True),
             Rule(net="+3V3_VCCIO", spokes=[], anchor_role="FPGA", retired=False),
         ])
-        drop_disabled_rules(cfg, logger)
+        cfg = drop_disabled_rules(cfg, logger)
         assert [r.net for r in cfg.rules] == ["+3V3_VCCIO"]
 
     def test_only_cannot_resurrect_retired_rule(self):
@@ -77,7 +80,7 @@ class TestDropDisabledRules:
         cfg = _cfg(rules=[
             Rule(net="GND", spokes=[], anchor_role="FPGA", retired=True),
         ])
-        drop_disabled_rules(cfg, logger)
+        cfg = drop_disabled_rules(cfg, logger)
         with pytest.raises(PlacerError):
             apply_only_filter(cfg, ["GND"], logger)
         assert cfg.rules == []
@@ -118,7 +121,7 @@ class TestDropInactiveItems:
             Rule(net="+3V3_VCCIO", spokes=[ManualSpoke(pad="2", cell="t")],
                  anchor_role="FPGA", skip=False),
         ])
-        drop_inactive_items(cfg, logger)
+        cfg = drop_inactive_items(cfg, logger)
         assert [r.net for r in cfg.rules] == ["+3V3_VCCIO"]
 
     def test_skipped_spoke_narrows_rule_without_dropping_it(self):
@@ -126,7 +129,7 @@ class TestDropInactiveItems:
             ManualSpoke(pad="1", cell="t", skip=False),
             ManualSpoke(pad="2", cell="t", skip=True),
         ], anchor_role="FPGA")])
-        drop_inactive_items(cfg, logger)
+        cfg = drop_inactive_items(cfg, logger)
         assert len(cfg.rules) == 1
         assert [s.pad for s in cfg.rules[0].spokes] == ["1"]
 
@@ -134,7 +137,7 @@ class TestDropInactiveItems:
         cfg = _cfg(rules=[Rule(net="GND", spokes=[
             ManualSpoke(pad="1", cell="t", skip=True),
         ], anchor_role="FPGA")])
-        drop_inactive_items(cfg, logger)
+        cfg = drop_inactive_items(cfg, logger)
         assert cfg.rules == []
 
     def test_original_rule_object_not_mutated(self):
@@ -143,7 +146,7 @@ class TestDropInactiveItems:
             ManualSpoke(pad="2", cell="t", skip=True),
         ], anchor_role="FPGA")
         cfg = _cfg(rules=[original])
-        drop_inactive_items(cfg, logger)
+        cfg = drop_inactive_items(cfg, logger)
         assert len(original.spokes) == 2
 
     def test_skipped_clone_placement_removed(self):
@@ -151,14 +154,14 @@ class TestDropInactiveItems:
             ClonePlacement(name="a", xy=(0.0, 0.0), cell="t", skip=True),
             ClonePlacement(name="b", xy=(0.0, 0.0), cell="t", skip=False),
         ])
-        drop_inactive_items(cfg, logger)
+        cfg = drop_inactive_items(cfg, logger)
         assert [c.name for c in cfg.clone_placements] == ["b"]
 
     def test_skipped_thermal_via_array_dropped_for_this_run(self):
         cfg = _cfg(thermal_via_arrays=[ThermalViaArrayConfig(
             retired=False, anchor_role="FPGA", pad="145", name="fpga_thermal", skip=True,
         )])
-        drop_inactive_items(cfg, logger)
+        cfg = drop_inactive_items(cfg, logger)
         assert cfg.thermal_via_arrays == []
 
     def test_one_of_several_thermal_via_arrays_skipped_others_kept(self):
@@ -171,7 +174,7 @@ class TestDropInactiveItems:
             ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch1_thermal", skip=False),
             ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch2_thermal", skip=False),
         ])
-        drop_inactive_items(cfg, logger)
+        cfg = drop_inactive_items(cfg, logger)
         assert [t.name for t in cfg.thermal_via_arrays] == ["ad9707_ch1_thermal", "ad9707_ch2_thermal"]
 
     def test_skip_false_everywhere_is_noop(self):
@@ -180,7 +183,7 @@ class TestDropInactiveItems:
             clone_placements=[ClonePlacement(name="a", xy=(0.0, 0.0), cell="t")],
             thermal_via_arrays=[ThermalViaArrayConfig(retired=False, anchor_role="FPGA", pad="145", name="th")],
         )
-        drop_inactive_items(cfg, logger)
+        cfg = drop_inactive_items(cfg, logger)
         assert len(cfg.rules) == 1
         assert len(cfg.clone_placements) == 1
         assert len(cfg.thermal_via_arrays) == 1
@@ -198,14 +201,14 @@ class TestDropInactiveItems:
                  anchor_role="FPGA", retired=False, skip=True),
         ])
         assert cfg.rules[0].retired is False
-        drop_inactive_items(cfg, logger)
+        cfg = drop_inactive_items(cfg, logger)
         assert cfg.rules == []
 
 
 class TestApplyOnlyFilter:
     def test_no_only_names_is_noop(self):
         cfg = _cfg(rules=[Rule(net="GND", spokes=[], anchor_role="FPGA")])
-        apply_only_filter(cfg, [], logger)
+        cfg = apply_only_filter(cfg, [], logger)
         assert len(cfg.rules) == 1
 
     def test_matches_by_net_when_name_unset(self):
@@ -213,14 +216,14 @@ class TestApplyOnlyFilter:
             Rule(net="GND", spokes=[], anchor_role="FPGA"),
             Rule(net="+3V3_VCCIO", spokes=[], anchor_role="FPGA"),
         ])
-        apply_only_filter(cfg, ["GND"], logger)
+        cfg = apply_only_filter(cfg, ["GND"], logger)
         assert [r.net for r in cfg.rules] == ["GND"]
 
     def test_matches_by_explicit_name(self):
         cfg = _cfg(rules=[
             Rule(net="GND", spokes=[], anchor_role="FPGA", name="fpga_gnd"),
         ])
-        apply_only_filter(cfg, ["fpga_gnd"], logger)
+        cfg = apply_only_filter(cfg, ["fpga_gnd"], logger)
         assert len(cfg.rules) == 1
 
     def test_only_selects_one_of_several_thermal_via_arrays_by_name(self):
@@ -228,7 +231,7 @@ class TestApplyOnlyFilter:
             ThermalViaArrayConfig(anchor_role="FPGA", pad="145", name="fpga_thermal"),
             ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch1_thermal"),
         ])
-        apply_only_filter(cfg, ["ad9707_ch1_thermal"], logger)
+        cfg = apply_only_filter(cfg, ["ad9707_ch1_thermal"], logger)
         assert [t.name for t in cfg.thermal_via_arrays] == ["ad9707_ch1_thermal"]
 
     def test_matches_clone_placement_by_name(self):
@@ -236,7 +239,7 @@ class TestApplyOnlyFilter:
             ClonePlacement(name="p5v_pi_filter", xy=(0.0, 0.0), cell="t"),
             ClonePlacement(name="other", xy=(0.0, 0.0), cell="t"),
         ])
-        apply_only_filter(cfg, ["p5v_pi_filter"], logger)
+        cfg = apply_only_filter(cfg, ["p5v_pi_filter"], logger)
         assert [c.name for c in cfg.clone_placements] == ["p5v_pi_filter"]
 
     def test_unknown_name_exits_fatal(self):
@@ -250,7 +253,7 @@ class TestApplyClusterFilter:
         cfg = _cfg(rules=[Rule(net="GND", spokes=[
             ManualSpoke(pad="1", cell="t", cluster="Channel_0"),
         ], anchor_role="FPGA")])
-        apply_cluster_filter(cfg, [], logger)
+        cfg = apply_cluster_filter(cfg, [], logger)
         assert len(cfg.rules[0].spokes) == 1
 
     def test_narrows_spokes_within_rule(self):
@@ -258,7 +261,7 @@ class TestApplyClusterFilter:
             ManualSpoke(pad="1", cell="t", cluster="Channel_0"),
             ManualSpoke(pad="2", cell="t", cluster="Channel_1"),
         ], anchor_role="FPGA")])
-        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        cfg = apply_cluster_filter(cfg, ["Channel_0"], logger)
         assert len(cfg.rules) == 1
         assert [s.pad for s in cfg.rules[0].spokes] == ["1"]
 
@@ -272,7 +275,7 @@ class TestApplyClusterFilter:
             clone_placements=[ClonePlacement(name="ch0", xy=(0.0, 0.0),
                                              cell="t", anchor_cluster="Channel_0")],
         )
-        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        cfg = apply_cluster_filter(cfg, ["Channel_0"], logger)
         assert cfg.rules == []
 
     def test_original_rule_object_not_mutated(self):
@@ -283,7 +286,7 @@ class TestApplyClusterFilter:
             ManualSpoke(pad="2", cell="t", cluster="Channel_1"),
         ], anchor_role="FPGA")
         cfg = _cfg(rules=[original])
-        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        cfg = apply_cluster_filter(cfg, ["Channel_0"], logger)
         assert len(original.spokes) == 2
 
     def test_clone_placement_narrowed_by_anchor_cluster(self):
@@ -293,7 +296,7 @@ class TestApplyClusterFilter:
             ClonePlacement(name="ch1", xy=(0.0, 0.0), cell="t",
                           anchor_cluster="Channel_1"),
         ])
-        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        cfg = apply_cluster_filter(cfg, ["Channel_0"], logger)
         assert [c.name for c in cfg.clone_placements] == ["ch0"]
 
     def test_thermal_via_array_narrowed_by_anchor_cluster(self):
@@ -307,7 +310,7 @@ class TestApplyClusterFilter:
                 anchor_cluster="Channel_1",
             )],
         )
-        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        cfg = apply_cluster_filter(cfg, ["Channel_0"], logger)
         assert cfg.thermal_via_arrays == []
 
     def test_cluster_narrows_among_several_thermal_via_arrays(self):
@@ -317,7 +320,7 @@ class TestApplyClusterFilter:
             ThermalViaArrayConfig(anchor_role="AD9707", pad="7", name="ad9707_ch2_thermal",
                                   anchor_cluster="Channel_2"),
         ])
-        apply_cluster_filter(cfg, ["Channel_1"], logger)
+        cfg = apply_cluster_filter(cfg, ["Channel_1"], logger)
         assert [t.name for t in cfg.thermal_via_arrays] == ["ad9707_ch1_thermal"]
 
     def test_no_match_anywhere_exits_fatal(self):
@@ -337,10 +340,95 @@ class TestApplyClusterFilter:
                 ManualSpoke(pad="3", cell="t", cluster="Channel_0"),
             ], anchor_role="FPGA"),
         ])
-        apply_only_filter(cfg, ["fpga_gnd"], logger)
-        apply_cluster_filter(cfg, ["Channel_0"], logger)
+        cfg = apply_only_filter(cfg, ["fpga_gnd"], logger)
+        cfg = apply_cluster_filter(cfg, ["Channel_0"], logger)
         assert len(cfg.rules) == 1
         assert [s.pad for s in cfg.rules[0].spokes] == ["1"]
+
+
+class TestFiltersDeriveNewConfig:
+    """T3.2 contract: each filter returns a DERIVED Config (copy-on-write via
+    dataclasses.replace) and never mutates the caller's input object — so a
+    preloaded cfg (e.g. the GUI's shared object) is never the config that gets
+    applied or modified by a run. Chaining the filters in the pipeline's order
+    must leave the ORIGINAL cfg (and its rules/clone_placements/
+    thermal_via_arrays) completely untouched."""
+
+    @staticmethod
+    def _full_cfg():
+        return _cfg(
+            rules=[
+                Rule(net="GND", spokes=[
+                    ManualSpoke(pad="1", cell="t", cluster="Channel_0"),
+                    ManualSpoke(pad="2", cell="t", cluster="Channel_1"),
+                ], anchor_role="FPGA", name="fpga_gnd"),
+                Rule(net="+3V3_VCCIO", spokes=[
+                    ManualSpoke(pad="3", cell="t", cluster="Channel_0"),
+                ], anchor_role="FPGA"),
+            ],
+            clone_placements=[
+                ClonePlacement(name="ch0", xy=(0.0, 0.0), cell="t",
+                              anchor_cluster="Channel_0"),
+                ClonePlacement(name="ch1", xy=(0.0, 0.0), cell="t",
+                              anchor_cluster="Channel_1"),
+            ],
+            thermal_via_arrays=[
+                ThermalViaArrayConfig(anchor_role="AD9707", pad="7",
+                                      name="ad9707_ch1_thermal", anchor_cluster="Channel_1"),
+                ThermalViaArrayConfig(anchor_role="AD9707", pad="7",
+                                      name="ad9707_ch2_thermal", anchor_cluster="Channel_2"),
+            ],
+        )
+
+    def test_dropping_filters_always_return_a_new_config_object(self):
+        base = self._full_cfg()
+        assert drop_disabled_rules(base) is not base
+        assert drop_inactive_items(base) is not base
+
+    def test_drop_disabled_rules_always_derives_fresh_object_even_when_noop(self):
+        """drop_disabled_rules ALWAYS returns a fresh derived Config (even when
+        nothing is retired), so the pipeline's self.cfg can never be the caller's
+        (e.g. GUI's) original object."""
+        cfg = _cfg(rules=[Rule(net="GND", spokes=[], anchor_role="FPGA", retired=False)])
+        result = drop_disabled_rules(cfg, logger)
+        assert result is not cfg
+        assert [r.net for r in result.rules] == ["GND"]
+
+    def test_pipeline_chain_leaves_original_config_untouched(self):
+        """The exact _filter_config chain — drop_disabled_rules →
+        drop_inactive_items → apply_only_filter → apply_cluster_filter — must
+        leave the ORIGINAL input cfg object and its lists exactly as they were;
+        the applied config is the final derived object, never the input."""
+        cfg = self._full_cfg()
+        original_rules = list(cfg.rules)
+        original_clones = list(cfg.clone_placements)
+        original_tvas = list(cfg.thermal_via_arrays)
+
+        derived = drop_disabled_rules(cfg)
+        derived = drop_inactive_items(derived)
+        derived = apply_only_filter(derived, ["fpga_gnd"])
+        derived = apply_cluster_filter(derived, ["Channel_0"])
+
+        # The config that would be applied is a DIFFERENT object...
+        assert derived is not cfg
+        # ...and the input cfg still holds its original content untouched.
+        assert cfg.rules == original_rules
+        assert cfg.clone_placements == original_clones
+        assert cfg.thermal_via_arrays == original_tvas
+        assert len(cfg.rules) == 2
+        assert len(cfg.rules[0].spokes) == 2
+
+        # The derived config reflects the chain: only fpga_gnd / Channel_0 survive.
+        assert [r.net for r in derived.rules] == ["GND"]
+        assert [s.pad for s in derived.rules[0].spokes] == ["1"]
+
+    def test_noop_filters_return_input_object_unchanged(self):
+        """The two no-op filters (no --only / no --cluster) return their input
+        UNCHANGED (same object) — safe because by then the pipeline's cfg is
+        already a fresh derived object from drop_disabled_rules."""
+        cfg = self._full_cfg()
+        assert apply_only_filter(cfg, []) is cfg
+        assert apply_cluster_filter(cfg, []) is cfg
 
 
 class TestLoadProfileRootDefaults:

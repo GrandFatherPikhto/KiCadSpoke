@@ -7,7 +7,7 @@ import logging
 import pytest
 from kipy.errors import ApiError, ApiStatusCode
 
-from kicadstamp.cli_common import api_error_message, run_cli
+from kicadstamp.cli_common import api_error_message, peek_log_file, run_cli
 from kicadstamp.exceptions import PlacerError, ValidationError
 
 
@@ -63,3 +63,46 @@ class TestApiErrorMessage:
     def test_other_code_gets_generic_message(self):
         msg = api_error_message(ApiError("nope", code=ApiStatusCode.AS_TIMEOUT))
         assert "KiCad returned API error" in msg
+
+
+class TestPeekLogFile:
+    """peek_log_file() — the CLI's cheap pre-logging read of just the config's
+    log_file key (see kicadstamp_cli.py: it must NOT run a full load_config()
+    there; that single validated load belongs to the apply pipeline)."""
+
+    def _write(self, tmp_path, text):
+        p = tmp_path / "cfg.yaml"
+        p.write_text(text, encoding="utf-8")
+        return str(p)
+
+    def test_returns_log_file_resolved_relative_to_config(self, tmp_path):
+        path = self._write(tmp_path, "log_file: logs/run.log\nlayer: B.Cu\n")
+        assert peek_log_file(path) == str(tmp_path / "logs" / "run.log")
+
+    def test_absolute_log_file_kept_as_is(self, tmp_path):
+        path = self._write(tmp_path, "log_file: C:/tmp/run.log\n")
+        assert peek_log_file(path) == "C:/tmp/run.log"
+
+    def test_no_log_file_returns_none(self, tmp_path):
+        path = self._write(tmp_path, "layer: B.Cu\n")
+        assert peek_log_file(path) is None
+
+    def test_missing_file_returns_none_with_warning(self, tmp_path, caplog):
+        with caplog.at_level(logging.WARNING):
+            result = peek_log_file(str(tmp_path / "nope.yaml"))
+        assert result is None
+        assert "log_file" in caplog.text
+
+    def test_broken_yaml_returns_none_with_warning(self, tmp_path, caplog):
+        path = self._write(tmp_path, "layer: [unclosed\n")
+        with caplog.at_level(logging.WARNING):
+            result = peek_log_file(path)
+        assert result is None
+        assert "log_file" in caplog.text
+
+    def test_does_not_run_include_resolution(self, tmp_path):
+        """Peek must be oblivious to include: — log_file is a root-file scalar;
+        the full load (include resolution + validation) happens once in the
+        pipeline. A broken child include must not poison the peek."""
+        path = self._write(tmp_path, "log_file: run.log\ninclude: [missing_child.yaml]\n")
+        assert peek_log_file(path) == str(tmp_path / "run.log")

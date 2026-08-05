@@ -15,7 +15,9 @@ never ``sys.exit()`` — it should raise ``PlacerError``/``ValidationError``/
 exit code and the message.
 """
 import logging
+from pathlib import Path
 
+import yaml
 
 from kipy.errors import ApiError, ApiStatusCode
 
@@ -72,3 +74,31 @@ def run_cli(main_fn: Callable[[], None]) -> int:
         logging.exception(_("Unexpected error"))
         return 2
     return 0
+
+
+def peek_log_file(config_path: str) -> str | None:
+    """Cheap, non-raising read of ONLY the config's ``log_file`` key.
+
+    The CLI needs ``log_file`` BEFORE
+    :func:`~kicadstamp.logging_setup.setup_logging` runs, but the full validated
+    :func:`~kicadstamp.config.load_config` belongs to the apply pipeline (one
+    load, errors surfaced properly there). This reads just the root YAML's
+    ``log_file`` scalar — resolved relative to the config file's directory
+    exactly like ``load_config`` does — and never raises: a
+    missing/unreadable/broken config simply logs a warning and returns ``None``.
+
+    ``log_file`` is a root-file top-level key (``include:`` never contributes
+    it), so a root-only read is faithful. Returns the resolved log path or
+    ``None``.
+    """
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        raw = data.get("log_file") if isinstance(data, dict) else None
+        if not raw:
+            return None
+        return str(Path(config_path).parent / raw)
+    except Exception as e:
+        logging.warning(_("Could not read log_file from config {path}: {e}")
+                        .format(path=config_path, e=e))
+        return None

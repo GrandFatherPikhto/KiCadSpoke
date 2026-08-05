@@ -5,9 +5,10 @@ Services for position calculation, angle correction, relaxation and via planning
 
 from .via_planner import ViaPlanner
 
-__all__ = [
-    "PositionCalculator",
-    "PowerPinOrienter",
-    "SpacingRelaxer",
-    "ViaPlanner",
-]
+# Only ViaPlanner lives in this package today. PositionCalculator /
+# PowerPinOrienter / SpacingRelaxer are leftovers from the old monolithic
+# services module and have no importable implementation — leaving them in
+# __all__ made `from kicadstamp.placement.services import PositionCalculator`
+# an ImportError. The real calculators are ManualPositionCalculator /
+# ClonePositionCalculator in their own modules.
+__all__ = ["ViaPlanner"]

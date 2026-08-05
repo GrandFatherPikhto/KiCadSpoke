@@ -14,6 +14,11 @@ from CLI argument parsing.  The pipeline is:
       -> create planner
       -> [dry‑run: plan & print]
       -> [execute: move → refresh → vias → tracks, per level]
+
+The filters (retired / skip / --only / --cluster) NEVER mutate the caller's
+Config: each returns a DERIVED Config and the input object is left untouched,
+so a preloaded cfg (e.g. the GUI's shared object) is never the config that gets
+applied or modified by a run.
 """
 
 import dataclasses
@@ -59,32 +64,39 @@ def _matches_any_cluster(candidate: str | None, wanted: list[str]) -> bool:
     return any(cluster_prefix_match(candidate, w) for w in wanted)
 
 
-def drop_disabled_rules(cfg, _logger=None) -> None:
+def drop_disabled_rules(cfg, _logger=None) -> "Config":
     """retired: true always wins, dropped before --only/--cluster ever see
     it — retired means "does not exist on the board right now", not
     "excluded from this particular run" (see Rule docstring in config/models.py).
-    Pure cfg mutation, no adapter — kept separate so it's unit‑testable without
-    a live KiCad connection."""
+
+    CONTRACT: filters never mutate the caller's Config. Each one returns a NEW
+    derived Config and leaves the input untouched — the input object is never
+    the config the pipeline applies, so a preloaded cfg (e.g. the GUI's shared
+    object) is safe to reuse after a run. Pure config math, no adapter — kept
+    separate so it's unit‑testable without a live KiCad connection."""
     l = _logger or logger
     disabled_rules = [r for r in cfg.rules if r.retired]
-    cfg.rules = [r for r in cfg.rules if not r.retired]
+    rules = [r for r in cfg.rules if not r.retired]
     for r in disabled_rules:
         l.info(_("Rule {name!r} (net {net!r}): retired=true, skipped entirely")
                .format(name=rule_effective_name(r), net=r.net))
+    return dataclasses.replace(cfg, rules=rules)
 
 
-def drop_inactive_items(cfg, _logger=None) -> None:
+def drop_inactive_items(cfg, _logger=None) -> "Config":
     """skip: true — the inline, per-item counterpart of --only/--cluster
     (see Rule/ClonePlacement/ThermalViaArrayConfig.skip docstrings in
     config/models.py). Unlike retired: true (drop_disabled_rules above),
     this must run AFTER known_anchor_ids is computed — a skipped item's
     via/tracks must still count as "known" so reconcile() protects them from
     pruning, it's just not (re)planned this run. Composes with --only/--cluster
-    as a further AND-narrowing. Pure cfg mutation, no adapter."""
+    as a further AND-narrowing. Pure config math, no adapter.
+
+    CONTRACT: returns a derived Config; the input object is never mutated (see
+    drop_disabled_rules)."""
     l = _logger or logger
     kept_clones = [c for c in cfg.clone_placements if not c.skip]
     dropped_clones = [c for c in cfg.clone_placements if c.skip]
-    cfg.clone_placements = kept_clones
     for c in dropped_clones:
         l.info(_("ClonePlacement {name!r}: skip=true, skipped this run "
                   "(existing via/tracks stay protected)").format(name=c.name))
@@ -105,7 +117,6 @@ def drop_inactive_items(cfg, _logger=None) -> None:
         else:
             l.info(_("Rule {name!r}: no non-skipped spokes left, skipped this run "
                       "(existing via/tracks stay protected)").format(name=rule_effective_name(r)))
-    cfg.rules = narrowed_rules
 
     kept_tvas = []
     for tva in cfg.thermal_via_arrays:
@@ -115,16 +126,21 @@ def drop_inactive_items(cfg, _logger=None) -> None:
                    .format(name=thermal_via_array_effective_name(tva)))
             continue
         kept_tvas.append(tva)
-    cfg.thermal_via_arrays = kept_tvas
+    return dataclasses.replace(cfg, rules=narrowed_rules,
+                               clone_placements=kept_clones,
+                               thermal_via_arrays=kept_tvas)
 
 
-def apply_only_filter(cfg, only_names: list[str], _logger=None) -> None:
+def apply_only_filter(cfg, only_names: list[str], _logger=None) -> "Config":
     """--only: whole-block selection by identity (rule name-or-net, clone_placement
     name, thermal_via_arrays entry name). Raises PlacerError on unmatched names.
-    Pure cfg mutation."""
+    Pure config math, no adapter.
+
+    CONTRACT: returns a derived Config; the input object is never mutated (see
+    drop_disabled_rules). A no-op filter (no --only names) returns cfg unchanged."""
     l = _logger or logger
     if not only_names:
-        return
+        return cfg
     requested = set(only_names)
     matched_rules = [r for r in cfg.rules if rule_effective_name(r) in requested]
     matched_clones = [c for c in cfg.clone_placements if c.name in requested]
@@ -152,24 +168,27 @@ def apply_only_filter(cfg, only_names: list[str], _logger=None) -> None:
         raise PlacerError(_("[error] --only: names not found:\n{lines}\nAvailable: {all}")
                           .format(lines="\n".join(lines), all=all_names))
 
-    cfg.rules = matched_rules
-    cfg.clone_placements = matched_clones
-    cfg.thermal_via_arrays = matched_tvas
     l.info(_("--only {requested}: rules={rules}, clone_placements={clones}, "
               "thermal_via_arrays={thermal} (everything else is ignored in this run)")
             .format(requested=sorted(requested),
                     rules=[rule_effective_name(r) for r in matched_rules],
                     clones=[c.name for c in matched_clones],
                     thermal=[thermal_via_array_effective_name(t) for t in matched_tvas]))
+    return dataclasses.replace(cfg, rules=matched_rules,
+                               clone_placements=matched_clones,
+                               thermal_via_arrays=matched_tvas)
 
 
-def apply_cluster_filter(cfg, cluster_paths: list[str], _logger=None) -> None:
+def apply_cluster_filter(cfg, cluster_paths: list[str], _logger=None) -> "Config":
     """--cluster — a second, independent selection axis (physical instance /
     Cluster field, not name). Composes with --only via AND only, never OR.
-    Pure cfg mutation, no adapter."""
+    Pure config math, no adapter.
+
+    CONTRACT: returns a derived Config; the input object is never mutated (see
+    drop_disabled_rules). A no-op filter (no --cluster paths) returns cfg unchanged."""
     l = _logger or logger
     if not cluster_paths:
-        return
+        return cfg
     matched_clones = [c for c in cfg.clone_placements
                       if _matches_any_cluster(c.anchor_cluster, cluster_paths)]
     matched_tvas = [t for t in cfg.thermal_via_arrays
@@ -188,15 +207,15 @@ def apply_cluster_filter(cfg, cluster_paths: list[str], _logger=None) -> None:
         raise PlacerError(_("[error] --cluster {paths}: matched nothing among rules' spokes, "
                             "clone_placements, or thermal_via_arrays").format(paths=cluster_paths))
 
-    cfg.rules = narrowed_rules
-    cfg.clone_placements = matched_clones
-    cfg.thermal_via_arrays = matched_tvas
     l.info(_("--cluster {paths}: rules={rules} (spokes narrowed), "
               "clone_placements={clones}, thermal_via_arrays={thermal}")
             .format(paths=cluster_paths,
                     rules=[rule_effective_name(r) for r in narrowed_rules],
                     clones=[c.name for c in matched_clones],
                     thermal=[thermal_via_array_effective_name(t) for t in matched_tvas]))
+    return dataclasses.replace(cfg, rules=narrowed_rules,
+                               clone_placements=matched_clones,
+                               thermal_via_arrays=matched_tvas)
 
 
 # ── Compute helper ────────────────────────────────────────────────────────────
@@ -270,11 +289,16 @@ class ApplyPipeline:
             self.sheet_names = self.ctx.sheet_names if self.ctx else {}
 
     def _filter_config(self) -> None:
-        drop_disabled_rules(self.cfg)
-        self.all_anchor_ids = _compute_all_anchor_ids(self.cfg)
-        drop_inactive_items(self.cfg)
-        apply_only_filter(self.cfg, _split_comma_values(self.only))
-        apply_cluster_filter(self.cfg, _split_comma_values(self.cluster))
+        # Filters return a DERIVED Config and never mutate the caller's object
+        # (see the filter docstrings) — self.cfg is replaced with each filter's
+        # result, so a preloaded cfg (e.g. the GUI's shared object) is never the
+        # config that gets applied or modified by this run.
+        cfg = drop_disabled_rules(self.cfg)
+        self.all_anchor_ids = _compute_all_anchor_ids(cfg)
+        cfg = drop_inactive_items(cfg)
+        cfg = apply_only_filter(cfg, _split_comma_values(self.only))
+        cfg = apply_cluster_filter(cfg, _split_comma_values(self.cluster))
+        self.cfg = cfg
 
     def _connect_adapter(self) -> None:
         logger.info(_("Connecting to KiCad (timeout {timeout} ms)").format(timeout=self.timeout_ms))
