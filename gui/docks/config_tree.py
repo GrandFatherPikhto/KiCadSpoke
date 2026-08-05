@@ -125,6 +125,16 @@ class ConfigTreeDock(QDockWidget):
     # see module docstring for why this replaces the three independent
     # FilePickerDock role signals.
     file_selected = pyqtSignal(object)
+    # Fired only when the ROOT itself changes (Open/New/Recent/restore-on-
+    # startup — set_root_file()'s every caller) — there is exactly ONE root
+    # per project (Denis, 2026-08-05: "root-панель должна читать/хранить/
+    # править настройки текущего проекта, независимо от того, выбран узел
+    # root или нет"), so RootMetadataDock listens to this instead of
+    # file_selected: browsing into an included file must NOT retarget it at
+    # that file's own root-only keys (which may be nonsensical there — see
+    # root_metadata.py's own docstring on non-root files sharing the field
+    # set), it always keeps editing the project's actual root file.
+    root_file_changed = pyqtSignal(object)
 
     def __init__(self, main_window):
         super().__init__(_("Config"), main_window)
@@ -217,6 +227,14 @@ class ConfigTreeDock(QDockWidget):
 
     # ── Setting/refreshing the root ─────────────────────────────────────
 
+    @property
+    def root_path(self) -> Optional[Path]:
+        """Current root file, if any — lets a late-connecting listener
+        (DockHub._wire(), see gui/dock_hub.py) pick up a value that was
+        already set by _restore_last_root() during __init__, i.e. BEFORE
+        root_file_changed had any listeners at all."""
+        return self._root_path
+
     def set_root_file(self, path: Optional[Path]) -> None:
         self._root_path = path
         if path is not None:
@@ -225,6 +243,7 @@ class ConfigTreeDock(QDockWidget):
         else:
             self.root_label.setText(_("No root file open"))
         self.refresh()
+        self.root_file_changed.emit(path)
 
     def refresh(self) -> None:
         """Public — also called by PlacerDock's saved signal (see

@@ -190,6 +190,25 @@ Cells-файл — GUI-эквивалент `kicadstamp_cli.py extract`.
 `anchor_sheet`, автодополнение имён `points:`, явный override `refs:` (role→ref), режим
 `by_selection`.
 
+## Project
+
+(Вкладка называется «Project» — Denis, 2026-08-05: «давай не root, а project»; в коде панель по-
+прежнему RootMetadataDock, потому что правит именно ROOT-файл проекта — то же понятие, что и «Open
+Root file...» в дереве Config, — изменилась только видимая подпись.)
+
+Правит скалярные ключи корневого конфига: Layer/Place components/Skip existing components (над
+вкладками, как общие настройки проекта), затем три вкладки — **Files** (Registry path/Track
+registry path/Log file/Operation log dir), **Schematics** (Schematic dir/Schematic files), **Via**
+(четыре поля `via_search_*`/`via_keepout_clearance_mm`) — разделены 2026-08-05 по той же причине
+«дока не влезает и не даёт ужаться», что и вкладки Extract выше.
+
+Всегда работает с ЕДИНСТВЕННЫМ root-файлом проекта — тем, что открыт через «Open Root file...»/«New
+Root file...»/выпадающий Recent (дерево Config, `gui/docks/config_tree.py`), — независимо от того,
+какой включённый (`include:`) файл сейчас просматривается в этом дереве. Клик по включённому файлу
+НЕ переключает эту панель на него: эти поля валидны только на настоящем root'е (если их задать во
+включаемом файле — фатальная ошибка при загрузке, см. [docs/config_ru.md](config_ru.md)), а root в
+проекте один.
+
 ## Log
 
 Read-only, копируемая, с поиском панель, питается от `logging.Handler`, подвешенного на **root**

@@ -15,10 +15,36 @@ def _read_yaml(path) -> dict:
 def test_no_file_picked_shows_placeholder_and_defaults(main_window):
     dock = RootMetadataDock(main_window)
     dock.set_target_file(None)
-    assert "pick one" in dock.target_label.text()
+    assert "No project file open" in dock.target_label.text()
     assert dock.layer_combo.currentText() == "F.Cu"
     assert dock.schematic_files_list.count() == 0
     assert dock.save_button is not None
+
+
+def test_fields_are_grouped_into_files_schematics_via_tabs(main_window):
+    """Restructured into tabs 2026-08-05 (Denis: "решил сделать root
+    табами") to cut dock height, same reasoning as ExtractDock's 2026-08-04
+    tabbing — Layer/place_components/skip_existing_components are general
+    project settings and stay above the tabs instead of in any one of
+    them."""
+    dock = RootMetadataDock(main_window)
+    labels = [dock._tabs.tabText(i) for i in range(dock._tabs.count())]
+    assert labels == ["Files", "Schematics", "Via"]
+
+    files_page = dock._tabs.widget(0)
+    schematics_page = dock._tabs.widget(1)
+    via_page = dock._tabs.widget(2)
+
+    assert files_page.isAncestorOf(dock._text_edits["registry_path"])
+    assert files_page.isAncestorOf(dock._text_edits["track_registry_path"])
+    assert files_page.isAncestorOf(dock._text_edits["log_file"])
+    assert files_page.isAncestorOf(dock._text_edits["operation_log_dir"])
+
+    assert schematics_page.isAncestorOf(dock._text_edits["schematic_dir"])
+    assert schematics_page.isAncestorOf(dock.schematic_files_list)
+
+    assert via_page.isAncestorOf(dock._float_edits["via_keepout_clearance_mm"])
+    assert via_page.isAncestorOf(dock._int_edits["via_search_n_directions"])
 
 
 def test_populates_widgets_from_existing_scalar_keys(main_window, tmp_path):
@@ -126,7 +152,7 @@ def test_save_rejects_non_integer_int_field(main_window, tmp_path):
 def test_save_without_a_file_picked_shows_error(main_window):
     dock = RootMetadataDock(main_window)
     dock._on_save()
-    assert "Pick a file" in dock.message_label.text()
+    assert "Open or create a project" in dock.message_label.text()
 
 
 def test_schematic_files_round_trips_as_a_list(main_window, tmp_path):
@@ -226,4 +252,4 @@ def test_add_schematic_file_does_not_duplicate(main_window, tmp_path, monkeypatc
 def test_browse_without_a_file_picked_shows_error(main_window):
     dock = RootMetadataDock(main_window)
     dock._browse_dir(dock._text_edits["schematic_dir"], "Schematic dir")
-    assert "Pick a file" in dock.message_label.text()
+    assert "Open or create a project" in dock.message_label.text()

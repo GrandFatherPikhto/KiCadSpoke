@@ -187,6 +187,24 @@ Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.
 Not covered by the GUI yet (all still reachable by hand-editing the saved YAML): `anchor_sheet`
 narrowing, `points:`-name autocomplete, `refs:` explicit role→ref override, `by_selection` mode.
 
+## Project
+
+(Tab labeled "Project" — Denis, 2026-08-05: "давай не root, а project"; the panel underneath is
+still called RootMetadataDock in code, since it edits the project's ROOT config file, same concept
+the Config tree's "Open Root file..." uses — only the displayed label changed.)
+
+Edits the project's root-config-only scalar keys: Layer/Place components/Skip existing components
+(shown above the tabs, as general project settings), then three tabs — **Files** (Registry path/
+Track registry path/Log file/Operation log dir), **Schematics** (Schematic dir/Schematic files),
+**Via** (the four `via_search_*`/`via_keepout_clearance_mm` fields) — split 2026-08-05 for the same
+"dock too tall to resize" reason as Extract's own tabs above.
+
+Always targets the project's single root file — the one opened via "Open Root file..."/"New Root
+file..."/the Recent dropdown (see the Config tree in `gui/docks/config_tree.py`) — regardless of
+which included file is currently browsed in that tree. Browsing into an included file does not
+retarget this panel: these fields are only valid on an actual root (an included file setting any of
+them is fatal at load — see [docs/config.md](config.md)), and a project only ever has one.
+
 ## Log
 
 A read-only, copyable, searchable panel fed by a `logging.Handler` attached to the **root**

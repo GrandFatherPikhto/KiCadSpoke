@@ -84,6 +84,32 @@ def test_config_tree_restores_last_root_after_restart(qapp, tmp_path):
         window._selection_timer.stop()
 
 
+def test_root_metadata_dock_picks_up_a_root_restored_before_wiring_existed(qapp, tmp_path):
+    """Found live 2026-08-05 (Denis: "он не видит настроек корневого
+    проекта. No root file open"): ConfigTreeDock._restore_last_root() runs
+    inside ITS OWN __init__ (see test_config_tree_restores_last_root_after_
+    restart above), which happens before DockHub even constructs the Root/
+    Project panel — so the very first root_file_changed emit fired into the
+    void, before DockHub._wire() ever connected it. A restored project used
+    to silently open with the panel stuck on its placeholder text despite
+    the Config tree itself showing the right root. DockHub._wire() must
+    sync explicitly from config_tree_dock.root_path, not rely solely on the
+    signal."""
+    root_file = tmp_path / "root.yaml"
+    _write(root_file)
+
+    data = settings.load()
+    data["last_root_file"] = str(root_file)
+    settings.save(data)
+
+    window = MainWindow(timeout_ms=10, verbose=False)
+    try:
+        assert window.root_metadata_dock._path == root_file
+    finally:
+        window._timer.stop()
+        window._selection_timer.stop()
+
+
 def test_tree_cluster_picked_fills_placer_cluster_field(real_main_window):
     """The Components-tree -> Placer wiring now goes through the
     cluster_picked signal — clicking a Cluster group node in the real window
@@ -372,8 +398,9 @@ def test_main_window_exposes_all_docks_through_the_hub(real_main_window):
 
 def test_dock_hub_constructs_all_docks_and_wires_file_selected(main_window, tmp_path):
     """A standalone DockHub builds every dock on any QMainWindow and the
-    Config tree's file_selected signal reaches every listener — the
-    composition root works without a real MainWindow too."""
+    Config tree's file_selected signal reaches every listener except Root
+    (which follows root_file_changed instead, see below) — the composition
+    root works without a real MainWindow too."""
     target_file = tmp_path / "power.yaml"
     _write(target_file)
 
@@ -390,7 +417,28 @@ def test_dock_hub_constructs_all_docks_and_wires_file_selected(main_window, tmp_
         hub.config_tree_dock.file_selected.emit(target_file)
         assert hub.extract_dock._target_path == target_file
         assert hub.placer_dock._cells_path == target_file
-        assert hub.root_metadata_dock._path == target_file
+    finally:
+        _teardown_hub(hub)
+
+
+def test_dock_hub_wires_root_file_changed_to_root_metadata_dock(main_window, tmp_path):
+    """Root is the one exception to file_selected (2026-08-05, Denis:
+    "root-панель должна читать/хранить/править настройки текущего проекта,
+    независимо от того, выбран узел root или нет") — it must NOT retarget
+    on a plain tree click into an included file, only on root_file_changed
+    (fired solely by set_root_file(), see config_tree.py)."""
+    included_file = tmp_path / "included.yaml"
+    _write(included_file)
+    root_file = tmp_path / "root.yaml"
+    _write(root_file)
+
+    hub = DockHub(main_window, connection=main_window.connection, verbose=False)
+    try:
+        hub.config_tree_dock.file_selected.emit(included_file)
+        assert hub.root_metadata_dock._path is None
+
+        hub.config_tree_dock.root_file_changed.emit(root_file)
+        assert hub.root_metadata_dock._path == root_file
     finally:
         _teardown_hub(hub)
 

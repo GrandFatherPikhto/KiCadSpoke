@@ -572,6 +572,24 @@ def test_new_root_dialog_cancelled_leaves_root_untouched(main_window, tmp_path, 
     assert dock._root_path == root
 
 
+def test_set_root_file_emits_root_file_changed(main_window, tmp_path):
+    """root_file_changed (2026-08-05) is the signal RootMetadataDock listens
+    to instead of file_selected — set_root_file() is its only source,
+    unlike file_selected which fires on every plain tree click too."""
+    root = tmp_path / "root.yaml"
+    root.write_text("cells: {}\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    received = []
+    dock.root_file_changed.connect(received.append)
+
+    dock.set_root_file(root)
+    assert received == [root]
+
+    dock.set_root_file(None)
+    assert received == [root, None]
+
+
 def test_recent_list_most_recent_first_and_deduplicated(main_window, tmp_path):
     a = tmp_path / "a.yaml"
     b = tmp_path / "b.yaml"

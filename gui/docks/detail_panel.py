@@ -47,7 +47,13 @@ class DetailDock(QDockWidget):
         self.tab_bar = QTabBar()
         self.tab_bar.addTab(_("Extract"))
         self.tab_bar.addTab(_("Placer"))
-        self.tab_bar.addTab(_("Root"))
+        # Displayed as "Project" (2026-08-05, Denis: "давай не root, а
+        # project") — the underlying panel is still RootMetadataDock/
+        # root_metadata_dock/show_root() (root_panel here below): "root"
+        # remains the correct internal term (it edits the project's ROOT
+        # config file, same concept ConfigTreeDock's "Open Root file..."
+        # uses), only the user-facing label changed.
+        self.tab_bar.addTab(_("Project"))
         self.tab_bar.addTab(_("Thermal via"))
         layout.addWidget(self.tab_bar)
 

@@ -117,8 +117,20 @@ class DockHub:
         self.config_tree_dock.file_selected.connect(self.extract_dock.set_placer_file)
         self.config_tree_dock.file_selected.connect(self.placer_dock.set_cells_file)
         self.config_tree_dock.file_selected.connect(self.placer_dock.set_placer_file)
-        self.config_tree_dock.file_selected.connect(self.root_metadata_dock.set_target_file)
         self.config_tree_dock.file_selected.connect(self.thermal_via_dock.set_target_file)
+        # Root is the one exception (2026-08-05): it always edits the
+        # project's single root file, not whatever file the tree happens to
+        # be browsing — root_file_changed only fires from set_root_file()
+        # (Open/New/Recent/restore-on-startup), never on a plain tree click.
+        self.config_tree_dock.root_file_changed.connect(self.root_metadata_dock.set_target_file)
+        # ConfigTreeDock's own _restore_last_root() runs inside ITS __init__
+        # (gui/docks/config_tree.py), which happens before this dock even
+        # exists — so the very first root_file_changed emit (if a root was
+        # restored on startup) fires into the void, before the connect()
+        # above. Sync explicitly with whatever value is already current, or
+        # a restored project silently opens with the Project panel showing
+        # "No root file open" (found live, 2026-08-05).
+        self.root_metadata_dock.set_target_file(self.config_tree_dock.root_path)
         # file_selected fires BEFORE the more specific cell_picked/
         # placement_picked/profile_picked signal on a leaf click (see
         # config_tree.py's _on_clicked) — so this fallback runs first and
