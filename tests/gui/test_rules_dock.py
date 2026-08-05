@@ -423,6 +423,50 @@ def test_redraw_rule_preserves_other_entries_for_registry_safety(main_window, tm
     assert "Placed" in dock.message_label.text()
 
 
+def test_redraw_rule_resolves_cells_via_project_root_not_rule_file(main_window, tmp_path, monkeypatch):
+    """Regression (found live 2026-08-06): a spoke's cell definition
+    routinely lives in a different included file than the rule referencing
+    it (module docstring) — the rule file (self._path) itself carries no
+    cells: key at all. Redraw used to load_config(self._path) directly and
+    saw an empty cells:, failing every spoke's "cell not found" check even
+    though the project as a whole is valid. Uses REAL load_config (not
+    monkeypatched) to prove the include: graph is actually walked."""
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {"cells": {"cap_pair": {}}})
+    target_file = tmp_path / "rules.yaml"
+    _write_yaml(target_file, {"rules": []})
+    root_file = tmp_path / "root.yaml"
+    _write_yaml(root_file, {"include": ["cells.yaml", "rules.yaml"]})
+
+    dock = RuleDock(main_window)
+    dock.set_target_file(target_file)
+    dock.set_root_path(root_file)
+
+    dock.net_edit.setCurrentText("+3V3")
+    dock.origin_mode_combo.setCurrentIndex(0)
+    dock.anchor_role_edit.setCurrentText("FPGA")
+    dock.spoke_pad_edit.setText("17")
+    dock.spoke_cell_combo.setCurrentText("cap_pair")
+    dock._on_add_spoke()
+
+    pipeline_calls = []
+
+    class _FakePipeline:
+        def __init__(self, config_path, preloaded_cfg, preloaded_ctx, only, dry_run):
+            pipeline_calls.append({"config_path": config_path, "cfg": preloaded_cfg})
+
+        def run(self):
+            pass
+
+    monkeypatch.setattr(rules_mod, "ApplyPipeline", _FakePipeline)
+
+    dock._do_redraw_rule()
+
+    assert pipeline_calls[-1]["config_path"] == str(root_file)
+    assert "cap_pair" in pipeline_calls[-1]["cfg"].cells
+    assert "Placed" in dock.message_label.text()
+
+
 def test_redraw_spoke_isolates_only_the_selected_spoke(main_window, tmp_path, monkeypatch):
     """The one property that makes "Redraw selected spoke" different from
     "Redraw rule" — every OTHER spoke gets a temporary skip=True injected

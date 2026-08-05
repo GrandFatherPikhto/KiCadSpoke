@@ -564,9 +564,19 @@ class RuleDock(QWidget):
                      for i, s in enumerate(rule.spokes)]
             rule = dataclasses.replace(rule, spokes=spokes)
 
+        # Load from the project ROOT, not self._path (the file this rule is
+        # saved into) — a spoke's cell routinely lives in a different
+        # included file than the rule referencing it (see module docstring),
+        # and only the root's own include: graph pulls those cells: in.
+        # Loading self._path directly would silently see an empty cells: and
+        # fail every spoke's "cell not found" check (found live 2026-08-06:
+        # fpga_cap_pair_spoke, defined in a sibling include, not fpga_spokes.yaml
+        # itself). Falls back to self._path when no root is known yet (e.g. a
+        # standalone rules file opened without a Config tree root).
+        config_path = self._root_path if self._root_path is not None else self._path
         try:
-            if self._path.exists():
-                cfg, ctx = load_config(str(self._path))
+            if config_path.exists():
+                cfg, ctx = load_config(str(config_path))
             else:
                 cfg, ctx = Config(), RuntimeContext()
         except (ValidationError, OSError, yaml.YAMLError) as e:
@@ -579,7 +589,7 @@ class RuleDock(QWidget):
         cfg.rules = [r for r in cfg.rules if rule_effective_name(r) != effective]
         cfg.rules.append(rule)
 
-        return {"path": self._path, "cfg": cfg, "ctx": ctx, "name": effective}
+        return {"path": config_path, "cfg": cfg, "ctx": ctx, "name": effective}
 
     def _run_redraw(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Worker thread: ApplyPipeline run only — never touches a widget."""
