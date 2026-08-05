@@ -192,6 +192,10 @@ class MainWindow(QMainWindow):
         return self._dock_hub.thermal_via_dock
 
     @property
+    def points_dock(self):
+        return self._dock_hub.points_dock
+
+    @property
     def log_dock(self):
         return self._dock_hub.log_dock
 

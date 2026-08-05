@@ -125,3 +125,42 @@ def resolve_point(adapter: KiCadBoardAdapter, point: Point,
     footprint = None if has_shift else base_footprint
 
     return ResolvedPoint(position=position, footprint=footprint)
+
+
+def resolve_point_chain(adapter: KiCadBoardAdapter, points: dict[str, Point], name: str,
+                        sheet_names=None) -> ResolvedPoint:
+    """Resolves points[name] against the live board, recursively resolving
+    whatever it chains to via anchor_point first — a point can only chain to
+    ANOTHER point (see Point's own docstring), never to a rule/clone_placement.
+
+    Standalone alternative to planner.py's full dependency-order pass
+    (dependency_order.py, which also orders rules/clone_placements) — for a
+    caller that only wants ONE point's current live position (gui/docks/
+    points.py's Resolve button, added 2026-08-05) and must not fail just
+    because some unrelated rule/clone_placement elsewhere in the same config
+    file happens to be broken right now."""
+    resolved: dict[str, ResolvedPoint] = {}
+    _resolve_chain_into(adapter, points, name, resolved, sheet_names or {}, set())
+    return resolved[name]
+
+
+def _resolve_chain_into(adapter: KiCadBoardAdapter, points: dict[str, Point], name: str,
+                        resolved: dict[str, ResolvedPoint], sheet_names, visiting: set) -> None:
+    if name in resolved:
+        return
+    if name not in points:
+        raise ValidationError(format_fatal_error(
+            _("anchor_point {name!r} not found").format(name=name),
+            [_("known points: {names}").format(names=sorted(points.keys()))]
+        ))
+    if name in visiting:
+        raise ValidationError(format_fatal_error(
+            _("anchor_point cycle at {name!r}").format(name=name),
+            [_("a point cannot (transitively) chain to itself via anchor_point")]
+        ))
+    visiting.add(name)
+    point = points[name]
+    if point.anchor_point is not None:
+        _resolve_chain_into(adapter, points, point.anchor_point, resolved, sheet_names, visiting)
+    resolved[name] = resolve_point(adapter, point, resolved, sheet_names)
+    visiting.discard(name)

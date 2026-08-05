@@ -41,6 +41,10 @@ from .loader import (
 # a single entry (Phase 4.2 — gui/ must not import the private names).
 load_clone_placement = _load_clone_placement
 load_thermal_via_array = _load_thermal_via_array
+# load_point takes (name, data) — points: is a dict section (keyed by name),
+# unlike the list-of-dicts thermal_via_arrays/clone_placements above, whose
+# own dict already carries its name inline (see _load_point's signature).
+load_point = _load_point
 
 __all__ = [
     "ThermalViaArrayConfig",
@@ -58,6 +62,7 @@ __all__ = [
     "load_config",
     "load_clone_placement",
     "load_thermal_via_array",
+    "load_point",
     "rule_effective_name",
     "thermal_via_array_effective_name",
 ]

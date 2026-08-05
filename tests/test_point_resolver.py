@@ -13,7 +13,8 @@ from kipy.board_types import Pad, FootprintInstance
 
 from kicadstamp.config import Point
 from kicadstamp.exceptions import ValidationError
-from kicadstamp.placement.services.point_resolver import resolve_point, ResolvedPoint
+from kicadstamp.placement.services.point_resolver import (ResolvedPoint, resolve_point,
+                                                           resolve_point_chain)
 
 MM = 1_000_000
 
@@ -169,3 +170,85 @@ class TestResolvePointAnchorPointChain:
         resolved = resolve_point(adapter, point, resolved_points={"parent": base})
 
         assert resolved.footprint is None
+
+
+class TestResolvePointChain:
+    """resolve_point_chain() — the standalone, points-only dependency walk
+    added 2026-08-05 for gui/docks/points.py's Resolve button (see its own
+    docstring): unlike planner.py's full dependency-order pass, it must
+    never be coupled to unrelated rules/clone_placements, and must not even
+    touch an unrelated OTHER point in the same dict that happens to be
+    broken."""
+
+    def test_resolves_a_point_with_no_chain_directly(self):
+        fp = _make_fp("U5", x_mm=10.0, y_mm=20.0)
+        adapter = _adapter_for([fp])
+        points = {"p": Point(name="p", anchor_ref="U5")}
+
+        resolved = resolve_point_chain(adapter, points, "p")
+
+        assert resolved.position.x == int(10.0 * MM)
+        assert resolved.footprint is fp
+
+    def test_resolves_a_chain_of_points_recursively(self):
+        fp = _make_fp("U5", x_mm=10.0, y_mm=20.0)
+        adapter = _adapter_for([fp])
+        points = {
+            "base": Point(name="base", anchor_ref="U5"),
+            "child": Point(name="child", anchor_point="base", shift_x_mm=1.0),
+        }
+
+        resolved = resolve_point_chain(adapter, points, "child")
+
+        assert resolved.position.x == int(11.0 * MM)
+        assert resolved.position.y == int(20.0 * MM)
+        assert resolved.footprint is None  # shift applied
+
+    def test_resolves_a_chain_two_levels_deep(self):
+        fp = _make_fp("U5", x_mm=1.0, y_mm=1.0)
+        adapter = _adapter_for([fp])
+        points = {
+            "base": Point(name="base", anchor_ref="U5"),
+            "mid": Point(name="mid", anchor_point="base"),
+            "tip": Point(name="tip", anchor_point="mid", shift_y_mm=2.0),
+        }
+
+        resolved = resolve_point_chain(adapter, points, "tip")
+
+        assert resolved.position.x == int(1.0 * MM)
+        assert resolved.position.y == int(3.0 * MM)
+
+    def test_an_unrelated_broken_point_in_the_same_dict_is_never_touched(self):
+        """Found live 2026-08-05: a config file routinely holds several
+        points:, and one being broken must not block previewing an
+        unrelated other one — gui/docks/points.py's Resolve button relies
+        on this by only including points it can successfully load into the
+        dict passed here in the first place; this pins down that
+        resolve_point_chain itself only visits what the chain needs."""
+        fp = _make_fp("U5", x_mm=1.0, y_mm=2.0)
+        adapter = _adapter_for([fp])
+        points = {
+            "good": Point(name="good", anchor_ref="U5"),
+            "broken": Point(name="broken", anchor_ref="DOES_NOT_EXIST"),
+        }
+
+        resolved = resolve_point_chain(adapter, points, "good")
+
+        assert resolved.position.x == int(1.0 * MM)
+
+    def test_missing_anchor_point_target_is_fatal(self):
+        adapter = _adapter_for([])
+        points = {"child": Point(name="child", anchor_point="ghost")}
+
+        with pytest.raises(ValidationError, match="not found"):
+            resolve_point_chain(adapter, points, "child")
+
+    def test_cycle_is_fatal(self):
+        adapter = _adapter_for([])
+        points = {
+            "a": Point(name="a", anchor_point="b"),
+            "b": Point(name="b", anchor_point="a"),
+        }
+
+        with pytest.raises(ValidationError, match="cycle"):
+            resolve_point_chain(adapter, points, "a")

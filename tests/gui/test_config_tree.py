@@ -385,6 +385,41 @@ def test_thermal_via_leaf_click_emits_thermal_via_picked(main_window, tmp_path):
     assert picked == [{"name": "fpga_thermal", "pad": "1"}]
 
 
+def test_add_point_emits_request_instead_of_writing_directly(main_window, tmp_path):
+    root = tmp_path / "root.yaml"
+    root.write_text("points: {}\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    requested = []
+    dock.add_point_requested.connect(requested.append)
+    dock.add_point_requested.emit(root)
+
+    assert requested == [root]
+    # nothing written — Add point defers to PointsDock's own Save path,
+    # same reasoning as Add thermal via pad/Add placer above.
+    assert yaml.safe_load(root.read_text(encoding="utf-8")) == {"points": {}}
+
+
+def test_points_leaf_click_emits_points_picked_with_the_name(main_window, tmp_path):
+    """points: is a DICT section (see _entries()) — unlike
+    thermal_via_picked's full-dict payload above, the click only carries
+    the name; PointsDock.load_entry() re-reads the file for the data."""
+    root = tmp_path / "root.yaml"
+    root.write_text("points:\n  origin:\n    xy: [0, 0]\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    picked = []
+    dock.points_picked.connect(picked.append)
+    leaf = _find(dock.tree.topLevelItem(0), "Points").child(0)
+    dock._on_clicked(leaf, 0)
+
+    assert picked == ["origin"]
+
+
 def test_add_placer_emits_request_instead_of_writing_directly(main_window, tmp_path):
     root = tmp_path / "root.yaml"
     root.write_text("clone_placements: []\n", encoding="utf-8")

@@ -181,6 +181,63 @@ def test_profile_picked_fills_extract_form(real_main_window, tmp_path):
     assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.extract_dock
 
 
+def test_points_picked_fills_points_form_and_switches_tab(real_main_window, tmp_path):
+    """ConfigTreeDock -> PointsDock wiring (points_picked -> load_entry,
+    see gui/docks/config_tree.py's points_picked docstring / PointsDock.
+    load_entry's docstring) — clicking a Points leaf in the real Config
+    tree must reach PointsDock's form end-to-end, not just via a direct
+    load_entry() call, and bring the Points tab to front (2026-08-05, same
+    shape as test_profile_picked_fills_extract_form above)."""
+    points_file = tmp_path / "points.yaml"
+    points_file.write_text("points:\n  origin:\n    xy: [1.0, 2.0]\n", encoding="utf-8")
+    real_main_window.config_tree_dock.set_root_file(points_file)
+    # points_picked alone carries only the name (dict section — see its own
+    # docstring); a real tree click fires file_selected first (setting
+    # _path), same as test_profile_picked_fills_extract_form's own
+    # set_profile_file call below.
+    real_main_window.points_dock.set_target_file(points_file)
+
+    real_main_window.config_tree_dock.points_picked.emit("origin")
+
+    assert real_main_window.points_dock.name_edit.text() == "origin"
+    assert real_main_window.points_dock.x_edit.text() == "1.0"
+    assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.points_dock
+
+
+def test_points_saved_refreshes_config_tree_points(real_main_window, tmp_path):
+    """PointsDock -> ConfigTreeDock wiring (saved -> refresh) — same
+    real-widget-state assertion style as
+    test_placer_saved_refreshes_config_tree_placements/test_extract_saved_
+    refreshes_config_tree_cells above."""
+    points_file = tmp_path / "points.yaml"
+    _write(points_file)
+    real_main_window.config_tree_dock.set_root_file(points_file)
+    root_item = real_main_window.config_tree_dock.tree.topLevelItem(0)
+    assert root_item.childCount() == 0
+
+    points_file.write_text("points:\n  origin:\n    xy: [0, 0]\n", encoding="utf-8")
+    real_main_window.points_dock.saved.emit()
+
+    root_item = real_main_window.config_tree_dock.tree.topLevelItem(0)
+    points = root_item.child(0)
+    assert points.text(0) == "Points"
+    assert points.child(0).text(0) == "origin"
+
+
+def test_add_point_requested_opens_blank_points_form_and_shows_tab(real_main_window, tmp_path):
+    """ConfigTreeDock's "Add point..." context-menu action -> PointsDock,
+    same shape as DockHub._start_new_placement/_start_new_thermal_via."""
+    points_file = tmp_path / "points.yaml"
+    _write(points_file)
+    real_main_window.points_dock.name_edit.setText("stale")
+
+    real_main_window.config_tree_dock.add_point_requested.emit(points_file)
+
+    assert real_main_window.points_dock.name_edit.text() == ""
+    assert real_main_window.points_dock._path == points_file
+    assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.points_dock
+
+
 def test_file_selected_alone_shows_root_page(real_main_window, tmp_path):
     """A plain file/category click (file_selected fires with no matching
     leaf signal) falls back to the Root page — Denis's chosen auto-switch
@@ -412,11 +469,13 @@ def test_dock_hub_constructs_all_docks_and_wires_file_selected(main_window, tmp_
         assert hub.extract_dock is not None
         assert hub.placer_dock is not None
         assert hub.root_metadata_dock is not None
+        assert hub.points_dock is not None
         assert hub.log_dock is not None
 
         hub.config_tree_dock.file_selected.emit(target_file)
         assert hub.extract_dock._target_path == target_file
         assert hub.placer_dock._cells_path == target_file
+        assert hub.points_dock._path == target_file
     finally:
         _teardown_hub(hub)
 
@@ -512,6 +571,8 @@ def test_dock_hub_delegates_route_to_the_right_docks(real_main_window, monkeypat
                         lambda s: pushed.setdefault("thermal_roles", []).append(s))
     monkeypatch.setattr(hub.thermal_via_dock, "refresh_known_nets",
                         lambda b: pushed.setdefault("thermal_nets", []).append(b))
+    monkeypatch.setattr(hub.points_dock, "refresh_known_roles",
+                        lambda s: pushed.setdefault("points_roles", []).append(s))
 
     board, snapshot = object(), object()
     hub.push_snapshot(snapshot, board)
@@ -520,6 +581,7 @@ def test_dock_hub_delegates_route_to_the_right_docks(real_main_window, monkeypat
     assert pushed["nets"] == [board]
     assert pushed["thermal_roles"] == [snapshot]
     assert pushed["thermal_nets"] == [board]
+    assert pushed["points_roles"] == [snapshot]
 
     cleared = []
     monkeypatch.setattr(hub.tree_dock, "set_footprints", lambda s: cleared.append(s))

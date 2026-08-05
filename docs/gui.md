@@ -185,7 +185,8 @@ Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.
   undo covers "moved something to the wrong place" — there's no separate movement log here.
 
 Not covered by the GUI yet (all still reachable by hand-editing the saved YAML): `anchor_sheet`
-narrowing, `points:`-name autocomplete, `refs:` explicit role→ref override, `by_selection` mode.
+narrowing, this dock's own Point-chain field has no name autocomplete (unlike the new Points panel
+below, which does), `refs:` explicit role→ref override, `by_selection` mode.
 
 ## Project
 
@@ -204,6 +205,34 @@ file..."/the Recent dropdown (see the Config tree in `gui/docks/config_tree.py`)
 which included file is currently browsed in that tree. Browsing into an included file does not
 retarget this panel: these fields are only valid on an actual root (an included file setting any of
 them is fatal at load — see [docs/config.md](config.md)), and a project only ever has one.
+
+## Points
+
+Edits a named `points:` entry (see [docs/config.md](config.md) on the Point schema) — a reusable
+anchor other `anchor_point:` references (Placer's own Point origin mode, Rule/ThermalViaArrayConfig)
+point at by name. Added 2026-08-05 after noticing how closely Point's own shape already matches
+Placer's Origin widget.
+
+- **Origin** — same three mutually exclusive bases as Placer's own Origin combo: **Absolute XY** /
+  **Anchor (ref/role)**, now including a **Sheet** field (Denis: "нужен anchor_sheet в этой
+  панели") alongside Ref/Role/Pad/Anchor cluster / **Point** (chain to another point by name — this
+  field IS autocompleted, from the current file's own `points:` keys, closing the "points:-name
+  autocomplete" gap the Placer section above still has for its own Point field).
+- **Shift X/Y** — flat mm offset on top of the Anchor/Point base (not available on Absolute XY —
+  there, just edit the coordinate directly).
+- **Resolve** — computes where this point (and whatever it chains through) resolves to RIGHT NOW,
+  without writing anything or moving anything on the board (a Point has no physical effect of its
+  own, unlike Placer's Redraw) — shows the literal X/Y in mm, and, if it resolved through a live
+  footprint, selects that footprint on the board (the same highlight the Components tree's own
+  click-to-select already uses). An unrelated OTHER point in the same file that's currently broken
+  is silently skipped rather than blocking this preview — deliberately more lenient than a real
+  `apply` run's all-or-nothing config validation. Sheet-based narrowing is not yet wired into this
+  preview specifically (it needs the project's `schematic_dir`, a second file dependency this first
+  pass deferred) — Sheet is still saved correctly for a real `apply` run, which does build that
+  narrowing properly.
+- **Save** — writes into the target file's `points:` section (a dict keyed by name, unlike
+  Placer/Thermal via's list-of-dicts sections — an existing name is replaced in place, not
+  duplicated).
 
 ## Log
 

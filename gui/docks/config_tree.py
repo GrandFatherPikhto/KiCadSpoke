@@ -20,15 +20,15 @@ shape here: an earlier version of this dock read one flat file per role
 and didn't walk include: at all, corrected same day, see the handoff
 above).
 
-4 of the 7 recognized sections route into an existing form when clicked
+5 of the 7 recognized sections route into an existing form when clicked
 (Cells -> PlacerDock.set_selected_cell, Clone placements ->
 PlacerDock.load_placement, Extract profiles -> ExtractDock.pick_profile,
-Thermal via arrays -> ThermalViaArrayDock.load_entry, added 2026-08-03) —
-Rules/Points/Clone profiles have no GUI edit form yet, shown read-only for
-now, same deliberate scope limit as before. Rules/ManualSpoke specifically
-was flagged live as a related future gap (Denis, re: fpga_cap_pair_spoke.yaml
-being used via rules: spokes, not clone_placements:) — parked alongside it,
-not started.
+Thermal via arrays -> ThermalViaArrayDock.load_entry, added 2026-08-03;
+Points -> PointsDock.load_entry, added 2026-08-05) — Rules/Clone profiles
+still have no GUI edit form, shown read-only for now, same deliberate scope
+limit as before. Rules/ManualSpoke specifically was flagged live as a
+related future gap (Denis, re: fpga_cap_pair_spoke.yaml being used via
+rules: spokes, not clone_placements:) — parked alongside it, not started.
 
 Every click (file header, category, or leaf alike) also fires
 file_selected with that item's nearest file ancestor — this REPLACES the
@@ -121,6 +121,16 @@ class ConfigTreeDock(QDockWidget):
     # ThermalViaArrayDock listens via its new_thermal_via() entry point,
     # same reasoning as add_placer_requested above.
     add_thermal_via_requested = pyqtSignal(object)
+    # Fired when a Points leaf is clicked (2026-08-05) — points: is a DICT
+    # section (see _entries()), so the payload is just the name, unlike
+    # placement_picked/thermal_via_picked's full-dict payload; PointsDock's
+    # load_entry() re-reads the file for the actual data, same "read fresh
+    # from yaml_io" discipline root_metadata.py's set_target_file already
+    # uses. add_point_requested mirrors add_thermal_via_requested/
+    # add_placer_requested — opens the form blank rather than writing a raw
+    # stub straight to YAML.
+    points_picked = pyqtSignal(str)
+    add_point_requested = pyqtSignal(object)
     # Fired on EVERY click in the tree (file header, category, or leaf) —
     # see module docstring for why this replaces the three independent
     # FilePickerDock role signals.
@@ -326,6 +336,8 @@ class ConfigTreeDock(QDockWidget):
             self.profile_picked.emit(ref)
         elif section == "thermal_via_arrays":
             self.thermal_via_picked.emit(ref)
+        elif section == "points":
+            self.points_picked.emit(ref)
 
     # ── Context menu (right-click anywhere under a file) ────────────────
 
@@ -365,6 +377,8 @@ class ConfigTreeDock(QDockWidget):
             lambda: self.add_thermal_via_requested.emit(file_path))
         menu.addAction(_("Add placer...")).triggered.connect(
             lambda: self.add_placer_requested.emit(file_path))
+        menu.addAction(_("Add point...")).triggered.connect(
+            lambda: self.add_point_requested.emit(file_path))
         menu.addAction(_("Add included file...")).triggered.connect(
             lambda: self._add_included_file(file_path))
         if parent_path is not None:
