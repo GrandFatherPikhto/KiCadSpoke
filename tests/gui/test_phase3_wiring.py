@@ -238,6 +238,85 @@ def test_add_point_requested_opens_blank_points_form_and_shows_tab(real_main_win
     assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.points_dock
 
 
+def test_rules_dock_picks_up_a_root_restored_before_wiring_existed(qapp, tmp_path):
+    """Same startup-order bug/fix as test_root_metadata_dock_picks_up_a_
+    root_restored_before_wiring_existed above — RuleDock is the SECOND
+    listener on root_file_changed (its Cell/Point combos need the whole
+    include graph, see gui/docks/rules.py's module docstring), so it needs
+    the exact same explicit sync in DockHub._wire()."""
+    root_file = tmp_path / "root.yaml"
+    root_file.write_text("cells:\n  cap_pair: {}\n", encoding="utf-8")
+
+    data = settings.load()
+    data["last_root_file"] = str(root_file)
+    settings.save(data)
+
+    window = MainWindow(timeout_ms=10, verbose=False)
+    try:
+        assert window.rules_dock._root_path == root_file
+        assert "cap_pair" in [window.rules_dock.spoke_cell_combo.itemText(i)
+                              for i in range(window.rules_dock.spoke_cell_combo.count())]
+    finally:
+        window._timer.stop()
+        window._selection_timer.stop()
+
+
+def test_rule_picked_fills_rules_form_and_switches_tab(real_main_window, tmp_path):
+    """ConfigTreeDock -> RuleDock wiring (rule_picked -> load_entry) —
+    clicking a Rules leaf in the real Config tree must reach RuleDock's
+    form end-to-end, not just via a direct load_entry() call, and bring
+    the Rules tab to front. rules: is a LIST section (see rule_picked's
+    own docstring), so the payload is already the full dict — unlike
+    points_picked, no set_target_file needed first just to populate the
+    form."""
+    rules_file = tmp_path / "rules.yaml"
+    rules_file.write_text(
+        "rules:\n  - net: '+3V3'\n    anchor_role: FPGA\n    spokes:\n"
+        "      - pad: '17'\n        cell: cap_pair\n", encoding="utf-8")
+    real_main_window.config_tree_dock.set_root_file(rules_file)
+
+    real_main_window.config_tree_dock.rule_picked.emit(
+        {"net": "+3V3", "anchor_role": "FPGA", "spokes": [{"pad": "17", "cell": "cap_pair"}]})
+
+    assert real_main_window.rules_dock.net_edit.currentText() == "+3V3"
+    assert real_main_window.rules_dock.anchor_role_edit.currentText() == "FPGA"
+    assert real_main_window.rules_dock._spokes == [{"pad": "17", "cell": "cap_pair"}]
+    assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.rules_dock
+
+
+def test_rules_saved_refreshes_config_tree_rules(real_main_window, tmp_path):
+    """RuleDock -> ConfigTreeDock wiring (saved -> refresh) — same
+    real-widget-state assertion style as test_points_saved_refreshes_
+    config_tree_points above."""
+    rules_file = tmp_path / "rules.yaml"
+    _write(rules_file)
+    real_main_window.config_tree_dock.set_root_file(rules_file)
+    root_item = real_main_window.config_tree_dock.tree.topLevelItem(0)
+    assert root_item.childCount() == 0
+
+    rules_file.write_text("rules:\n  - net: '+3V3'\n    anchor_role: FPGA\n", encoding="utf-8")
+    real_main_window.rules_dock.saved.emit()
+
+    root_item = real_main_window.config_tree_dock.tree.topLevelItem(0)
+    rules = root_item.child(0)
+    assert rules.text(0) == "Rules"
+    assert rules.child(0).text(0) == "+3V3"
+
+
+def test_add_rule_requested_opens_blank_rules_form_and_shows_tab(real_main_window, tmp_path):
+    """ConfigTreeDock's "Add rule..." context-menu action -> RuleDock, same
+    shape as DockHub._start_new_placement/_start_new_point."""
+    rules_file = tmp_path / "rules.yaml"
+    _write(rules_file)
+    real_main_window.rules_dock.net_edit.setCurrentText("stale")
+
+    real_main_window.config_tree_dock.add_rule_requested.emit(rules_file)
+
+    assert real_main_window.rules_dock.net_edit.currentText() == ""
+    assert real_main_window.rules_dock._path == rules_file
+    assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.rules_dock
+
+
 def test_file_selected_alone_shows_root_page(real_main_window, tmp_path):
     """A plain file/category click (file_selected fires with no matching
     leaf signal) falls back to the Root page — Denis's chosen auto-switch
@@ -470,12 +549,14 @@ def test_dock_hub_constructs_all_docks_and_wires_file_selected(main_window, tmp_
         assert hub.placer_dock is not None
         assert hub.root_metadata_dock is not None
         assert hub.points_dock is not None
+        assert hub.rules_dock is not None
         assert hub.log_dock is not None
 
         hub.config_tree_dock.file_selected.emit(target_file)
         assert hub.extract_dock._target_path == target_file
         assert hub.placer_dock._cells_path == target_file
         assert hub.points_dock._path == target_file
+        assert hub.rules_dock._path == target_file
     finally:
         _teardown_hub(hub)
 
@@ -498,6 +579,27 @@ def test_dock_hub_wires_root_file_changed_to_root_metadata_dock(main_window, tmp
 
         hub.config_tree_dock.root_file_changed.emit(root_file)
         assert hub.root_metadata_dock._path == root_file
+    finally:
+        _teardown_hub(hub)
+
+
+def test_dock_hub_wires_root_file_changed_to_rules_dock(main_window, tmp_path):
+    """RuleDock is the SECOND listener on root_file_changed (2026-08-05) —
+    its Cell/Point combos need the whole include graph starting from the
+    project's root, same reasoning as test_dock_hub_wires_root_file_
+    changed_to_root_metadata_dock above."""
+    root_file = tmp_path / "root.yaml"
+    root_file.write_text("cells:\n  cap_pair: {}\n", encoding="utf-8")
+
+    hub = DockHub(main_window, connection=main_window.connection, verbose=False)
+    try:
+        assert hub.rules_dock._root_path is None
+
+        hub.config_tree_dock.root_file_changed.emit(root_file)
+
+        assert hub.rules_dock._root_path == root_file
+        assert "cap_pair" in [hub.rules_dock.spoke_cell_combo.itemText(i)
+                              for i in range(hub.rules_dock.spoke_cell_combo.count())]
     finally:
         _teardown_hub(hub)
 
@@ -573,6 +675,10 @@ def test_dock_hub_delegates_route_to_the_right_docks(real_main_window, monkeypat
                         lambda b: pushed.setdefault("thermal_nets", []).append(b))
     monkeypatch.setattr(hub.points_dock, "refresh_known_roles",
                         lambda s: pushed.setdefault("points_roles", []).append(s))
+    monkeypatch.setattr(hub.rules_dock, "refresh_known_roles",
+                        lambda s: pushed.setdefault("rules_roles", []).append(s))
+    monkeypatch.setattr(hub.rules_dock, "refresh_known_nets",
+                        lambda b: pushed.setdefault("rules_nets", []).append(b))
 
     board, snapshot = object(), object()
     hub.push_snapshot(snapshot, board)
@@ -582,6 +688,8 @@ def test_dock_hub_delegates_route_to_the_right_docks(real_main_window, monkeypat
     assert pushed["thermal_roles"] == [snapshot]
     assert pushed["thermal_nets"] == [board]
     assert pushed["points_roles"] == [snapshot]
+    assert pushed["rules_roles"] == [snapshot]
+    assert pushed["rules_nets"] == [board]
 
     cleared = []
     monkeypatch.setattr(hub.tree_dock, "set_footprints", lambda s: cleared.append(s))

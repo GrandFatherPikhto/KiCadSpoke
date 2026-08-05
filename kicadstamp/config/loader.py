@@ -354,6 +354,56 @@ _RULE_KNOWN_KEYS = {
 }
 
 
+def _load_rule(rule_data: dict[str, Any]) -> Rule:
+    """Extracted 2026-08-05 from load_config's own inline loop (same
+    standalone-per-entry shape as _load_point/_load_thermal_via_array/
+    _load_clone_placement) so gui/docks/rules.py can validate a single Rule
+    the same clean way those docks already validate their own entry type.
+    The cross-rule name/net collision check stays in load_config — it
+    needs the WHOLE rules list, not just one entry."""
+    rule_net = rule_data.get('net')
+    check_unknown_keys(rule_data, _RULE_KNOWN_KEYS,
+                       _("unknown fields in rule (net {net!r})").format(net=rule_net))
+    anchor_ref = rule_data.get('anchor_ref')
+    anchor_role = rule_data.get('anchor_role')
+    anchor_sheet = rule_data.get('anchor_sheet')
+    anchor_cluster = rule_data.get('anchor_cluster')
+    anchor_point = rule_data.get('anchor_point')
+
+    if anchor_ref and anchor_role:
+        raise ValidationError(format_fatal_error(
+            _("anchor_ref and anchor_role together in rule (net {net!r})").format(net=rule_net),
+            [_("mutually exclusive: either by refdes (anchor_ref) or by Role field "
+               "(anchor_role), not both")]
+        ))
+    if anchor_sheet and not anchor_role:
+        raise ValidationError(format_fatal_error(
+            _("anchor_sheet without anchor_role in rule (net {net!r})").format(net=rule_net),
+            [_("anchor_sheet only narrows ambiguity of anchor_role, it is not an anchor itself")]
+        ))
+    if anchor_point and (anchor_ref or anchor_role):
+        raise ValidationError(format_fatal_error(
+            _("anchor_point together with anchor_ref/anchor_role in rule (net {net!r})")
+            .format(net=rule_net),
+            [_("anchor_point={point!r} names a points: entry that already carries its own "
+               "anchor — mutually exclusive with anchor_ref/anchor_role").format(point=anchor_point)]
+        ))
+    if not anchor_ref and not anchor_role and not anchor_point:
+        raise ValidationError(format_fatal_error(
+            _("rule (net {net!r}) without anchor_ref/anchor_role/anchor_point").format(net=rule_net),
+            [_("a spoke rule must have an anchor – anchor_ref: <ref> (component whose "
+               "pads are listed in spokes), anchor_role: <ROLE> (survives re‑annotation), "
+               "or anchor_point: <name from points:>")]
+        ))
+    spokes = [_load_manual_spoke(spoke_data, rule_net) for spoke_data in rule_data.get('spokes', [])]
+    return Rule(net=rule_net, spokes=spokes, anchor_ref=anchor_ref,
+               anchor_role=anchor_role, anchor_sheet=anchor_sheet,
+               anchor_cluster=anchor_cluster, anchor_point=anchor_point,
+               name=rule_data.get('name'),
+               retired=rule_data.get('retired', False),
+               skip=rule_data.get('skip', False))
+
+
 _THERMAL_VIA_ARRAY_KNOWN_KEYS = {
     'retired', 'anchor_ref', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
     'anchor_point', 'pad', 'net', 'rows', 'cols', 'margin_mm', 'pattern',
@@ -659,49 +709,7 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
     points_data = dict(data.get('points', {}) or {})
     points = {name: _load_point(name, pdata) for name, pdata in points_data.items()}
 
-    rules = []
-    for rule_data in data.get('rules', []):
-        rule_net = rule_data.get('net')
-        check_unknown_keys(rule_data, _RULE_KNOWN_KEYS,
-                           _("unknown fields in rule (net {net!r})").format(net=rule_net))
-        anchor_ref = rule_data.get('anchor_ref')
-        anchor_role = rule_data.get('anchor_role')
-        anchor_sheet = rule_data.get('anchor_sheet')
-        anchor_cluster = rule_data.get('anchor_cluster')
-        anchor_point = rule_data.get('anchor_point')
-
-        if anchor_ref and anchor_role:
-            raise ValidationError(format_fatal_error(
-                _("anchor_ref and anchor_role together in rule (net {net!r})").format(net=rule_net),
-                [_("mutually exclusive: either by refdes (anchor_ref) or by Role field "
-                   "(anchor_role), not both")]
-            ))
-        if anchor_sheet and not anchor_role:
-            raise ValidationError(format_fatal_error(
-                _("anchor_sheet without anchor_role in rule (net {net!r})").format(net=rule_net),
-                [_("anchor_sheet only narrows ambiguity of anchor_role, it is not an anchor itself")]
-            ))
-        if anchor_point and (anchor_ref or anchor_role):
-            raise ValidationError(format_fatal_error(
-                _("anchor_point together with anchor_ref/anchor_role in rule (net {net!r})")
-                .format(net=rule_net),
-                [_("anchor_point={point!r} names a points: entry that already carries its own "
-                   "anchor — mutually exclusive with anchor_ref/anchor_role").format(point=anchor_point)]
-            ))
-        if not anchor_ref and not anchor_role and not anchor_point:
-            raise ValidationError(format_fatal_error(
-                _("rule (net {net!r}) without anchor_ref/anchor_role/anchor_point").format(net=rule_net),
-                [_("a spoke rule must have an anchor – anchor_ref: <ref> (component whose "
-                   "pads are listed in spokes), anchor_role: <ROLE> (survives re‑annotation), "
-                   "or anchor_point: <name from points:>")]
-            ))
-        spokes = [_load_manual_spoke(spoke_data, rule_net) for spoke_data in rule_data.get('spokes', [])]
-        rules.append(Rule(net=rule_net, spokes=spokes, anchor_ref=anchor_ref,
-                          anchor_role=anchor_role, anchor_sheet=anchor_sheet,
-                          anchor_cluster=anchor_cluster, anchor_point=anchor_point,
-                          name=rule_data.get('name'),
-                          retired=rule_data.get('retired', False),
-                          skip=rule_data.get('skip', False)))
+    rules = [_load_rule(rule_data) for rule_data in data.get('rules', [])]
 
     # Fatal on collision: two rules resolving to the same --only identity
     # (same net, neither disambiguated with an explicit name) would silently

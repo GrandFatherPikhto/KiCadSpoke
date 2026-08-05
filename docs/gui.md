@@ -234,6 +234,36 @@ Placer's Origin widget.
   Placer/Thermal via's list-of-dicts sections — an existing name is replaced in place, not
   duplicated).
 
+## Rules
+
+Edits a `rules:` entry (see [docs/config.md](config.md) on Rule/ManualSpoke) — one shared anchor
+(no `xy` mode here, unlike Points/Placer — only **Anchor (ref/role, + Sheet/Cluster)** or **Point**)
+plus an ORDERED list of spokes, each placing a Cell at a specific pad of that anchor with its own
+hand-tuned shift/rotation. Added 2026-08-05 after Denis connected `fpga_spokes.yaml`/
+`fpga_cap_pair_spoke.yaml` to a real project and hit the long-standing "Rules has no edit form" gap.
+
+- **Spokes table + detail row below** — picked over putting spokes in the shared Config tree
+  (a spoke has no name field for a tree leaf label, spoke ORDER is semantically significant — the
+  component pool consumes spokes in list order — and a table's columns show every spoke's shift/
+  rotation/cluster at a glance). The table itself is read-only; all editing goes through the row
+  below it and its own **Add spoke** / **Update selected** / **Remove selected** / **Move up** /
+  **Move down** buttons — a table row can never drift from what was actually validated and stored.
+- **Cell** (per spoke) is a searchable combo listing every `cells:` key reachable from the
+  project's root via `include:` — not just this file's own, since a spoke's cell routinely lives in
+  a different file than the rule using it. **Point** (the rule's own anchor, not per-spoke — a
+  spoke always anchors to a pad on THIS rule's own anchor) is populated the same whole-graph way.
+  Both need the project's root, wired the same way Project's own panel does.
+- **Redraw rule** — the whole rule, all non-skipped spokes, same replace-by-identity +
+  `ApplyPipeline(only=[...])` shape as Thermal via's own Redraw.
+- **Redraw selected spoke** — same, but every OTHER spoke in the copy handed to the pipeline gets a
+  temporary `skip: true` injected (never written back — Save is unaffected) — sound because spoke
+  resolution shares ONE component pool per net across the whole rule, so a single spoke can't be
+  resolved in total isolation, but the pipeline can be told to skip every spoke except the one
+  you're checking, which `skip:` already exists to do.
+- **Save** — writes the whole rule into the target file's `rules:` list, matched by name if set,
+  else net (`rules:` is the one list section without a required `name:` — see
+  [docs/config.md](config.md)'s `rule_effective_name`).
+
 ## Log
 
 A read-only, copyable, searchable panel fed by a `logging.Handler` attached to the **root**

@@ -4,6 +4,7 @@ from gui.docks.extract import ExtractDock
 from gui.docks.placer import PlacerDock
 from gui.docks.points import PointsDock
 from gui.docks.root_metadata import RootMetadataDock
+from gui.docks.rules import RuleDock
 from gui.docks.thermal_via import ThermalViaArrayDock
 
 
@@ -14,7 +15,8 @@ def test_pages_are_the_expected_panel_types(main_window):
     assert isinstance(dock.root_panel, RootMetadataDock)
     assert isinstance(dock.thermal_via_panel, ThermalViaArrayDock)
     assert isinstance(dock.points_panel, PointsDock)
-    assert dock.stack.count() == 5
+    assert isinstance(dock.rules_panel, RuleDock)
+    assert dock.stack.count() == 6
 
 
 def test_extract_tab_is_shown_first(main_window):
@@ -67,3 +69,10 @@ def test_show_points_switches_tab_and_stack(main_window):
     dock.show_points()
     assert dock.tab_bar.currentIndex() == 4
     assert dock.stack.currentWidget() is dock.points_panel
+
+
+def test_show_rules_switches_tab_and_stack(main_window):
+    dock = DetailDock(main_window)
+    dock.show_rules()
+    assert dock.tab_bar.currentIndex() == 5
+    assert dock.stack.currentWidget() is dock.rules_panel

@@ -23,7 +23,7 @@ Two groups live here:
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import yaml
 from PyQt6.QtCore import Qt
@@ -136,16 +136,24 @@ def add_list_entry(path: Path, section: str, entry: str) -> bool:
     return True
 
 
-def upsert_list_entry(path: Path, section: str, entry: Dict[str, Any], key: str = "name") -> bool:
+def upsert_list_entry(path: Path, section: str, entry: Dict[str, Any], key: str = "name",
+                      key_fn: Optional[Callable[[Dict[str, Any]], Any]] = None) -> bool:
     """Read-merge-write like merge_write()/add_list_entry(), but for a list
-    section whose entries are dicts matched by their own `key` field, not
-    by list membership: an entry whose key already exists gets REPLACED in
-    place (same position), a new key gets appended. Every other top-level
+    section whose entries are dicts matched by identity, not by list
+    membership: an entry whose identity already exists gets REPLACED in
+    place (same position), a new one gets appended. Every other top-level
     key in the file (cells:, include:, extract_profiles:, ...) is left
     untouched. Shared shape for clone_placements: (see
-    upsert_clone_placement) and thermal_via_arrays: (ConfigTreeDock's Add
-    thermal via pad, 2026-08-03) — both are "list of named dict entries"
-    sections in exactly this way."""
+    upsert_clone_placement), thermal_via_arrays: (ConfigTreeDock's Add
+    thermal via pad, 2026-08-03), and rules: (gui/docks/rules.py, 2026-08-05)
+    — all three are "list of dict entries" sections in exactly this way.
+
+    key_fn (callable, entry -> identity) overrides the default `entry.get(key)`
+    — rules: needs this because a Rule's identity for --only falls back to
+    net: when name: is absent (config/models.py's rule_effective_name()),
+    unlike clone_placements:/thermal_via_arrays: which always require an
+    explicit name:."""
+    identity = key_fn if key_fn is not None else (lambda e: e.get(key))
     existing = _read_data(path)
     items = existing.setdefault(section, [])
     if not isinstance(items, list):
@@ -153,7 +161,7 @@ def upsert_list_entry(path: Path, section: str, entry: Dict[str, Any], key: str 
                       .format(section=section, path=path))
     overwritten = False
     for i, existing_entry in enumerate(items):
-        if isinstance(existing_entry, dict) and existing_entry.get(key) == entry.get(key):
+        if isinstance(existing_entry, dict) and identity(existing_entry) == identity(entry):
             items[i] = entry
             overwritten = True
             break

@@ -420,6 +420,41 @@ def test_points_leaf_click_emits_points_picked_with_the_name(main_window, tmp_pa
     assert picked == ["origin"]
 
 
+def test_add_rule_emits_request_instead_of_writing_directly(main_window, tmp_path):
+    root = tmp_path / "root.yaml"
+    root.write_text("rules: []\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    requested = []
+    dock.add_rule_requested.connect(requested.append)
+    dock.add_rule_requested.emit(root)
+
+    assert requested == [root]
+    # nothing written — Add rule defers to RuleDock's own Save path, same
+    # reasoning as Add thermal via pad/Add placer/Add point above.
+    assert yaml.safe_load(root.read_text(encoding="utf-8")) == {"rules": []}
+
+
+def test_rule_leaf_click_emits_rule_picked(main_window, tmp_path):
+    """rules: is a LIST section (see _entries()) — like thermal_via_picked,
+    the payload is already the full dict."""
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        "rules:\n  - net: '+3V3'\n    anchor_role: FPGA\n", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    picked = []
+    dock.rule_picked.connect(picked.append)
+    leaf = _find(dock.tree.topLevelItem(0), "Rules").child(0)
+    dock._on_clicked(leaf, 0)
+
+    assert picked == [{"net": "+3V3", "anchor_role": "FPGA"}]
+
+
 def test_add_placer_emits_request_instead_of_writing_directly(main_window, tmp_path):
     root = tmp_path / "root.yaml"
     root.write_text("clone_placements: []\n", encoding="utf-8")

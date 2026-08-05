@@ -12,14 +12,14 @@ MainWindow re-exposes as thin forwarding properties — needed for the parts
 of the app that still reach a dock directly (notably RoleClusterTreeDock's
 lazy fieldstool lookup and the test suite).
 
-Extract/Placer/Root/Thermal via/Points (extract_dock/placer_dock/
-root_metadata_dock/thermal_via_dock/points_dock) are the one exception:
-2026-08-03 they were merged into ONE QDockWidget, DetailDock (gui/docks/
-detail_panel.py) — its own module docstring covers why (Points added
-2026-08-05, same shape). Those attributes are kept as aliases straight
-into DetailDock's stack pages so every existing call site keeps working
-unchanged; they are plain QWidgets now, not QDockWidgets in their own
-right.
+Extract/Placer/Root/Thermal via/Points/Rules (extract_dock/placer_dock/
+root_metadata_dock/thermal_via_dock/points_dock/rules_dock) are the one
+exception: 2026-08-03 they were merged into ONE QDockWidget, DetailDock
+(gui/docks/detail_panel.py) — its own module docstring covers why (Points/
+Rules added 2026-08-05, same shape). Those attributes are kept as aliases
+straight into DetailDock's stack pages so every existing call site keeps
+working unchanged; they are plain QWidgets now, not QDockWidgets in their
+own right.
 """
 from PyQt6.QtCore import Qt
 
@@ -84,6 +84,7 @@ class DockHub:
         self.root_metadata_dock = self.detail_dock.root_panel
         self.thermal_via_dock = self.detail_dock.thermal_via_panel
         self.points_dock = self.detail_dock.points_panel
+        self.rules_dock = self.detail_dock.rules_panel
 
         # ── bottom: Pending changes, Log ────────────────────────────────────
         main_window.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.pending_dock)
@@ -121,19 +122,28 @@ class DockHub:
         self.config_tree_dock.file_selected.connect(self.placer_dock.set_placer_file)
         self.config_tree_dock.file_selected.connect(self.thermal_via_dock.set_target_file)
         self.config_tree_dock.file_selected.connect(self.points_dock.set_target_file)
+        self.config_tree_dock.file_selected.connect(self.rules_dock.set_target_file)
         # Root is the one exception (2026-08-05): it always edits the
         # project's single root file, not whatever file the tree happens to
         # be browsing — root_file_changed only fires from set_root_file()
         # (Open/New/Recent/restore-on-startup), never on a plain tree click.
         self.config_tree_dock.root_file_changed.connect(self.root_metadata_dock.set_target_file)
+        # Rules' own Cell/Point combos need the WHOLE include graph (see
+        # gui/docks/rules.py's module docstring), which starts from the
+        # project's root, not whatever file rules_dock.set_target_file above
+        # points it at — same root_file_changed signal as Root, second
+        # listener.
+        self.config_tree_dock.root_file_changed.connect(self.rules_dock.set_root_path)
         # ConfigTreeDock's own _restore_last_root() runs inside ITS __init__
         # (gui/docks/config_tree.py), which happens before this dock even
         # exists — so the very first root_file_changed emit (if a root was
         # restored on startup) fires into the void, before the connect()
         # above. Sync explicitly with whatever value is already current, or
         # a restored project silently opens with the Project panel showing
-        # "No root file open" (found live, 2026-08-05).
+        # "No root file open" (found live, 2026-08-05) / Rules' Cell combo
+        # empty.
         self.root_metadata_dock.set_target_file(self.config_tree_dock.root_path)
+        self.rules_dock.set_root_path(self.config_tree_dock.root_path)
         # file_selected fires BEFORE the more specific cell_picked/
         # placement_picked/profile_picked signal on a leaf click (see
         # config_tree.py's _on_clicked) — so this fallback runs first and
@@ -158,20 +168,26 @@ class DockHub:
         self.config_tree_dock.thermal_via_picked.connect(self.detail_dock.show_thermal_via)
         self.config_tree_dock.points_picked.connect(self.points_dock.load_entry)
         self.config_tree_dock.points_picked.connect(self.detail_dock.show_points)
-        # Placer/Thermal via/Extract/Points -> Config tree: a successful Save
-        # refreshes the whole tree (walk_include_tree() is re-run) so a
-        # brand new (or renamed) entry shows up without reassigning Files.
+        self.config_tree_dock.rule_picked.connect(self.rules_dock.load_entry)
+        self.config_tree_dock.rule_picked.connect(self.detail_dock.show_rules)
+        # Placer/Thermal via/Extract/Points/Rules -> Config tree: a
+        # successful Save refreshes the whole tree (walk_include_tree() is
+        # re-run) so a brand new (or renamed) entry shows up without
+        # reassigning Files.
         self.placer_dock.saved.connect(self.config_tree_dock.refresh)
         self.thermal_via_dock.saved.connect(self.config_tree_dock.refresh)
         self.extract_dock.saved.connect(self.config_tree_dock.refresh)
         self.points_dock.saved.connect(self.config_tree_dock.refresh)
-        # Config tree's "Add placer.../Add thermal via pad.../Add point..."
-        # context-menu actions -> Placer/Thermal via/Points: open the form
-        # blank, targeting the file the action was invoked on, and bring
-        # that tab to front (same raise pattern as open_fieldstool() below).
+        self.rules_dock.saved.connect(self.config_tree_dock.refresh)
+        # Config tree's "Add placer.../Add thermal via pad.../Add point.../
+        # Add rule..." context-menu actions -> Placer/Thermal via/Points/
+        # Rules: open the form blank, targeting the file the action was
+        # invoked on, and bring that tab to front (same raise pattern as
+        # open_fieldstool() below).
         self.config_tree_dock.add_placer_requested.connect(self._start_new_placement)
         self.config_tree_dock.add_thermal_via_requested.connect(self._start_new_thermal_via)
         self.config_tree_dock.add_point_requested.connect(self._start_new_point)
+        self.config_tree_dock.add_rule_requested.connect(self._start_new_rule)
 
         # fieldstool tab -> Components tree: an explicit Rescan/Apply there
         # refreshes this tree's schematic view (see FieldsToolDock).
@@ -189,6 +205,8 @@ class DockHub:
         self.thermal_via_dock.refresh_known_roles(snapshot)
         self.thermal_via_dock.refresh_known_nets(board)
         self.points_dock.refresh_known_roles(snapshot)
+        self.rules_dock.refresh_known_roles(snapshot)
+        self.rules_dock.refresh_known_nets(board)
 
     def clear_components(self) -> None:
         """Connection-lost path: empty the Components tree (live mode only —
@@ -256,3 +274,11 @@ class DockHub:
         self.detail_dock.setVisible(True)
         self.detail_dock.raise_()
         self.detail_dock.show_points()
+
+    def _start_new_rule(self, file_path) -> None:
+        """ConfigTreeDock's add_rule_requested delegate — same reasoning as
+        _start_new_placement above, for RuleDock."""
+        self.rules_dock.new_rule(file_path)
+        self.detail_dock.setVisible(True)
+        self.detail_dock.raise_()
+        self.detail_dock.show_rules()

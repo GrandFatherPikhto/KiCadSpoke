@@ -5,9 +5,9 @@ gui/docks/rename.py's module docstring for the cross-reference audit this
 is built against)."""
 import yaml
 
-from gui.docks.rename import (collect_graph_files, name_exists_in_graph,
-                              rename_dict_entry, rename_entry, rename_list_entry,
-                              rename_references)
+from gui.docks.rename import (collect_all_cell_names, collect_all_point_names, collect_graph_files,
+                              name_exists_in_graph, rename_dict_entry, rename_entry,
+                              rename_list_entry, rename_references)
 
 
 def _load(path):
@@ -52,6 +52,37 @@ def test_name_exists_in_graph_finds_a_match_in_an_included_file(tmp_path):
 
     assert name_exists_in_graph(files, "cells", "existing_cell") is True
     assert name_exists_in_graph(files, "cells", "no_such_cell") is False
+
+
+# ── collect_all_cell_names ───────────────────────────────────────────────
+
+def test_collect_all_cell_names_unions_across_the_whole_graph(tmp_path):
+    (tmp_path / "sub.yaml").write_text(
+        "cells:\n  b_cell: {}\n  a_cell: {}\n", encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        "cells:\n  root_cell: {}\ninclude:\n  - sub.yaml\n", encoding="utf-8")
+
+    assert collect_all_cell_names(root) == ["a_cell", "b_cell", "root_cell"]
+
+
+def test_collect_all_cell_names_empty_when_no_cells_anywhere(tmp_path):
+    root = tmp_path / "root.yaml"
+    root.write_text("rules: []\n", encoding="utf-8")
+
+    assert collect_all_cell_names(root) == []
+
+
+# ── collect_all_point_names ──────────────────────────────────────────────
+
+def test_collect_all_point_names_unions_across_the_whole_graph(tmp_path):
+    (tmp_path / "sub.yaml").write_text(
+        "points:\n  b_point: {xy: [0, 0]}\n  a_point: {xy: [1, 1]}\n", encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        "points:\n  root_point: {xy: [2, 2]}\ninclude:\n  - sub.yaml\n", encoding="utf-8")
+
+    assert collect_all_point_names(root) == ["a_point", "b_point", "root_point"]
 
 
 # ── rename_dict_entry ─────────────────────────────────────────────────────

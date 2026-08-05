@@ -32,6 +32,7 @@ from .loader import (
     _load_cell_placement,
     _load_point,
     _load_manual_spoke,
+    _load_rule,
     _load_clone_placement,
     _load_thermal_via_array,
     _check_layer_value,
@@ -45,6 +46,12 @@ load_thermal_via_array = _load_thermal_via_array
 # unlike the list-of-dicts thermal_via_arrays/clone_placements above, whose
 # own dict already carries its name inline (see _load_point's signature).
 load_point = _load_point
+# load_rule/load_manual_spoke — Rule's own extracted validator (2026-08-05,
+# see loader.py's _load_rule docstring) + the pre-existing per-spoke one,
+# both needed by gui/docks/rules.py to validate a Rule and its individual
+# spokes the same clean way Save/Redraw validate everything else here.
+load_rule = _load_rule
+load_manual_spoke = _load_manual_spoke
 
 __all__ = [
     "ThermalViaArrayConfig",
@@ -63,6 +70,8 @@ __all__ = [
     "load_clone_placement",
     "load_thermal_via_array",
     "load_point",
+    "load_rule",
+    "load_manual_spoke",
     "rule_effective_name",
     "thermal_via_array_effective_name",
 ]

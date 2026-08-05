@@ -181,6 +181,32 @@ def test_upsert_list_entry_refuses_non_list(config_path):
         upsert_list_entry(config_path, "thermal_via_arrays", {"name": "A"})
 
 
+def test_upsert_list_entry_key_fn_matches_by_name_or_net(config_path):
+    """rules: needs this (2026-08-05) — a Rule's identity falls back to
+    net: when name: is absent (config/models.py's rule_effective_name()),
+    unlike thermal_via_arrays:/clone_placements: which always require an
+    explicit name:."""
+    identity = lambda e: e.get("name") or e.get("net")  # noqa: E731
+    config_path.write_text(
+        json.dumps({"rules": [{"net": "+3V3", "anchor_role": "FPGA"}]})
+        if config_path.suffix == ".json"
+        else "rules:\n  - net: +3V3\n    anchor_role: FPGA\n",
+        encoding="utf-8")
+
+    overwritten = upsert_list_entry(
+        config_path, "rules", {"net": "+3V3", "anchor_role": "FPGA_2"}, key_fn=identity)
+    assert overwritten is True
+    data = _load(config_path)
+    assert data["rules"] == [{"net": "+3V3", "anchor_role": "FPGA_2"}]
+
+    appended = upsert_list_entry(
+        config_path, "rules", {"net": "+1V2", "name": "explicit", "anchor_role": "FPGA"},
+        key_fn=identity)
+    assert appended is False
+    data = _load(config_path)
+    assert len(data["rules"]) == 2
+
+
 # ── add_include / disable_include (ConfigTreeDock's Add/Remove file, ─────
 # 2026-08-03 — comment-toggle via enabled: false, not erasing the line) ───
 

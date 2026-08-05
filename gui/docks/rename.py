@@ -95,6 +95,31 @@ def name_exists_in_graph(files: List[Path], section: str, name: str) -> bool:
     return False
 
 
+def collect_all_point_names(root_path: Path) -> List[str]:
+    """Every points: key reachable from root_path via include: — used by
+    gui/docks/rules.py's Point-chain combo (a Rule's own anchor_point can
+    name a point declared in ANY file in the graph, points: resolving
+    globally the same way cells: does — see collect_all_cell_names above,
+    same reasoning)."""
+    names: set = set()
+    for path in collect_graph_files(root_path):
+        names.update((_read_data(path).get("points") or {}).keys())
+    return sorted(names)
+
+
+def collect_all_cell_names(root_path: Path) -> List[str]:
+    """Every cells: key reachable from root_path via include: — used by
+    gui/docks/rules.py's spoke.cell combo (2026-08-05, Denis: "Чтобы
+    назначать разные целлы разным спицам? Да, думаю комбобоксик"). resolve_
+    includes() already treats a cells: key repeated across two files as
+    FATAL (dict sections merge key-by-key), so a plain union here can never
+    silently collide — same reasoning name_exists_in_graph above relies on."""
+    names: set = set()
+    for path in collect_graph_files(root_path):
+        names.update((_read_data(path).get("cells") or {}).keys())
+    return sorted(names)
+
+
 def rename_dict_entry(path: Path, section: str, old_name: str, new_name: str) -> None:
     """cells:/points:/extract_profiles:/clone_profiles: — renames the dict
     KEY in place (same position among the section's other entries), value
