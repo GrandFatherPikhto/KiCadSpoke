@@ -266,6 +266,30 @@ class TestClose:
 
         adapter.close()  # must not raise
 
+    def test_noop_when_client_never_created(self):
+        """A fresh kipy.KiCad() has _client = None until _connect() has run
+        once — the very first close() before any connection attempt must not
+        raise (the getattr default on _client is the branch that protects
+        this)."""
+        adapter = Adapter.__new__(Adapter)
+        adapter._kicad = MagicMock()
+        adapter._kicad._client = None
+
+        adapter.close()  # must not raise
+
+    def test_noop_when_connected_but_no_conn_object(self):
+        """_connected can be True while _conn is still missing if the client
+        is in a half-initialised state (e.g. a broken reconnect) — the
+        getattr default must keep this branch a silent no-op too."""
+        adapter = Adapter.__new__(Adapter)
+        client = MagicMock()
+        client._connected = True
+        del client._conn  # real KiCadClient may not have _conn yet
+        adapter._kicad = MagicMock()
+        adapter._kicad._client = client
+
+        adapter.close()  # must not raise
+
 
 class TestSetFieldValuesBulk:
     """Regression (found live 2026-08-03, reproduced live on a real board via

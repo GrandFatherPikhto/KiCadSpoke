@@ -250,8 +250,29 @@ The internal protobuf structure may change.
 **Alternative:**  
 None – this is the only way to obtain group members.
 
-**Mitigation:**  
+**Mitigation:**
 Diagnostic scripts and `extract` tests use selection with groups.
+
+---
+
+### `KiCadClient._conn` — kipy has no public `close()` (upstream tracking)
+
+**Where used:**
+- `kicad/adapter.py` – `close()` reaches `self._kicad._client._conn.close()` to explicitly close the pynng socket instead of leaving that to the garbage collector.
+
+**Why:**
+Found live (2026-08-04): a silent Windows access violation with no Python frame on the crashing thread — every GUI reconnect creates a fresh `kipy.KiCad()` (and pynng socket) without closing the previous one, and several never-closed sockets finalized by the GC at unpredictable points on unpredictable threads is the plausible trigger. kipy 0.7.1 exposes **no public `close()`** on `KiCad`/`KiCadClient` (checked `kicad.py`/`client.py` directly), so this reaches into the private `_conn`.
+
+**Risk:**
+The private shape (`KiCadClient._connected` / `_conn`) may change in any kipy version.
+
+**Alternative:**
+None until kipy ships a public close.
+
+**Upstream tracking:**
+- kipy 0.7.1: no public `close()` (verified by reading `kicad.py`/`client.py`).
+- **Action:** track the kipy issue tracker for a public `KiCad.close()` / `KiCadClient.close()`; when it lands, replace the private-attribute reach with the public call and remove this subsection.
+- **Guard:** `TestClose` in `tests/test_kicad.py` pins the private-attribute shape against exactly this reach (closes correctly / no-op before connect / no-op without `_conn` / swallows a broken socket).
 
 ---
 
