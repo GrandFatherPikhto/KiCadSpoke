@@ -23,6 +23,20 @@ never drift from what Add/Update actually validated and stored.
 Origin has only two modes (Anchor ref/role / Point) — Rule has no `xy`
 field at all, unlike Points/PlacerDock's three-way combo.
 
+Net/Origin/Spoke are tabbed (2026-08-05, Denis: "опять проблема с местом в
+Rules... давай сделаем табы") — same "QVBoxLayout's minimum height is the
+SUM of every section's own" problem Extract (2026-08-04) and Root/Project
+(2026-08-05) already hit, same QTabWidget fix. Net carries the rule's own
+identity+status (Net/Name/Retired/Skip); Origin carries the anchor-mode
+combo and its two rows; Spoke carries every field the detail-row editor
+below the table writes into (Pad/Cell/Cluster/Shift/Rotation/Retired/Skip).
+The spokes table itself, its Move up/down, the Add/Update/Remove row, and
+Redraw/Save all stay OUTSIDE the tabs — they act across whichever tab is
+open, not scoped to one. Considered renaming the tab/dock "Spokes" instead
+of "Rules" (Denis's suggestion) but kept "Rules": Net+Origin describe the
+whole Rule, not just its spokes, and the config key is rules: — same
+"keep the accurate name, don't undersell part of it" call as Root/Project.
+
 spoke.cell is a searchable combo (Denis: "Чтобы назначать разные целлы
 разным спицам? Да, думаю комбобоксик") sourced from collect_all_cell_names()
 (gui/docks/rename.py) — EVERY cells: key reachable from the project's root
@@ -67,7 +81,7 @@ from kipy.errors import ApiError
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFormLayout,
                               QHBoxLayout, QHeaderView, QLabel, QLineEdit, QPushButton,
-                              QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+                              QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from kicadstamp.apply_pipeline import ApplyPipeline
 from kicadstamp.config import (Config, RuntimeContext, load_config, load_manual_spoke,
@@ -117,6 +131,14 @@ class RuleDock(QWidget):
         self.target_label.setWordWrap(True)
         layout.addWidget(self.target_label)
 
+        # Tabbed (2026-08-05) — see module docstring for why Net/Origin/
+        # Spoke split this way and why the table+buttons below stay outside
+        # the tabs.
+        self._tabs = QTabWidget()
+        layout.addWidget(self._tabs, 1)
+
+        net_page = QWidget()
+        net_page_layout = QVBoxLayout(net_page)
         rule_form = QFormLayout()
         self.net_edit = QComboBox()
         configure_searchable(self.net_edit)
@@ -124,14 +146,24 @@ class RuleDock(QWidget):
         self.name_edit = QLineEdit()
         self.name_edit.setPlaceholderText(_("optional — defaults to net for --only"))
         rule_form.addRow(_("Name:"), self.name_edit)
-        layout.addLayout(rule_form)
+        net_page_layout.addLayout(rule_form)
+        checks_row = QHBoxLayout()
+        self.retired_checkbox = QCheckBox(_("Retired"))
+        self.skip_checkbox = QCheckBox(_("Skip"))
+        checks_row.addWidget(self.retired_checkbox)
+        checks_row.addWidget(self.skip_checkbox)
+        net_page_layout.addLayout(checks_row)
+        net_page_layout.addStretch(1)
+        self._tabs.addTab(net_page, _("Net"))
 
+        origin_page = QWidget()
+        origin_page_layout = QVBoxLayout(origin_page)
         origin_form = QFormLayout()
         self.origin_mode_combo = QComboBox()
         self.origin_mode_combo.addItems([_("Anchor (ref/role)"), _("Point")])
         self.origin_mode_combo.currentIndexChanged.connect(self._on_origin_mode_changed)
         origin_form.addRow(_("Origin:"), self.origin_mode_combo)
-        layout.addLayout(origin_form)
+        origin_page_layout.addLayout(origin_form)
 
         self._anchor_row = QWidget()
         anchor_form = QFormLayout(self._anchor_row)
@@ -148,7 +180,7 @@ class RuleDock(QWidget):
         self.anchor_cluster_edit = QComboBox()
         configure_searchable(self.anchor_cluster_edit)
         anchor_form.addRow(_("Anchor cluster:"), self.anchor_cluster_edit)
-        layout.addWidget(self._anchor_row)
+        origin_page_layout.addWidget(self._anchor_row)
 
         self._point_row = QWidget()
         point_form = QFormLayout(self._point_row)
@@ -156,14 +188,49 @@ class RuleDock(QWidget):
         self.point_edit = QComboBox()
         configure_searchable(self.point_edit)
         point_form.addRow(_("Point:"), self.point_edit)
-        layout.addWidget(self._point_row)
+        origin_page_layout.addWidget(self._point_row)
+        origin_page_layout.addStretch(1)
+        self._tabs.addTab(origin_page, _("Origin"))
 
-        checks_row = QHBoxLayout()
-        self.retired_checkbox = QCheckBox(_("Retired"))
-        self.skip_checkbox = QCheckBox(_("Skip"))
-        checks_row.addWidget(self.retired_checkbox)
-        checks_row.addWidget(self.skip_checkbox)
-        layout.addLayout(checks_row)
+        spoke_page = QWidget()
+        spoke_page_layout = QVBoxLayout(spoke_page)
+        spoke_form = QFormLayout()
+        self.spoke_pad_edit = QLineEdit()
+        self.spoke_pad_edit.setPlaceholderText(_("pad number on the rule's own anchor"))
+        spoke_form.addRow(_("Pad:"), self.spoke_pad_edit)
+        self.spoke_cell_combo = QComboBox()
+        configure_searchable(self.spoke_cell_combo)
+        spoke_form.addRow(_("Cell:"), self.spoke_cell_combo)
+        self.spoke_cluster_combo = QComboBox()
+        configure_searchable(self.spoke_cluster_combo)
+        spoke_form.addRow(_("Cluster:"), self.spoke_cluster_combo)
+        spoke_page_layout.addLayout(spoke_form)
+
+        spoke_shift_row = QHBoxLayout()
+        self.spoke_shift_x_edit = QLineEdit()
+        self.spoke_shift_x_edit.setPlaceholderText(_("shift X mm (0)"))
+        self.spoke_shift_y_edit = QLineEdit()
+        self.spoke_shift_y_edit.setPlaceholderText(_("shift Y mm (0)"))
+        spoke_shift_row.addWidget(QLabel(_("Shift X:")))
+        spoke_shift_row.addWidget(self.spoke_shift_x_edit)
+        spoke_shift_row.addWidget(QLabel(_("Shift Y:")))
+        spoke_shift_row.addWidget(self.spoke_shift_y_edit)
+        spoke_page_layout.addLayout(spoke_shift_row)
+
+        spoke_extra_form = QFormLayout()
+        self.spoke_rotation_edit = QLineEdit()
+        self.spoke_rotation_edit.setPlaceholderText("0")
+        spoke_extra_form.addRow(_("Rotation (deg):"), self.spoke_rotation_edit)
+        spoke_page_layout.addLayout(spoke_extra_form)
+
+        spoke_checks_row = QHBoxLayout()
+        self.spoke_retired_checkbox = QCheckBox(_("Retired"))
+        self.spoke_skip_checkbox = QCheckBox(_("Skip"))
+        spoke_checks_row.addWidget(self.spoke_retired_checkbox)
+        spoke_checks_row.addWidget(self.spoke_skip_checkbox)
+        spoke_page_layout.addLayout(spoke_checks_row)
+        spoke_page_layout.addStretch(1)
+        self._tabs.addTab(spoke_page, _("Spoke"))
 
         layout.addWidget(QLabel(_("Spokes:")))
         self.spokes_table = QTableWidget(0, len(_COLUMNS))
@@ -183,42 +250,6 @@ class RuleDock(QWidget):
         self.move_down_button.clicked.connect(lambda: self._on_move_spoke(1))
         move_row.addWidget(self.move_down_button)
         layout.addLayout(move_row)
-
-        spoke_form = QFormLayout()
-        self.spoke_pad_edit = QLineEdit()
-        self.spoke_pad_edit.setPlaceholderText(_("pad number on the rule's own anchor"))
-        spoke_form.addRow(_("Pad:"), self.spoke_pad_edit)
-        self.spoke_cell_combo = QComboBox()
-        configure_searchable(self.spoke_cell_combo)
-        spoke_form.addRow(_("Cell:"), self.spoke_cell_combo)
-        self.spoke_cluster_combo = QComboBox()
-        configure_searchable(self.spoke_cluster_combo)
-        spoke_form.addRow(_("Cluster:"), self.spoke_cluster_combo)
-        layout.addLayout(spoke_form)
-
-        spoke_shift_row = QHBoxLayout()
-        self.spoke_shift_x_edit = QLineEdit()
-        self.spoke_shift_x_edit.setPlaceholderText(_("shift X mm (0)"))
-        self.spoke_shift_y_edit = QLineEdit()
-        self.spoke_shift_y_edit.setPlaceholderText(_("shift Y mm (0)"))
-        spoke_shift_row.addWidget(QLabel(_("Shift X:")))
-        spoke_shift_row.addWidget(self.spoke_shift_x_edit)
-        spoke_shift_row.addWidget(QLabel(_("Shift Y:")))
-        spoke_shift_row.addWidget(self.spoke_shift_y_edit)
-        layout.addLayout(spoke_shift_row)
-
-        spoke_extra_form = QFormLayout()
-        self.spoke_rotation_edit = QLineEdit()
-        self.spoke_rotation_edit.setPlaceholderText("0")
-        spoke_extra_form.addRow(_("Rotation (deg):"), self.spoke_rotation_edit)
-        layout.addLayout(spoke_extra_form)
-
-        spoke_checks_row = QHBoxLayout()
-        self.spoke_retired_checkbox = QCheckBox(_("Retired"))
-        self.spoke_skip_checkbox = QCheckBox(_("Skip"))
-        spoke_checks_row.addWidget(self.spoke_retired_checkbox)
-        spoke_checks_row.addWidget(self.spoke_skip_checkbox)
-        layout.addLayout(spoke_checks_row)
 
         spoke_button_row = QHBoxLayout()
         self.add_spoke_button = QPushButton(_("Add spoke"))

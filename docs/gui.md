@@ -266,6 +266,12 @@ plus an ORDERED list of spokes, each placing a Cell at a specific pad of that an
 hand-tuned shift/rotation. Added 2026-08-05 after Denis connected `fpga_spokes.yaml`/
 `fpga_cap_pair_spoke.yaml` to a real project and hit the long-standing "Rules has no edit form" gap.
 
+**Net**/**Origin**/**Spoke** live in a tab widget (2026-08-05, same "a stacked `QVBoxLayout`'s
+minimum height is the SUM of every section's own" fix as Extract/Project): Net carries the rule's
+own Net/Name/Retired/Skip; Origin carries the anchor-mode combo and its two rows; Spoke carries
+every field the detail row below the table writes into. The spokes table itself, its move/Add/
+Update/Remove row, and Redraw/Save stay outside the tabs — they act on the whole rule, not one tab.
+
 - **Spokes table + detail row below** — picked over putting spokes in the shared Config tree
   (a spoke has no name field for a tree leaf label, spoke ORDER is semantically significant — the
   component pool consumes spokes in list order — and a table's columns show every spoke's shift/
