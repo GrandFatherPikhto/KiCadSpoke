@@ -38,6 +38,16 @@ from .loader import (
     _check_layer_value,
 )
 
+# load_cell/load_template_component_slot/load_template_via/
+# load_template_track/load_cell_placement (2026-08-06) — the cell editor's
+# own validators, same "gui/ must not import the private names" reasoning
+# as load_clone_placement/load_rule/load_point above.
+load_cell = _load_cell
+load_template_component_slot = _load_template_component_slot
+load_template_via = _load_template_via
+load_template_track = _load_template_track
+load_cell_placement = _load_cell_placement
+
 # Public aliases for the loader entry points the GUI uses to validate/rebuild
 # a single entry (Phase 4.2 — gui/ must not import the private names).
 load_clone_placement = _load_clone_placement
@@ -67,6 +77,11 @@ __all__ = [
     "Config",
     "RuntimeContext",
     "load_config",
+    "load_cell",
+    "load_template_component_slot",
+    "load_template_via",
+    "load_template_track",
+    "load_cell_placement",
     "load_clone_placement",
     "load_thermal_via_array",
     "load_point",

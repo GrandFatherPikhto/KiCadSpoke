@@ -203,6 +203,18 @@ class Cell:
     pure leaf (only vias/components/tracks), a pure composite (only
     clone_placements), or both at once — nothing about the two is mutually
     exclusive.
+
+    anchor_xy/anchor_role(+anchor_pad) — added 2026-08-06 for the cell
+    editor (Denis: "cell редактор уже необходимость"), DISPLAY-ONLY
+    metadata, mutually exclusive, both optional: marks which point of the
+    cell's own local (0,0) already IS by construction (offset_along_mm=
+    offset_across_mm=0.0 is always the origin — these fields do not change
+    that, and are never read by clone_position_calculator.py/any resolver).
+    Exists purely so the cell editor can show a crosshair/"distance from
+    anchor" while hand-authoring offsets, instead of them being an untracked
+    fact only the original extractor run knew. anchor_role must name one of
+    this cell's own components (role); anchor_pad narrows to a specific pad
+    of it and is only meaningful together with anchor_role.
     """
     name: str
     vias: list[TemplateVia] = field(default_factory=list)
@@ -214,6 +226,9 @@ class Cell:
     # No automatic guesswork: the cell is placed verbatim; to flip the whole
     # thing, use explicit mirror on the placement.
     layer: str = 'F.Cu'
+    anchor_xy: tuple[float, float] | None = None
+    anchor_role: str | None = None
+    anchor_pad: str | None = None
 
 
 @dataclass

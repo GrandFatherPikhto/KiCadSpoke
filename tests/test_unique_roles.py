@@ -33,3 +33,69 @@ def test_three_duplicates_all_named_in_error():
 def test_single_role_no_duplicates():
     cell = _load_cell("t", {"components": [{"role": "SOLO"}]})
     assert len(cell.components) == 1
+
+
+class TestRoleRequired:
+    """Regression (found live 2026-08-06, Denis: Conn_PM5V): a missing/null
+    role used to either crash with a bare KeyError or silently propagate a
+    None role into placement, surfacing as a confusing runtime "role None is
+    in cell but not found anywhere on board" instead of a clear load-time
+    error."""
+
+    def test_missing_role_key_raises_validation_error(self):
+        with pytest.raises(ValidationError, match="without a role"):
+            _load_cell("t", {"components": [{"offset_along_mm": 1.0}]})
+
+    def test_null_role_raises_validation_error(self):
+        with pytest.raises(ValidationError, match="without a role"):
+            _load_cell("t", {"components": [{"role": None}]})
+
+    def test_empty_string_role_raises_validation_error(self):
+        with pytest.raises(ValidationError, match="without a role"):
+            _load_cell("t", {"components": [{"role": ""}]})
+
+
+class TestCellAnchor:
+    """anchor_xy/anchor_role/anchor_pad (2026-08-06) — display-only metadata
+    for the cell editor, see Cell's own docstring in config/models.py. Never
+    consumed by clone_position_calculator.py/any resolver — validated here
+    only for shape/mutual-exclusion/cross-reference correctness."""
+
+    def test_anchor_xy_loads(self):
+        cell = _load_cell("t", {"components": [{"role": "A"}], "anchor_xy": [1.5, -2.0]})
+        assert cell.anchor_xy == (1.5, -2.0)
+        assert cell.anchor_role is None
+
+    def test_anchor_role_loads(self):
+        cell = _load_cell("t", {"components": [{"role": "A"}], "anchor_role": "A"})
+        assert cell.anchor_role == "A"
+        assert cell.anchor_xy is None
+
+    def test_anchor_role_with_pad_loads(self):
+        cell = _load_cell("t", {"components": [{"role": "A"}],
+                                "anchor_role": "A", "anchor_pad": "1"})
+        assert cell.anchor_role == "A"
+        assert cell.anchor_pad == "1"
+
+    def test_no_anchor_at_all_is_fine(self):
+        cell = _load_cell("t", {"components": [{"role": "A"}]})
+        assert cell.anchor_xy is None
+        assert cell.anchor_role is None
+        assert cell.anchor_pad is None
+
+    def test_anchor_xy_and_anchor_role_together_is_fatal(self):
+        with pytest.raises(ValidationError, match="anchor_xy together with anchor_role"):
+            _load_cell("t", {"components": [{"role": "A"}],
+                             "anchor_xy": [0, 0], "anchor_role": "A"})
+
+    def test_anchor_pad_without_anchor_role_is_fatal(self):
+        with pytest.raises(ValidationError, match="anchor_pad without anchor_role"):
+            _load_cell("t", {"components": [{"role": "A"}], "anchor_pad": "1"})
+
+    def test_anchor_role_not_a_component_is_fatal(self):
+        with pytest.raises(ValidationError, match="not a component of cell"):
+            _load_cell("t", {"components": [{"role": "A"}], "anchor_role": "NOT_HERE"})
+
+    def test_anchor_xy_wrong_shape_is_fatal(self):
+        with pytest.raises(ValidationError, match="2-element"):
+            _load_cell("t", {"components": [{"role": "A"}], "anchor_xy": [1.0]})

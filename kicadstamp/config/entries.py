@@ -76,6 +76,17 @@ def _check_layer_value(value, where: str):
 
 
 def _load_template_component_slot(data: dict[str, Any]) -> TemplateComponentSlot:
+    # FIXED (found live 2026-08-06, Denis: Conn_PM5V): a missing/empty/null
+    # role here used to either crash with a bare KeyError, or (if 'role' was
+    # present but None) silently propagate a None role all the way into
+    # placement — surfacing as a confusing runtime "role None is in cell but
+    # not found anywhere on board" instead of a clear load-time error.
+    if not data.get('role'):
+        raise ValidationError(format_fatal_error(
+            _("component slot without a role"),
+            [_("every component slot needs role: <ROLE> – roles MUST be unique "
+               "within a cell")]
+        ))
     if 'side' in data:
         raise ValidationError(format_fatal_error(
             _("deprecated field 'side' in slot {role!r}").format(role=data.get('role')),
@@ -130,11 +141,48 @@ def _load_cell(name: str, data: dict[str, Any]) -> Cell:
              .format(dup=n, count=nested_names.count(n)) for n in sorted(dup_names)]
         ))
 
+    # anchor_xy/anchor_role/anchor_pad — display-only metadata for the cell
+    # editor, see Cell's own docstring: mutually exclusive, never consumed
+    # by any resolver, so a bad value here is only ever a UI-authoring
+    # mistake, not a placement-breaking one.
+    anchor_xy_raw = data.get('anchor_xy')
+    anchor_role = data.get('anchor_role')
+    anchor_pad = data.get('anchor_pad')
+    anchor_xy: tuple[float, float] | None = None
+    if anchor_xy_raw is not None:
+        if anchor_role is not None:
+            raise ValidationError(format_fatal_error(
+                _("anchor_xy together with anchor_role in cell {name!r}").format(name=name),
+                [_("these are mutually exclusive ways to mark the cell's own local (0,0) — "
+                   "pick one")]
+            ))
+        if not (isinstance(anchor_xy_raw, (list, tuple)) and len(anchor_xy_raw) == 2):
+            raise ValidationError(format_fatal_error(
+                _("anchor_xy must be a 2-element [x, y] list in cell {name!r}").format(name=name),
+                [_("got: {xy!r}").format(xy=anchor_xy_raw)]
+            ))
+        anchor_xy = (float(anchor_xy_raw[0]), float(anchor_xy_raw[1]))
+    if anchor_pad is not None and anchor_role is None:
+        raise ValidationError(format_fatal_error(
+            _("anchor_pad without anchor_role in cell {name!r}").format(name=name),
+            [_("anchor_pad only narrows anchor_role — it is not an anchor by itself")]
+        ))
+    if anchor_role is not None and anchor_role not in {c.role for c in components}:
+        raise ValidationError(format_fatal_error(
+            _("anchor_role {role!r} is not a component of cell {name!r}").format(
+                role=anchor_role, name=name),
+            [_("anchor_role must name one of this cell's own components: {roles}")
+             .format(roles=sorted({c.role for c in components}))]
+        ))
+
     return Cell(
         name=name,
         vias=[_load_template_via(v) for v in data.get('vias', [])],
         components=components,
         tracks=[_load_template_track(t) for t in data.get('tracks', [])],
+        anchor_xy=anchor_xy,
+        anchor_role=anchor_role,
+        anchor_pad=anchor_pad,
         clone_placements=clone_placements,
         layer=layer,
     )
