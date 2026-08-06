@@ -257,15 +257,16 @@ def test_role_mode_hides_cell_widgets_and_shows_role_row(main_window, tmp_path):
 
     assert visible(dock.cell_label) and not visible(dock._role_only_row)
     assert visible(dock._params_container)
-    assert visible(dock._nets_group) and visible(dock._net_overrides_group) and visible(dock._refs_group)
+    assert dock._tabs.isTabVisible(dock._nets_tab_index)
+    assert dock._tabs.isTabVisible(dock._net_overrides_tab_index)
+    assert dock._tabs.isTabVisible(dock._refs_tab_index)
 
     dock.cell_mode_combo.setCurrentIndex(1)
 
     assert not visible(dock.cell_label) and visible(dock._role_only_row)
-    assert not visible(dock._params_container)
-    assert not visible(dock._nets_group)
-    assert not visible(dock._net_overrides_group)
-    assert not visible(dock._refs_group)
+    assert not dock._tabs.isTabVisible(dock._nets_tab_index)
+    assert not dock._tabs.isTabVisible(dock._net_overrides_tab_index)
+    assert not dock._tabs.isTabVisible(dock._refs_tab_index)
 
 
 def test_build_entry_dict_role_mode_needs_no_cell(main_window, tmp_path):
@@ -356,10 +357,9 @@ def test_cluster_mode_hides_cell_and_role_widgets(main_window, tmp_path):
 
     assert visible(dock._cluster_only_row)
     assert not visible(dock.cell_label) and not visible(dock._role_only_row)
-    assert not visible(dock._params_container)
-    assert not visible(dock._nets_group)
-    assert not visible(dock._net_overrides_group)
-    assert not visible(dock._refs_group)
+    assert not dock._tabs.isTabVisible(dock._nets_tab_index)
+    assert not dock._tabs.isTabVisible(dock._net_overrides_tab_index)
+    assert not dock._tabs.isTabVisible(dock._refs_tab_index)
     # The top "Cluster:" name row is redundant/dangerous here (it would
     # otherwise let the placement's own name diverge from the tag it was
     # found by, silently retagging the component) — see

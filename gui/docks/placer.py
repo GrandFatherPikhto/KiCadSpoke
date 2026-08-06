@@ -309,11 +309,20 @@ class PlacerDock(QWidget):
         source_page_layout.addStretch(1)
         self._tabs.addTab(source_page, _("Source"))
 
-        # Nets tab (2026-08-06) — Params already existed (cell-driven,
-        # auto-discovered placeholders); nets:/net_overrides:/refs: had NO
-        # GUI at all before this (see module docstring + _KeyValueTableEditor
-        # above) — all four only apply to Cell mode's by-nets role
-        # resolution, hidden for Role/Cluster mode same as Params already was.
+        # Nets/Net overrides/Refs tabs (2026-08-06, split into three sibling
+        # tabs same day they were introduced — Denis, live: stacked as
+        # sections of one "Nets" page, all four (Params+Nets+Net overrides+
+        # Refs) at once didn't fit the screen. Params already existed
+        # (cell-driven, auto-discovered placeholders); nets:/net_overrides:/
+        # refs: had NO GUI at all before this (see module docstring +
+        # _KeyValueTableEditor above) — all four only apply to Cell mode's
+        # by-nets role resolution, hidden for Role/Cluster mode same as
+        # Params already was. Params stays paired with Nets (role -> literal
+        # net) rather than getting its own tab — both feed the same by-nets
+        # resolution step and Denis explicitly liked that pairing as-is
+        # ("отличное решение"); Net overrides and Refs are separate/rarer
+        # enough to earn their own tabs instead of competing for the same
+        # vertical space.
         nets_page = QWidget()
         nets_page_layout = QVBoxLayout(nets_page)
         self._params_label = QLabel(_("Params (placeholder -> literal net, for by-nets role resolution):"))
@@ -322,34 +331,27 @@ class PlacerDock(QWidget):
         self._params_layout = QGridLayout(self._params_container)
         self._params_layout.setContentsMargins(0, 0, 0, 0)
         nets_page_layout.addWidget(self._params_container)
-
-        self._nets_group = QWidget()
-        nets_group_layout = QVBoxLayout(self._nets_group)
-        nets_group_layout.setContentsMargins(0, 0, 0, 0)
-        nets_group_layout.addWidget(QLabel(_("Nets (role -> literal net, priority over the cell's own net_template):")))
+        nets_page_layout.addWidget(QLabel(_("Nets (role -> literal net, priority over the cell's own net_template):")))
         self.nets_table = _KeyValueTableEditor(_("Role"), _("Net"), _("ROLE"), _("net name"))
-        nets_group_layout.addWidget(self.nets_table)
-        nets_page_layout.addWidget(self._nets_group)
+        nets_page_layout.addWidget(self.nets_table)
+        self._nets_tab_index = self._tabs.addTab(nets_page, _("Nets"))
 
-        self._net_overrides_group = QWidget()
-        net_overrides_group_layout = QVBoxLayout(self._net_overrides_group)
-        net_overrides_group_layout.setContentsMargins(0, 0, 0, 0)
-        net_overrides_group_layout.addWidget(
+        net_overrides_page = QWidget()
+        net_overrides_page_layout = QVBoxLayout(net_overrides_page)
+        net_overrides_page_layout.addWidget(
             QLabel(_("Net overrides (resolved net -> final override):")))
         self.net_overrides_table = _KeyValueTableEditor(
             _("Resolved net"), _("Override"), _("resolved net name"), _("override net name"))
-        net_overrides_group_layout.addWidget(self.net_overrides_table)
-        nets_page_layout.addWidget(self._net_overrides_group)
+        net_overrides_page_layout.addWidget(self.net_overrides_table)
+        self._net_overrides_tab_index = self._tabs.addTab(net_overrides_page, _("Net overrides"))
 
-        self._refs_group = QWidget()
-        refs_group_layout = QVBoxLayout(self._refs_group)
-        refs_group_layout.setContentsMargins(0, 0, 0, 0)
-        refs_group_layout.addWidget(
+        refs_page = QWidget()
+        refs_page_layout = QVBoxLayout(refs_page)
+        refs_page_layout.addWidget(
             QLabel(_("Refs (role -> explicit ref, bypasses search entirely — last resort):")))
         self.refs_table = _KeyValueTableEditor(_("Role"), _("Ref"), _("ROLE"), _("e.g. C12"))
-        refs_group_layout.addWidget(self.refs_table)
-        nets_page_layout.addWidget(self._refs_group)
-        self._tabs.addTab(nets_page, _("Nets"))
+        refs_page_layout.addWidget(self.refs_table)
+        self._refs_tab_index = self._tabs.addTab(refs_page, _("Refs"))
 
         origin_page = QWidget()
         origin_page_layout = QVBoxLayout(origin_page)
@@ -469,23 +471,25 @@ class PlacerDock(QWidget):
         picked Existing-Cluster value as the placement's own name too in
         that mode, so there is nothing left for this row to ask for.
 
-        Nets/Net overrides/Refs (2026-08-06, same Nets tab as Params) hide
-        for the same reason Params does: resolve_roles_by_selection (the
-        default resolution unless nets:/params: are ALSO set — see
-        clone_uses_selection_mode) never reads clone.refs at all, only
-        resolve_roles_by_nets's step 0 does — setting Refs without also
-        setting Nets/Params in Role/Cluster mode would silently do nothing,
-        so hiding all four together avoids that trap."""
+        Nets/Net overrides/Refs (2026-08-06, own tabs as of the same day —
+        see their addTab() calls above) hide for the same reason Params
+        does: resolve_roles_by_selection (the default resolution unless
+        nets:/params: are ALSO set — see clone_uses_selection_mode) never
+        reads clone.refs at all, only resolve_roles_by_nets's step 0 does —
+        setting Refs without also setting Nets/Params in Role/Cluster mode
+        would silently do nothing, so hiding all three tabs together avoids
+        that trap. setTabVisible(), not setVisible() on their page widgets —
+        each now IS a whole tab page on its own, so hiding just the content
+        would leave an empty, confusingly-clickable tab behind instead of
+        removing it from the tab bar entirely."""
         mode = self.cell_mode_combo.currentIndex()
         self.cell_label.setVisible(mode == 0)
         self._role_only_row.setVisible(mode == 1)
         self._cluster_only_row.setVisible(mode == 2)
         self._name_row.setVisible(mode != 2)
-        self._params_label.setVisible(mode == 0)
-        self._params_container.setVisible(mode == 0)
-        self._nets_group.setVisible(mode == 0)
-        self._net_overrides_group.setVisible(mode == 0)
-        self._refs_group.setVisible(mode == 0)
+        self._tabs.setTabVisible(self._nets_tab_index, mode == 0)
+        self._tabs.setTabVisible(self._net_overrides_tab_index, mode == 0)
+        self._tabs.setTabVisible(self._refs_tab_index, mode == 0)
 
     # ── Wiring from the Config tree / Components tree ─────────────────────
 
