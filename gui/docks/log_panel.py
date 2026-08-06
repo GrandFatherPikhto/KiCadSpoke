@@ -173,6 +173,15 @@ class LogDock(QDockWidget):
     def append_line(self, message: str, levelno: int) -> None:
         color = _LEVEL_COLOR.get(levelno)
         if color:
-            self.text.appendHtml(f'<span style="color:{color}">{html.escape(message)}</span>')
+            # appendHtml() does NOT preserve \n as a line break (HTML collapses
+            # whitespace outside a whitespace-preserving container) — a
+            # multi-line message (e.g. format_fatal_error()'s bulleted dump)
+            # would otherwise render as one run-on line. white-space:pre-wrap
+            # fixes it without <pre>'s forced monospace font (verified live
+            # against QTextDocument — both preserve \n identically).
+            self.text.appendHtml(
+                f'<div style="white-space:pre-wrap"><span style="color:{color}">'
+                f'{html.escape(message)}</span></div>'
+            )
         else:
             self.text.appendPlainText(message)

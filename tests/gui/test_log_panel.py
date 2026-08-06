@@ -64,6 +64,21 @@ def test_clear_button_empties_the_panel(log_dock):
     assert log_dock.text.toPlainText() == ""
 
 
+def test_multiline_error_message_preserves_line_breaks(log_dock):
+    """Regression (found live 2026-08-06): appendHtml() used to collapse \\n
+    in colored ERROR/WARNING messages (e.g. format_fatal_error()'s bulleted,
+    multi-line dump) into one run-on line — HTML outside a whitespace-
+    preserving container ignores \\n and repeated leading spaces. Fixed by
+    wrapping in <div style="white-space:pre-wrap">, verified live against
+    QTextDocument to preserve \\n identically to <pre> without its forced
+    monospace font."""
+    test_logger = logging.getLogger("kicadstamp.gui_test.multiline")
+    test_logger.error("line one\n  bullet two")
+
+    text = log_dock.text.toPlainText()
+    assert "line one\n  bullet two" in text
+
+
 def test_find_selects_matching_text(log_dock):
     log_dock.text.appendPlainText("a needle in a haystack")
     log_dock.find_edit.setText("needle")
