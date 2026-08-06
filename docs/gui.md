@@ -199,14 +199,16 @@ Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.
     (tag it first via the Components tree's Role/Cluster editing or fieldstool) — same-day pushback
     on Role alone, Denis: "Условие уникальности у нас касается кластера, а не роли... ОДНУ деталь
     надо размещать просто по кластеру. Роль там не при делах". No selection/narrowing: an exact
-    match is either unique (used directly) or a tagging mistake, fatal either way. **Not** the same
-    field as the "Cluster:" row below (that one is this placement's own *name*, written onto
-    components as their Cluster tag *after* a successful Redraw) — this one searches for a tag that
-    already exists, going the other direction.
+    match is either unique (used directly) or a tagging mistake, fatal either way. This mode also
+    reuses the picked Cluster value as the placement's own name — the "Cluster:" name row below
+    (see next bullet) hides entirely in this mode (found live 2026-08-06, Denis: "Зачем нам два поля
+    Existing Cluster и Cluster?" — a second, independently-typed name risked silently retagging the
+    component to something else on Redraw, since Cluster tags are meant to already be unique).
 - **Cell** — picked in the Cells tab (see above); the current pick is shown here. Hidden in
   Role/Cluster mode.
-- **Cluster** — the placement's name (also what gets clicked from the Components tree, see
-  above).
+- **Cluster** — the placement's name (also what gets clicked from the Components tree, see above).
+  Hidden in Cluster *source* mode (see above) — the picked Existing Cluster value is reused as the
+  name instead, nothing left to ask for here.
 - **Params** — one row per `{PLACEHOLDER}` found anywhere in the picked Cell's own YAML (auto-
   discovered, not hand-typed) — the literal net each placeholder should resolve to for *this*
   instance. Hidden in Role/Cluster mode (a synthetic one-component cell has no via/track net fields

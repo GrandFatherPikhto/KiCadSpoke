@@ -190,12 +190,14 @@ class PlacerDock(QWidget):
         cluster_only_form.addRow(_("Existing Cluster:"), self.place_cluster_edit)
         layout.addWidget(self._cluster_only_row)
 
-        form = QFormLayout()
+        self._name_row = QWidget()
+        form = QFormLayout(self._name_row)
+        form.setContentsMargins(0, 0, 0, 0)
         self.cluster_edit = QComboBox()
         configure_searchable(self.cluster_edit)
         self.cluster_edit.lineEdit().setPlaceholderText(_("Cluster / clone_placement name"))
         form.addRow(_("Cluster:"), self.cluster_edit)
-        layout.addLayout(form)
+        layout.addWidget(self._name_row)
 
         self._params_label = QLabel(_("Params (placeholder -> literal net, for by-nets role resolution):"))
         layout.addWidget(self._params_label)
@@ -311,11 +313,18 @@ class PlacerDock(QWidget):
         (resolve_by_cluster_tag) — no selection/nets ambiguity to narrow at
         all. Params never apply to Role or Cluster mode (a synthetic
         one-component cell has no via/track net fields to template in the
-        first place), so the whole Params section hides for either."""
+        first place), so the whole Params section hides for either.
+
+        The top "Cluster:" name row (self._name_row/self.cluster_edit) also
+        hides in Cluster mode (found live 2026-08-06, Denis: "Зачем нам два
+        поля Existing Cluster и Cluster?") — _build_entry_dict() reuses the
+        picked Existing-Cluster value as the placement's own name too in
+        that mode, so there is nothing left for this row to ask for."""
         mode = self.cell_mode_combo.currentIndex()
         self.cell_label.setVisible(mode == 0)
         self._role_only_row.setVisible(mode == 1)
         self._cluster_only_row.setVisible(mode == 2)
+        self._name_row.setVisible(mode != 2)
         self._params_label.setVisible(mode == 0)
         self._params_container.setVisible(mode == 0)
 
@@ -454,31 +463,40 @@ class PlacerDock(QWidget):
             return None
 
     def _build_entry_dict(self) -> Optional[Dict[str, Any]]:
-        name = self.cluster_edit.currentText().strip()
-        if not name:
-            self._show_message(_("Cluster name is required."), _ERROR_STYLE)
-            return None
-
         source_mode = self.cell_mode_combo.currentIndex()
         is_role_mode = source_mode == 1
         is_cluster_mode = source_mode == 2
-        if is_role_mode:
-            role = self.place_role_edit.currentText().strip()
-            if not role:
-                self._show_message(_("Pick a Role first."), _ERROR_STYLE)
-                return None
-            entry: Dict[str, Any] = {"name": name, "role": role}
-        elif is_cluster_mode:
+
+        if is_cluster_mode:
+            # No separate name field here (2026-08-06, found live — Denis:
+            # "Зачем нам два поля Existing Cluster и Cluster?") — Cluster is
+            # meant to already be unique per instance, and it's the exact
+            # value Redraw re-tags the component with afterwards anyway,
+            # so a second, independently-typed name risks silently
+            # retagging the component to something else. self._name_row
+            # (self.cluster_edit) is hidden in this mode — see
+            # _on_cell_mode_changed.
             cluster = self.place_cluster_edit.currentText().strip()
             if not cluster:
                 self._show_message(_("Pick an existing Cluster first."), _ERROR_STYLE)
                 return None
-            entry: Dict[str, Any] = {"name": name, "cluster": cluster}
+            entry: Dict[str, Any] = {"name": cluster, "cluster": cluster}
         else:
-            if not self._selected_cell:
-                self._show_message(_("Pick a Cell first."), _ERROR_STYLE)
+            name = self.cluster_edit.currentText().strip()
+            if not name:
+                self._show_message(_("Cluster name is required."), _ERROR_STYLE)
                 return None
-            entry: Dict[str, Any] = {"name": name, "cell": self._selected_cell}
+            if is_role_mode:
+                role = self.place_role_edit.currentText().strip()
+                if not role:
+                    self._show_message(_("Pick a Role first."), _ERROR_STYLE)
+                    return None
+                entry: Dict[str, Any] = {"name": name, "role": role}
+            else:
+                if not self._selected_cell:
+                    self._show_message(_("Pick a Cell first."), _ERROR_STYLE)
+                    return None
+                entry: Dict[str, Any] = {"name": name, "cell": self._selected_cell}
 
         mode = self.origin_mode_combo.currentIndex()
         if mode == 0:
