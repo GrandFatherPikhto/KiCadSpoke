@@ -154,8 +154,18 @@ class CellDock(QWidget):
         self._anchor_role_row = QWidget()
         anchor_role_form = QFormLayout(self._anchor_role_row)
         anchor_role_form.setContentsMargins(0, 0, 0, 0)
+        # Deliberately NOT configure_searchable() — unlike every other Role
+        # combo in this project (free-typed "picker, not whitelist"),
+        # anchor_role MUST already be one of this cell's own components:
+        # roles (validated at Save, see _load_cell) — free text is never
+        # valid here, so a plain closed dropdown is the correct widget, not
+        # just a workaround. Also plausibly the fix for a live freeze
+        # (found 2026-08-06, Denis: clicked Role a couple times on a
+        # freshly-added, still-componentless cell — an empty editable combo
+        # + QCompleter popup is a real category of Qt hang) — either way,
+        # this field's value space is a small closed set, editable search
+        # buys nothing here.
         self.anchor_role_combo = QComboBox()
-        configure_searchable(self.anchor_role_combo)
         anchor_role_form.addRow(_("Role:"), self.anchor_role_combo)
         self.anchor_pad_edit = QLineEdit()
         self.anchor_pad_edit.setPlaceholderText(_("pad (optional)"))

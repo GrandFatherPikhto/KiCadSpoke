@@ -271,18 +271,25 @@ def test_build_cell_dict_with_anchor_role(main_window, tmp_path):
     assert entry["anchor_pad"] == "1"
 
 
-def test_anchor_role_not_a_component_is_rejected_at_save(main_window, tmp_path):
-    """anchor_role must name one of THIS cell's own components — caught by
-    load_cell() inside _build_cell_dict (see config/entries.py's _load_cell)."""
+def test_anchor_role_combo_is_a_closed_picker_not_a_free_text_field(main_window, tmp_path):
+    """Regression (found live 2026-08-06, Denis: clicked Role a couple
+    times on a freshly-added, still-componentless cell — GUI froze).
+    anchor_role_combo deliberately isn't configure_searchable() (unlike
+    every other Role combo in the project) — its value MUST already be one
+    of this cell's own components: roles, free text is never valid, so it's
+    a plain non-editable dropdown. Trying to set text that isn't an
+    existing item is therefore a silent no-op (Qt's own behaviour for a
+    non-editable combo), not something the GUI can even produce — the
+    equivalent backend rejection (anchor_role naming a role that ISN'T a
+    component) is covered directly in tests/test_unique_roles.py's
+    TestCellAnchor::test_anchor_role_not_a_component_is_fatal."""
     dock, _ = _make_dock(main_window, tmp_path)
-    dock.name_edit.setText("t")
     dock.comp_role_edit.setCurrentText("A")
     dock._on_add_component()
-    dock.anchor_mode_combo.setCurrentIndex(2)
+
     dock.anchor_role_combo.setCurrentText("NOT_A_COMPONENT")
 
-    assert dock._build_cell_dict() is None
-    assert "not a component of cell" in dock.message_label.text()
+    assert dock.anchor_role_combo.currentText() != "NOT_A_COMPONENT"
 
 
 def test_name_is_required(main_window, tmp_path):
