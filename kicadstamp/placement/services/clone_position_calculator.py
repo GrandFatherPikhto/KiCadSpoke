@@ -62,7 +62,19 @@ def resolve_clone_anchor_ref(adapter: KiCadBoardAdapter, cfg: Config, clone: Clo
 def clone_anchor_id(clone: ClonePlacement) -> str:
     """
     Identity of clone_placement for the registry — physical binding, not name.
-    Priority order matches anchor resolution order:
+    Priority order matches anchor resolution order (_resolve_anchor: anchor_point
+    is checked FIRST, then anchor_ref, then anchor_role — this function mirrors
+    that order so every anchored clone gets a physical-binding key, not the
+    name: fallback):
+      anchor_point set -> "point:{anchor_point}:{origin_x}:{origin_y}"
+        (found 2026-08-06: this branch was missing entirely — a Point-anchored
+        clone fell all the way through to name:{clone.name}, same as absolute
+        coordinates, silently losing the rename-safety this whole function
+        exists for — renaming a Point-anchored clone_placement, or just editing
+        its xy: while keeping the same name, orphaned its own vias/tracks in
+        the registry with no protection from known_anchor_ids, since the OLD
+        name: key stops being produced the moment cfg no longer has that exact
+        name)
       anchor_ref set -> "anchor:{ref}:{pad}:{origin_x}:{origin_y}"
       anchor_role set -> "role:{anchor_role}:{anchor_sheet}:{pad}:{origin_x}:{origin_y}"
         (anchor_role is also resilient to renaming/re‑annotation, like anchor_ref
@@ -91,6 +103,8 @@ def clone_anchor_id(clone: ClonePlacement) -> str:
     vs C12 the anchor resolves to. Without it in the key, they too would
     collapse to one registry identity.
     """
+    if clone.anchor_point is not None:
+        return f"point:{clone.anchor_point}:{clone.xy[0]:.4f}:{clone.xy[1]:.4f}"
     if clone.anchor_ref is not None:
         return f"anchor:{clone.anchor_ref}:{clone.anchor_pad or ''}:{clone.xy[0]:.4f}:{clone.xy[1]:.4f}"
     if clone.anchor_role is not None:

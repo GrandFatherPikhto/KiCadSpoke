@@ -273,9 +273,14 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
          origin and differ ONLY by anchor_cluster (Pos vs Neg, the field that
          actually picks which physical component the anchor resolves to) —
          without it here, this check false-positived on that legitimate pair.
+      3. Same check for anchor_point (found 2026-08-06, same gap as
+         clone_anchor_id's missing anchor_point branch): two clones anchored
+         on the same Point with the same offset are just as confusable to the
+         registry as two anchor_ref/anchor_role duplicates would be.
     """
     problems = []
     seen_names = {}
+    seen_point_anchors = {}
     seen_ref_anchors = {}
     seen_role_anchors = {}
     for clone in cfg.clone_placements:
@@ -288,6 +293,19 @@ def check_no_duplicate_clone_anchors(cfg: Config) -> None:
 
         content_id = clone.cell if clone.cell is not None else _("role:{role}").format(role=clone.role)
         origin = (round(clone.xy[0], 4), round(clone.xy[1], 4))
+
+        if clone.anchor_point is not None:
+            key = (content_id, clone.anchor_point, origin)
+            if key in seen_point_anchors:
+                problems.append(
+                    _("{this!r} and {other!r} both point to the same anchor with the same offset "
+                      "(cell/role={content!r}, anchor_point={point!r}, origin=({ox}, {oy}) mm) — "
+                      "the registry would confuse their vias/tracks; likely a copy‑paste typo (if "
+                      "this is intentional, give them different xy)")
+                    .format(this=clone.name, other=seen_point_anchors[key], content=content_id,
+                            point=clone.anchor_point, ox=origin[0], oy=origin[1])
+                )
+            seen_point_anchors[key] = clone.name
 
         if clone.anchor_ref is not None:
             key = (content_id, clone.anchor_ref, clone.anchor_pad, origin)

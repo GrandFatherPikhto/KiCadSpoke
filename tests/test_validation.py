@@ -243,6 +243,26 @@ class TestNoDuplicateCloneAnchors:
         with pytest.raises(ValidationError, match="b.*a"):
             check_no_duplicate_clone_anchors(cfg)
 
+    def test_duplicate_point_anchor_raises(self):
+        """Found 2026-08-06: anchor_point had no branch here at all, same gap
+        as clone_anchor_id — two clones on the same Point with the same
+        offset went completely unnoticed."""
+        clones = [
+            ClonePlacement(name="a", cell="t", xy=(4.0, -110.0), anchor_point="Origin"),
+            ClonePlacement(name="b", cell="t", xy=(4.0, -110.0), anchor_point="Origin"),
+        ]
+        cfg = _cfg(rules=[], clone_placements=clones)
+        with pytest.raises(ValidationError, match="b.*a"):
+            check_no_duplicate_clone_anchors(cfg)
+
+    def test_same_point_different_origin_is_not_a_duplicate(self):
+        clones = [
+            ClonePlacement(name="a", cell="t", xy=(4.0, -110.0), anchor_point="Origin"),
+            ClonePlacement(name="b", cell="t", xy=(8.0, -69.0), anchor_point="Origin"),
+        ]
+        cfg = _cfg(rules=[], clone_placements=clones)
+        check_no_duplicate_clone_anchors(cfg)
+
 
 class TestCloneNetsExistOnBoard:
     def _make_net_mock(self, name):

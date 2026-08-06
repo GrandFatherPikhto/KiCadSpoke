@@ -408,6 +408,32 @@ class TestIgnoreSelection:
         adapter._board.get_selection.assert_not_called()
 
 
+class TestSelectionLogDedup:
+    """Found 2026-08-06: the GUI's live-selection timer polls
+    get_selected_items() every ~400ms — logging its count unconditionally at
+    DEBUG flooded the log file (many lines/sec) with nothing to say, burying
+    the one Redraw actually worth reading around it. Only log when the count
+    changes."""
+
+    def test_logs_only_when_count_changes(self, caplog):
+        import logging
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+        adapter.ignore_selection = False
+
+        with caplog.at_level(logging.DEBUG, logger="kicadstamp.kicad.adapter"):
+            adapter._board.get_selection.return_value = []
+            adapter.get_selected_items()
+            adapter.get_selected_items()
+            adapter.get_selected_items()
+            adapter._board.get_selection.return_value = [_make_fp("J1")]
+            adapter.get_selected_items()
+            adapter.get_selected_items()
+
+        selection_logs = [r for r in caplog.records if "Selected items" in r.message]
+        assert len(selection_logs) == 2  # once for count=0, once for count=1 — not 5
+
+
 class TestTemporarilyIgnoreSelection:
     """adapter.temporarily_ignore_selection() — per-item counterpart of the
     plain ignore_selection flag, used by ClonePlacement.ignore_selection

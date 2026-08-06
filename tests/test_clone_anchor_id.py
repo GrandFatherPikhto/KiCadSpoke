@@ -53,3 +53,25 @@ class TestCloneAnchorId:
         a = clone_anchor_id(_clone(name="x", xy=(1.0, 2.0)))
         b = clone_anchor_id(_clone(name="x", xy=(99.0, -99.0)))
         assert a == b == "name:x"
+
+    def test_anchor_point_is_not_the_name_fallback(self):
+        """Found 2026-08-06: anchor_point had NO branch at all here, so it fell
+        through all the way to name:{clone.name} — same identity as absolute
+        coordinates, and with none of the rename-safety anchor_ref/anchor_role
+        get. A Point-anchored clone must key on the point + offset, not name."""
+        result = clone_anchor_id(_clone(name="x", anchor_point="Origin", xy=(4.0, -110.0)))
+        assert result != "name:x"
+        assert "Origin" in result
+
+    def test_anchor_point_includes_offset(self):
+        a = clone_anchor_id(_clone(anchor_point="Origin", xy=(4.0, -110.0)))
+        b = clone_anchor_id(_clone(anchor_point="Origin", xy=(4.0, -100.0)))
+        assert a != b
+
+    def test_anchor_point_survives_rename(self):
+        """The whole point of keying on physical binding instead of clone.name —
+        renaming a Point-anchored clone must NOT change its registry identity,
+        exactly like it already doesn't for anchor_ref/anchor_role."""
+        a = clone_anchor_id(_clone(name="Conn_PM5V", anchor_point="Origin", xy=(4.0, -110.0)))
+        b = clone_anchor_id(_clone(name="Conn_PM5V_renamed", anchor_point="Origin", xy=(4.0, -110.0)))
+        assert a == b

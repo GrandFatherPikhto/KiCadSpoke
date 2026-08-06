@@ -27,6 +27,14 @@ class KiCadBoardAdapter(IBoardAdapter):
         self._board = None
         self._write_risk_checked = False
         self._footprints_cache: list[FootprintInstance] | None = None
+        # get_selected_items() is polled every ~400ms by the GUI's live-
+        # selection timer (see main_window.py's _poll_board_selection) —
+        # logging its count unconditionally at DEBUG flooded the log file
+        # with a "Selected items...: 0" line several times a second,
+        # burying anything useful around a specific Redraw (found 2026-08-06,
+        # while trying to dig a real placement bug out of the log). Only log
+        # when the count actually changes since the last call.
+        self._last_selection_log_count: int | None = None
         # Settable by the caller (see kicadstamp_cli.py's --no-selection) —
         # makes get_selected_items() always report "nothing selected",
         # regardless of what's actually highlighted in the PCB editor GUI.
@@ -168,7 +176,9 @@ class KiCadBoardAdapter(IBoardAdapter):
                 if str(via.id.value) in group_uuids:
                     direct_items.append(via)
 
-        logger.debug(_("Selected items (including groups expanded): {count}").format(count=len(direct_items)))
+        if len(direct_items) != getattr(self, "_last_selection_log_count", None):
+            logger.debug(_("Selected items (including groups expanded): {count}").format(count=len(direct_items)))
+            self._last_selection_log_count = len(direct_items)
         return direct_items
 
     def select_items(self, items: list[Any]):

@@ -125,3 +125,67 @@ class TestApplyCloneGeometry:
         # origin должен быть (100+5, 200+7) мм
         assert layout.origin.x == int((100.0 + 5.0) * MM)
         assert layout.origin.y == int((200.0 + 7.0) * MM)
+
+    def test_flat_shift_is_not_rotated_by_anchors_own_orientation(self):
+        """
+        xy: — плоский вектор, не поворачивается вместе с anchor'ом: apply_clone_geometry
+        никогда не крутит clone.xy по ориентации самого anchor'а, только по
+        parent_rotation_deg (используется исключительно для ВЛОЖЕННЫХ Cell,
+        Phase 4). А ClonePositionCalculator.compute_raw_positions() — реальный
+        путь для ЛЮБОГО top-level clone_placements: (в т.ч. anchor_role/
+        anchor_cluster/anchor_pad-цепочек между независимыми клонами) — всегда
+        зовёт его с parent_rotation_deg=0.0 (см. clone_position_calculator.py:360).
+        Поэтому если anchor сам повёрнут/подвинут, зависимый клон это отражает
+        только через СМЕЩЕНИЕ anchor_position, но его собственный xy: остаётся
+        буквальным вектором в мировых координатах — при этом же самом xy:
+        поворот anchor'а НЕ меняет относительное направление смещения так,
+        как это интуитивно ожидалось бы для "чего-то, что едет вместе с ним".
+        """
+        tpl = Cell(name="single", components=[TemplateComponentSlot(role="A")])
+        clone = ClonePlacement(name="anchor_test", cell="single", xy=(5.0, 0.0))
+
+        anchor_0deg = Vector2.from_xy(0, 0)
+        layout_0 = apply_clone_geometry(clone, tpl, {"A": "C1"}, anchor_position=anchor_0deg)
+
+        # Тот же anchor, но физически повёрнутый на 180° вокруг себя (например,
+        # anchor — это сам ClonePlacement с rotation_deg: 180.0) — anchor_position
+        # (его мировая точка привязки) не меняется, только его ориентация.
+        # "Честный" плоский сдвиг, повёрнутый вместе с anchor'ом, лёг бы в
+        # противоположную сторону: (-5, 0). Код этого не делает.
+        layout_180 = apply_clone_geometry(clone, tpl, {"A": "C1"}, anchor_position=anchor_0deg,
+                                          parent_rotation_deg=0.0)
+        assert layout_180.components[0].position.x == layout_0.components[0].position.x
+        assert layout_180.components[0].position.x == int(5.0 * MM)
+
+    def test_unredrawn_sibling_can_collide_after_shared_anchor_moves(self):
+        """
+        Два клона на одном anchor'е (напр. J1/CONN_PM5V), с xy: подобранными так,
+        чтобы стоять на безопасном удалении (5mm) друг от друга. Anchor
+        физически подвинули на 4mm. Один клон переRedraw'or'ен (anchor_position
+        уже новый), второй — ещё нет (в реестре/на плате остался со старым
+        anchor_position, как Ldo_Adj_n2v5 в реальном логе — 'not processed in
+        this run (--only filtered ...), but it is still in the config — NOT
+        pruned'). Итог: расстояние между ними схлопывается с 5mm до 1mm —
+        воспроизводит ровно то, что видно на скриншотах ('всё в кучу'), без
+        какого-либо бага в геометрии/registry — просто Redraw применяется
+        строго к одному clone_placement, а не ко всей anchor-семье.
+        """
+        tpl = Cell(name="single", components=[TemplateComponentSlot(role="A")])
+        clone_a = ClonePlacement(name="A", cell="single", xy=(0.0, 0.0))
+        clone_b = ClonePlacement(name="B", cell="single", xy=(5.0, 0.0))
+
+        anchor_old = Vector2.from_xy(0, 0)
+        anchor_new = Vector2.from_xy(int(4.0 * MM), 0)
+
+        # A только что переRedraw'ен -> видит новый anchor_position.
+        layout_a = apply_clone_geometry(clone_a, tpl, {"A": "C_A"}, anchor_position=anchor_new)
+        # B ещё не тронут в этом прогоне -> его последняя посчитанная позиция
+        # всё ещё привязана к СТАРОМУ anchor_position.
+        layout_b = apply_clone_geometry(clone_b, tpl, {"A": "C_B"}, anchor_position=anchor_old)
+
+        pos_a = layout_a.components[0].position
+        pos_b = layout_b.components[0].position
+        dist_mm = abs(pos_a.x - pos_b.x) / MM
+
+        assert dist_mm == pytest.approx(1.0)  # было 5mm, стало 1mm после сдвига anchor'а на 4mm
+        assert dist_mm < 2.0  # типичный клиренс для мелкого SMD — уже коллизия
