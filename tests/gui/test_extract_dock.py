@@ -27,6 +27,51 @@ def _fake_extract(adapter, name, params=None, items=None, annotations=None, **kw
     return {name: {"vias": [], "components": [], "tracks": [], "layer": "F.Cu"}}
 
 
+# ── Net aliases as a real QTableWidget (2026-08-06, Denis: "у нас в
+# экстракторе net-aliases, не таблица") ──────────────────────────────────
+
+def test_net_aliases_table_has_one_row_per_distinct_net(main_window, tmp_path):
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+
+    dock.set_board_selection([], [FakeSelected("C1", "C_IN", "X", {"1": "+3V3", "2": "GND"})])
+
+    assert dock.nets_table.rowCount() == 2
+    net_names = {dock.nets_table.item(row, 0).text() for row in range(dock.nets_table.rowCount())}
+    assert net_names == {"+3V3", "GND"}
+
+
+def test_net_aliases_table_net_column_is_read_only(main_window, tmp_path):
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+
+    dock.set_board_selection([], [FakeSelected("C1", "C_IN", "X", {"1": "+3V3"})])
+
+    item = dock.nets_table.item(0, 0)
+    assert not (item.flags() & Qt.ItemFlag.ItemIsEditable)
+
+
+def test_net_aliases_table_alias_and_checkbox_are_cell_widgets(main_window, tmp_path):
+    """Alias/Rule-net stay reachable through the same _net_alias_edits/
+    _rule_net_checkboxes dicts as before (unchanged data flow) — verify
+    they're also actually the table's own cell widgets, in the right
+    columns, not just tracked separately."""
+    cells_file = tmp_path / "cells.yaml"
+    _write_yaml(cells_file, {})
+    dock = ExtractDock(main_window)
+    dock.set_target_file(cells_file)
+
+    dock.set_board_selection([], [FakeSelected("C1", "C_IN", "X", {"1": "+3V3"})])
+
+    row = next(r for r in range(dock.nets_table.rowCount()) if dock.nets_table.item(r, 0).text() == "+3V3")
+    assert dock.nets_table.cellWidget(row, 1) is dock._net_alias_edits["+3V3"]
+    assert dock.nets_table.cellWidget(row, 2) is dock._rule_net_checkboxes["+3V3"]
+
+
 def test_cluster_slug_default_when_nothing_matches(main_window, tmp_path):
     cells_file = tmp_path / "cells.yaml"
     _write_yaml(cells_file, {})

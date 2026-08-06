@@ -166,14 +166,18 @@ tab is hidden outright (not just its content) until it actually applies.
   Extractor key already matches, that wins instead. Never overwrites something you've typed.
 - **Origin** — Bounding box (default, lower-left corner of the selection) / Component role (+
   optional pad) / Via net.
-- **Net aliases** — one row per net found on the selected components' pads. A non-empty alias
-  becomes a `{PLACEHOLDER}` in the written Cell (feeds `params:` for round-trip resolution — see
-  [docs/config.md](config.md) on `net_template`/`params`). Each row also has a **"Rule net (null)"**
-  checkbox (2026-08-05), mutually exclusive with the alias field — checking it writes that net's
-  via/track as `net: null` instead, so a cell placed via `rules:`/ManualSpoke inherits whichever
-  Rule's own net it's placed under (see [docs/config.md](config.md) on `rule_nets:`) — the mechanism
-  for reusing the SAME cell across several Rules on different power rails, which `{PLACEHOLDER}`
-  aliasing can't do here (ManualSpoke has no `params:` to resolve a template against).
+- **Net aliases** — a `QTableWidget` (2026-08-06, previously a hand-rolled grid — Denis: "у нас в
+  экстракторе net-aliases, не таблица"), one row per net found on the selected components' pads.
+  Rows themselves aren't user-added/removed — the net set is dictated entirely by the current board
+  selection and rebuilt on every selection-watch tick; only the **Alias** and **Rule net** cells
+  within each row are editable. A non-empty alias becomes a `{PLACEHOLDER}` in the written Cell
+  (feeds `params:` for round-trip resolution — see [docs/config.md](config.md) on
+  `net_template`/`params`). Each row also has a **"Rule net (null)"** checkbox (2026-08-05), mutually
+  exclusive with the alias field — checking it writes that net's via/track as `net: null` instead, so
+  a cell placed via `rules:`/ManualSpoke inherits whichever Rule's own net it's placed under (see
+  [docs/config.md](config.md) on `rule_nets:`) — the mechanism for reusing the SAME cell across
+  several Rules on different power rails, which `{PLACEHOLDER}` aliasing can't do here (ManualSpoke
+  has no `params:` to resolve a template against).
 - **Net template role** — appears only when a component's pads touch **2 or more already-aliased
   nets** (a bridging part — inductor, ferrite bead, fuse spanning two rails). The tool can't guess
   which one is "the" role's net_template in that case; extraction is blocked until you pick.

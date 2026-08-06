@@ -118,9 +118,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from kipy.board_types import Via
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFormLayout,
-                              QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-                              QListWidget, QPushButton, QScrollArea,
+from PyQt6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFormLayout,
+                              QGridLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+                              QListWidget, QPushButton, QTableWidget, QTableWidgetItem,
                               QTabWidget, QVBoxLayout, QWidget)
 
 from kicadstamp.explore import Selected
@@ -247,13 +247,29 @@ class ExtractDock(QWidget):
         aliases_page = QWidget()
         aliases_page_layout = QVBoxLayout(aliases_page)
         aliases_page_layout.addWidget(QLabel(_("Net aliases (blank = keep literal):")))
-        self._nets_container = QWidget()
-        self._nets_layout = QGridLayout(self._nets_container)
-        self._nets_layout.setContentsMargins(0, 0, 0, 0)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(self._nets_container)
-        aliases_page_layout.addWidget(scroll, 1)
+        # A real QTableWidget (2026-08-06, Denis: "у нас в экстракторе
+        # net-aliases, не таблица" — was a hand-rolled QGridLayout+
+        # QScrollArea, one Label/QLineEdit/QCheckBox row per net). Rows
+        # themselves are NOT user-added/removed here, unlike PlacerDock's
+        # _KeyValueTableEditor (gui/docks/placer.py) — the set of nets is
+        # dictated entirely by what's on the current selection's pads
+        # (_rebuild_net_aliases, called every ~400ms selection-watch tick);
+        # only the Alias/Rule-net CELLS within each row are user-editable,
+        # via setCellWidget — the table just replaces the grid as the
+        # layout mechanism, the data flow (_net_alias_edits/
+        # _rule_net_checkboxes keyed by net) is unchanged.
+        self.nets_table = QTableWidget(0, 3)
+        self.nets_table.setHorizontalHeaderLabels([_("Net"), _("Alias"), _("Rule net (null)")])
+        self.nets_table.verticalHeader().setVisible(False)
+        self.nets_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.nets_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.nets_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        # NoEditTriggers, not because nothing here is editable (Alias/Rule
+        # net ARE, via their own cell widgets) but because the Net column
+        # itself is a plain read-only QTableWidgetItem — this only stops Qt
+        # from opening an inline text editor on top of it.
+        self.nets_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        aliases_page_layout.addWidget(self.nets_table, 1)
         self._tabs.addTab(aliases_page, _("Net aliases"))
 
         self._role_net_section = QWidget()
@@ -641,21 +657,21 @@ class ExtractDock(QWidget):
         if set(nets) == set(previous_alias):
             return
 
-        while self._nets_layout.count():
-            item = self._nets_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
+        self.nets_table.setRowCount(0)  # also deletes every row's cell widgets
 
         self._net_alias_edits = {}
         self._rule_net_checkboxes = {}
         for row, net in enumerate(nets):
-            self._nets_layout.addWidget(QLabel(net), row, 0)
+            self.nets_table.insertRow(row)
+            net_item = QTableWidgetItem(net)
+            net_item.setFlags(Qt.ItemFlag.ItemIsEnabled)  # read-only, not editable/selectable
+            self.nets_table.setItem(row, 0, net_item)
+
             edit = QLineEdit()
             edit.setPlaceholderText(_("alias, e.g. PWR_IN"))
             edit.setText(previous_alias.get(net, ""))
             edit.textChanged.connect(self._update_net_template_role_rows)
-            self._nets_layout.addWidget(edit, row, 1)
+            self.nets_table.setCellWidget(row, 1, edit)
             self._net_alias_edits[net] = edit
 
             checkbox = QCheckBox(_("Rule net (null)"))
@@ -665,7 +681,7 @@ class ExtractDock(QWidget):
                   "cell can be reused across Rules on different nets."))
             checkbox.setChecked(previous_rule_net.get(net, False))
             checkbox.toggled.connect(lambda checked, e=edit: self._on_rule_net_toggled(e, checked))
-            self._nets_layout.addWidget(checkbox, row, 2)
+            self.nets_table.setCellWidget(row, 2, checkbox)
             self._rule_net_checkboxes[net] = checkbox
             self._on_rule_net_toggled(edit, checkbox.isChecked())
         self._update_net_template_role_rows()
