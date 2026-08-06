@@ -132,6 +132,35 @@ class TestResolvePointXyLiteral:
         assert resolved.position.x == int(3.0 * MM)
 
 
+class TestResolvePointBoardOrigin:
+    """anchor_origin (2026-08-06) — a LIVE board value read via
+    adapter.get_board_origin(), not a config literal like xy."""
+
+    def test_drill_origin_no_shift(self):
+        adapter = _adapter_for([])
+        adapter.get_board_origin.return_value = Vector2.from_xy(int(7.0 * MM), int(8.0 * MM))
+        point = Point(name="p", anchor_origin="drill")
+
+        resolved = resolve_point(adapter, point, resolved_points={})
+
+        adapter.get_board_origin.assert_called_once_with("drill")
+        assert resolved.position.x == int(7.0 * MM)
+        assert resolved.position.y == int(8.0 * MM)
+        assert resolved.footprint is None
+
+    def test_grid_origin_with_shift(self):
+        adapter = _adapter_for([])
+        adapter.get_board_origin.return_value = Vector2.from_xy(int(7.0 * MM), int(8.0 * MM))
+        point = Point(name="p", anchor_origin="grid", shift_x_mm=1.0, shift_y_mm=-2.0)
+
+        resolved = resolve_point(adapter, point, resolved_points={})
+
+        adapter.get_board_origin.assert_called_once_with("grid")
+        assert resolved.position.x == int(8.0 * MM)
+        assert resolved.position.y == int(6.0 * MM)
+        assert resolved.footprint is None
+
+
 class TestResolvePointAnchorPointChain:
     def test_chain_looks_up_already_resolved_point_no_recursion(self):
         """The referenced point must already be in resolved_points — this

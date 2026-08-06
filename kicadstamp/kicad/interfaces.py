@@ -35,6 +35,9 @@ class IBoardAdapter(ABC):
     def get_net_by_name(self, name: str) -> Net | None: ...
 
     @abstractmethod
+    def get_board_origin(self, kind: str) -> Vector2: ...
+
+    @abstractmethod
     def get_bounding_boxes(self, items) -> list[Any | None]: ...
 
     @abstractmethod

@@ -216,8 +216,9 @@ def _load_cell_placement(cell_name: str, data: dict[str, Any]) -> CellPlacement:
 
 _POINT_KNOWN_KEYS = {
     'anchor_ref', 'anchor_role', 'anchor_sheet', 'anchor_cluster', 'anchor_pad',
-    'anchor_point', 'xy', 'shift_x_mm', 'shift_y_mm',
+    'anchor_point', 'xy', 'anchor_origin', 'shift_x_mm', 'shift_y_mm',
 }
+_BOARD_ORIGIN_KINDS = {'grid', 'drill'}
 
 
 def _load_point(name: str, data: dict[str, Any]) -> Point:
@@ -231,25 +232,36 @@ def _load_point(name: str, data: dict[str, Any]) -> Point:
     anchor_pad = data.get('anchor_pad')
     anchor_point = data.get('anchor_point')
     xy = data.get('xy')
+    anchor_origin = data.get('anchor_origin')
 
-    # Exactly one "base": (anchor_ref or anchor_role) / anchor_point / xy.
+    if anchor_origin is not None and anchor_origin not in _BOARD_ORIGIN_KINDS:
+        raise ValidationError(format_fatal_error(
+            _("invalid anchor_origin {value!r} in point {name!r}").format(value=anchor_origin, name=name),
+            [_("must be 'grid' (Place > Set Grid Origin, visual only) or 'drill' "
+               "(Place > Drill/Place Origin — the auxiliary axis drill/position files "
+               "use, and Gerbers optionally via their own plot option)")]
+        ))
+
+    # Exactly one "base": (anchor_ref or anchor_role) / anchor_point / xy / anchor_origin.
     base_kind_count = sum([
         anchor_ref is not None or anchor_role is not None,
         anchor_point is not None,
         xy is not None,
+        anchor_origin is not None,
     ])
     if base_kind_count == 0:
         raise ValidationError(format_fatal_error(
             _("point {name!r} has no anchor").format(name=name),
             [_("set exactly one of: anchor_ref/anchor_role (+ optional anchor_sheet/"
                "anchor_cluster/anchor_pad), anchor_point (chain to another point), "
-               "or xy (literal absolute coordinate)")]
+               "xy (literal absolute coordinate), or anchor_origin (the board's own "
+               "live grid/drill-place origin)")]
         ))
     if base_kind_count > 1:
         raise ValidationError(format_fatal_error(
             _("point {name!r} has more than one anchor base").format(name=name),
-            [_("anchor_ref/anchor_role, anchor_point, and xy are mutually exclusive — "
-               "pick exactly one way to define this point's base position")]
+            [_("anchor_ref/anchor_role, anchor_point, xy, and anchor_origin are mutually "
+               "exclusive — pick exactly one way to define this point's base position")]
         ))
     if anchor_ref is not None and anchor_role is not None:
         raise ValidationError(format_fatal_error(
@@ -293,6 +305,7 @@ def _load_point(name: str, data: dict[str, Any]) -> Point:
         anchor_pad=str(anchor_pad) if anchor_pad is not None else None,
         anchor_point=anchor_point,
         xy=xy,
+        anchor_origin=anchor_origin,
         shift_x_mm=shift_x_mm,
         shift_y_mm=shift_y_mm,
     )
@@ -320,6 +333,8 @@ def _point_is_footprint_eligible(points: dict[str, Point], name: str, _visited=N
     if point.shift_x_mm or point.shift_y_mm:
         return False
     if point.xy is not None:
+        return False
+    if point.anchor_origin is not None:
         return False
     if point.anchor_point is not None:
         return _point_is_footprint_eligible(points, point.anchor_point, _visited)

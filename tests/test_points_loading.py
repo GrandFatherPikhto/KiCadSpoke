@@ -154,6 +154,112 @@ points:
             load_config(str(config_file))
 
 
+class TestBoardOriginPoint:
+    """anchor_origin (added 2026-08-06, Denis: "точка 0,0 -- это левый
+    верхний угол листа, никак не origin") — the board's own live grid/
+    drill-place origin, read via kipy (adapter.get_board_origin), not a
+    config-file literal like xy."""
+
+    def test_drill_origin_point_loads(self, tmp_path):
+        text = MINIMAL + """
+points:
+  board_zero:
+    anchor_origin: drill
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        cfg, _ = load_config(str(config_file))
+
+        p = cfg.points["board_zero"]
+        assert p.anchor_origin == "drill"
+        assert p.xy is None
+
+    def test_grid_origin_point_loads(self, tmp_path):
+        text = MINIMAL + """
+points:
+  board_zero:
+    anchor_origin: grid
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        cfg, _ = load_config(str(config_file))
+        assert cfg.points["board_zero"].anchor_origin == "grid"
+
+    def test_invalid_anchor_origin_value_is_fatal(self, tmp_path):
+        text = MINIMAL + """
+points:
+  bad:
+    anchor_origin: page
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        with pytest.raises(ValidationError, match="invalid anchor_origin"):
+            load_config(str(config_file))
+
+    def test_anchor_origin_and_xy_together_is_fatal(self, tmp_path):
+        text = MINIMAL + """
+points:
+  bad:
+    anchor_origin: drill
+    xy: [1.0, 2.0]
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        with pytest.raises(ValidationError, match="more than one anchor base"):
+            load_config(str(config_file))
+
+    def test_shift_on_anchor_origin_is_allowed(self, tmp_path):
+        """Unlike xy (a literal you'd just edit directly instead), anchor_origin
+        is a LIVE board value — shift is the only way to offset it."""
+        text = MINIMAL + """
+points:
+  offset_from_drill:
+    anchor_origin: drill
+    shift_x_mm: 5.0
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        cfg, _ = load_config(str(config_file))
+        assert cfg.points["offset_from_drill"].shift_x_mm == 5.0
+
+    def test_rule_anchor_point_to_board_origin_is_fatal(self, tmp_path):
+        """Same wall as xy — a board origin has no pads to look up spoke.pad
+        from."""
+        text = MINIMAL.replace("rules: []", "") + """
+points:
+  board_zero:
+    anchor_origin: drill
+rules:
+  - net: GND
+    anchor_point: board_zero
+    spokes: []
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        with pytest.raises(ValidationError, match="has no footprint to anchor on"):
+            load_config(str(config_file))
+
+    def test_clone_placement_anchor_point_to_board_origin_is_fine(self, tmp_path):
+        """ClonePlacement only ever needs a coordinate."""
+        text = MINIMAL + """
+points:
+  board_zero:
+    anchor_origin: drill
+cells:
+  one_role:
+    components:
+      - role: THE_ROLE
+clone_placements:
+  - name: cp1
+    cell: one_role
+    anchor_point: board_zero
+"""
+        config_file = tmp_path / "test.yaml"
+        config_file.write_text(text, encoding="utf-8")
+        cfg, _ = load_config(str(config_file))
+        assert cfg.clone_placements[0].anchor_point == "board_zero"
+
+
 class TestAnchorPointOnConsumers:
     def test_clone_placement_anchor_point_loads(self, tmp_path):
         text = MINIMAL + """

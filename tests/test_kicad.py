@@ -45,6 +45,7 @@ def test_adapter_has_methods():
         "get_zone_by_name",
         "get_net_by_name",
         "get_all_nets",
+        "get_board_origin",
         "get_bounding_boxes",
         # Transactions
         "begin_commit",
@@ -121,6 +122,30 @@ class TestHasField:
         adapter = Adapter.__new__(Adapter)
         fp = _fp_with_fields(Role="MCU")
         assert adapter.has_field(fp, "Cluster") is False
+
+
+class TestGetBoardOrigin:
+    """get_board_origin() (added 2026-08-06) — thin wrapper over kipy's
+    Board.get_origin(BOT_GRID/BOT_DRILL), used by Point's anchor_origin
+    (config/points.py) via point_resolver.py."""
+
+    def test_drill_maps_to_bot_drill(self):
+        from kipy.proto.board import board_commands_pb2
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+
+        adapter.get_board_origin("drill")
+
+        adapter._board.get_origin.assert_called_once_with(board_commands_pb2.BOT_DRILL)
+
+    def test_grid_maps_to_bot_grid(self):
+        from kipy.proto.board import board_commands_pb2
+        adapter = Adapter.__new__(Adapter)
+        adapter._board = MagicMock()
+
+        adapter.get_board_origin("grid")
+
+        adapter._board.get_origin.assert_called_once_with(board_commands_pb2.BOT_GRID)
 
 
 class TestFootprintsCache:

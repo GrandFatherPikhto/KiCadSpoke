@@ -242,13 +242,17 @@ anchor other `anchor_point:` references (Placer's own Point origin mode, Rule/Th
 point at by name. Added 2026-08-05 after noticing how closely Point's own shape already matches
 Placer's Origin widget.
 
-- **Origin** — same three mutually exclusive bases as Placer's own Origin combo: **Absolute XY** /
-  **Anchor (ref/role)**, now including a **Sheet** field (Denis: "нужен anchor_sheet в этой
-  панели") alongside Ref/Role/Pad/Anchor cluster / **Point** (chain to another point by name — this
-  field IS autocompleted, from the current file's own `points:` keys, closing the "points:-name
-  autocomplete" gap the Placer section above still has for its own Point field).
-- **Shift X/Y** — flat mm offset on top of the Anchor/Point base (not available on Absolute XY —
-  there, just edit the coordinate directly).
+- **Origin** — **Absolute XY** / **Anchor (ref/role)**, now including a **Sheet** field (Denis:
+  "нужен anchor_sheet в этой панели") alongside Ref/Role/Pad/Anchor cluster / **Point** (chain to
+  another point by name — this field IS autocompleted, from the current file's own `points:` keys,
+  closing the "points:-name autocomplete" gap the Placer section above still has for its own Point
+  field) / **Board origin** (added 2026-08-06, Denis: "точка 0,0 -- это левый верхний угол листа,
+  никак не origin" — reads the board's own LIVE origin marker via kipy instead of a guessed-at
+  literal: **Drill/place**, the auxiliary axis drill/position files are always relative to (and
+  Gerbers optionally, via their own plot-dialog option), or **Grid**, visual-only, Place > Set Grid
+  Origin).
+- **Shift X/Y** — flat mm offset on top of the Anchor/Point/Board-origin base (not available on
+  Absolute XY — there, just edit the coordinate directly).
 - **Resolve** — computes where this point (and whatever it chains through) resolves to RIGHT NOW,
   without writing anything or moving anything on the board (a Point has no physical effect of its
   own, unlike Placer's Redraw) — shows the literal X/Y in mm, and, if it resolved through a live

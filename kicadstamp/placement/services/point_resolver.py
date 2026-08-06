@@ -109,14 +109,17 @@ def resolve_point(adapter: KiCadBoardAdapter, point: Point,
     elif point.xy is not None:
         base_position = Vector2.from_xy(int(point.xy[0] * MM), int(point.xy[1] * MM))
         base_footprint = None
+    elif point.anchor_origin is not None:
+        base_position = adapter.get_board_origin(point.anchor_origin)
+        base_footprint = None
     else:
         # Unreachable if config/loader.py's _load_point validation ran —
         # kept as a loud failure, not a silent fallback, in case a Point is
         # ever constructed some other way (tests, future code paths).
         raise ValidationError(format_fatal_error(
             _("point {name!r} has no anchor").format(name=point.name),
-            [_("set anchor_ref/anchor_role, anchor_point, or xy — should have been "
-               "caught at load time (config/loader.py)")]
+            [_("set anchor_ref/anchor_role, anchor_point, xy, or anchor_origin — should "
+               "have been caught at load time (config/loader.py)")]
         ))
 
     shift = Vector2.from_xy(int(point.shift_x_mm * MM), int(point.shift_y_mm * MM))

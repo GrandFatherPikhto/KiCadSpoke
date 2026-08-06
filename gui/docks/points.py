@@ -2,13 +2,25 @@
 """
 PointsDock — edits a named, reusable `points:` entry (kicadstamp/config/
 points.py's Point dataclass): a base position (Absolute XY / Anchor ref-
-role, narrowed by Sheet/Pad/Cluster / chain to another named Point) plus an
-optional flat mm shift. Requested live 2026-08-05 (Denis: "а можем мы
-соорудить панельку с именованными поинтами?") after noticing how much of
-PlacerDock's own Origin widget (gui/docks/placer.py) already matches
-Point's shape field-for-field — Absolute XY/Anchor(ref/role)/Point are
-exactly Point's three mutually exclusive anchor "bases", and shift_x_mm/
+role, narrowed by Sheet/Pad/Cluster / chain to another named Point / Board
+origin) plus an optional flat mm shift. Requested live 2026-08-05 (Denis: "а
+можем мы соорудить панельку с именованными поинтами?") after noticing how
+much of PlacerDock's own Origin widget (gui/docks/placer.py) already
+matches Point's shape field-for-field — Absolute XY/Anchor(ref/role)/Point
+are exactly Point's mutually exclusive anchor "bases", and shift_x_mm/
 shift_y_mm is exactly PlacerDock's own Anchor/Point-mode shift.
+
+Board origin (added 2026-08-06, Denis: "точка 0,0 -- это левый верхний угол
+листа, никак не origin") reads the board's own LIVE origin marker via kipy
+(adapter.get_board_origin) instead of a config-file xy: literal — 'drill'
+(Place > Drill/Place Origin, the auxiliary axis drill/position files are
+always relative to, and Gerbers optionally via their own plot option) or
+'grid' (Place > Set Grid Origin, visual-only, no exported file uses it).
+Same "coordinate, no footprint" shape as Absolute XY (see Rule/
+ThermalViaArrayConfig still refusing to anchor to it directly — they need a
+pad on a live component, not a bare coordinate), but unlike Absolute XY it
+is read live rather than guessed at as a literal number, and CAN carry a
+shift on top (it isn't a config literal you could "just edit instead").
 
 Deliberately NOT sharing a widget with PlacerDock/ThermalViaArrayDock yet —
 first pass, built to be used and judged by hand before generalizing
@@ -114,7 +126,8 @@ class PointsDock(QWidget):
 
         origin_form = QFormLayout()
         self.origin_mode_combo = QComboBox()
-        self.origin_mode_combo.addItems([_("Absolute XY"), _("Anchor (ref/role)"), _("Point")])
+        self.origin_mode_combo.addItems(
+            [_("Absolute XY"), _("Anchor (ref/role)"), _("Point"), _("Board origin")])
         self.origin_mode_combo.currentIndexChanged.connect(self._on_origin_mode_changed)
         origin_form.addRow(_("Origin:"), self.origin_mode_combo)
         layout.addLayout(origin_form)
@@ -159,6 +172,17 @@ class PointsDock(QWidget):
         configure_searchable(self.point_edit)
         point_form.addRow(_("Point:"), self.point_edit)
         layout.addWidget(self._point_row)
+
+        self._board_origin_row = QWidget()
+        board_origin_form = QFormLayout(self._board_origin_row)
+        board_origin_form.setContentsMargins(0, 0, 0, 0)
+        self.board_origin_kind_combo = QComboBox()
+        self.board_origin_kind_combo.addItem(
+            _("Drill/place (drill/position files, optional for Gerbers)"), "drill")
+        self.board_origin_kind_combo.addItem(
+            _("Grid (visual only — Place > Set Grid Origin)"), "grid")
+        board_origin_form.addRow(_("Kind:"), self.board_origin_kind_combo)
+        layout.addWidget(self._board_origin_row)
 
         self._shift_row = QWidget()
         shift_row = QHBoxLayout(self._shift_row)
@@ -224,6 +248,7 @@ class PointsDock(QWidget):
         self._xy_row.setVisible(mode == 0)
         self._anchor_row.setVisible(mode == 1)
         self._point_row.setVisible(mode == 2)
+        self._board_origin_row.setVisible(mode == 3)
         self._shift_row.setVisible(mode != 0)
 
     # ── Message helper ────────────────────────────────────────────────────
@@ -306,12 +331,14 @@ class PointsDock(QWidget):
             pad = self.anchor_pad_edit.text().strip()
             if pad:
                 entry["anchor_pad"] = pad
-        else:  # Point
+        elif mode == 2:  # Point
             point = self.point_edit.currentText().strip()
             if not point:
                 self._show_message(_("Point: name is required."), _ERROR_STYLE)
                 return None
             entry["anchor_point"] = point
+        else:  # Board origin
+            entry["anchor_origin"] = self.board_origin_kind_combo.currentData()
 
         if mode != 0:
             shift_x = self._parse_float(self.shift_x_edit, _("Shift X"), default=0.0)
@@ -466,6 +493,7 @@ class PointsDock(QWidget):
         self.anchor_pad_edit.setText("")
         self.anchor_cluster_edit.setCurrentText("")
         self.point_edit.setCurrentText("")
+        self.board_origin_kind_combo.setCurrentIndex(0)
         self.shift_x_edit.setText("")
         self.shift_y_edit.setText("")
         self._show_message("")
@@ -488,6 +516,10 @@ class PointsDock(QWidget):
         if "anchor_point" in entry:
             self.origin_mode_combo.setCurrentIndex(2)
             self.point_edit.setCurrentText(str(entry["anchor_point"]))
+        elif "anchor_origin" in entry:
+            self.origin_mode_combo.setCurrentIndex(3)
+            idx = self.board_origin_kind_combo.findData(entry["anchor_origin"])
+            self.board_origin_kind_combo.setCurrentIndex(idx if idx >= 0 else 0)
         elif "xy" in entry:
             self.origin_mode_combo.setCurrentIndex(0)
             xy = entry["xy"] or [0, 0]

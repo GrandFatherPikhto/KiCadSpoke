@@ -108,6 +108,26 @@ def test_point_mode_requires_a_name(main_window, tmp_path):
     assert "Point: name is required" in dock.message_label.text()
 
 
+def test_build_entry_board_origin_mode(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.name_edit.setText("board_zero")
+    dock.origin_mode_combo.setCurrentIndex(3)
+    dock.board_origin_kind_combo.setCurrentIndex(1)  # grid
+
+    name, entry = dock._build_entry()
+    assert name == "board_zero"
+    assert entry == {"anchor_origin": "grid"}
+
+
+def test_board_origin_mode_defaults_to_drill(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.name_edit.setText("board_zero")
+    dock.origin_mode_combo.setCurrentIndex(3)
+
+    name, entry = dock._build_entry()
+    assert entry == {"anchor_origin": "drill"}
+
+
 def test_name_is_required(main_window, tmp_path):
     dock, _ = _make_dock(main_window, tmp_path)
     dock.origin_mode_combo.setCurrentIndex(0)
@@ -140,6 +160,10 @@ def test_origin_mode_toggles_row_visibility(main_window, tmp_path):
 
     dock.origin_mode_combo.setCurrentIndex(2)
     assert visible(dock._point_row) and not visible(dock._anchor_row)
+    assert visible(dock._shift_row)
+
+    dock.origin_mode_combo.setCurrentIndex(3)
+    assert visible(dock._board_origin_row) and not visible(dock._point_row)
     assert visible(dock._shift_row)
 
 
@@ -249,6 +273,17 @@ def test_load_entry_point_chain_mode(main_window, tmp_path):
 
     assert dock.origin_mode_combo.currentIndex() == 2
     assert dock.point_edit.currentText() == "base"
+
+
+def test_load_entry_board_origin_mode(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path, {"points": {
+        "board_zero": {"anchor_origin": "grid"},
+    }})
+
+    dock.load_entry("board_zero")
+
+    assert dock.origin_mode_combo.currentIndex() == 3
+    assert dock.board_origin_kind_combo.currentData() == "grid"
 
 
 # ── Point-name autocomplete ──────────────────────────────────────────────

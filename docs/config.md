@@ -367,14 +367,15 @@ anchor dependency is.
 | `name` | The key under `points:` — not a separate field, just how it's referenced. |
 | `anchor_ref` / `anchor_role`(+`anchor_sheet`+`anchor_cluster`) **or** `anchor_pad` | Live-board anchor, same fields/resolution as `Rule`/`ClonePlacement`. |
 | `anchor_point` | Chain to another, already-defined point by name — points can reference points (a cycle is caught by the same graph algorithm that catches any other anchor cycle). |
-| `xy` | A literal, absolute board coordinate — no live anchor at all. |
-| `shift_x_mm`/`shift_y_mm` | Board-absolute mm shift layered on top of any of the three bases above (not on `xy:` — fatal if both are set, just edit the literal coordinate instead). |
+| `xy` | A literal, absolute board coordinate — no live anchor at all. **(0, 0) here is the drawing sheet's corner, not any physical board reference** — see `anchor_origin` below for that. |
+| `anchor_origin` | `'grid'` (Place > Set Grid Origin, visual only — no exported file uses it) or `'drill'` (Place > Drill/Place Origin, the auxiliary axis — drill/position files are always relative to it, Gerbers optionally via their own plot-dialog option). Read LIVE via kipy, not a config literal. |
+| `shift_x_mm`/`shift_y_mm` | Board-absolute mm shift layered on top of `anchor_ref`/`anchor_role`/`anchor_point`/`anchor_origin` (not on `xy:` — fatal if both are set, just edit the literal coordinate instead). |
 
-Exactly one of `{anchor_ref or anchor_role, anchor_point, xy}` must be the base — fatal at load
-otherwise. `Rule`/`ThermalViaArrayConfig`'s own `anchor_point:` requires the referenced point to
-resolve to an actual footprint (no shift, not `xy:`-literal, and not chained through one that has a
-shift) — they need to look up a specific pad by number from it; `ClonePlacement` only ever needs a
-coordinate, so any Point works there.
+Exactly one of `{anchor_ref or anchor_role, anchor_point, xy, anchor_origin}` must be the base —
+fatal at load otherwise. `Rule`/`ThermalViaArrayConfig`'s own `anchor_point:` requires the referenced
+point to resolve to an actual footprint (no shift, not `xy:`-literal, not `anchor_origin`-based, and
+not chained through one that has any of those) — they need to look up a specific pad by number from
+it; `ClonePlacement` only ever needs a coordinate, so any Point works there, `anchor_origin` included.
 
 ---
 

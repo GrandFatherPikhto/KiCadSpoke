@@ -7,6 +7,7 @@ from typing import Any
 import kipy
 from kipy.board_types import FootprintInstance, Zone, Net, Via, ViaType, Track, BoardLayer, Pad, Field, Group
 from kipy.geometry import Vector2, Box2, Angle
+from kipy.proto.board import board_commands_pb2
 
 from .interfaces import IBoardAdapter
 from ..exceptions import BoardNotFoundError, ComponentNotFoundError, ValidationError, format_fatal_error
@@ -326,6 +327,16 @@ class KiCadBoardAdapter(IBoardAdapter):
         nets = list(self._board.get_nets())
         logger.debug(_("Retrieved {count} nets").format(count=len(nets)))
         return nets
+
+    # 'grid' (Place > Set Grid Origin, visual only) vs 'drill' (Place >
+    # Drill/Place Origin, the auxiliary axis — the actual zero used by
+    # drill/position files, and optionally Gerbers via their own "use drill/
+    # place file origin" plot option). Used by Point's anchor_origin
+    # (config/points.py) — see placement/services/point_resolver.py.
+    _BOARD_ORIGIN_KINDS = {"grid": board_commands_pb2.BOT_GRID, "drill": board_commands_pb2.BOT_DRILL}
+
+    def get_board_origin(self, kind: str) -> Vector2:
+        return self._board.get_origin(self._BOARD_ORIGIN_KINDS[kind])
 
     # --- Bounding boxes (for collisions — see collision.py) ---
     def get_bounding_boxes(self, items) -> list[Box2 | None]:
