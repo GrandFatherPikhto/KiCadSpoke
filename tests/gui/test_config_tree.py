@@ -231,34 +231,70 @@ def test_file_context_for_a_nested_included_file(main_window, tmp_path):
     assert parent_path == root.resolve()
 
 
-def test_add_cell_writes_a_minimal_stub_and_refreshes(main_window, tmp_path, monkeypatch):
+def test_add_cell_emits_request_instead_of_writing_directly(main_window, tmp_path):
+    """2026-08-06 — Add cell used to write a raw {"components": []} stub
+    straight to YAML with no form behind it (the exact root cause of a live
+    bug, see gui/docks/cell_editor.py's module docstring); now it defers to
+    CellDock's own Save path, same shape as Add point/Add thermal via pad/
+    Add placer above."""
     root = tmp_path / "root.yaml"
     root.write_text("cells: {}\n", encoding="utf-8")
 
     dock = ConfigTreeDock(main_window)
     dock.set_root_file(root)
 
-    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
-                        staticmethod(lambda *a, **k: ("new_cell", True)))
-    dock._add_cell(root)
+    requested = []
+    dock.add_cell_requested.connect(requested.append)
+    dock.add_cell_requested.emit(root)
 
-    data = yaml.safe_load(root.read_text(encoding="utf-8"))
-    assert data["cells"]["new_cell"] == {"components": []}
-    assert _find(dock.tree.topLevelItem(0), "Cells").child(0).text(0) == "new_cell"
-
-
-def test_add_cell_cancelled_writes_nothing(main_window, tmp_path, monkeypatch):
-    root = tmp_path / "root.yaml"
-    root.write_text("cells: {}\n", encoding="utf-8")
-
-    dock = ConfigTreeDock(main_window)
-    dock.set_root_file(root)
-
-    monkeypatch.setattr(config_tree_mod.QInputDialog, "getText",
-                        staticmethod(lambda *a, **k: ("", False)))
-    dock._add_cell(root)
-
+    assert requested == [root]
     assert yaml.safe_load(root.read_text(encoding="utf-8")) == {"cells": {}}
+
+
+def test_composite_cell_shows_nested_clone_placements_as_children(main_window, tmp_path):
+    """2026-08-06 — the "tree" Denis actually meant once CellDock's own
+    internal editor was built as tabs instead (see gui/docks/cell_editor.py):
+    a composite cell's nested clone_placements: show as read-only child
+    nodes under its own Cells leaf."""
+    root = tmp_path / "root.yaml"
+    root.write_text("""
+cells:
+  leaf:
+    components: []
+  composite:
+    clone_placements:
+      - name: inner_cell
+        cell: leaf
+      - name: inner_role
+        role: SOME_ROLE
+""", encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    composite_leaf = _find(_find(dock.tree.topLevelItem(0), "Cells"), "composite")
+    assert composite_leaf.childCount() == 2
+    assert composite_leaf.child(0).text(0) == "inner_cell (cell:leaf)"
+    assert composite_leaf.child(1).text(0) == "inner_role (role:SOME_ROLE)"
+
+    leaf_leaf = _find(_find(dock.tree.topLevelItem(0), "Cells"), "leaf")
+    assert leaf_leaf.childCount() == 0
+
+
+def test_edit_cell_emits_name_and_file(main_window, tmp_path):
+    """"Edit cell..." (context menu, 2026-08-06) — CellDock listens via
+    load_entry(), see gui/dock_hub.py's _edit_cell."""
+    root = tmp_path / "root.yaml"
+    root.write_text(MINIMAL_CELL, encoding="utf-8")
+
+    dock = ConfigTreeDock(main_window)
+    dock.set_root_file(root)
+
+    requested = []
+    dock.cell_edit_requested.connect(lambda name, path: requested.append((name, path)))
+    dock.cell_edit_requested.emit("one_role", root)
+
+    assert requested == [("one_role", root)]
 
 
 def test_rename_action_present_for_a_leaf_absent_for_a_category(main_window, tmp_path):

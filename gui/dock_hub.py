@@ -85,6 +85,7 @@ class DockHub:
         self.thermal_via_dock = self.detail_dock.thermal_via_panel
         self.points_dock = self.detail_dock.points_panel
         self.rules_dock = self.detail_dock.rules_panel
+        self.cells_dock = self.detail_dock.cells_panel
 
         # ── bottom: Pending changes, Log ────────────────────────────────────
         main_window.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.pending_dock)
@@ -123,6 +124,7 @@ class DockHub:
         self.config_tree_dock.file_selected.connect(self.thermal_via_dock.set_target_file)
         self.config_tree_dock.file_selected.connect(self.points_dock.set_target_file)
         self.config_tree_dock.file_selected.connect(self.rules_dock.set_target_file)
+        self.config_tree_dock.file_selected.connect(self.cells_dock.set_target_file)
         # Root is the one exception (2026-08-05): it always edits the
         # project's single root file, not whatever file the tree happens to
         # be browsing — root_file_changed only fires from set_root_file()
@@ -139,6 +141,7 @@ class DockHub:
         self.config_tree_dock.root_file_changed.connect(self.rules_dock.set_root_path)
         self.config_tree_dock.root_file_changed.connect(self.placer_dock.set_root_path)
         self.config_tree_dock.root_file_changed.connect(self.thermal_via_dock.set_root_path)
+        self.config_tree_dock.root_file_changed.connect(self.cells_dock.set_root_path)
         # ConfigTreeDock's own _restore_last_root() runs inside ITS __init__
         # (gui/docks/config_tree.py), which happens before this dock even
         # exists — so the very first root_file_changed emit (if a root was
@@ -151,6 +154,7 @@ class DockHub:
         self.rules_dock.set_root_path(self.config_tree_dock.root_path)
         self.placer_dock.set_root_path(self.config_tree_dock.root_path)
         self.thermal_via_dock.set_root_path(self.config_tree_dock.root_path)
+        self.cells_dock.set_root_path(self.config_tree_dock.root_path)
         # file_selected fires BEFORE the more specific cell_picked/
         # placement_picked/profile_picked signal on a leaf click (see
         # config_tree.py's _on_clicked) — so this fallback runs first and
@@ -177,6 +181,15 @@ class DockHub:
         self.config_tree_dock.points_picked.connect(self.detail_dock.show_points)
         self.config_tree_dock.rule_picked.connect(self.rules_dock.load_entry)
         self.config_tree_dock.rule_picked.connect(self.detail_dock.show_rules)
+        # "Edit cell..." (context menu, 2026-08-06) — deliberately NOT wired
+        # to cell_picked, which keeps meaning "pick this cell as a
+        # placement's content" (see config_tree.py's module docstring).
+        # Context-menu actions never go through _on_clicked, so unlike a
+        # plain leaf click, file_selected has NOT necessarily already
+        # targeted CellDock at the right file — _edit_cell below sets it
+        # explicitly before loading, same reasoning as _start_new_placement
+        # etc. below for "Add ...".
+        self.config_tree_dock.cell_edit_requested.connect(self._edit_cell)
         # Placer/Thermal via/Extract/Points/Rules -> Config tree: a
         # successful Save refreshes the whole tree (walk_include_tree() is
         # re-run) so a brand new (or renamed) entry shows up without
@@ -186,6 +199,7 @@ class DockHub:
         self.extract_dock.saved.connect(self.config_tree_dock.refresh)
         self.points_dock.saved.connect(self.config_tree_dock.refresh)
         self.rules_dock.saved.connect(self.config_tree_dock.refresh)
+        self.cells_dock.saved.connect(self.config_tree_dock.refresh)
         # Config tree's "Add placer.../Add thermal via pad.../Add point.../
         # Add rule..." context-menu actions -> Placer/Thermal via/Points/
         # Rules: open the form blank, targeting the file the action was
@@ -195,6 +209,7 @@ class DockHub:
         self.config_tree_dock.add_thermal_via_requested.connect(self._start_new_thermal_via)
         self.config_tree_dock.add_point_requested.connect(self._start_new_point)
         self.config_tree_dock.add_rule_requested.connect(self._start_new_rule)
+        self.config_tree_dock.add_cell_requested.connect(self._start_new_cell)
 
         # fieldstool tab -> Components tree: an explicit Rescan/Apply there
         # refreshes this tree's schematic view (see FieldsToolDock).
@@ -214,6 +229,7 @@ class DockHub:
         self.points_dock.refresh_known_roles(snapshot)
         self.rules_dock.refresh_known_roles(snapshot)
         self.rules_dock.refresh_known_nets(board)
+        self.cells_dock.refresh_known_roles(snapshot)
 
     def clear_components(self) -> None:
         """Connection-lost path: empty the Components tree (live mode only —
@@ -289,3 +305,22 @@ class DockHub:
         self.detail_dock.setVisible(True)
         self.detail_dock.raise_()
         self.detail_dock.show_rules()
+
+    def _start_new_cell(self, file_path) -> None:
+        """ConfigTreeDock's add_cell_requested delegate — same reasoning as
+        _start_new_placement above, for CellDock."""
+        self.cells_dock.new_cell(file_path)
+        self.detail_dock.setVisible(True)
+        self.detail_dock.raise_()
+        self.detail_dock.show_cells()
+
+    def _edit_cell(self, name, file_path) -> None:
+        """ConfigTreeDock's cell_edit_requested delegate — right-click
+        "Edit cell..." never goes through _on_clicked/file_selected (see
+        that wiring's own comment above), so the target file is set
+        explicitly here before loading, then the Cells tab is raised."""
+        self.cells_dock.set_target_file(file_path)
+        self.cells_dock.load_entry(name)
+        self.detail_dock.setVisible(True)
+        self.detail_dock.raise_()
+        self.detail_dock.show_cells()

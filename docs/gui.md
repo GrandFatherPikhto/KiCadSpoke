@@ -326,6 +326,53 @@ Update/Remove row, and Redraw/Save stay outside the tabs — they act on the who
   else net (`rules:` is the one list section without a required `name:` — see
   [docs/config.md](config.md)'s `rule_effective_name`).
 
+## Cells
+
+Edits a `cells:` entry (see [docs/config.md](config.md) on `Cell`) — Components/Vias/Tracks (local
+`along`/`across` offsets from the cell's own `(0,0)`) plus, recursively, nested `clone_placements:`
+referencing other cells/roles. Added 2026-08-06 after Denis hit a real bug caused by the ONLY
+existing way to create a cell — Config tree's **Add cell...** wrote a raw `{"components": []}` stub
+straight to YAML with no form behind it at all ("создавать экстрактор под один компонент, прости,
+тупняк" — a full select-on-board-and-extract round trip was the only way to add so much as one
+component slot by hand).
+
+Four tabs, same "table + detail row below" shape as Rules' own Spoke editor, one pair per kind
+(Components/Vias/Tracks/Nested cells) rather than one tree merging all four — none of the four share
+a common set of columns, so a merged tree would still need the detail form below to switch shape on
+selection, buying nothing over separate tabs. (Denis initially proposed a tree given nested cells can
+recurse — that tree is Config tree's own Cells category, which now shows a composite cell's nested
+`clone_placements:` as child nodes for read-only navigation, not this dock's internal editor.)
+
+- **Name**/**Layer** — the cell's own identity and absolute layer (`F.Cu`/`B.Cu`).
+- **Anchor** — **(none)** / **XY** / **Role** (`+Pad`, optional) — **display-only metadata**, see
+  `Cell.anchor_xy`/`anchor_role`/`anchor_pad` in [docs/config.md](config.md): marks which point of
+  the cell's own local `(0,0)` already IS the origin by construction, never changes how any offset
+  resolves. **Role** is a searchable combo sourced from THIS cell's own current Components list (not
+  the live board) — it must name one of them.
+- **Components** — Role (searchable, autocompleted from the live board's `Role` field, same source
+  as Rule's own anchor-role combo), Offset along/across, Angle, Layer (inherit/`F.Cu`/`B.Cu`), Net
+  template (for `clone_placements:`'s by-nets role matching only).
+- **Vias**/**Tracks** — the cell's own top-level (spoke-level) vias/tracks, same fields as
+  [docs/config.md](config.md)'s `TemplateVia`/`TemplateTrack`.
+- **Nested cells** — one entry per `CellPlacement`: Name, **Cell** (searchable, every `cells:` key
+  reachable from the project's root, same source as Rule's own spoke-cell combo) **or** **Role**,
+  X/Y, Rotation, Mirror, Layer.
+- **Scope cuts, deliberate** (shipped in one sitting, not because they don't matter): per-component
+  vias (`TemplateComponentSlot.vias`) are not editable here — only the cell's own top-level Vias tab;
+  a pre-existing per-component via list still round-trips untouched if the row isn't otherwise
+  edited. Nested cells only expose their core fields — `nets:`/`params:`/`net_overrides:`/`refs:` are
+  preserved verbatim if already present, not editable from this form.
+- No Redraw/Resolve — unlike Rule/Point/Placer, a Cell has no anchor of its own on the live board; it
+  only ever gets a physical position in the context of a placement/spoke that references it.
+- **Save** — writes into the target file's `cells:` section (a dict keyed by name, same shape as
+  Points).
+
+Config tree's **Add cell...** now opens this form blank (`new_cell()`) instead of writing a stub —
+same shape as every other Add-entity action. Editing an EXISTING cell's content is a separate
+action, right-click **Edit cell...**, deliberately not the same click as a plain left-click on a
+Cell leaf (which keeps its original meaning, "pick this cell as a placement's content" — Placer's
+own Cell field), so opening a placement form and opening the cell editor never fight over one click.
+
 ## Log
 
 A read-only, copyable, searchable panel fed by a `logging.Handler` attached to the **root**

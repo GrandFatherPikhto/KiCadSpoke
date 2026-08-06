@@ -20,13 +20,26 @@ shape here: an earlier version of this dock read one flat file per role
 and didn't walk include: at all, corrected same day, see the handoff
 above).
 
-6 of the 7 recognized sections route into an existing form when clicked
-(Cells -> PlacerDock.set_selected_cell, Clone placements ->
+6 of the 7 recognized sections route into an existing form when LEFT-
+clicked (Cells -> PlacerDock.set_selected_cell, Clone placements ->
 PlacerDock.load_placement, Extract profiles -> ExtractDock.pick_profile,
 Thermal via arrays -> ThermalViaArrayDock.load_entry, added 2026-08-03;
 Points -> PointsDock.load_entry, Rules -> RuleDock.load_entry, both added
 2026-08-05) — Clone profiles is the one section still with no GUI edit
 form, shown read-only for now, same deliberate scope limit as before.
+
+Cells is special (2026-08-06, CellDock added — see gui/docks/cell_editor.py):
+left-click on a Cell leaf keeps its ORIGINAL meaning, "pick this cell as a
+placement's content" (cell_picked -> PlacerDock.set_selected_cell,
+unchanged) — editing the cell's OWN content (Components/Vias/Tracks/Nested
+cells) is a separate action, "Edit cell..." in the right-click menu
+(cell_edit_requested -> CellDock.load_entry), so opening a placement form
+and opening the cell editor never fight over the same click. "Add cell..."
+(same menu) used to write a raw {"components": []} stub straight to YAML
+with no form behind it at all — replaced with add_cell_requested ->
+CellDock.new_cell(), the same "open the form blank" shape every other
+Add-entity action already uses (found live: that raw stub is exactly what
+caused Denis's Conn_PM5V placement failure, see cell_editor.py).
 
 Every click (file header, category, or leaf alike) also fires
 file_selected with that item's nearest file ancestor — this REPLACES the
@@ -90,8 +103,7 @@ from kicadstamp.exceptions import ValidationError
 from kicadstamp.i18n import _
 
 from .. import settings, yaml_io
-from ._common import (add_include, disable_include, display_path, merge_write,
-                      non_includable_keys)
+from ._common import add_include, disable_include, display_path, non_includable_keys
 from .entity_delete import delete_entry, find_references
 from .entity_export import ExportItem, export_entries
 from .rename import CASCADE_FIELD, collect_graph_files, rename_entry
@@ -119,8 +131,23 @@ _SECTION_LABELS = {
 
 class ConfigTreeDock(QDockWidget):
     # Fired when a Cell leaf is clicked — PlacerDock listens to fill its
-    # Cell field (see gui/dock_hub.py).
+    # Cell field (see gui/dock_hub.py). Left CLICK stays "pick this cell as
+    # a placement's content" (unchanged) — editing a cell's own content is a
+    # DIFFERENT action, see cell_edit_requested/add_cell_requested below,
+    # deliberately not routed through this same signal.
     cell_picked = pyqtSignal(str)
+    # Fired by the context menu's "Edit cell..." (2026-08-06, added
+    # alongside CellDock — see gui/docks/cell_editor.py) — CellDock listens
+    # via its load_entry() entry point. (name, file_path), same "leaf name +
+    # owning file" shape points_picked/rule_picked's file context carries.
+    cell_edit_requested = pyqtSignal(str, object)
+    # Fired by the context menu's "Add cell..." (2026-08-06, replaces a raw
+    # {"components": []} stub write straight to YAML with no form behind it
+    # — the exact root cause of a live bug, see cell_editor.py's module
+    # docstring) — CellDock listens via its new_cell() entry point, same
+    # "open the form blank" reasoning as add_placer_requested/add_point_
+    # requested/add_rule_requested/add_thermal_via_requested below.
+    add_cell_requested = pyqtSignal(object)
     # Fired when a Clone placement leaf is clicked — PlacerDock listens to
     # load it back into the form.
     placement_picked = pyqtSignal(object)
@@ -321,8 +348,27 @@ class ConfigTreeDock(QDockWidget):
                 # routes it anywhere yet (Rules/Points/Clone profiles have
                 # no edit form, but a bare rename doesn't need one).
                 leaf.setData(0, Qt.ItemDataRole.UserRole, ("leaf", section, payload))
+                if section == "cells" and isinstance(raw, dict):
+                    self._add_nested_cell_children(leaf, raw.get(name) or {})
         for child in node.children:
             self._build_file_item(file_item, child, parent_path=node.path)
+
+    @staticmethod
+    def _add_nested_cell_children(leaf, cell_data: dict) -> None:
+        """Composite cells (clone_placements:, Phase 4 recursion) show their
+        nested content as read-only child nodes — the "tree" Denis actually
+        meant (2026-08-06: "если у нас вложенные целлы могут быть, то
+        скорее не список, а дерево") once CellDock's own internal editor
+        was built as tabs instead (see gui/docks/cell_editor.py's module
+        docstring on why). Not clickable (no UserRole leaf data set) —
+        purely a navigation aid; editing content still goes through
+        CellDock via "Edit cell...", not by clicking these."""
+        for nested in cell_data.get("clone_placements") or []:
+            if not isinstance(nested, dict):
+                continue
+            content = (f"cell:{nested['cell']}" if nested.get("cell") is not None
+                      else f"role:{nested.get('role', '?')}")
+            QTreeWidgetItem(leaf, [f"{nested.get('name', '?')} ({content})"])
 
     @staticmethod
     def _entries(raw):
@@ -409,6 +455,9 @@ class ConfigTreeDock(QDockWidget):
         if leaf_data is not None and leaf_data[0] == "leaf":
             _kind, section, _payload = leaf_data
             old_name = item.text(0)
+            if section == "cells":
+                menu.addAction(_("Edit cell...")).triggered.connect(
+                    lambda: self.cell_edit_requested.emit(old_name, file_path))
             menu.addAction(_("Rename...")).triggered.connect(
                 lambda: self._on_rename(file_path, section, old_name))
             menu.addAction(_("Delete...")).triggered.connect(
@@ -423,7 +472,7 @@ class ConfigTreeDock(QDockWidget):
             menu.addSeparator()
 
         menu.addAction(_("Add cell...")).triggered.connect(
-            lambda: self._add_cell(file_path))
+            lambda: self.add_cell_requested.emit(file_path))
         menu.addAction(_("Add thermal via pad...")).triggered.connect(
             lambda: self.add_thermal_via_requested.emit(file_path))
         menu.addAction(_("Add placer...")).triggered.connect(
@@ -577,14 +626,6 @@ class ConfigTreeDock(QDockWidget):
             _("Exported {count} entr{suffix} to {name}").format(
                 count=len(items), suffix=_("y") if len(items) == 1 else _("ies"),
                 name=display_path(target_path)))
-
-    def _add_cell(self, file_path: Path) -> None:
-        name, ok = QInputDialog.getText(self, _("Add cell"), _("Cell name:"))
-        name = name.strip()
-        if not ok or not name:
-            return
-        merge_write(file_path, {"cells": {name: {"components": []}}}, section="cells")
-        self.refresh()
 
     def _add_included_file(self, file_path: Path) -> None:
         """QFileDialog's SAVE mode (not Open) is used deliberately — it

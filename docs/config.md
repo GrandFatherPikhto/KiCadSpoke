@@ -122,6 +122,15 @@ cells:
   KiCad's own DRC is the source of truth for that, by design (see [docs/geometry.md](geometry.md)).
 - `layer:` at the cell's own top level — the layer it was extracted on; components/tracks without
   their own `layer:` inherit it.
+- `anchor_xy:` **or** `anchor_role:` (`+anchor_pad:`) — added 2026-08-06 for the GUI's Cell editor
+  (`CellDock`), **display-only metadata**: marks which point of the cell's own local `(0,0)` already
+  IS by construction (`offset_along_mm`/`offset_across_mm` = `0.0` is always the origin regardless of
+  this field) — never read by `clone_position_calculator.py` or any resolver, purely so a human (or
+  the editor) can see what the original extractor anchored to instead of it being an untracked fact.
+  Mutually exclusive; `anchor_role` must name one of this cell's own `components:`.
+- Every `components:` entry **requires** a non-empty `role:` — a missing/`null` role used to either
+  crash with a bare `KeyError` or silently propagate into placement as a confusing runtime "role None
+  is in cell but not found anywhere on board"; now a clear load-time error (found live 2026-08-06).
 
 ### Composite cell (recursive, since 2026-07-31)
 

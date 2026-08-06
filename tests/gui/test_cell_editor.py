@@ -1,0 +1,442 @@
+# tests/gui/test_cell_editor.py
+"""
+CellDock tests are deliberately headless AND board-mutation-free, same
+reasoning as tests/gui/test_points_dock.py/test_rules_dock.py — no live
+KiCad connection is involved (CellDock has no Resolve/Redraw of its own,
+see its module docstring), so these only check what the dock builds/
+validates/writes.
+"""
+from types import SimpleNamespace
+
+import yaml
+
+from gui.docks.cell_editor import CellDock
+
+
+def _write_yaml(path, data) -> None:
+    path.write_text(yaml.dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+
+
+def _read_yaml(path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def _make_dock(main_window, tmp_path, data=None):
+    target_file = tmp_path / "root.yaml"
+    _write_yaml(target_file, data if data is not None else {"cells": {}})
+    dock = CellDock(main_window)
+    dock.set_target_file(target_file)
+    return dock, target_file
+
+
+# ── Components tab ───────────────────────────────────────────────────────
+
+def test_add_component_appends_and_selects_the_new_row(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.comp_role_edit.setCurrentText("HEAVY")
+    dock.comp_offset_along_edit.setText("1.5")
+    dock.comp_offset_across_edit.setText("-2.0")
+    dock.comp_angle_edit.setText("90")
+
+    dock._on_add_component()
+
+    assert dock._components == [
+        {"role": "HEAVY", "offset_along_mm": 1.5, "offset_across_mm": -2.0, "angle_deg": 90.0}
+    ]
+    assert dock.components_table.rowCount() == 1
+    assert dock._selected_component == 0
+    assert dock.components_table.item(0, 0).text() == "HEAVY"
+
+
+def test_component_role_is_required(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    assert dock._build_component_dict() is None
+    assert "Role is required" in dock.message_label.text()
+
+
+def test_duplicate_component_role_is_rejected_on_add(main_window, tmp_path):
+    """The per-slot validator (load_template_component_slot) doesn't check
+    uniqueness by itself (that's a whole-cell check, see _load_cell) — this
+    only proves a missing role IS caught immediately, the duplicate-role
+    case is caught later at Save via load_cell (see
+    test_save_rejects_duplicate_component_roles below)."""
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.comp_role_edit.setCurrentText("HEAVY")
+    dock._on_add_component()
+    dock.comp_role_edit.setCurrentText("HEAVY")
+    dock._on_add_component()
+    assert len(dock._components) == 2  # allowed at add-time, caught at Save
+
+
+def test_update_component(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.comp_role_edit.setCurrentText("HEAVY")
+    dock._on_add_component()
+
+    dock.comp_offset_along_edit.setText("3.0")
+    dock._on_update_component()
+
+    assert dock._components == [{"role": "HEAVY", "offset_along_mm": 3.0}]
+    assert dock.components_table.item(0, 1).text() == "3.0"
+
+
+def test_remove_component(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.comp_role_edit.setCurrentText("HEAVY")
+    dock._on_add_component()
+
+    dock._on_remove_component()
+
+    assert dock._components == []
+    assert dock.components_table.rowCount() == 0
+    assert dock._selected_component is None
+
+
+def test_remove_component_without_selection_shows_error(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock._on_remove_component()
+    assert "Pick a component row first" in dock.message_label.text()
+
+
+# ── Vias tab ──────────────────────────────────────────────────────────────
+
+def test_add_via_appends_and_selects_the_new_row(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.via_offset_along_edit.setText("0.5")
+    dock.via_net_edit.setText("GND")
+    dock.via_drill_edit.setText("0.4")
+    dock.via_diameter_edit.setText("0.8")
+
+    dock._on_add_via()
+
+    assert dock._vias == [
+        {"offset_along_mm": 0.5, "net": "GND", "drill_mm": 0.4, "diameter_mm": 0.8}
+    ]
+    assert dock.vias_table.rowCount() == 1
+
+
+def test_via_defaults_when_blank(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock._on_add_via()
+    assert dock._vias == [{}]  # everything defaults, nothing written
+
+
+def test_remove_via(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock._on_add_via()
+    dock._on_remove_via()
+    assert dock._vias == []
+
+
+# ── Tracks tab ────────────────────────────────────────────────────────────
+
+def test_add_track_appends_and_selects_the_new_row(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.track_start_along_edit.setText("0")
+    dock.track_start_across_edit.setText("0")
+    dock.track_end_along_edit.setText("5")
+    dock.track_end_across_edit.setText("0")
+    dock.track_width_edit.setText("0.3")
+    dock.track_net_edit.setText("GND")
+
+    dock._on_add_track()
+
+    assert dock._tracks == [
+        {"end_along_mm": 5.0, "width_mm": 0.3, "net": "GND"}
+    ]
+    assert dock.tracks_table.rowCount() == 1
+
+
+def test_remove_track(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock._on_add_track()
+    dock._on_remove_track()
+    assert dock._tracks == []
+
+
+# ── Nested cells tab ──────────────────────────────────────────────────────
+
+def test_add_nested_cell_mode(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.nested_name_edit.setText("inner")
+    dock.nested_mode_combo.setCurrentIndex(0)
+    dock.nested_cell_combo.setCurrentText("leaf")
+    dock.nested_x_edit.setText("5.0")
+    dock.nested_y_edit.setText("2.0")
+    dock.nested_rotation_edit.setText("90")
+
+    dock._on_add_nested()
+
+    assert dock._nested == [
+        {"name": "inner", "cell": "leaf", "xy": [5.0, 2.0], "rotation_deg": 90.0}
+    ]
+    assert dock.nested_table.rowCount() == 1
+    assert dock.nested_table.item(0, 1).text() == "cell:leaf"
+
+
+def test_add_nested_role_mode(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.nested_name_edit.setText("inner")
+    dock.nested_mode_combo.setCurrentIndex(1)
+    dock.nested_role_combo.setCurrentText("SOME_ROLE")
+
+    dock._on_add_nested()
+
+    assert dock._nested == [{"name": "inner", "role": "SOME_ROLE"}]
+    assert dock.nested_table.item(0, 1).text() == "role:SOME_ROLE"
+
+
+def test_nested_name_is_required(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.nested_cell_combo.setCurrentText("leaf")
+    assert dock._build_nested_dict() is None
+    assert "name is required" in dock.message_label.text()
+
+
+def test_nested_cell_mode_requires_a_cell(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.nested_name_edit.setText("inner")
+    dock.nested_mode_combo.setCurrentIndex(0)
+    assert dock._build_nested_dict() is None
+    assert "Pick a Cell first" in dock.message_label.text()
+
+
+def test_nested_role_mode_requires_a_role(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.nested_name_edit.setText("inner")
+    dock.nested_mode_combo.setCurrentIndex(1)
+    assert dock._build_nested_dict() is None
+    assert "Pick a Role first" in dock.message_label.text()
+
+
+def test_remove_nested(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.nested_name_edit.setText("inner")
+    dock.nested_cell_combo.setCurrentText("leaf")
+    dock._on_add_nested()
+    dock._on_remove_nested()
+    assert dock._nested == []
+
+
+# ── Anchor UI ─────────────────────────────────────────────────────────────
+
+def test_anchor_mode_toggles_row_visibility(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+
+    dock.anchor_mode_combo.setCurrentIndex(0)
+    assert not dock._anchor_xy_row.isVisibleTo(dock) and not dock._anchor_role_row.isVisibleTo(dock)
+
+    dock.anchor_mode_combo.setCurrentIndex(1)
+    assert dock._anchor_xy_row.isVisibleTo(dock) and not dock._anchor_role_row.isVisibleTo(dock)
+
+    dock.anchor_mode_combo.setCurrentIndex(2)
+    assert dock._anchor_role_row.isVisibleTo(dock) and not dock._anchor_xy_row.isVisibleTo(dock)
+
+
+def test_anchor_role_choices_follow_the_components_list(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.comp_role_edit.setCurrentText("HEAVY")
+    dock._on_add_component()
+    items = [dock.anchor_role_combo.itemText(i) for i in range(dock.anchor_role_combo.count())]
+    assert items == ["HEAVY"]
+
+
+# ── Building/Save ─────────────────────────────────────────────────────────
+
+def test_build_cell_dict_with_anchor_xy(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.name_edit.setText("t")
+    dock.comp_role_edit.setCurrentText("A")
+    dock._on_add_component()
+    dock.anchor_mode_combo.setCurrentIndex(1)
+    dock.anchor_x_edit.setText("1.0")
+    dock.anchor_y_edit.setText("2.0")
+
+    name, entry = dock._build_cell_dict()
+    assert name == "t"
+    assert entry["anchor_xy"] == [1.0, 2.0]
+
+
+def test_build_cell_dict_with_anchor_role(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.name_edit.setText("t")
+    dock.comp_role_edit.setCurrentText("A")
+    dock._on_add_component()
+    dock.anchor_mode_combo.setCurrentIndex(2)
+    dock.anchor_role_combo.setCurrentText("A")
+    dock.anchor_pad_edit.setText("1")
+
+    name, entry = dock._build_cell_dict()
+    assert entry["anchor_role"] == "A"
+    assert entry["anchor_pad"] == "1"
+
+
+def test_anchor_role_not_a_component_is_rejected_at_save(main_window, tmp_path):
+    """anchor_role must name one of THIS cell's own components — caught by
+    load_cell() inside _build_cell_dict (see config/entries.py's _load_cell)."""
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.name_edit.setText("t")
+    dock.comp_role_edit.setCurrentText("A")
+    dock._on_add_component()
+    dock.anchor_mode_combo.setCurrentIndex(2)
+    dock.anchor_role_combo.setCurrentText("NOT_A_COMPONENT")
+
+    assert dock._build_cell_dict() is None
+    assert "not a component of cell" in dock.message_label.text()
+
+
+def test_name_is_required(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    assert dock._build_cell_dict() is None
+    assert "Name is required" in dock.message_label.text()
+
+
+def test_save_rejects_duplicate_component_roles(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.name_edit.setText("t")
+    dock.comp_role_edit.setCurrentText("HEAVY")
+    dock._on_add_component()
+    dock.comp_role_edit.setCurrentText("HEAVY")
+    dock._on_add_component()
+
+    assert dock._build_cell_dict() is None
+    assert "appears twice" in dock.message_label.text()
+
+
+def test_save_writes_dict_section_and_preserves_other_keys(main_window, tmp_path):
+    dock, target = _make_dock(main_window, tmp_path, {"points": {"origin": {"xy": [0, 0]}}})
+    dock.name_edit.setText("t")
+    dock.comp_role_edit.setCurrentText("A")
+    dock._on_add_component()
+
+    dock._on_save()
+
+    data = _read_yaml(target)
+    assert data["cells"] == {"t": {"layer": "F.Cu", "components": [{"role": "A"}],
+                                   "vias": [], "tracks": [], "clone_placements": []}}
+    assert data["points"] == {"origin": {"xy": [0, 0]}}
+    assert "Wrote" in dock.message_label.text()
+
+
+def test_save_overwrites_an_existing_cell_by_name(main_window, tmp_path):
+    dock, target = _make_dock(main_window, tmp_path, {"cells": {"t": {"components": []}}})
+    dock.name_edit.setText("t")
+    dock.comp_role_edit.setCurrentText("A")
+    dock._on_add_component()
+
+    dock._on_save()
+
+    assert _read_yaml(target)["cells"]["t"]["components"] == [{"role": "A"}]
+    assert "Overwrote" in dock.message_label.text()
+
+
+def test_save_without_a_file_picked_shows_error(main_window):
+    dock = CellDock(main_window)
+    dock.name_edit.setText("t")
+    dock.comp_role_edit.setCurrentText("A")
+    dock._on_add_component()
+
+    dock._on_save()
+    assert "Pick a file" in dock.message_label.text()
+
+
+def test_save_emits_saved_signal(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    dock.name_edit.setText("t")
+    dock.comp_role_edit.setCurrentText("A")
+    dock._on_add_component()
+
+    fired = []
+    dock.saved.connect(lambda: fired.append(True))
+    dock._on_save()
+    assert fired == [True]
+
+
+# ── new_cell / load_entry ────────────────────────────────────────────────
+
+def test_new_cell_resets_the_form(main_window, tmp_path):
+    dock, target = _make_dock(main_window, tmp_path)
+    dock.name_edit.setText("stale")
+    dock.comp_role_edit.setCurrentText("A")
+    dock._on_add_component()
+
+    dock.new_cell(target)
+
+    assert dock.name_edit.text() == ""
+    assert dock._components == []
+    assert dock.components_table.rowCount() == 0
+
+
+def test_load_entry_round_trips_everything(main_window, tmp_path):
+    dock, target = _make_dock(main_window, tmp_path, {"cells": {
+        "composite": {
+            "layer": "B.Cu",
+            "anchor_role": "A",
+            "anchor_pad": "1",
+            "components": [{"role": "A", "offset_along_mm": 1.0}],
+            "vias": [{"offset_along_mm": 0.5, "net": "GND"}],
+            "tracks": [{"end_along_mm": 5.0, "width_mm": 0.3}],
+            "clone_placements": [{"name": "inner", "cell": "leaf", "xy": [1.0, 1.0]}],
+        }
+    }})
+
+    dock.load_entry("composite")
+
+    assert dock.name_edit.text() == "composite"
+    assert dock.layer_combo.currentData() == "B.Cu"
+    assert dock.anchor_mode_combo.currentIndex() == 2
+    assert dock.anchor_role_combo.currentText() == "A"
+    assert dock.anchor_pad_edit.text() == "1"
+    assert dock._components == [{"role": "A", "offset_along_mm": 1.0}]
+    assert dock._vias == [{"offset_along_mm": 0.5, "net": "GND"}]
+    assert dock._tracks == [{"end_along_mm": 5.0, "width_mm": 0.3}]
+    assert dock._nested == [{"name": "inner", "cell": "leaf", "xy": [1.0, 1.0]}]
+    assert dock.components_table.rowCount() == 1
+    assert dock.vias_table.rowCount() == 1
+    assert dock.tracks_table.rowCount() == 1
+    assert dock.nested_table.rowCount() == 1
+
+    # And it round-trips back out unchanged on Save.
+    dock._on_save()
+    assert _read_yaml(target)["cells"]["composite"]["anchor_role"] == "A"
+
+
+def test_load_entry_with_anchor_xy(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path, {"cells": {
+        "t": {"components": [], "anchor_xy": [1.5, -2.0]},
+    }})
+    dock.load_entry("t")
+    assert dock.anchor_mode_combo.currentIndex() == 1
+    assert dock.anchor_x_edit.text() == "1.5"
+    assert dock.anchor_y_edit.text() == "-2.0"
+
+
+def test_load_entry_with_no_anchor(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path, {"cells": {"t": {"components": []}}})
+    dock.load_entry("t")
+    assert dock.anchor_mode_combo.currentIndex() == 0
+
+
+# ── set_root_path / refresh_known_roles ──────────────────────────────────
+
+def test_set_root_path_populates_nested_cell_combo(main_window, tmp_path):
+    root = tmp_path / "root.yaml"
+    _write_yaml(root, {"cells": {"leaf": {"components": []}, "other": {"components": []}}})
+    dock = CellDock(main_window)
+
+    dock.set_root_path(root)
+
+    items = {dock.nested_cell_combo.itemText(i) for i in range(dock.nested_cell_combo.count())}
+    assert items == {"leaf", "other"}
+
+
+def test_refresh_known_roles_populates_role_combos(main_window, tmp_path):
+    dock, _ = _make_dock(main_window, tmp_path)
+    snapshot = [SimpleNamespace(role="HEAVY"), SimpleNamespace(role="LIGHT"), SimpleNamespace(role="")]
+
+    dock.refresh_known_roles(snapshot)
+
+    comp_items = {dock.comp_role_edit.itemText(i) for i in range(dock.comp_role_edit.count())}
+    nested_items = {dock.nested_role_combo.itemText(i) for i in range(dock.nested_role_combo.count())}
+    assert comp_items == {"HEAVY", "LIGHT"}
+    assert nested_items == {"HEAVY", "LIGHT"}

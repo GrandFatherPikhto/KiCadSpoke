@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (QDockWidget, QStackedWidget, QTabBar, QVBoxLayout, 
 
 from kicadstamp.i18n import _
 
+from .cell_editor import CellDock
 from .extract import ExtractDock
 from .placer import PlacerDock
 from .points import PointsDock
@@ -35,7 +36,7 @@ from .root_metadata import RootMetadataDock
 from .rules import RuleDock
 from .thermal_via import ThermalViaArrayDock
 
-_EXTRACT, _PLACER, _ROOT, _THERMAL_VIA, _POINTS, _RULES = range(6)
+_EXTRACT, _PLACER, _ROOT, _THERMAL_VIA, _POINTS, _RULES, _CELLS = range(7)
 
 
 class DetailDock(QDockWidget):
@@ -59,6 +60,7 @@ class DetailDock(QDockWidget):
         self.tab_bar.addTab(_("Thermal via"))
         self.tab_bar.addTab(_("Points"))
         self.tab_bar.addTab(_("Rules"))
+        self.tab_bar.addTab(_("Cells"))
         layout.addWidget(self.tab_bar)
 
         self.stack = QStackedWidget()
@@ -68,12 +70,14 @@ class DetailDock(QDockWidget):
         self.thermal_via_panel = ThermalViaArrayDock(main_window)
         self.points_panel = PointsDock(main_window, connection=connection)
         self.rules_panel = RuleDock(main_window)
+        self.cells_panel = CellDock(main_window)
         self.stack.addWidget(self.extract_panel)
         self.stack.addWidget(self.placer_panel)
         self.stack.addWidget(self.root_panel)
         self.stack.addWidget(self.thermal_via_panel)
         self.stack.addWidget(self.points_panel)
         self.stack.addWidget(self.rules_panel)
+        self.stack.addWidget(self.cells_panel)
         layout.addWidget(self.stack)
 
         self.tab_bar.currentChanged.connect(self.stack.setCurrentIndex)
@@ -97,3 +101,6 @@ class DetailDock(QDockWidget):
 
     def show_rules(self) -> None:
         self.tab_bar.setCurrentIndex(_RULES)
+
+    def show_cells(self) -> None:
+        self.tab_bar.setCurrentIndex(_CELLS)

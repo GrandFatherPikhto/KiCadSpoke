@@ -679,6 +679,8 @@ def test_dock_hub_delegates_route_to_the_right_docks(real_main_window, monkeypat
                         lambda s: pushed.setdefault("rules_roles", []).append(s))
     monkeypatch.setattr(hub.rules_dock, "refresh_known_nets",
                         lambda b: pushed.setdefault("rules_nets", []).append(b))
+    monkeypatch.setattr(hub.cells_dock, "refresh_known_roles",
+                        lambda s: pushed.setdefault("cells_roles", []).append(s))
 
     board, snapshot = object(), object()
     hub.push_snapshot(snapshot, board)
@@ -690,6 +692,7 @@ def test_dock_hub_delegates_route_to_the_right_docks(real_main_window, monkeypat
     assert pushed["points_roles"] == [snapshot]
     assert pushed["rules_roles"] == [snapshot]
     assert pushed["rules_nets"] == [board]
+    assert pushed["cells_roles"] == [snapshot]
 
     cleared = []
     monkeypatch.setattr(hub.tree_dock, "set_footprints", lambda s: cleared.append(s))

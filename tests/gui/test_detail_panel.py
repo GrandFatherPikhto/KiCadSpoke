@@ -1,4 +1,5 @@
 # tests/gui/test_detail_panel.py
+from gui.docks.cell_editor import CellDock
 from gui.docks.detail_panel import DetailDock
 from gui.docks.extract import ExtractDock
 from gui.docks.placer import PlacerDock
@@ -16,7 +17,8 @@ def test_pages_are_the_expected_panel_types(main_window):
     assert isinstance(dock.thermal_via_panel, ThermalViaArrayDock)
     assert isinstance(dock.points_panel, PointsDock)
     assert isinstance(dock.rules_panel, RuleDock)
-    assert dock.stack.count() == 6
+    assert isinstance(dock.cells_panel, CellDock)
+    assert dock.stack.count() == 7
 
 
 def test_extract_tab_is_shown_first(main_window):
@@ -76,3 +78,10 @@ def test_show_rules_switches_tab_and_stack(main_window):
     dock.show_rules()
     assert dock.tab_bar.currentIndex() == 5
     assert dock.stack.currentWidget() is dock.rules_panel
+
+
+def test_show_cells_switches_tab_and_stack(main_window):
+    dock = DetailDock(main_window)
+    dock.show_cells()
+    assert dock.tab_bar.currentIndex() == 6
+    assert dock.stack.currentWidget() is dock.cells_panel
