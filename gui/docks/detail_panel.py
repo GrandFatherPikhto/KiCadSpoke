@@ -23,6 +23,29 @@ leaf clicks, always BEFORE the more specific signal — see config_tree.py's
 _on_clicked) -> show_root() as the fallback for a plain file/category
 click; the more specific signal's handler (if any) then runs right after
 and wins.
+
+Raise-on-switch (2026-08-06, found live — Denis: "неплохо бы подсвечивать,
+какой док сейчас активен. А то вообще, не видно, кто и что"): every
+show_X() below now ALSO calls setVisible(True)/raise_() on itself. Before
+this, only the "Add .../Edit cell..." context-menu delegates in
+gui/dock_hub.py (_start_new_placement etc.) did that explicitly — a plain
+tree left-click (cell_picked/points_picked/rule_picked/...) switched the
+internal QTabBar but never brought DetailDock itself to the front of its
+OWN tabified group (it shares the right-hand dock area with fieldstool) —
+so clicking a Cell while looking at fieldstool silently switched Placer
+"under the hood" with nothing visible happening. Putting raise/show INSIDE
+show_X() itself (rather than duplicated at each dock_hub.py call site, as
+it used to be for the Add/Edit actions) fixes every caller at once and
+can't drift out of sync again.
+
+Window title (same request) reflects which page AND which entity is
+loaded on it right now — e.g. "Detail — Cells: composite" — read fresh
+from each page's own name field via _current_entity_name() rather than
+threaded through every show_X() call, so it stays correct even when a
+DIFFERENT entity is loaded while already on the same tab (leaf click ->
+load_entry() -> show_X() where the tab index doesn't change, so
+QTabBar.currentChanged never fires — _update_title() is therefore called
+unconditionally by show_X(), not only via that signal).
 """
 from PyQt6.QtWidgets import (QDockWidget, QStackedWidget, QTabBar, QVBoxLayout, QWidget)
 
@@ -81,26 +104,76 @@ class DetailDock(QDockWidget):
         layout.addWidget(self.stack)
 
         self.tab_bar.currentChanged.connect(self.stack.setCurrentIndex)
+        self.tab_bar.currentChanged.connect(self._update_title)
 
         self.setWidget(container)
+        self._update_title()
+
+    # ── Page labels / current entity name (for the window title) ─────────
+
+    _PAGE_LABELS = {
+        _EXTRACT: _("Extract"),
+        _PLACER: _("Placer"),
+        _ROOT: _("Project"),
+        _THERMAL_VIA: _("Thermal via"),
+        _POINTS: _("Points"),
+        _RULES: _("Rules"),
+        _CELLS: _("Cells"),
+    }
+
+    def _current_entity_name(self) -> str:
+        """Best-effort "what's loaded on the current page right now",
+        read fresh from that page's own name field — no page-agnostic
+        concept of "current entity" exists, each dock owns its own name/net
+        widget (see each module's __init__), so this just knows where to
+        look for each one. Extract/Project have no single current entity
+        (Extract browses profiles, Project edits a whole file) — empty
+        string for both, title falls back to just the page label."""
+        index = self.tab_bar.currentIndex()
+        if index == _PLACER:
+            return self.placer_panel.cluster_edit.currentText().strip()
+        if index == _THERMAL_VIA:
+            return self.thermal_via_panel.name_edit.text().strip()
+        if index == _POINTS:
+            return self.points_panel.name_edit.text().strip()
+        if index == _RULES:
+            return self.rules_panel.name_edit.text().strip() or self.rules_panel.net_edit.currentText().strip()
+        if index == _CELLS:
+            return self.cells_panel.name_edit.text().strip()
+        return ""
+
+    def _update_title(self) -> None:
+        label = self._PAGE_LABELS.get(self.tab_bar.currentIndex(), "")
+        name = self._current_entity_name()
+        self.setWindowTitle(
+            _("Detail — {label}: {name}").format(label=label, name=name) if name
+            else _("Detail — {label}").format(label=label))
+
+    # ── Switching (always raises/shows itself — see module docstring) ────
+
+    def _show(self, index: int) -> None:
+        self.tab_bar.setCurrentIndex(index)
+        self._update_title()  # unconditional — currentChanged doesn't fire when index is unchanged
+        self.setVisible(True)
+        self.raise_()
 
     def show_extract(self) -> None:
-        self.tab_bar.setCurrentIndex(_EXTRACT)
+        self._show(_EXTRACT)
 
     def show_placer(self) -> None:
-        self.tab_bar.setCurrentIndex(_PLACER)
+        self._show(_PLACER)
 
     def show_root(self) -> None:
-        self.tab_bar.setCurrentIndex(_ROOT)
+        self._show(_ROOT)
 
     def show_thermal_via(self) -> None:
-        self.tab_bar.setCurrentIndex(_THERMAL_VIA)
+        self._show(_THERMAL_VIA)
 
     def show_points(self) -> None:
-        self.tab_bar.setCurrentIndex(_POINTS)
+        self._show(_POINTS)
 
     def show_rules(self) -> None:
-        self.tab_bar.setCurrentIndex(_RULES)
+        self._show(_RULES)
 
     def show_cells(self) -> None:
-        self.tab_bar.setCurrentIndex(_CELLS)
+        self._show(_CELLS)

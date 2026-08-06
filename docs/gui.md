@@ -138,6 +138,18 @@ Right-click a file node for **Add cell.../Add point.../Add rule.../Add placer...
 pad.../Add included file...**, plus **Remove this file** (soft-disables its `include:` entry,
 doesn't delete the file) when it's not the root.
 
+## Detail dock
+
+Extract/Placer/Project/Thermal via/Points/Rules/Cells below all live as tabs inside one shared
+**Detail** dock, not as separate docks — switching is both automatic (a Config-tree click routes to
+the matching tab) and manual (click the tab bar directly). Every automatic switch also raises Detail
+to the front of its own tabified group (it shares screen space with fieldstool) and updates its
+window title to name the page and, where there's a single obvious current entity, its name too — e.g.
+"Detail — Cells: composite", or just "Detail — Extract" for pages with no single current entity
+(added 2026-08-06, found live — Denis: "неплохо бы подсвечивать, какой док сейчас активен. А то
+вообще, не видно, кто и что" — a plain tree click used to switch the tab silently if Detail wasn't
+already the visible group).
+
 ## Extract
 
 Builds a `Cell` from whatever's currently selected on the board (components, vias, tracks) and

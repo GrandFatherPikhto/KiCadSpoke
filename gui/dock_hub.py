@@ -278,40 +278,30 @@ class DockHub:
         front, same reasoning as open_fieldstool() above (the action was
         invoked from the Config tree tab, not the Detail tab)."""
         self.placer_dock.new_placement(placer_path)
-        self.detail_dock.setVisible(True)
-        self.detail_dock.raise_()
-        self.detail_dock.show_placer()
+        self.detail_dock.show_placer()  # raises/shows itself now — see detail_panel.py
 
     def _start_new_thermal_via(self, file_path) -> None:
         """ConfigTreeDock's add_thermal_via_requested delegate — same
         reasoning as _start_new_placement above, for ThermalViaArrayDock."""
         self.thermal_via_dock.new_thermal_via(file_path)
-        self.detail_dock.setVisible(True)
-        self.detail_dock.raise_()
         self.detail_dock.show_thermal_via()
 
     def _start_new_point(self, file_path) -> None:
         """ConfigTreeDock's add_point_requested delegate — same reasoning
         as _start_new_placement above, for PointsDock."""
         self.points_dock.new_point(file_path)
-        self.detail_dock.setVisible(True)
-        self.detail_dock.raise_()
         self.detail_dock.show_points()
 
     def _start_new_rule(self, file_path) -> None:
         """ConfigTreeDock's add_rule_requested delegate — same reasoning as
         _start_new_placement above, for RuleDock."""
         self.rules_dock.new_rule(file_path)
-        self.detail_dock.setVisible(True)
-        self.detail_dock.raise_()
         self.detail_dock.show_rules()
 
     def _start_new_cell(self, file_path) -> None:
         """ConfigTreeDock's add_cell_requested delegate — same reasoning as
         _start_new_placement above, for CellDock."""
         self.cells_dock.new_cell(file_path)
-        self.detail_dock.setVisible(True)
-        self.detail_dock.raise_()
         self.detail_dock.show_cells()
 
     def _edit_cell(self, name, file_path) -> None:
@@ -321,6 +311,4 @@ class DockHub:
         explicitly here before loading, then the Cells tab is raised."""
         self.cells_dock.set_target_file(file_path)
         self.cells_dock.load_entry(name)
-        self.detail_dock.setVisible(True)
-        self.detail_dock.raise_()
         self.detail_dock.show_cells()
