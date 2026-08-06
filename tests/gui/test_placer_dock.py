@@ -247,15 +247,25 @@ def test_role_mode_hides_cell_widgets_and_shows_role_row(main_window, tmp_path):
     dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
 
     def visible(w):
-        return w.isVisibleTo(dock)
+        # isVisibleTo(dock) would also depend on w's own TAB being the
+        # currently selected one (2026-08-06: PlacerDock got tabbed —
+        # Source/Nets/Origin) — checking against the widget's own immediate
+        # parent isolates just _on_cell_mode_changed()'s own setVisible()
+        # toggle, independent of which tab happens to be up (same fix
+        # RuleDock's own tests already use for the same reason).
+        return w.isVisibleTo(w.parentWidget())
 
     assert visible(dock.cell_label) and not visible(dock._role_only_row)
     assert visible(dock._params_container)
+    assert visible(dock._nets_group) and visible(dock._net_overrides_group) and visible(dock._refs_group)
 
     dock.cell_mode_combo.setCurrentIndex(1)
 
     assert not visible(dock.cell_label) and visible(dock._role_only_row)
     assert not visible(dock._params_container)
+    assert not visible(dock._nets_group)
+    assert not visible(dock._net_overrides_group)
+    assert not visible(dock._refs_group)
 
 
 def test_build_entry_dict_role_mode_needs_no_cell(main_window, tmp_path):
@@ -347,6 +357,9 @@ def test_cluster_mode_hides_cell_and_role_widgets(main_window, tmp_path):
     assert visible(dock._cluster_only_row)
     assert not visible(dock.cell_label) and not visible(dock._role_only_row)
     assert not visible(dock._params_container)
+    assert not visible(dock._nets_group)
+    assert not visible(dock._net_overrides_group)
+    assert not visible(dock._refs_group)
     # The top "Cluster:" name row is redundant/dangerous here (it would
     # otherwise let the placement's own name diverge from the tag it was
     # found by, silently retagging the component) — see
@@ -633,3 +646,146 @@ def test_on_redraw_dispatches_to_worker(main_window, tmp_path, monkeypatch):
     assert payload["placer_path"] == placer_file
     assert payload["cfg"] is fake_cfg
     assert payload["ctx"] is fake_ctx
+
+
+# ── Nets tab: _KeyValueTableEditor + nets:/net_overrides:/refs: (2026-08-06) ──
+
+def test_key_value_table_editor_add_update_remove():
+    editor = placer_mod._KeyValueTableEditor("Key", "Value")
+
+    editor.key_edit.setCurrentText("HEAVY")
+    editor.value_edit.setCurrentText("+3V3")
+    editor._on_add_or_update()
+    assert editor.to_dict() == {"HEAVY": "+3V3"}
+    assert editor.table.rowCount() == 1
+    assert editor.table.item(0, 0).text() == "HEAVY"
+    assert editor.table.item(0, 1).text() == "+3V3"
+
+    # Add with an existing key updates in place, not a second row.
+    editor.key_edit.setCurrentText("HEAVY")
+    editor.value_edit.setCurrentText("GND")
+    editor._on_add_or_update()
+    assert editor.to_dict() == {"HEAVY": "GND"}
+    assert editor.table.rowCount() == 1
+
+    editor.table.selectRow(0)
+    editor._on_remove()
+    assert editor.to_dict() == {}
+    assert editor.table.rowCount() == 0
+
+
+def test_key_value_table_editor_ignores_blank_key_or_value():
+    editor = placer_mod._KeyValueTableEditor("Key", "Value")
+    editor.value_edit.setCurrentText("GND")
+    editor._on_add_or_update()
+    assert editor.to_dict() == {}
+
+
+def test_key_value_table_editor_load_dict_round_trips():
+    editor = placer_mod._KeyValueTableEditor("Key", "Value")
+    editor.load_dict({"HEAVY": "+3V3", "LIGHT": "GND"})
+    assert editor.to_dict() == {"HEAVY": "+3V3", "LIGHT": "GND"}
+    assert editor.table.rowCount() == 2
+
+
+def test_build_entry_dict_includes_nets_net_overrides_refs_in_cell_mode(main_window, tmp_path):
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    dock.cluster_edit.setCurrentText("Channel_1")
+    dock.x_edit.setText("1.0")
+    dock.y_edit.setText("2.0")
+
+    dock.nets_table.load_dict({"C_IN": "+5V"})
+    dock.net_overrides_table.load_dict({"+5V": "+5V_DIRTY"})
+    dock.refs_table.load_dict({"C_IN": "C12"})
+
+    entry = dock._build_entry_dict()
+    assert entry["nets"] == {"C_IN": "+5V"}
+    assert entry["net_overrides"] == {"+5V": "+5V_DIRTY"}
+    assert entry["refs"] == {"C_IN": "C12"}
+    cp = load_clone_placement(entry)  # must validate against the real backend loader
+    assert cp.nets == {"C_IN": "+5V"}
+    assert cp.net_overrides == {"+5V": "+5V_DIRTY"}
+    assert cp.refs == {"C_IN": "C12"}
+
+
+def test_build_entry_dict_omits_empty_nets_tables(main_window, tmp_path):
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    dock.cluster_edit.setCurrentText("Channel_1")
+    dock.x_edit.setText("1.0")
+    dock.y_edit.setText("2.0")
+
+    entry = dock._build_entry_dict()
+    assert "nets" not in entry
+    assert "net_overrides" not in entry
+    assert "refs" not in entry
+
+
+def test_role_mode_never_includes_nets_tables_even_if_filled(main_window, tmp_path):
+    """The tables are hidden but not cleared when switching to Role/Cluster
+    mode (see _on_cell_mode_changed) — _build_entry_dict must still gate on
+    mode, not on whether the tables happen to have stale data in them."""
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    dock.nets_table.load_dict({"C_IN": "+5V"})
+    dock.cluster_edit.setCurrentText("X")
+    dock.cell_mode_combo.setCurrentIndex(1)
+    dock.place_role_edit.setCurrentText("C_BYPASS")
+    dock.x_edit.setText("1.0")
+    dock.y_edit.setText("2.0")
+
+    entry = dock._build_entry_dict()
+    assert "nets" not in entry
+
+
+def test_load_placement_round_trips_nets_net_overrides_refs(main_window, tmp_path):
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    entry = {
+        "name": "Channel_1", "cell": "pi_filter", "xy": [1.0, 2.0],
+        "nets": {"C_IN": "+5V"}, "net_overrides": {"+5V": "+5V_DIRTY"}, "refs": {"C_IN": "C12"},
+    }
+
+    dock.load_placement(entry)
+
+    assert dock.nets_table.to_dict() == {"C_IN": "+5V"}
+    assert dock.net_overrides_table.to_dict() == {"+5V": "+5V_DIRTY"}
+    assert dock.refs_table.to_dict() == {"C_IN": "C12"}
+
+
+def test_new_placement_clears_nets_tables(main_window, tmp_path):
+    dock, _, placer_file = _make_cell_and_dock(main_window, tmp_path)
+    dock.nets_table.load_dict({"C_IN": "+5V"})
+    dock.net_overrides_table.load_dict({"+5V": "+5V_DIRTY"})
+    dock.refs_table.load_dict({"C_IN": "C12"})
+
+    dock.new_placement(placer_file)
+
+    assert dock.nets_table.to_dict() == {}
+    assert dock.net_overrides_table.to_dict() == {}
+    assert dock.refs_table.to_dict() == {}
+
+
+def test_refresh_known_roles_feeds_nets_and_refs_key_choices(main_window, tmp_path):
+    from types import SimpleNamespace
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+
+    dock.refresh_known_roles([SimpleNamespace(role="HEAVY", cluster=""),
+                              SimpleNamespace(role="LIGHT", cluster="")])
+
+    nets_items = {dock.nets_table.key_edit.itemText(i) for i in range(dock.nets_table.key_edit.count())}
+    refs_items = {dock.refs_table.key_edit.itemText(i) for i in range(dock.refs_table.key_edit.count())}
+    assert nets_items == {"HEAVY", "LIGHT"}
+    assert refs_items == {"HEAVY", "LIGHT"}
+
+
+def test_refresh_known_nets_feeds_nets_and_net_overrides_value_choices(main_window, tmp_path):
+    from types import SimpleNamespace
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    board = SimpleNamespace(adapter=SimpleNamespace(
+        get_all_nets=lambda: [SimpleNamespace(name="+3V3"), SimpleNamespace(name="GND")]))
+
+    dock.refresh_known_nets(board)
+
+    nets_values = {dock.nets_table.value_edit.itemText(i) for i in range(dock.nets_table.value_edit.count())}
+    override_keys = {dock.net_overrides_table.key_edit.itemText(i)
+                     for i in range(dock.net_overrides_table.key_edit.count())}
+    assert nets_values == {"+3V3", "GND"}
+    assert override_keys == {"+3V3", "GND"}

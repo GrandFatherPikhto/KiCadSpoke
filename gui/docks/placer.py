@@ -106,9 +106,10 @@ from typing import Any, Dict, List, Optional
 import yaml
 from kipy.errors import ApiError
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (QCheckBox, QComboBox,
-                              QFormLayout, QGridLayout, QHBoxLayout, QLabel,
-                              QLineEdit, QPushButton, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox,
+                              QFormLayout, QGridLayout, QHBoxLayout, QHeaderView, QLabel,
+                              QLineEdit, QPushButton, QTableWidget, QTableWidgetItem,
+                              QTabWidget, QVBoxLayout, QWidget)
 
 from kicadstamp.apply_pipeline import ApplyPipeline
 from kicadstamp.config import Config, RuntimeContext, load_clone_placement, load_config
@@ -128,6 +129,103 @@ from .rename import collect_all_point_names
 logger = logging.getLogger(__name__)
 
 _PLACEHOLDER_RE = re.compile(r"\{(\w+)\}")
+
+
+class _KeyValueTableEditor(QWidget):
+    """One small dict[str, str]-editing block — read-only table + a
+    key/value row with Add/update + Remove selected, same "table below,
+    editing goes through the row" discipline as RuleDock's spokes editor/
+    CellDock's per-tab editors, just for a plain string->string mapping
+    instead of a richer dataclass. Used three times in PlacerDock's Nets
+    tab (2026-08-06, Denis: "в пласере точно надо... таблицей (может быть
+    даже с изменяемыми полями)") — ClonePlacement.nets/net_overrides/refs
+    had NO GUI at all before this (explicitly flagged "Scope NOT covered"
+    in this module's own docstring); one reusable class instead of
+    tripling the same table+row+Add/Remove wiring three times over.
+    Key/value combos are searchable and editable (configure_searchable) —
+    set_key_choices()/set_value_choices() feed them known roles/nets, same
+    picker-not-whitelist convention as every other combo here."""
+
+    def __init__(self, key_label: str, value_label: str,
+                key_placeholder: str = "", value_placeholder: str = "",
+                parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self._data: Dict[str, str] = {}
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.table = QTableWidget(0, 2)
+        self.table.setHorizontalHeaderLabels([key_label, value_label])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.table.itemSelectionChanged.connect(self._on_selection_changed)
+        layout.addWidget(self.table)
+
+        row = QHBoxLayout()
+        self.key_edit = QComboBox()
+        configure_searchable(self.key_edit)
+        self.key_edit.lineEdit().setPlaceholderText(key_placeholder)
+        row.addWidget(self.key_edit)
+        self.value_edit = QComboBox()
+        configure_searchable(self.value_edit)
+        self.value_edit.lineEdit().setPlaceholderText(value_placeholder)
+        row.addWidget(self.value_edit)
+        self.add_button = QPushButton(_("Add / update"))
+        self.add_button.clicked.connect(self._on_add_or_update)
+        row.addWidget(self.add_button)
+        self.remove_button = QPushButton(_("Remove selected"))
+        self.remove_button.clicked.connect(self._on_remove)
+        row.addWidget(self.remove_button)
+        layout.addLayout(row)
+
+    def _on_selection_changed(self) -> None:
+        rows = self.table.selectionModel().selectedRows()
+        if not rows:
+            return
+        self.key_edit.setCurrentText(self.table.item(rows[0].row(), 0).text())
+        self.value_edit.setCurrentText(self.table.item(rows[0].row(), 1).text())
+
+    def _on_add_or_update(self) -> None:
+        key = self.key_edit.currentText().strip()
+        value = self.value_edit.currentText().strip()
+        if not key or not value:
+            return
+        self._data[key] = value
+        self._refresh()
+
+    def _on_remove(self) -> None:
+        rows = self.table.selectionModel().selectedRows()
+        if not rows:
+            return
+        key = self.table.item(rows[0].row(), 0).text()
+        self._data.pop(key, None)
+        self._refresh()
+        self.key_edit.setCurrentText("")
+        self.value_edit.setCurrentText("")
+
+    def _refresh(self) -> None:
+        self.table.setRowCount(len(self._data))
+        for row, (key, value) in enumerate(sorted(self._data.items())):
+            self.table.setItem(row, 0, QTableWidgetItem(key))
+            self.table.setItem(row, 1, QTableWidgetItem(value))
+
+    def to_dict(self) -> Dict[str, str]:
+        return dict(self._data)
+
+    def load_dict(self, data: Optional[Dict[str, str]]) -> None:
+        self._data = dict(data or {})
+        self._refresh()
+        self.key_edit.setCurrentText("")
+        self.value_edit.setCurrentText("")
+
+    def set_key_choices(self, items: List[str]) -> None:
+        set_combo_items(self.key_edit, items)
+
+    def set_value_choices(self, items: List[str]) -> None:
+        set_combo_items(self.value_edit, items)
 
 
 class PlacerDock(QWidget):
@@ -157,17 +255,27 @@ class PlacerDock(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
+        # Tabbed (2026-08-06, Denis: "в пласере точно надо табом. Он может
+        # быть длинный!") — same "a stacked QVBoxLayout's minimum height is
+        # the SUM of every section's own" fix Extract/Root/Rules/Cells
+        # already got. Buttons/message stay OUTSIDE the tabs — they act on
+        # the whole placement, not one tab.
+        self._tabs = QTabWidget()
+        layout.addWidget(self._tabs, 1)
+
+        source_page = QWidget()
+        source_page_layout = QVBoxLayout(source_page)
         source_form = QFormLayout()
         self.cell_mode_combo = QComboBox()
         self.cell_mode_combo.addItems([_("Cell"), _("Role (single component, no cell)"),
                                        _("Cluster (existing tag, single component)")])
         self.cell_mode_combo.currentIndexChanged.connect(self._on_cell_mode_changed)
         source_form.addRow(_("Source:"), self.cell_mode_combo)
-        layout.addLayout(source_form)
+        source_page_layout.addLayout(source_form)
 
         self.cell_label = QLabel(_("No cell picked — pick one in the Config tree"))
         self.cell_label.setWordWrap(True)
-        layout.addWidget(self.cell_label)
+        source_page_layout.addWidget(self.cell_label)
 
         self._role_only_row = QWidget()
         role_only_form = QFormLayout(self._role_only_row)
@@ -175,7 +283,7 @@ class PlacerDock(QWidget):
         self.place_role_edit = QComboBox()
         configure_searchable(self.place_role_edit)
         role_only_form.addRow(_("Role:"), self.place_role_edit)
-        layout.addWidget(self._role_only_row)
+        source_page_layout.addWidget(self._role_only_row)
 
         self._cluster_only_row = QWidget()
         cluster_only_form = QFormLayout(self._cluster_only_row)
@@ -188,7 +296,7 @@ class PlacerDock(QWidget):
         # see module docstring's Cluster-tagging note). This field is the
         # opposite direction: an ALREADY-EXISTING Cluster tag to search FOR.
         cluster_only_form.addRow(_("Existing Cluster:"), self.place_cluster_edit)
-        layout.addWidget(self._cluster_only_row)
+        source_page_layout.addWidget(self._cluster_only_row)
 
         self._name_row = QWidget()
         form = QFormLayout(self._name_row)
@@ -197,21 +305,60 @@ class PlacerDock(QWidget):
         configure_searchable(self.cluster_edit)
         self.cluster_edit.lineEdit().setPlaceholderText(_("Cluster / clone_placement name"))
         form.addRow(_("Cluster:"), self.cluster_edit)
-        layout.addWidget(self._name_row)
+        source_page_layout.addWidget(self._name_row)
+        source_page_layout.addStretch(1)
+        self._tabs.addTab(source_page, _("Source"))
 
+        # Nets tab (2026-08-06) — Params already existed (cell-driven,
+        # auto-discovered placeholders); nets:/net_overrides:/refs: had NO
+        # GUI at all before this (see module docstring + _KeyValueTableEditor
+        # above) — all four only apply to Cell mode's by-nets role
+        # resolution, hidden for Role/Cluster mode same as Params already was.
+        nets_page = QWidget()
+        nets_page_layout = QVBoxLayout(nets_page)
         self._params_label = QLabel(_("Params (placeholder -> literal net, for by-nets role resolution):"))
-        layout.addWidget(self._params_label)
+        nets_page_layout.addWidget(self._params_label)
         self._params_container = QWidget()
         self._params_layout = QGridLayout(self._params_container)
         self._params_layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self._params_container)
+        nets_page_layout.addWidget(self._params_container)
 
+        self._nets_group = QWidget()
+        nets_group_layout = QVBoxLayout(self._nets_group)
+        nets_group_layout.setContentsMargins(0, 0, 0, 0)
+        nets_group_layout.addWidget(QLabel(_("Nets (role -> literal net, priority over the cell's own net_template):")))
+        self.nets_table = _KeyValueTableEditor(_("Role"), _("Net"), _("ROLE"), _("net name"))
+        nets_group_layout.addWidget(self.nets_table)
+        nets_page_layout.addWidget(self._nets_group)
+
+        self._net_overrides_group = QWidget()
+        net_overrides_group_layout = QVBoxLayout(self._net_overrides_group)
+        net_overrides_group_layout.setContentsMargins(0, 0, 0, 0)
+        net_overrides_group_layout.addWidget(
+            QLabel(_("Net overrides (resolved net -> final override):")))
+        self.net_overrides_table = _KeyValueTableEditor(
+            _("Resolved net"), _("Override"), _("resolved net name"), _("override net name"))
+        net_overrides_group_layout.addWidget(self.net_overrides_table)
+        nets_page_layout.addWidget(self._net_overrides_group)
+
+        self._refs_group = QWidget()
+        refs_group_layout = QVBoxLayout(self._refs_group)
+        refs_group_layout.setContentsMargins(0, 0, 0, 0)
+        refs_group_layout.addWidget(
+            QLabel(_("Refs (role -> explicit ref, bypasses search entirely — last resort):")))
+        self.refs_table = _KeyValueTableEditor(_("Role"), _("Ref"), _("ROLE"), _("e.g. C12"))
+        refs_group_layout.addWidget(self.refs_table)
+        nets_page_layout.addWidget(self._refs_group)
+        self._tabs.addTab(nets_page, _("Nets"))
+
+        origin_page = QWidget()
+        origin_page_layout = QVBoxLayout(origin_page)
         origin_form = QFormLayout()
         self.origin_mode_combo = QComboBox()
         self.origin_mode_combo.addItems([_("Absolute XY"), _("Anchor (ref/role)"), _("Point")])
         self.origin_mode_combo.currentIndexChanged.connect(self._on_origin_mode_changed)
         origin_form.addRow(_("Origin:"), self.origin_mode_combo)
-        layout.addLayout(origin_form)
+        origin_page_layout.addLayout(origin_form)
 
         self._xy_row = QWidget()
         xy_row = QHBoxLayout(self._xy_row)
@@ -224,7 +371,7 @@ class PlacerDock(QWidget):
         xy_row.addWidget(self.x_edit)
         xy_row.addWidget(QLabel(_("Y:")))
         xy_row.addWidget(self.y_edit)
-        layout.addWidget(self._xy_row)
+        origin_page_layout.addWidget(self._xy_row)
 
         self._anchor_row = QWidget()
         anchor_form = QFormLayout(self._anchor_row)
@@ -241,7 +388,7 @@ class PlacerDock(QWidget):
         self.anchor_cluster_edit = QComboBox()
         configure_searchable(self.anchor_cluster_edit)
         anchor_form.addRow(_("Anchor cluster:"), self.anchor_cluster_edit)
-        layout.addWidget(self._anchor_row)
+        origin_page_layout.addWidget(self._anchor_row)
 
         self._point_row = QWidget()
         point_form = QFormLayout(self._point_row)
@@ -249,7 +396,7 @@ class PlacerDock(QWidget):
         self.point_edit = QComboBox()
         configure_searchable(self.point_edit)
         point_form.addRow(_("Point:"), self.point_edit)
-        layout.addWidget(self._point_row)
+        origin_page_layout.addWidget(self._point_row)
 
         self._shift_row = QWidget()
         shift_row = QHBoxLayout(self._shift_row)
@@ -262,7 +409,7 @@ class PlacerDock(QWidget):
         shift_row.addWidget(self.shift_x_edit)
         shift_row.addWidget(QLabel(_("Shift Y:")))
         shift_row.addWidget(self.shift_y_edit)
-        layout.addWidget(self._shift_row)
+        origin_page_layout.addWidget(self._shift_row)
 
         extra_form = QFormLayout()
         self.rotation_edit = QLineEdit()
@@ -271,9 +418,11 @@ class PlacerDock(QWidget):
         self.layer_combo = QComboBox()
         self.layer_combo.addItems([_("(cell default)"), "F.Cu", "B.Cu"])
         extra_form.addRow(_("Layer:"), self.layer_combo)
-        layout.addLayout(extra_form)
+        origin_page_layout.addLayout(extra_form)
         self.mirror_checkbox = QCheckBox(_("Mirror"))
-        layout.addWidget(self.mirror_checkbox)
+        origin_page_layout.addWidget(self.mirror_checkbox)
+        origin_page_layout.addStretch(1)
+        self._tabs.addTab(origin_page, _("Origin"))
 
         button_row = QHBoxLayout()
         self.redraw_button = QPushButton(_("Redraw"))
@@ -288,7 +437,6 @@ class PlacerDock(QWidget):
         self.message_label.setWordWrap(True)
         layout.addWidget(self.message_label)
 
-        layout.addStretch(1)
         self._on_origin_mode_changed()
         self._on_cell_mode_changed()
 
@@ -319,7 +467,15 @@ class PlacerDock(QWidget):
         hides in Cluster mode (found live 2026-08-06, Denis: "Зачем нам два
         поля Existing Cluster и Cluster?") — _build_entry_dict() reuses the
         picked Existing-Cluster value as the placement's own name too in
-        that mode, so there is nothing left for this row to ask for."""
+        that mode, so there is nothing left for this row to ask for.
+
+        Nets/Net overrides/Refs (2026-08-06, same Nets tab as Params) hide
+        for the same reason Params does: resolve_roles_by_selection (the
+        default resolution unless nets:/params: are ALSO set — see
+        clone_uses_selection_mode) never reads clone.refs at all, only
+        resolve_roles_by_nets's step 0 does — setting Refs without also
+        setting Nets/Params in Role/Cluster mode would silently do nothing,
+        so hiding all four together avoids that trap."""
         mode = self.cell_mode_combo.currentIndex()
         self.cell_label.setVisible(mode == 0)
         self._role_only_row.setVisible(mode == 1)
@@ -327,6 +483,9 @@ class PlacerDock(QWidget):
         self._name_row.setVisible(mode != 2)
         self._params_label.setVisible(mode == 0)
         self._params_container.setVisible(mode == 0)
+        self._nets_group.setVisible(mode == 0)
+        self._net_overrides_group.setVisible(mode == 0)
+        self._refs_group.setVisible(mode == 0)
 
     # ── Wiring from the Config tree / Components tree ─────────────────────
 
@@ -389,6 +548,8 @@ class PlacerDock(QWidget):
         set_combo_items(self.anchor_cluster_edit, clusters)
         set_combo_items(self.place_role_edit, roles)
         set_combo_items(self.place_cluster_edit, clusters)
+        self.nets_table.set_key_choices(roles)
+        self.refs_table.set_key_choices(roles)
 
     def refresh_known_nets(self, board) -> None:
         """Populates the Params comboboxes (placeholder -> literal net) with
@@ -396,10 +557,14 @@ class PlacerDock(QWidget):
         (комбобоксами с поиском)" (2026-08-02). Same ~2s poll cadence as
         refresh_known_roles(); cached on self so newly-discovered param
         rows (_rebuild_param_rows, triggered by picking a different Cell)
-        don't have to wait for the next poll tick to be populated."""
+        don't have to wait for the next poll tick to be populated. Nets/Net
+        overrides' own value combos (2026-08-06) share the same list."""
         self._known_nets = sorted({n.name for n in board.adapter.get_all_nets() if n.name})
         for combo in self._param_edits.values():
             set_combo_items(combo, self._known_nets)
+        self.nets_table.set_value_choices(self._known_nets)
+        self.net_overrides_table.set_key_choices(self._known_nets)
+        self.net_overrides_table.set_value_choices(self._known_nets)
 
     def _rebuild_param_rows(self) -> None:
         cell_data = yaml_io.load_data(self._cells_path).get("cells", {}).get(self._selected_cell, {})
@@ -558,6 +723,15 @@ class PlacerDock(QWidget):
                       if edit.currentText().strip()}
             if params:
                 entry["params"] = params
+            nets = self.nets_table.to_dict()
+            if nets:
+                entry["nets"] = nets
+            net_overrides = self.net_overrides_table.to_dict()
+            if net_overrides:
+                entry["net_overrides"] = net_overrides
+            refs = self.refs_table.to_dict()
+            if refs:
+                entry["refs"] = refs
 
         return entry
 
@@ -776,6 +950,9 @@ class PlacerDock(QWidget):
         self.layer_combo.setCurrentIndex(0)
         self.mirror_checkbox.setChecked(False)
         self._rebuild_param_rows()
+        self.nets_table.load_dict({})
+        self.net_overrides_table.load_dict({})
+        self.refs_table.load_dict({})
         self._show_message("")
 
     # ── Loading an already-saved placement back into the form ──────────────
@@ -829,6 +1006,9 @@ class PlacerDock(QWidget):
         params = entry.get("params") or {}
         for name, edit in self._param_edits.items():
             edit.setCurrentText(str(params.get(name, "")))
+        self.nets_table.load_dict(entry.get("nets"))
+        self.net_overrides_table.load_dict(entry.get("net_overrides"))
+        self.refs_table.load_dict(entry.get("refs"))
 
     @staticmethod
     def _upsert_clone_placement(path: Path, entry: Dict[str, Any]) -> bool:

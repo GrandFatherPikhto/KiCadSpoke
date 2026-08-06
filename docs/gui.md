@@ -184,6 +184,11 @@ tab is hidden outright (not just its content) until it actually applies.
 Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.py apply --only
 <name>`. **This dock moves real footprints on the live board.**
 
+**Source**/**Nets**/**Origin** live in a tab widget (2026-08-06, Denis: "в пласере точно надо
+табом. Он может быть длинный!" — same "a stacked `QVBoxLayout`'s minimum height is the SUM of every
+section's own" fix Extract/Root/Rules/Cells already got). Redraw/Save and the message label stay
+outside the tabs — they act on the whole placement, not one tab.
+
 - **Source** — **Cell** (default), **Role**, or **Cluster** (all added 2026-08-06, Denis: "путь
   потрясающе длинный: создать экстрактор, извлечь шаблон, сделать cell и только потом, placement") —
   Role/Cluster both skip Extract/Cell entirely for a genuine single-component placement; neither
@@ -209,10 +214,22 @@ Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.
 - **Cluster** — the placement's name (also what gets clicked from the Components tree, see above).
   Hidden in Cluster *source* mode (see above) — the picked Existing Cluster value is reused as the
   name instead, nothing left to ask for here.
-- **Params** — one row per `{PLACEHOLDER}` found anywhere in the picked Cell's own YAML (auto-
-  discovered, not hand-typed) — the literal net each placeholder should resolve to for *this*
-  instance. Hidden in Role/Cluster mode (a synthetic one-component cell has no via/track net fields
-  to template).
+- **Nets tab** — all four rows below are hidden in Role/Cluster mode (a synthetic one-component cell
+  has no via/track net fields to template in the first place, and Role/Cluster's default resolution
+  — by selection — never reads `nets:`/`refs:` at all, only "by nets" mode does; see
+  `_on_cell_mode_changed`'s own docstring for why hiding them together avoids a silent no-op trap):
+  - **Params** — one row per `{PLACEHOLDER}` found anywhere in the picked Cell's own YAML (auto-
+    discovered, not hand-typed) — the literal net each placeholder should resolve to for *this*
+    instance.
+  - **Nets** (added 2026-08-06) — role → literal net, takes priority over the cell's own
+    `net_template:` for by-nets role resolution. Editable table (add/update by key, remove selected
+    row) — Role column autocompletes from the live board's `Role` field.
+  - **Net overrides** (added 2026-08-06) — resolved net → final override name, applied AFTER
+    Params/net_template substitution (see `resolve_net` in [docs/config.md](config.md)). Both columns
+    autocomplete from the live board's actual net names.
+  - **Refs** (added 2026-08-06, closes the last GUI gap this dock's own docstring used to flag) —
+    role → explicit ref, bypasses role search entirely — last resort, breaks on re-annotation. Role
+    column autocompletes from the live board's `Role` field.
 - **Origin**:
   - *Absolute XY* — a literal board position.
   - *Anchor (ref/role)* — position relative to an existing component: Ref **or** Role (mutually
@@ -237,8 +254,8 @@ Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.
   itself — look, adjust, Redraw again, and only Save once you're happy with the result. KiCad's own
   undo covers "moved something to the wrong place" — there's no separate movement log here.
 
-Not covered by the GUI yet (all still reachable by hand-editing the saved YAML): `anchor_sheet`
-narrowing, `refs:` explicit role→ref override, `by_selection` mode.
+Not covered by the GUI yet (still reachable by hand-editing the saved YAML): `anchor_sheet`
+narrowing, `by_selection` mode.
 
 ## Project
 
