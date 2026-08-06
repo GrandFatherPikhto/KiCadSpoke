@@ -410,6 +410,13 @@ GUI writes itself. **Verbose** toggles this panel's own level between INFO and D
 console/file logging `kicadstamp_gui.py` was launched with, if any, is untouched). **Find** /
 **Prev** / **Next** search the accumulated text; **Clear** empties it.
 
+This panel is in-memory only (capped, lost if the process is killed/crashes). If the currently open
+root config sets `log_file:` (see [docs/config.md](config.md)), the GUI now ALSO writes everything
+(DEBUG level, regardless of Verbose) to that file — same convention `kicadstamp_cli.py apply`
+already used, previously CLI-only (found live 2026-08-06: a `log_file:` already sitting in a
+project's root.yaml was silently never honored by the GUI). Re-attached fresh on every root-file
+change (Open/New/Recent), so it always points at the CURRENTLY open project.
+
 ## Tray icon
 
 The **Tray icon** status-bar checkbox creates an OS tray icon (a small programmatic icon, not a

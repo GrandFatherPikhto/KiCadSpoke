@@ -9,6 +9,8 @@ replaced FilePickerDock's three independent role signals entirely — see
 gui/docks/config_tree.py's module docstring), and the two connection-taking
 docks using the injected object instead of main_window.connection.
 """
+import logging
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -513,8 +515,15 @@ def test_fieldstool_pick_delegates_reach_the_window(real_main_window):
 def _teardown_hub(hub):
     """A DockHub constructed on the bare `main_window` fixture embeds a real
     fieldstool MainWindow and a LogDock (root-logger handler) that would
-    otherwise leak across tests."""
+    otherwise leak across tests. The log_file: FileHandler (2026-08-06,
+    see _on_root_file_changed_for_logging) is the same kind of leak, PLUS
+    it holds an open file handle into a tmp_path a later test/pytest
+    teardown may need to delete — closing it here matters on Windows,
+    where an open handle blocks the delete."""
     hub.log_dock.remove_handler()
+    if hub._log_file_handler is not None:
+        logging.getLogger().removeHandler(hub._log_file_handler)
+        hub._log_file_handler.close()
 
 
 def test_main_window_exposes_all_docks_through_the_hub(real_main_window):
@@ -600,6 +609,73 @@ def test_dock_hub_wires_root_file_changed_to_rules_dock(main_window, tmp_path):
         assert hub.rules_dock._root_path == root_file
         assert "cap_pair" in [hub.rules_dock.spoke_cell_combo.itemText(i)
                               for i in range(hub.rules_dock.spoke_cell_combo.count())]
+    finally:
+        _teardown_hub(hub)
+
+
+def test_dock_hub_attaches_a_file_handler_from_the_root_configs_log_file(main_window, tmp_path):
+    """2026-08-06, found live — Denis had log_file: already set in his
+    root.yaml, assumed (reasonably) it already covered GUI runs too, but
+    the GUI's own setup_logging() call (kicadstamp_gui.py) never passed a
+    log_file at all — only kicadstamp_cli.py's `apply` command honored it.
+    Reused cli_common.peek_log_file() so the same log_file: now covers the
+    GUI as well."""
+    root_file = tmp_path / "root.yaml"
+    # peek_log_file resolves log_file: relative to the CONFIG file's own
+    # directory — a plain relative path is enough here.
+    root_file.write_text("log_file: logs/run.log\n", encoding="utf-8")
+
+    root_logger = logging.getLogger()
+    original_level = root_logger.level
+    root_logger.setLevel(logging.DEBUG)  # ambient level in tests may filter INFO before it reaches handlers
+    hub = DockHub(main_window, connection=main_window.connection, verbose=False)
+    try:
+        assert hub._log_file_handler is None
+
+        hub.config_tree_dock.root_file_changed.emit(root_file)
+
+        assert hub._log_file_handler is not None
+        assert Path(hub._log_file_handler.baseFilename) == (tmp_path / "logs" / "run.log").resolve()
+
+        logging.getLogger("kicadstamp.gui_test.log_file").info("hello from a GUI test")
+        hub._log_file_handler.flush()
+        assert "hello from a GUI test" in (tmp_path / "logs" / "run.log").read_text(encoding="utf-8")
+    finally:
+        _teardown_hub(hub)
+        root_logger.setLevel(original_level)
+
+
+def test_dock_hub_swaps_the_file_handler_when_the_root_file_changes(main_window, tmp_path):
+    first_dir = tmp_path / "first"
+    first_dir.mkdir()
+    (first_dir / "root.yaml").write_text("log_file: logs/first.log\n", encoding="utf-8")
+    second_dir = tmp_path / "second"
+    second_dir.mkdir()
+    (second_dir / "root.yaml").write_text("log_file: logs/second.log\n", encoding="utf-8")
+
+    hub = DockHub(main_window, connection=main_window.connection, verbose=False)
+    try:
+        hub.config_tree_dock.root_file_changed.emit(first_dir / "root.yaml")
+        first_handler = hub._log_file_handler
+        assert Path(first_handler.baseFilename) == (first_dir / "logs" / "first.log").resolve()
+
+        hub.config_tree_dock.root_file_changed.emit(second_dir / "root.yaml")
+
+        assert hub._log_file_handler is not first_handler
+        assert first_handler not in logging.getLogger().handlers  # old one detached, not leaked
+        assert Path(hub._log_file_handler.baseFilename) == (second_dir / "logs" / "second.log").resolve()
+    finally:
+        _teardown_hub(hub)
+
+
+def test_dock_hub_has_no_file_handler_when_root_config_has_no_log_file(main_window, tmp_path):
+    root_file = tmp_path / "root.yaml"
+    root_file.write_text("{}\n", encoding="utf-8")
+
+    hub = DockHub(main_window, connection=main_window.connection, verbose=False)
+    try:
+        hub.config_tree_dock.root_file_changed.emit(root_file)
+        assert hub._log_file_handler is None
     finally:
         _teardown_hub(hub)
 

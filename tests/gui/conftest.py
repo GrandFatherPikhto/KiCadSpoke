@@ -151,6 +151,13 @@ def real_main_window(qapp):
     # logger; detach it so a session with several windows doesn't accumulate
     # handlers that keep every torn-down dock alive / keep logging forever.
     window.log_dock.remove_handler()
+    # Same leak, same reasoning, for the root config's own log_file:
+    # FileHandler (2026-08-06, see DockHub._on_root_file_changed_for_logging)
+    # — also holds an open file handle a later tmp_path cleanup may need.
+    log_file_handler = window._dock_hub._log_file_handler
+    if log_file_handler is not None:
+        logging.getLogger().removeHandler(log_file_handler)
+        log_file_handler.close()
     if window._tray_icon is not None:
         window._tray_icon.hide()
 

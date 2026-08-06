@@ -21,7 +21,13 @@ straight into DetailDock's stack pages so every existing call site keeps
 working unchanged; they are plain QWidgets now, not QDockWidgets in their
 own right.
 """
+import logging
+from pathlib import Path
+from typing import Optional
+
 from PyQt6.QtCore import Qt
+
+from kicadstamp.cli_common import peek_log_file
 
 from .docks.config_tree import ConfigTreeDock
 from .docks.detail_panel import DetailDock
@@ -38,6 +44,9 @@ class DockHub:
 
     def __init__(self, main_window, connection, verbose: bool = False):
         self.main_window = main_window
+        # The root-config log_file: FileHandler currently attached to the
+        # root logger, if any — see _on_root_file_changed_for_logging().
+        self._log_file_handler: Optional[logging.Handler] = None
 
         # ── left group: Components tree, Config tree ──────────────────────
         self.tree_dock = RoleClusterTreeDock(main_window, connection=connection)
@@ -142,6 +151,14 @@ class DockHub:
         self.config_tree_dock.root_file_changed.connect(self.placer_dock.set_root_path)
         self.config_tree_dock.root_file_changed.connect(self.thermal_via_dock.set_root_path)
         self.config_tree_dock.root_file_changed.connect(self.cells_dock.set_root_path)
+        # log_file: (Config.log_file, root-file top-level key) — 2026-08-06,
+        # found live: Denis had it set in root.yaml already, assumed
+        # (reasonably) it already covered GUI runs too, but the GUI's own
+        # setup_logging() call (kicadstamp_gui.py) never passed a log_file
+        # at all — only kicadstamp_cli.py's `apply` command honored it (see
+        # cli_common.peek_log_file). Reused here so a project's log_file:
+        # covers the GUI too, not just the CLI.
+        self.config_tree_dock.root_file_changed.connect(self._on_root_file_changed_for_logging)
         # ConfigTreeDock's own _restore_last_root() runs inside ITS __init__
         # (gui/docks/config_tree.py), which happens before this dock even
         # exists — so the very first root_file_changed emit (if a root was
@@ -155,6 +172,7 @@ class DockHub:
         self.placer_dock.set_root_path(self.config_tree_dock.root_path)
         self.thermal_via_dock.set_root_path(self.config_tree_dock.root_path)
         self.cells_dock.set_root_path(self.config_tree_dock.root_path)
+        self._on_root_file_changed_for_logging(self.config_tree_dock.root_path)
         # file_selected fires BEFORE the more specific cell_picked/
         # placement_picked/profile_picked signal on a leaf click (see
         # config_tree.py's _on_clicked) — so this fallback runs first and
@@ -312,3 +330,33 @@ class DockHub:
         self.cells_dock.set_target_file(file_path)
         self.cells_dock.load_entry(name)
         self.detail_dock.show_cells()
+
+    def _on_root_file_changed_for_logging(self, path) -> None:
+        """Attaches a root-logger FileHandler using the CURRENT root
+        config's own log_file: (Config.log_file) — see this method's own
+        connect() above for why. Re-peeked fresh on every root-file change
+        (never cached), matching kicadstamp_cli.py's own per-invocation
+        freshness — same cli_common.peek_log_file() helper, so a typo/
+        missing log_file: is handled exactly the same way the CLI already
+        handles it (a logged warning, never a raise). DEBUG level
+        regardless of the GUI's own console/LogDock verbosity, same as the
+        CLI's file handler (kicadstamp/logging_setup.py)."""
+        root_logger = logging.getLogger()
+        if self._log_file_handler is not None:
+            root_logger.removeHandler(self._log_file_handler)
+            self._log_file_handler = None
+        if path is None:
+            return
+        log_file = peek_log_file(str(path))
+        if log_file is None:
+            return
+        try:
+            Path(log_file).parent.mkdir(parents=True, exist_ok=True)
+            handler = logging.FileHandler(log_file, encoding="utf-8")
+        except OSError as e:
+            logging.warning(f"Could not open log_file {log_file!r}: {e}")
+            return
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+        root_logger.addHandler(handler)
+        self._log_file_handler = handler
