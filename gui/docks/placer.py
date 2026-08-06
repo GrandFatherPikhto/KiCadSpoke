@@ -88,6 +88,12 @@ cadence as refresh_known_roles()) and filter-as-you-type via
 _configure_searchable() — plain literal text is still accepted (editable
 combo, NoInsert policy), this is a picker, not a whitelist: "сети стоит
 сделать выпадашками (комбобоксами с поиском)" (2026-08-02).
+
+Source: Cell vs Role (added 2026-08-06, closing a real workflow complaint —
+Denis: "путь потрясающе длинный: создать экстрактор, извлечь шаблон,
+сделать cell и только потом, placement") — see _on_cell_mode_changed's own
+docstring for the backend mechanism this surfaces (ClonePlacement.role,
+which already existed but had no GUI path).
 """
 import logging
 import re
@@ -148,9 +154,24 @@ class PlacerDock(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
+        source_form = QFormLayout()
+        self.cell_mode_combo = QComboBox()
+        self.cell_mode_combo.addItems([_("Cell"), _("Role (single component, no cell)")])
+        self.cell_mode_combo.currentIndexChanged.connect(self._on_cell_mode_changed)
+        source_form.addRow(_("Source:"), self.cell_mode_combo)
+        layout.addLayout(source_form)
+
         self.cell_label = QLabel(_("No cell picked — pick one in the Config tree"))
         self.cell_label.setWordWrap(True)
         layout.addWidget(self.cell_label)
+
+        self._role_only_row = QWidget()
+        role_only_form = QFormLayout(self._role_only_row)
+        role_only_form.setContentsMargins(0, 0, 0, 0)
+        self.place_role_edit = QComboBox()
+        configure_searchable(self.place_role_edit)
+        role_only_form.addRow(_("Role:"), self.place_role_edit)
+        layout.addWidget(self._role_only_row)
 
         form = QFormLayout()
         self.cluster_edit = QComboBox()
@@ -159,7 +180,8 @@ class PlacerDock(QWidget):
         form.addRow(_("Cluster:"), self.cluster_edit)
         layout.addLayout(form)
 
-        layout.addWidget(QLabel(_("Params (placeholder -> literal net, for by-nets role resolution):")))
+        self._params_label = QLabel(_("Params (placeholder -> literal net, for by-nets role resolution):"))
+        layout.addWidget(self._params_label)
         self._params_container = QWidget()
         self._params_layout = QGridLayout(self._params_container)
         self._params_layout.setContentsMargins(0, 0, 0, 0)
@@ -249,6 +271,29 @@ class PlacerDock(QWidget):
 
         layout.addStretch(1)
         self._on_origin_mode_changed()
+        self._on_cell_mode_changed()
+
+    # ── Cell/Role source toggle ──────────────────────────────────────────
+
+    def _on_cell_mode_changed(self) -> None:
+        """Cell (default) vs Role (2026-08-06, Denis: "мы не можем как-то
+        упростить процедуру размещения отдельных компонент? ...путь
+        потрясающе длинный: создать экстрактор, извлечь шаблон, сделать
+        cell и только потом, placement") — ClonePlacement.cell/role are
+        mutually exclusive in the backend already (config/models.py's own
+        docstring: role is "for a ONE-COMPONENT placement without a single
+        via/track — creating a separate cell file just for one role is
+        cumbersome", ClonePositionCalculator synthesises a temporary Cell on
+        the fly, cells: is never touched) — this toggle is the first GUI
+        surface for that existing shortcut. Params never apply to Role mode
+        (a synthetic one-component cell has no via/track net fields to
+        template in the first place), so the whole Params section hides
+        too, not just the source row."""
+        is_role = self.cell_mode_combo.currentIndex() == 1
+        self.cell_label.setVisible(not is_role)
+        self._role_only_row.setVisible(is_role)
+        self._params_label.setVisible(not is_role)
+        self._params_container.setVisible(not is_role)
 
     # ── Wiring from the Config tree / Components tree ─────────────────────
 
@@ -309,6 +354,7 @@ class PlacerDock(QWidget):
         set_combo_items(self.cluster_edit, clusters)
         set_combo_items(self.anchor_role_edit, roles)
         set_combo_items(self.anchor_cluster_edit, clusters)
+        set_combo_items(self.place_role_edit, roles)
 
     def refresh_known_nets(self, board) -> None:
         """Populates the Params comboboxes (placeholder -> literal net) with
@@ -387,11 +433,19 @@ class PlacerDock(QWidget):
         if not name:
             self._show_message(_("Cluster name is required."), _ERROR_STYLE)
             return None
-        if not self._selected_cell:
-            self._show_message(_("Pick a Cell first."), _ERROR_STYLE)
-            return None
 
-        entry: Dict[str, Any] = {"name": name, "cell": self._selected_cell}
+        is_role_mode = self.cell_mode_combo.currentIndex() == 1
+        if is_role_mode:
+            role = self.place_role_edit.currentText().strip()
+            if not role:
+                self._show_message(_("Pick a Role first."), _ERROR_STYLE)
+                return None
+            entry: Dict[str, Any] = {"name": name, "role": role}
+        else:
+            if not self._selected_cell:
+                self._show_message(_("Pick a Cell first."), _ERROR_STYLE)
+                return None
+            entry: Dict[str, Any] = {"name": name, "cell": self._selected_cell}
 
         mode = self.origin_mode_combo.currentIndex()
         if mode == 0:
@@ -448,10 +502,11 @@ class PlacerDock(QWidget):
         if self.mirror_checkbox.isChecked():
             entry["mirror"] = True
 
-        params = {name: edit.currentText().strip() for name, edit in self._param_edits.items()
-                  if edit.currentText().strip()}
-        if params:
-            entry["params"] = params
+        if not is_role_mode:
+            params = {name: edit.currentText().strip() for name, edit in self._param_edits.items()
+                      if edit.currentText().strip()}
+            if params:
+                entry["params"] = params
 
         return entry
 
@@ -482,7 +537,10 @@ class PlacerDock(QWidget):
         if self._placer_path is None:
             self._show_message(_("Pick a Placer file in Files first."), _ERROR_STYLE)
             return None
-        if self._cells_path is None:
+        # Role mode needs no cells.yaml at all — ClonePositionCalculator
+        # synthesises its one-component Cell on the fly (see
+        # _on_cell_mode_changed's docstring), cells: is never read.
+        if "cell" in entry and self._cells_path is None:
             self._show_message(_("Pick a Cells file in Files first."), _ERROR_STYLE)
             return None
 
@@ -501,11 +559,11 @@ class PlacerDock(QWidget):
             self._show_message(_("Failed to load Placer file: {error}").format(error=e), _ERROR_STYLE)
             return None
 
-        if self._selected_cell not in cfg.cells:
+        if "cell" in entry and entry["cell"] not in cfg.cells:
             self._show_message(
                 _("Cell {cell!r} isn't reachable from the Placer file's include: — "
                   "extract/save it and make sure include: is wired (see Extract).")
-                .format(cell=self._selected_cell), _ERROR_STYLE)
+                .format(cell=entry["cell"]), _ERROR_STYLE)
             return None
 
         # Replace-by-name: previewing an already-saved placement's edits
@@ -647,6 +705,9 @@ class PlacerDock(QWidget):
         self._placer_path = placer_path
         self._selected_cell = None
         self.cell_label.setText(_("No cell picked — pick one in the Config tree"))
+        self.cell_mode_combo.setCurrentIndex(0)
+        self.place_role_edit.setCurrentText("")
+        self._on_cell_mode_changed()
         self.cluster_edit.setCurrentText("")
         self.origin_mode_combo.setCurrentIndex(0)
         self._on_origin_mode_changed()
@@ -677,8 +738,14 @@ class PlacerDock(QWidget):
         экстракторов")."""
         self._show_message("")
         self.cluster_edit.setCurrentText(str(entry.get("name", "")))
-        if "cell" in entry:
-            self.set_selected_cell(entry["cell"])
+        if "role" in entry:
+            self.cell_mode_combo.setCurrentIndex(1)
+            self.place_role_edit.setCurrentText(str(entry["role"]))
+        else:
+            self.cell_mode_combo.setCurrentIndex(0)
+            if "cell" in entry:
+                self.set_selected_cell(entry["cell"])
+        self._on_cell_mode_changed()  # setCurrentIndex above is a no-op signal-wise when unchanged
 
         xy = entry.get("xy") or [0.0, 0.0]
         if "anchor_point" in entry:

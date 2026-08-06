@@ -241,6 +241,99 @@ def test_redraw_preserves_other_placements_for_registry_safety(main_window, tmp_
     assert "1 component(s) tagged Cluster" in dock.message_label.text()
 
 
+# ── Cell/Role source toggle (2026-08-06) ─────────────────────────────────
+
+def test_role_mode_hides_cell_widgets_and_shows_role_row(main_window, tmp_path):
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+
+    def visible(w):
+        return w.isVisibleTo(dock)
+
+    assert visible(dock.cell_label) and not visible(dock._role_only_row)
+    assert visible(dock._params_container)
+
+    dock.cell_mode_combo.setCurrentIndex(1)
+
+    assert not visible(dock.cell_label) and visible(dock._role_only_row)
+    assert not visible(dock._params_container)
+
+
+def test_build_entry_dict_role_mode_needs_no_cell(main_window, tmp_path):
+    """Role mode is the whole point of this feature: no cells.yaml, no
+    Extract, just a bare component (Denis, 2026-08-06: "путь потрясающе
+    длинный: создать экстрактор, извлечь шаблон, сделать cell и только
+    потом, placement")."""
+    dock = PlacerDock(main_window)
+    dock.cluster_edit.setCurrentText("Just_One_Cap")
+    dock.cell_mode_combo.setCurrentIndex(1)
+    dock.place_role_edit.setCurrentText("C_BYPASS")
+    dock.x_edit.setText("1.0")
+    dock.y_edit.setText("2.0")
+
+    entry = dock._build_entry_dict()
+    assert entry == {"name": "Just_One_Cap", "role": "C_BYPASS", "xy": [1.0, 2.0]}
+    cp = load_clone_placement(entry)  # must validate against the real backend loader
+    assert cp.role == "C_BYPASS"
+    assert cp.cell is None
+
+
+def test_role_mode_requires_a_role(main_window, tmp_path):
+    dock = PlacerDock(main_window)
+    dock.cluster_edit.setCurrentText("X")
+    dock.cell_mode_combo.setCurrentIndex(1)
+    dock.x_edit.setText("1")
+    dock.y_edit.setText("2")
+
+    assert dock._build_entry_dict() is None
+    assert "Pick a Role first" in dock.message_label.text()
+
+
+def test_redraw_in_role_mode_skips_cell_reachability_and_cells_path_checks(main_window, tmp_path, monkeypatch):
+    """Neither _cells_path nor cfg.cells should matter in Role mode — the
+    Cell-mode-only guards must not fire just because no Cells file was ever
+    picked."""
+    placer_file = tmp_path / "root.yaml"
+    _write_yaml(placer_file, {"clone_placements": []})
+    dock = PlacerDock(main_window)
+    dock.set_placer_file(placer_file)
+    dock.cluster_edit.setCurrentText("Just_One_Cap")
+    dock.cell_mode_combo.setCurrentIndex(1)
+    dock.place_role_edit.setCurrentText("C_BYPASS")
+    dock.x_edit.setText("1")
+    dock.y_edit.setText("2")
+
+    monkeypatch.setattr(placer_mod, "load_config", lambda path: (Config(), RuntimeContext()))
+
+    payload = dock._collect_redraw_inputs()
+    assert payload is not None
+    assert payload["cfg"].clone_placements[0].role == "C_BYPASS"
+
+
+def test_load_placement_round_trips_role_mode(main_window, tmp_path):
+    dock = PlacerDock(main_window)
+    entry = {"name": "Just_One_Cap", "role": "C_BYPASS", "xy": [1.0, 2.0]}
+
+    dock.load_placement(entry)
+
+    assert dock.cluster_edit.currentText() == "Just_One_Cap"
+    assert dock.cell_mode_combo.currentIndex() == 1
+    assert dock.place_role_edit.currentText() == "C_BYPASS"
+    assert dock.x_edit.text() == "1.0"
+    assert dock.y_edit.text() == "2.0"
+    assert dock._build_entry_dict() == entry
+
+
+def test_new_placement_resets_cell_mode_to_cell(main_window, tmp_path):
+    dock, _, placer_file = _make_cell_and_dock(main_window, tmp_path)
+    dock.cell_mode_combo.setCurrentIndex(1)
+    dock.place_role_edit.setCurrentText("C_BYPASS")
+
+    dock.new_placement(placer_file)
+
+    assert dock.cell_mode_combo.currentIndex() == 0
+    assert dock.place_role_edit.currentText() == ""
+
+
 def test_load_placement_round_trips_absolute_xy(main_window, tmp_path):
     """Reverse of _build_entry_dict — ConfigTreeDock's Clone placements
     category feeds a saved clone_placement dict straight back in via

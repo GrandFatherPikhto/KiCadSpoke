@@ -184,12 +184,20 @@ tab is hidden outright (not just its content) until it actually applies.
 Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.py apply --only
 <name>`. **This dock moves real footprints on the live board.**
 
-- **Cell** — picked in the Cells tab (see above); the current pick is shown here.
+- **Source** — **Cell** (default) or **Role** (added 2026-08-06, Denis: "путь потрясающе длинный:
+  создать экстрактор, извлечь шаблон, сделать cell и только потом, placement") — Role skips
+  Extract/Cell entirely for a genuine single-component placement: pick a Role directly (same
+  autocompleted combo as Anchor's own Role field below), no `cells:` entry ever gets written or
+  read (`ClonePlacement.role`, already supported by the backend — this toggle is just its first GUI
+  surface). Only good for a bare component with no via/track/second component of its own — for
+  anything with real content, Cell + Extract is still the right path.
+- **Cell** — picked in the Cells tab (see above); the current pick is shown here. Hidden in Role mode.
 - **Cluster** — the placement's name (also what gets clicked from the Components tree, see
   above).
 - **Params** — one row per `{PLACEHOLDER}` found anywhere in the picked Cell's own YAML (auto-
   discovered, not hand-typed) — the literal net each placeholder should resolve to for *this*
-  instance.
+  instance. Hidden in Role mode (a synthetic one-component cell has no via/track net fields to
+  template).
 - **Origin**:
   - *Absolute XY* — a literal board position.
   - *Anchor (ref/role)* — position relative to an existing component: Ref **or** Role (mutually
@@ -198,7 +206,8 @@ Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.
     autocompleted from the live board; Ref is plain free text (this project prefers Role over
     refdes — Role survives re-annotation, refdes doesn't — Ref exists mainly for the rare case it's
     actually needed).
-  - *Point* — position relative to a named `points:` entry.
+  - *Point* — position relative to a named `points:` entry, autocompleted from the whole project
+    (every `points:` key reachable via `include:`, not just this file's own).
   - Anchor/Point modes also take a flat XY **shift**.
 - **Rotation / Layer / Mirror** — as in `ClonePlacement`'s own fields (see
   [docs/config.md](config.md)).
@@ -214,8 +223,7 @@ Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.
   undo covers "moved something to the wrong place" — there's no separate movement log here.
 
 Not covered by the GUI yet (all still reachable by hand-editing the saved YAML): `anchor_sheet`
-narrowing, this dock's own Point-chain field has no name autocomplete (unlike the new Points panel
-below, which does), `refs:` explicit role→ref override, `by_selection` mode.
+narrowing, `refs:` explicit role→ref override, `by_selection` mode.
 
 ## Project
 
