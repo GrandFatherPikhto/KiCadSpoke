@@ -72,6 +72,97 @@ def test_net_aliases_table_alias_and_checkbox_are_cell_widgets(main_window, tmp_
     assert dock.nets_table.cellWidget(row, 2) is dock._rule_net_checkboxes["+3V3"]
 
 
+# ── Cell/Profile file pickers as independent combos (2026-08-06, Denis:
+# "имя файла, куда пишем extract и cell... тоже, выпадашками" — un-couples
+# them from always following the same ConfigTreeDock click) ─────────────
+
+def _combo_index_for_filename(combo, filename):
+    """display_path() shows a path relative to PROJECT_ROOT (falling back
+    to absolute outside it) — under tmp_path (always outside the real
+    PROJECT_ROOT) that's the full absolute path, not a bare filename, so
+    tests match on itemData's own .name instead of item TEXT."""
+    for i in range(combo.count()):
+        if combo.itemData(i).name == filename:
+            return i
+    return -1
+
+
+def test_set_root_path_populates_both_file_combos(tmp_path, main_window):
+    (tmp_path / "sub.yaml").write_text("cells: {}\n", encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text("include:\n  - sub.yaml\n", encoding="utf-8")
+    dock = ExtractDock(main_window)
+
+    dock.set_root_path(root)
+
+    target_names = {dock.target_file_combo.itemData(i).name for i in range(dock.target_file_combo.count())}
+    profile_names = {dock.profile_file_combo.itemData(i).name for i in range(dock.profile_file_combo.count())}
+    assert target_names == {"root.yaml", "sub.yaml"}
+    assert profile_names == {"root.yaml", "sub.yaml"}
+
+
+def test_picking_the_target_combo_calls_set_target_file(tmp_path, main_window):
+    (tmp_path / "sub.yaml").write_text("cells: {}\n", encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text("include:\n  - sub.yaml\n", encoding="utf-8")
+    dock = ExtractDock(main_window)
+    dock.set_root_path(root)
+
+    dock.target_file_combo.setCurrentIndex(_combo_index_for_filename(dock.target_file_combo, "sub.yaml"))
+
+    assert dock._target_path is not None
+    assert dock._target_path.name == "sub.yaml"
+
+
+def test_target_and_profile_files_can_genuinely_differ(tmp_path, main_window):
+    """The whole point of the request — previously these two always
+    followed the same ConfigTreeDock click and could never diverge."""
+    (tmp_path / "cells_only.yaml").write_text("cells: {}\n", encoding="utf-8")
+    (tmp_path / "profiles_only.yaml").write_text("extract_profiles: {}\n", encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text("include:\n  - cells_only.yaml\n  - profiles_only.yaml\n", encoding="utf-8")
+    dock = ExtractDock(main_window)
+    dock.set_root_path(root)
+
+    dock.target_file_combo.setCurrentIndex(
+        _combo_index_for_filename(dock.target_file_combo, "cells_only.yaml"))
+    dock.profile_file_combo.setCurrentIndex(
+        _combo_index_for_filename(dock.profile_file_combo, "profiles_only.yaml"))
+
+    assert dock._target_path.name == "cells_only.yaml"
+    assert dock._profile_path.name == "profiles_only.yaml"
+    assert dock._target_path != dock._profile_path
+
+
+def test_set_target_file_reflects_into_the_combo_even_before_root_is_known(tmp_path, main_window):
+    """ConfigTreeDock's own file_selected click must keep working exactly
+    as before, even for a dock that never got set_root_path() yet (or a
+    file outside the include graph) — same fallback PlacerDock's
+    cell_combo/set_selected_cell already relies on."""
+    cells_file = tmp_path / "cells.yaml"
+    cells_file.write_text("cells: {}\n", encoding="utf-8")
+    dock = ExtractDock(main_window)
+
+    dock.set_target_file(cells_file)
+
+    assert dock.target_file_combo.currentData() == cells_file
+    assert dock._target_path == cells_file
+
+
+def test_file_combos_are_closed_pickers_not_free_text_fields(main_window):
+    dock = ExtractDock(main_window)
+    assert not dock.target_file_combo.isEditable()
+    assert not dock.profile_file_combo.isEditable()
+
+
+def test_profile_key_field_has_an_explanatory_tooltip(main_window, tmp_path):
+    """Denis, live 2026-08-06: "я постоянно забываю" what Profile key even
+    is — a hover reminder beats asking again next time."""
+    dock = ExtractDock(main_window)
+    assert dock.profile_key_edit.toolTip()
+    assert "extract_profiles" in dock.profile_key_edit.toolTip()
+
+
 def test_cluster_slug_default_when_nothing_matches(main_window, tmp_path):
     cells_file = tmp_path / "cells.yaml"
     _write_yaml(cells_file, {})

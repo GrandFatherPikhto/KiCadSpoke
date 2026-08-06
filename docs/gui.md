@@ -161,6 +161,18 @@ section's own — the dock couldn't shrink below that even when most of it didn'
 A `QTabWidget` only sizes for the current page, so the dock resizes freely; **Net template role**'s
 tab is hidden outright (not just its content) until it actually applies.
 
+- **Cell file** / **Profile file** — closed-set dropdowns (not editable — same reasoning as
+  Placer's Cell combo), populated from every file reachable via `include:` from the project root
+  (`collect_graph_files`, the same helper `rename.py`'s own renaming uses). Added 2026-08-06 (Denis:
+  "имя файла, куда пишем extract и cell... тоже, выпадашками") — until then both ALWAYS followed
+  whatever file was last clicked in the Config tree (`file_selected` fired `set_target_file`/
+  `set_profile_file` together, a deliberate 2026-08-03 collapse of what used to be two independent
+  role slots). Asked live whether the two could even differ: yes — the backend already supports
+  independent `target_path`/`profile_path` (an `extract_profiles:` entry has its own `output:` too)
+  — the GUI just never surfaced it. `set_target_file()`/`set_profile_file()` stay the SAME shared
+  entry points a Config-tree click still calls, so that path is unchanged; these combos are a
+  second, independent way to set either one, genuinely un-coupling them if you want a Cell and its
+  Extract profile to live in different files.
 - **Cell name** — defaults to the current selection's Cluster, slugified (`PWR/DAC0` →
   `pwr_dac0`), if nothing's been extracted from this Cluster before; if an existing Cells/
   Extractor key already matches, that wins instead. Never overwrites something you've typed.

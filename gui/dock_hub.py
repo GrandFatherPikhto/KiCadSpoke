@@ -151,6 +151,11 @@ class DockHub:
         self.config_tree_dock.root_file_changed.connect(self.placer_dock.set_root_path)
         self.config_tree_dock.root_file_changed.connect(self.thermal_via_dock.set_root_path)
         self.config_tree_dock.root_file_changed.connect(self.cells_dock.set_root_path)
+        # Extract's own Cell file/Profile file combos (added 2026-08-06,
+        # Denis: "имя файла, куда пишем extract и cell... тоже, выпадашками"
+        # — un-couples them from always following the same file_selected
+        # click) need the whole include graph too, same reasoning as above.
+        self.config_tree_dock.root_file_changed.connect(self.extract_dock.set_root_path)
         # log_file: (Config.log_file, root-file top-level key) — 2026-08-06,
         # found live: Denis had it set in root.yaml already, assumed
         # (reasonably) it already covered GUI runs too, but the GUI's own
@@ -172,6 +177,7 @@ class DockHub:
         self.placer_dock.set_root_path(self.config_tree_dock.root_path)
         self.thermal_via_dock.set_root_path(self.config_tree_dock.root_path)
         self.cells_dock.set_root_path(self.config_tree_dock.root_path)
+        self.extract_dock.set_root_path(self.config_tree_dock.root_path)
         self._on_root_file_changed_for_logging(self.config_tree_dock.root_path)
         # file_selected fires BEFORE the more specific cell_picked/
         # placement_picked/profile_picked signal on a leaf click (see
