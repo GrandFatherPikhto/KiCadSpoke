@@ -1,0 +1,6 @@
+registry_path: registry
+track_registry_path: tracks
+log_file: logs/3ch-awg-tia.log
+operation_log_dir: logs/operation
+include:
+- components.yaml

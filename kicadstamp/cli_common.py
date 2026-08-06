@@ -15,7 +15,7 @@ never ``sys.exit()`` — it should raise ``PlacerError``/``ValidationError``/
 exit code and the message.
 """
 import logging
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import yaml
 
@@ -97,6 +97,8 @@ def peek_log_file(config_path: str) -> str | None:
         raw = data.get("log_file") if isinstance(data, dict) else None
         if not raw:
             return None
+        if Path(raw).is_absolute() or PureWindowsPath(raw).is_absolute():
+            return str(Path(raw))
         return str(Path(config_path).parent / raw)
     except Exception as e:
         logging.warning(_("Could not read log_file from config {path}: {e}")
