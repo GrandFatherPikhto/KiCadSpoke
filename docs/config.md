@@ -253,18 +253,22 @@ clone_placements:
   see the `xy:` note above), `rotation_deg` rotates only the cell's contents.
 - **Absolute** (no anchor field set at all) — `xy:` is a required, literal board coordinate.
 
-**Role → real component — two modes**, decided by presence of `params`/`nets` (by-nets) vs their
-absence (by-selection):
-- **By nets** (repeated sections — PI-filters, DAC channels): each role inside the cell resolves
-  against a real net, via `nets:` (literal `role: net`) and/or `params:` (fills `{placeholder}`s in
-  the cell's own `net_template:` fields, same substitution as via/track `net:`). Ambiguous candidates
-  (2+ matching the resolved net) are narrowed by `anchor_sheet` → `Cluster` → current board selection
-  → physical proximity to the anchor → a fatal error, in that order — see
-  `clone_role_resolver.py`'s docstrings for the exact cascade.
-- **By selection** (rare, one-off sections — a single MCU): no `params`/`nets` at all (or
+**Role → real component — three modes:**
+- **By nets** (repeated sections — PI-filters, DAC channels), when `params`/`nets` are present: each
+  role inside the cell resolves against a real net, via `nets:` (literal `role: net`) and/or
+  `params:` (fills `{placeholder}`s in the cell's own `net_template:` fields, same substitution as
+  via/track `net:`). Ambiguous candidates (2+ matching the resolved net) are narrowed by
+  `anchor_sheet` → `Cluster` → current board selection → physical proximity to the anchor → a fatal
+  error, in that order — see `clone_role_resolver.py`'s docstrings for the exact cascade.
+- **By selection** (rare, one-off sections — a single MCU), when `params`/`nets` are absent (or
   `by_selection: true` explicitly, if `params` is present only for via/track net resolution and would
-  otherwise be misread as "by nets" mode) — roles resolve against whatever's currently selected on the
+  otherwise be misread as "by nets" mode): roles resolve against whatever's currently selected on the
   live board in the PCB editor.
+- **By Cluster tag** (single component only — `cluster:` set, added 2026-08-06): the ONE component
+  already tagged with that Cluster PCB field (assigned beforehand, e.g. via the GUI's Components tree
+  or fieldstool) — no selection, no nets, no narrowing cascade. Zero or more than one match is fatal
+  (Cluster is meant to be unique per instance, unlike Role — a shared category). `nets`/`params`/
+  `by_selection` are meaningless here and fatal if set alongside `cluster`.
 
 **Full field reference:**
 
@@ -272,7 +276,7 @@ absence (by-selection):
 |---|---|
 | `name` | Required — registry identity fallback, `--only` target, shows up in every diagnostic message. |
 | `xy` | Required. See the anchored/absolute modes above and the `xy:` note. |
-| `cell` **or** `role` | Exactly one. `cell:` references `cells:` (inline or `include:`d). `role:` synthesises a temporary one-component cell on the fly (for a placement not worth a whole cell file). |
+| `cell` **or** `role` **or** `cluster` | Exactly one. `cell:` references `cells:` (inline or `include:`d). `role:`/`cluster:` both synthesise a temporary one-component cell on the fly (for a placement not worth a whole cell file) — `role:` matches the live Role field (a category, ambiguity gets narrowed), `cluster:` matches an already-assigned Cluster field directly (meant to already be unique, no narrowing). |
 | `rotation_deg` | Default `0.0`. Rotates the cell's contents (anchored mode) or the whole thing (absolute mode). |
 | `anchor_ref` / `anchor_role`(+`anchor_sheet`+`anchor_cluster`) / `anchor_point` | Optional, mutually exclusive — see **Positioning** above. |
 | `anchor_pad` | Optional, only meaningful with an anchor set — narrows the anchor to a specific pad rather than the footprint's centre. |

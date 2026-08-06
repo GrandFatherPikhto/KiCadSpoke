@@ -427,7 +427,7 @@ _THERMAL_VIA_ARRAY_KNOWN_KEYS = {
 
 
 _CLONE_PLACEMENT_KNOWN_KEYS = {
-    'name', 'cell', 'role', 'xy', 'rotation_deg',
+    'name', 'cell', 'role', 'cluster', 'xy', 'rotation_deg',
     'nets', 'params', 'net_overrides', 'retired', 'skip', 'ignore_selection',
     'anchor_ref', 'anchor_pad', 'anchor_role', 'anchor_sheet', 'anchor_cluster',
     'anchor_point', 'layer', 'mirror', 'refs', 'by_selection',
@@ -458,18 +458,29 @@ def _load_clone_placement(data: dict[str, Any]) -> ClonePlacement:
 
     cell = data.get('cell')
     role = data.get('role')
-    if cell is not None and role is not None:
+    cluster = data.get('cluster')
+    _content_count = sum(x is not None for x in (cell, role, cluster))
+    if _content_count > 1:
         raise ValidationError(format_fatal_error(
-            _("cell and role together in clone_placement {name!r}").format(name=name),
-            [_("these are mutually exclusive ways to define the content: "
-               "either a ready-made cell (cell), or a single-component placement "
-               "by role (role), not both")]
+            _("more than one of cell/role/cluster set in clone_placement {name!r}").format(name=name),
+            [_("these are mutually exclusive ways to define the content: a ready-made cell "
+               "(cell), a single-component placement by Role field (role), or a "
+               "single-component placement by an existing Cluster field (cluster) — "
+               "pick exactly one")]
         ))
-    if cell is None and role is None:
+    if _content_count == 0:
         raise ValidationError(format_fatal_error(
-            _("neither cell nor role set in clone_placement {name!r}").format(name=name),
-            [_("need either cell: <name from cells:>, or role: <ROLE> for "
-               "a single-component placement without a separate cell file")]
+            _("neither cell, role, nor cluster set in clone_placement {name!r}").format(name=name),
+            [_("need cell: <name from cells:> (ready-made cell), role: <ROLE> (single component "
+               "found by its Role field), or cluster: <CLUSTER> (single component found by an "
+               "already-assigned Cluster field)")]
+        ))
+    if cluster is not None and (data.get('nets') or data.get('params') or data.get('by_selection')):
+        raise ValidationError(format_fatal_error(
+            _("cluster together with nets/params/by_selection in clone_placement {name!r}").format(name=name),
+            [_("cluster: finds its single target by an exact, already-unique Cluster field match — "
+               "nets/params/by_selection (selection-vs-nets role resolution) have no meaning here, "
+               "remove them")]
         ))
 
     if anchor_ref is not None and anchor_role is not None:
@@ -560,6 +571,7 @@ def _load_clone_placement(data: dict[str, Any]) -> ClonePlacement:
         name=name,
         cell=cell,
         role=role,
+        cluster=cluster,
         xy=xy,
         rotation_deg=data.get('rotation_deg', 0.0),
         nets=nets,

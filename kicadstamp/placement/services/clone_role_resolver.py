@@ -1,6 +1,7 @@
 # kicadstamp/placement/services/clone_role_resolver.py
 """
-clone_role_resolver.py — role‑to‑ref mapping for ClonePlacement, two independent mechanisms:
+clone_role_resolver.py — role‑to‑ref mapping for ClonePlacement, three
+independent mechanisms:
 
   1. By selection (resolve_roles_by_selection) — for rare, one‑off sections
      (e.g. a single MCU on the board). The user selects the components of a
@@ -15,9 +16,19 @@ clone_role_resolver.py — role‑to‑ref mapping for ClonePlacement, two indep
      via net_resolution.resolve_net). No geometry‑based or ref‑pattern matching
      — only explicitly specified nets.
 
+  3. By Cluster tag (resolve_by_cluster_tag) — for ClonePlacement.cluster
+     (2026-08-06): a single component identified by an EXISTING Cluster PCB
+     field, assigned by hand beforehand (RoleClusterTreeDock/fieldstool).
+     Cluster is meant to be unique per instance (Role is a category, many
+     components legitimately share one — see Denis, 2026-08-06: "ОДНУ деталь
+     надо размещать просто по кластеру. Роль там не при делах"), so this is a
+     direct, unconditional field match — no selection/nets, no narrowing
+     cascade; ambiguity here is a tagging mistake, not something to resolve.
+
 The mode is chosen BEFORE calling this module (see planner/orchestration):
-if ClonePlacement has nets or params set — mode is "by nets", otherwise "by
-selection". This is final, no automatic mode switching inside the resolver.
+ClonePlacement.cluster set — mode is "by cluster tag"; otherwise, nets or
+params set — mode is "by nets"; otherwise — "by selection". This is final,
+no automatic mode switching inside the resolver.
 
 Implementation notes (T3.1 god-file decomposition): the shared candidate-
 narrowing cascade (anchor_sheet -> Cluster -> selection -> physical proximity)
@@ -34,10 +45,43 @@ from ...config import Cell, ClonePlacement
 from ...exceptions import ValidationError, format_fatal_error
 from ...net_resolution import resolve_net, resolve_placeholder
 from .component_pool import ROLE_FIELD_NAME
+from ...constants import CLUSTER_FIELD_NAME
 from ...i18n import _
 from .role_narrowing import _narrow_ambiguous_candidates, _narrow_by_sheet_cluster_selection
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_by_cluster_tag(adapter, cell: Cell, clone: ClonePlacement) -> dict[str, str]:
+    """Mapping by an EXISTING Cluster PCB field — see module docstring, §3.
+    `cell` is the synthetic one-component Cell ClonePositionCalculator
+    builds for cluster mode (its single slot's role is a synthetic
+    placeholder key, not a real Role value — see _resolve_content); this
+    returns {that placeholder: matched ref}, the same shape resolve_roles_by_
+    selection/by_nets return, so apply_clone_geometry doesn't need to know
+    which of the three modes produced it."""
+    matches = [fp for fp in adapter.get_footprints()
+              if adapter.get_field_value(fp, CLUSTER_FIELD_NAME) == clone.cluster]
+    if not matches:
+        raise ValidationError(format_fatal_error(
+            _("{name}: no component tagged {field}={cluster!r}")
+            .format(name=clone.name, field=CLUSTER_FIELD_NAME, cluster=clone.cluster),
+            [_("tag the target component's {field} field first (RoleClusterTreeDock or "
+               "fieldstool), or check for a typo").format(field=CLUSTER_FIELD_NAME)]
+        ))
+    if len(matches) > 1:
+        refs = sorted(fp.reference_field.text.value for fp in matches)
+        raise ValidationError(format_fatal_error(
+            _("{name}: {count} components tagged {field}={cluster!r}, expected exactly one")
+            .format(name=clone.name, count=len(matches), field=CLUSTER_FIELD_NAME, cluster=clone.cluster),
+            [_("{field} is meant to be unique per instance — fix the tagging: {refs}")
+             .format(field=CLUSTER_FIELD_NAME, refs=refs)]
+        ))
+    slot_role = cell.components[0].role
+    ref = matches[0].reference_field.text.value
+    logger.info(_("[{name}] cluster {cluster!r} -> {ref}")
+                .format(name=clone.name, cluster=clone.cluster, ref=ref))
+    return {slot_role: ref}
 
 
 def clone_uses_selection_mode(clone: ClonePlacement) -> bool:

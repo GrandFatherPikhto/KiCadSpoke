@@ -313,13 +313,26 @@ class ClonePlacement:
     channels). Presence of params OR nets means "by nets" mode; absence means
     "by selection".
 
-    cell OR role (mutually exclusive, exactly one required):
+    cell OR role OR cluster (mutually exclusive, exactly one required):
       - cell: reference to a Cell from cfg.cells.
       - role: for a ONE‑COMPONENT placement without a single via/track —
         creating a separate cell file just for one role is cumbersome.
         ClonePositionCalculator synthesises a temporary Cell "on the fly"
         (one component with that role at (0,0), angle 0) — cells: in YAML
-        is not touched.
+        is not touched. Resolution matches the live Role field — Role is a
+        CATEGORY, not unique (many components routinely share one), so
+        ambiguity is resolved by selection/anchor_cluster narrowing, same
+        cascade as a real cell's role slots (see clone_role_resolver.py).
+      - cluster: for a ONE‑COMPONENT placement identified by an EXISTING
+        Cluster PCB field instead of Role (2026-08-06, Denis: "ОДНУ деталь
+        надо размещать просто по кластеру. Роль там не при делах") — Cluster
+        is meant to be assigned once and stay unique per instance (unlike
+        Role), typically hand-tagged beforehand via RoleClusterTreeDock/
+        fieldstool. No selection/nets/narrowing cascade: an exact Cluster
+        match is either unique (used directly) or a tagging mistake, fatal
+        either way (see resolve_by_cluster_tag in clone_role_resolver.py).
+        nets/params/by_selection have no meaning here — fatal if set
+        alongside cluster.
 
     skip — see ThermalViaArrayConfig.skip for the retired-vs-skip distinction.
 
@@ -339,6 +352,7 @@ class ClonePlacement:
     rotation_deg: float = 0.0
     cell: str | None = None
     role: str | None = None
+    cluster: str | None = None
     nets: dict[str, str] = field(default_factory=dict)      # role -> net (literal)
     params: dict[str, Any] = field(default_factory=dict)    # for {placeholder} in net cells
     net_overrides: dict[str, str] = field(default_factory=dict)  # final override of resolved name
