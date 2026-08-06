@@ -38,6 +38,12 @@ Redraw call kicadstamp.config.load_thermal_via_array(entry), the same
 per-entry validator load_config() itself uses (extracted 2026-08-03 from
 its former inline-only form specifically so this dock could reuse it,
 mirroring load_clone_placement's existing public/private split).
+
+anchor_point IS autocompleted (added 2026-08-06, Denis: "думаю имена
+Points тоже надо делать выпадашкой с именами") — set_root_path(), wired to
+ConfigTreeDock's root_file_changed same as RuleDock's/PlacerDock's own,
+sources the combo from the WHOLE include graph via
+collect_all_point_names(), not just this dock's own target file.
 """
 import logging
 from pathlib import Path
@@ -59,6 +65,7 @@ from ..worker import start_long_op
 from ._common import (ERROR_STYLE as _ERROR_STYLE, SUCCESS_STYLE as _SUCCESS_STYLE,
                       WARN_STYLE as _WARN_STYLE, configure_searchable, display_path,
                       set_combo_items, show_message, upsert_list_entry)
+from .rename import collect_all_point_names
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +86,7 @@ class ThermalViaArrayDock(QWidget):
         # parent-less QThread isn't garbage-collected mid-run.
         self._active_op: Optional[Any] = None
         self._path: Optional[Path] = None
+        self._root_path: Optional[Path] = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -117,7 +125,8 @@ class ThermalViaArrayDock(QWidget):
         self._point_row = QWidget()
         point_form = QFormLayout(self._point_row)
         point_form.setContentsMargins(0, 0, 0, 0)
-        self.point_edit = QLineEdit()
+        self.point_edit = QComboBox()
+        configure_searchable(self.point_edit)
         point_form.addRow(_("Point:"), self.point_edit)
         layout.addWidget(self._point_row)
 
@@ -187,6 +196,18 @@ class ThermalViaArrayDock(QWidget):
         self.target_label.setText(
             display_path(path) if path is not None
             else _("No file picked (pick one in the Config tree)"))
+
+    def set_root_path(self, path: Optional[Path]) -> None:
+        """Wired to ConfigTreeDock's root_file_changed — the Point combo is
+        sourced from the WHOLE include graph (a Point routinely lives in a
+        different file than the thermal_via_arrays entry referencing it),
+        same reasoning/pattern as RuleDock's/PlacerDock's own set_root_path."""
+        self._root_path = path
+        self._refresh_point_names()
+
+    def _refresh_point_names(self) -> None:
+        names = collect_all_point_names(self._root_path) if self._root_path is not None else []
+        set_combo_items(self.point_edit, names)
 
     def refresh_known_roles(self, snapshot) -> None:
         """Same "populate from the live board" pattern as PlacerDock's own
@@ -266,7 +287,7 @@ class ThermalViaArrayDock(QWidget):
             if cluster:
                 entry["anchor_cluster"] = cluster
         else:  # Point
-            point = self.point_edit.text().strip()
+            point = self.point_edit.currentText().strip()
             if not point:
                 self._show_message(_("Point: name is required."), _ERROR_STYLE)
                 return None
@@ -430,7 +451,7 @@ class ThermalViaArrayDock(QWidget):
         self.anchor_ref_edit.setText("")
         self.anchor_role_edit.setCurrentText("")
         self.anchor_cluster_edit.setCurrentText("")
-        self.point_edit.setText("")
+        self.point_edit.setCurrentText("")
         self.pad_edit.setText("")
         self.net_edit.setCurrentText("GND")
         self.rows_edit.setText("")
@@ -456,7 +477,7 @@ class ThermalViaArrayDock(QWidget):
 
         if "anchor_point" in entry:
             self.anchor_mode_combo.setCurrentIndex(1)
-            self.point_edit.setText(str(entry["anchor_point"]))
+            self.point_edit.setCurrentText(str(entry["anchor_point"]))
         else:
             self.anchor_mode_combo.setCurrentIndex(0)
             self.anchor_ref_edit.setText(str(entry.get("anchor_ref", "")))

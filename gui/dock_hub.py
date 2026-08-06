@@ -132,8 +132,13 @@ class DockHub:
         # gui/docks/rules.py's module docstring), which starts from the
         # project's root, not whatever file rules_dock.set_target_file above
         # points it at — same root_file_changed signal as Root, second
-        # listener.
+        # listener. Placer's/ThermalVia's own Point combos (added
+        # 2026-08-06, closing the "anchor_point Point-name autocomplete" gap
+        # their own module docstrings had deferred) need the same whole-
+        # graph source, same reasoning.
         self.config_tree_dock.root_file_changed.connect(self.rules_dock.set_root_path)
+        self.config_tree_dock.root_file_changed.connect(self.placer_dock.set_root_path)
+        self.config_tree_dock.root_file_changed.connect(self.thermal_via_dock.set_root_path)
         # ConfigTreeDock's own _restore_last_root() runs inside ITS __init__
         # (gui/docks/config_tree.py), which happens before this dock even
         # exists — so the very first root_file_changed emit (if a root was
@@ -144,6 +149,8 @@ class DockHub:
         # empty.
         self.root_metadata_dock.set_target_file(self.config_tree_dock.root_path)
         self.rules_dock.set_root_path(self.config_tree_dock.root_path)
+        self.placer_dock.set_root_path(self.config_tree_dock.root_path)
+        self.thermal_via_dock.set_root_path(self.config_tree_dock.root_path)
         # file_selected fires BEFORE the more specific cell_picked/
         # placement_picked/profile_picked signal on a leaf click (see
         # config_tree.py's _on_clicked) — so this fallback runs first and

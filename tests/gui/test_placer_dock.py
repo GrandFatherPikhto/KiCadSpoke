@@ -108,7 +108,7 @@ def test_point_mode_requires_a_name(main_window, tmp_path):
     assert dock._build_entry_dict() is None
     assert "name is required" in dock.message_label.text()
 
-    dock.point_edit.setText("origin_point")
+    dock.point_edit.setCurrentText("origin_point")
     entry = dock._build_entry_dict()
     assert entry["anchor_point"] == "origin_point"
 
@@ -288,7 +288,7 @@ def test_load_placement_round_trips_point_mode(main_window, tmp_path):
     dock.load_placement(entry)
 
     assert dock.origin_mode_combo.currentIndex() == 2
-    assert dock.point_edit.text() == "origin_point"
+    assert dock.point_edit.currentText() == "origin_point"
     assert dock.shift_x_edit.text() == "1.0"
     assert dock.shift_y_edit.text() == "2.0"
 
