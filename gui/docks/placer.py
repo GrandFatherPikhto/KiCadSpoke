@@ -89,11 +89,14 @@ _configure_searchable() — plain literal text is still accepted (editable
 combo, NoInsert policy), this is a picker, not a whitelist: "сети стоит
 сделать выпадашками (комбобоксами с поиском)" (2026-08-02).
 
-Source: Cell vs Role (added 2026-08-06, closing a real workflow complaint —
-Denis: "путь потрясающе длинный: создать экстрактор, извлечь шаблон,
-сделать cell и только потом, placement") — see _on_cell_mode_changed's own
-docstring for the backend mechanism this surfaces (ClonePlacement.role,
-which already existed but had no GUI path).
+Source: Cell / Role / Cluster (added 2026-08-06, closing a real workflow
+complaint — Denis: "путь потрясающе длинный: создать экстрактор, извлечь
+шаблон, сделать cell и только потом, placement") — see
+_on_cell_mode_changed's own docstring for the backend mechanisms this
+surfaces (ClonePlacement.role/cluster, both already existed in the backend
+but had no GUI path) and why Cluster exists as a THIRD option rather than
+Role alone (same-day pushback, Denis: "Условие уникальности у нас касается
+кластера, а не роли").
 """
 import logging
 import re
@@ -156,7 +159,8 @@ class PlacerDock(QWidget):
 
         source_form = QFormLayout()
         self.cell_mode_combo = QComboBox()
-        self.cell_mode_combo.addItems([_("Cell"), _("Role (single component, no cell)")])
+        self.cell_mode_combo.addItems([_("Cell"), _("Role (single component, no cell)"),
+                                       _("Cluster (existing tag, single component)")])
         self.cell_mode_combo.currentIndexChanged.connect(self._on_cell_mode_changed)
         source_form.addRow(_("Source:"), self.cell_mode_combo)
         layout.addLayout(source_form)
@@ -172,6 +176,19 @@ class PlacerDock(QWidget):
         configure_searchable(self.place_role_edit)
         role_only_form.addRow(_("Role:"), self.place_role_edit)
         layout.addWidget(self._role_only_row)
+
+        self._cluster_only_row = QWidget()
+        cluster_only_form = QFormLayout(self._cluster_only_row)
+        cluster_only_form.setContentsMargins(0, 0, 0, 0)
+        self.place_cluster_edit = QComboBox()
+        configure_searchable(self.place_cluster_edit)
+        # Deliberately NOT labelled "Cluster:" — that label is already taken
+        # by self.cluster_edit below (the placement's own NAME, which is
+        # what a successful Redraw tags components Cluster=<name> WITH —
+        # see module docstring's Cluster-tagging note). This field is the
+        # opposite direction: an ALREADY-EXISTING Cluster tag to search FOR.
+        cluster_only_form.addRow(_("Existing Cluster:"), self.place_cluster_edit)
+        layout.addWidget(self._cluster_only_row)
 
         form = QFormLayout()
         self.cluster_edit = QComboBox()
@@ -276,24 +293,31 @@ class PlacerDock(QWidget):
     # ── Cell/Role source toggle ──────────────────────────────────────────
 
     def _on_cell_mode_changed(self) -> None:
-        """Cell (default) vs Role (2026-08-06, Denis: "мы не можем как-то
-        упростить процедуру размещения отдельных компонент? ...путь
-        потрясающе длинный: создать экстрактор, извлечь шаблон, сделать
-        cell и только потом, placement") — ClonePlacement.cell/role are
-        mutually exclusive in the backend already (config/models.py's own
-        docstring: role is "for a ONE-COMPONENT placement without a single
-        via/track — creating a separate cell file just for one role is
-        cumbersome", ClonePositionCalculator synthesises a temporary Cell on
-        the fly, cells: is never touched) — this toggle is the first GUI
-        surface for that existing shortcut. Params never apply to Role mode
-        (a synthetic one-component cell has no via/track net fields to
-        template in the first place), so the whole Params section hides
-        too, not just the source row."""
-        is_role = self.cell_mode_combo.currentIndex() == 1
-        self.cell_label.setVisible(not is_role)
-        self._role_only_row.setVisible(is_role)
-        self._params_label.setVisible(not is_role)
-        self._params_container.setVisible(not is_role)
+        """Cell (default) vs Role vs Cluster (2026-08-06). Role: Denis, "мы
+        не можем как-то упростить процедуру размещения отдельных компонент?
+        ...путь потрясающе длинный: создать экстрактор, извлечь шаблон,
+        сделать cell и только потом, placement" — ClonePlacement.role
+        already existed in the backend (config/models.py: "for a
+        ONE-COMPONENT placement without a single via/track — creating a
+        separate cell file just for one role is cumbersome",
+        ClonePositionCalculator synthesises a temporary Cell on the fly,
+        cells: is never touched), this toggle is just its first GUI
+        surface. Cluster: same day, Denis pushed back on Role specifically
+        — "Условие уникальности у нас касается кластера, а не роли...
+        ОДНУ деталь надо размещать просто по кластеру. Роль там не при
+        делах" — Role is a CATEGORY (many components legitimately share
+        one), Cluster is meant to stay unique per instance, so Cluster mode
+        resolves by an exact, unconditional Cluster-tag match instead
+        (resolve_by_cluster_tag) — no selection/nets ambiguity to narrow at
+        all. Params never apply to Role or Cluster mode (a synthetic
+        one-component cell has no via/track net fields to template in the
+        first place), so the whole Params section hides for either."""
+        mode = self.cell_mode_combo.currentIndex()
+        self.cell_label.setVisible(mode == 0)
+        self._role_only_row.setVisible(mode == 1)
+        self._cluster_only_row.setVisible(mode == 2)
+        self._params_label.setVisible(mode == 0)
+        self._params_container.setVisible(mode == 0)
 
     # ── Wiring from the Config tree / Components tree ─────────────────────
 
@@ -355,6 +379,7 @@ class PlacerDock(QWidget):
         set_combo_items(self.anchor_role_edit, roles)
         set_combo_items(self.anchor_cluster_edit, clusters)
         set_combo_items(self.place_role_edit, roles)
+        set_combo_items(self.place_cluster_edit, clusters)
 
     def refresh_known_nets(self, board) -> None:
         """Populates the Params comboboxes (placeholder -> literal net) with
@@ -434,13 +459,21 @@ class PlacerDock(QWidget):
             self._show_message(_("Cluster name is required."), _ERROR_STYLE)
             return None
 
-        is_role_mode = self.cell_mode_combo.currentIndex() == 1
+        source_mode = self.cell_mode_combo.currentIndex()
+        is_role_mode = source_mode == 1
+        is_cluster_mode = source_mode == 2
         if is_role_mode:
             role = self.place_role_edit.currentText().strip()
             if not role:
                 self._show_message(_("Pick a Role first."), _ERROR_STYLE)
                 return None
             entry: Dict[str, Any] = {"name": name, "role": role}
+        elif is_cluster_mode:
+            cluster = self.place_cluster_edit.currentText().strip()
+            if not cluster:
+                self._show_message(_("Pick an existing Cluster first."), _ERROR_STYLE)
+                return None
+            entry: Dict[str, Any] = {"name": name, "cluster": cluster}
         else:
             if not self._selected_cell:
                 self._show_message(_("Pick a Cell first."), _ERROR_STYLE)
@@ -464,7 +497,7 @@ class PlacerDock(QWidget):
                 ref = self.anchor_ref_edit.text().strip()
                 role = self.anchor_role_edit.currentText().strip()
                 pad = self.anchor_pad_edit.text().strip()
-                cluster = self.anchor_cluster_edit.currentText().strip()
+                anchor_cluster = self.anchor_cluster_edit.currentText().strip()
                 if not ref and not role:
                     self._show_message(_("Anchor: set Ref or Role."), _ERROR_STYLE)
                     return None
@@ -478,8 +511,8 @@ class PlacerDock(QWidget):
                     entry["anchor_role"] = role
                 if pad:
                     entry["anchor_pad"] = pad
-                if cluster:
-                    entry["anchor_cluster"] = cluster
+                if anchor_cluster:
+                    entry["anchor_cluster"] = anchor_cluster
             else:  # Point
                 point = self.point_edit.currentText().strip()
                 if not point:
@@ -502,7 +535,7 @@ class PlacerDock(QWidget):
         if self.mirror_checkbox.isChecked():
             entry["mirror"] = True
 
-        if not is_role_mode:
+        if not (is_role_mode or is_cluster_mode):
             params = {name: edit.currentText().strip() for name, edit in self._param_edits.items()
                       if edit.currentText().strip()}
             if params:
@@ -707,6 +740,7 @@ class PlacerDock(QWidget):
         self.cell_label.setText(_("No cell picked — pick one in the Config tree"))
         self.cell_mode_combo.setCurrentIndex(0)
         self.place_role_edit.setCurrentText("")
+        self.place_cluster_edit.setCurrentText("")
         self._on_cell_mode_changed()
         self.cluster_edit.setCurrentText("")
         self.origin_mode_combo.setCurrentIndex(0)
@@ -741,6 +775,9 @@ class PlacerDock(QWidget):
         if "role" in entry:
             self.cell_mode_combo.setCurrentIndex(1)
             self.place_role_edit.setCurrentText(str(entry["role"]))
+        elif "cluster" in entry:
+            self.cell_mode_combo.setCurrentIndex(2)
+            self.place_cluster_edit.setCurrentText(str(entry["cluster"]))
         else:
             self.cell_mode_combo.setCurrentIndex(0)
             if "cell" in entry:

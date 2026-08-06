@@ -184,20 +184,33 @@ tab is hidden outright (not just its content) until it actually applies.
 Builds and applies a `ClonePlacement` — the GUI equivalent of `kicadstamp_cli.py apply --only
 <name>`. **This dock moves real footprints on the live board.**
 
-- **Source** — **Cell** (default) or **Role** (added 2026-08-06, Denis: "путь потрясающе длинный:
-  создать экстрактор, извлечь шаблон, сделать cell и только потом, placement") — Role skips
-  Extract/Cell entirely for a genuine single-component placement: pick a Role directly (same
-  autocompleted combo as Anchor's own Role field below), no `cells:` entry ever gets written or
-  read (`ClonePlacement.role`, already supported by the backend — this toggle is just its first GUI
-  surface). Only good for a bare component with no via/track/second component of its own — for
-  anything with real content, Cell + Extract is still the right path.
-- **Cell** — picked in the Cells tab (see above); the current pick is shown here. Hidden in Role mode.
+- **Source** — **Cell** (default), **Role**, or **Cluster** (all added 2026-08-06, Denis: "путь
+  потрясающе длинный: создать экстрактор, извлечь шаблон, сделать cell и только потом, placement") —
+  Role/Cluster both skip Extract/Cell entirely for a genuine single-component placement; neither
+  ever writes or reads a `cells:` entry (`ClonePlacement.role`/`.cluster`, already supported by the
+  backend — this toggle is just their first GUI surface). Only good for a bare component with no
+  via/track/second component of its own — for anything with real content, Cell + Extract is still
+  the right path.
+  - *Role* — pick a Role directly (same autocompleted combo as Anchor's own Role field below). Role
+    is a CATEGORY, not unique — many components routinely share one — so if it's ambiguous on the
+    board, Redraw resolves it the same way a real cell's role slots do (selection, then
+    anchor_cluster narrowing), or fails loud listing every candidate.
+  - *Cluster* — same idea, but finds its target by an ALREADY-ASSIGNED Cluster PCB field instead
+    (tag it first via the Components tree's Role/Cluster editing or fieldstool) — same-day pushback
+    on Role alone, Denis: "Условие уникальности у нас касается кластера, а не роли... ОДНУ деталь
+    надо размещать просто по кластеру. Роль там не при делах". No selection/narrowing: an exact
+    match is either unique (used directly) or a tagging mistake, fatal either way. **Not** the same
+    field as the "Cluster:" row below (that one is this placement's own *name*, written onto
+    components as their Cluster tag *after* a successful Redraw) — this one searches for a tag that
+    already exists, going the other direction.
+- **Cell** — picked in the Cells tab (see above); the current pick is shown here. Hidden in
+  Role/Cluster mode.
 - **Cluster** — the placement's name (also what gets clicked from the Components tree, see
   above).
 - **Params** — one row per `{PLACEHOLDER}` found anywhere in the picked Cell's own YAML (auto-
   discovered, not hand-typed) — the literal net each placeholder should resolve to for *this*
-  instance. Hidden in Role mode (a synthetic one-component cell has no via/track net fields to
-  template).
+  instance. Hidden in Role/Cluster mode (a synthetic one-component cell has no via/track net fields
+  to template).
 - **Origin**:
   - *Absolute XY* — a literal board position.
   - *Anchor (ref/role)* — position relative to an existing component: Ref **or** Role (mutually

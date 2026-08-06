@@ -334,6 +334,107 @@ def test_new_placement_resets_cell_mode_to_cell(main_window, tmp_path):
     assert dock.place_role_edit.currentText() == ""
 
 
+# ── Cluster source mode (2026-08-06) ─────────────────────────────────────
+
+def test_cluster_mode_hides_cell_and_role_widgets(main_window, tmp_path):
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+
+    def visible(w):
+        return w.isVisibleTo(dock)
+
+    dock.cell_mode_combo.setCurrentIndex(2)
+
+    assert visible(dock._cluster_only_row)
+    assert not visible(dock.cell_label) and not visible(dock._role_only_row)
+    assert not visible(dock._params_container)
+
+
+def test_build_entry_dict_cluster_mode_needs_no_cell_or_role(main_window, tmp_path):
+    """Cluster mode is the second half of the same simplification — Denis,
+    2026-08-06: "ОДНУ деталь надо размещать просто по кластеру. Роль там
+    не при делах"."""
+    dock = PlacerDock(main_window)
+    dock.cluster_edit.setCurrentText("Just_One_Cap")
+    dock.cell_mode_combo.setCurrentIndex(2)
+    dock.place_cluster_edit.setCurrentText("CH2_BYPASS")
+    dock.x_edit.setText("1.0")
+    dock.y_edit.setText("2.0")
+
+    entry = dock._build_entry_dict()
+    assert entry == {"name": "Just_One_Cap", "cluster": "CH2_BYPASS", "xy": [1.0, 2.0]}
+    cp = load_clone_placement(entry)  # must validate against the real backend loader
+    assert cp.cluster == "CH2_BYPASS"
+    assert cp.cell is None and cp.role is None
+
+
+def test_cluster_mode_requires_a_cluster(main_window, tmp_path):
+    dock = PlacerDock(main_window)
+    dock.cluster_edit.setCurrentText("X")
+    dock.cell_mode_combo.setCurrentIndex(2)
+    dock.x_edit.setText("1")
+    dock.y_edit.setText("2")
+
+    assert dock._build_entry_dict() is None
+    assert "Pick an existing Cluster first" in dock.message_label.text()
+
+
+def test_redraw_in_cluster_mode_skips_cell_reachability_and_cells_path_checks(
+        main_window, tmp_path, monkeypatch):
+    placer_file = tmp_path / "root.yaml"
+    _write_yaml(placer_file, {"clone_placements": []})
+    dock = PlacerDock(main_window)
+    dock.set_placer_file(placer_file)
+    dock.cluster_edit.setCurrentText("Just_One_Cap")
+    dock.cell_mode_combo.setCurrentIndex(2)
+    dock.place_cluster_edit.setCurrentText("CH2_BYPASS")
+    dock.x_edit.setText("1")
+    dock.y_edit.setText("2")
+
+    monkeypatch.setattr(placer_mod, "load_config", lambda path: (Config(), RuntimeContext()))
+
+    payload = dock._collect_redraw_inputs()
+    assert payload is not None
+    assert payload["cfg"].clone_placements[0].cluster == "CH2_BYPASS"
+
+
+def test_load_placement_round_trips_cluster_mode(main_window, tmp_path):
+    dock = PlacerDock(main_window)
+    entry = {"name": "Just_One_Cap", "cluster": "CH2_BYPASS", "xy": [1.0, 2.0]}
+
+    dock.load_placement(entry)
+
+    assert dock.cluster_edit.currentText() == "Just_One_Cap"
+    assert dock.cell_mode_combo.currentIndex() == 2
+    assert dock.place_cluster_edit.currentText() == "CH2_BYPASS"
+    assert dock._build_entry_dict() == entry
+
+
+def test_new_placement_resets_cluster_source_field(main_window, tmp_path):
+    dock, _, placer_file = _make_cell_and_dock(main_window, tmp_path)
+    dock.cell_mode_combo.setCurrentIndex(2)
+    dock.place_cluster_edit.setCurrentText("CH2_BYPASS")
+
+    dock.new_placement(placer_file)
+
+    assert dock.cell_mode_combo.currentIndex() == 0
+    assert dock.place_cluster_edit.currentText() == ""
+
+
+def test_refresh_known_roles_populates_place_cluster_combo(main_window):
+    class _Row:
+        def __init__(self, role, cluster):
+            self.role = role
+            self.cluster = cluster
+
+    dock = PlacerDock(main_window)
+    snapshot = [_Row(role="C_BYPASS", cluster="CH2_BYPASS"), _Row(role="C_BYPASS", cluster="CH3_BYPASS")]
+
+    dock.refresh_known_roles(snapshot)
+
+    items = [dock.place_cluster_edit.itemText(i) for i in range(dock.place_cluster_edit.count())]
+    assert items == ["CH2_BYPASS", "CH3_BYPASS"]
+
+
 def test_load_placement_round_trips_absolute_xy(main_window, tmp_path):
     """Reverse of _build_entry_dict — ConfigTreeDock's Clone placements
     category feeds a saved clone_placement dict straight back in via
