@@ -39,7 +39,8 @@ from ..exceptions import ValidationError, format_fatal_error
 from .services.manual_position_calculator import resolve_rule_anchor_ref
 from .services.clone_position_calculator import resolve_clone_anchor_ref
 from .services.point_resolver import resolve_point_anchor_ref
-from .services.clone_role_resolver import resolve_roles_by_selection, resolve_roles_by_nets, clone_uses_selection_mode
+from .services.clone_role_resolver import (resolve_roles_by_selection, resolve_roles_by_nets,
+                                           resolve_by_cluster_tag, clone_uses_selection_mode)
 from .services.component_pool import ComponentPool
 from ..i18n import _
 
@@ -119,13 +120,20 @@ def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: Clon
     resolving the anchor position, applying clone geometry, or creating
     ViaCommand/TrackCommand objects.
 
-    Role resolvers are called directly (resolve_roles_by_selection or
-    resolve_roles_by_nets) — they are standalone functions. The anchor_position
-    parameter (used only for last-resort physical proximity tie-breaking) is
-    omitted here; the known limitation documented in this module's docstring
-    covers that case.
+    Role resolvers are called directly (resolve_by_cluster_tag,
+    resolve_roles_by_selection, or resolve_roles_by_nets) — they are
+    standalone functions. The anchor_position parameter (used only for
+    last-resort physical proximity tie-breaking) is omitted here; the known
+    limitation documented in this module's docstring covers that case.
     """
-    # Synthesise or look up cell (same logic as ClonePositionCalculator)
+    # Synthesise or look up cell (same logic as ClonePositionCalculator's
+    # _resolve_content) — FIXED (found live 2026-08-06, Denis: Conn_PM5V):
+    # this used to only know cell:/role:, missing cluster: entirely (added
+    # later than this function was written) — a cluster: placement has
+    # clone.role=None, so the old else-branch built a synthetic slot with
+    # role=None, then resolve_roles_by_selection (clone.cluster is never
+    # checked here) failed with the confusing "role None is in cell but not
+    # found anywhere on board" instead of ever reaching resolve_by_cluster_tag.
     if clone.cell is not None:
         cell = cfg.cells.get(clone.cell)
         if cell is None:
@@ -134,6 +142,13 @@ def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: Clon
                 .format(name=clone.name, cell=clone.cell)
             )
             return set()
+    elif clone.cluster is not None:
+        cell = Cell(
+            name=f"__cluster__{clone.cluster}",
+            components=[TemplateComponentSlot(
+                role=f"__cluster__{clone.cluster}", offset_along_mm=0.0, offset_across_mm=0.0, angle_deg=0.0,
+            )],
+        )
     else:
         # role: instead of cell — single-component placement without
         # a separate cell file.
@@ -146,7 +161,9 @@ def _resolve_clone_produces(adapter: KiCadBoardAdapter, cfg: Config, clone: Clon
 
     # clone.ignore_selection must apply here too — same as in the real pass
     with adapter.temporarily_ignore_selection(clone.ignore_selection):
-        if clone_uses_selection_mode(clone):
+        if clone.cluster is not None:
+            role_to_ref = resolve_by_cluster_tag(adapter, cell, clone)
+        elif clone_uses_selection_mode(clone):
             role_to_ref = resolve_roles_by_selection(
                 adapter, cell, clone,
                 anchor_position=None,

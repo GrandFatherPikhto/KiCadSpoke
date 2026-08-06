@@ -75,6 +75,30 @@ def _cfg(clones=None, points=None):
     )
 
 
+def test_cluster_mode_clone_resolves_via_cluster_tag_not_role():
+    """Regression (found live 2026-08-06, Denis: Conn_PM5V). A cluster:
+    placement has clone.role=None (content is picked by an existing
+    Cluster tag, not a Role) — _resolve_clone_produces used to only know
+    cell:/role:, never checking clone.cluster at all, so it always built a
+    synthetic slot with role=None and then failed in resolve_roles_by_
+    selection with "role None is in cell but not found anywhere on board"
+    instead of ever reaching resolve_by_cluster_tag. _adapter_for's
+    get_field_value mock doesn't distinguish Role from Cluster — role=
+    here stands in for whichever field resolve_by_cluster_tag actually
+    reads (CLUSTER_FIELD_NAME)."""
+    tagged = _make_fp("J1", role="Conn_PM5V")
+    other = _make_fp("J2", role="SOMETHING_ELSE")
+
+    clone = ClonePlacement(name="Conn_PM5V", cluster="Conn_PM5V", xy=(0.0, 0.0))
+    cfg = _cfg([clone])
+
+    adapter = _adapter_for([tagged, other])
+    items = resolve_execution_order(adapter, cfg)
+
+    assert [it.label for it in items] == ["clone_placement 'Conn_PM5V'"]
+    assert items[0].produces == {"J1"}
+
+
 def test_disabled_clone_is_skipped_entirely():
     """A disabled clone_placement anchored on a role that doesn't exist on the
     board at all would fatal if resolved (see resolve_footprint_by_role) — it
