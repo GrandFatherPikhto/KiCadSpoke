@@ -730,11 +730,7 @@ cells:
       net: '{PWR_DIRTY}'
     layer: F.Cu
   conn_pm5v:
-    layer: F.Cu
     components: []
-    vias: []
-    tracks: []
-    clone_placements: []
 extract_profiles:
   pi_fb_filter_p5v:
     output: profiles\3ch-awg-tia\cells.yaml
@@ -830,9 +826,9 @@ clone_placements:
   xy:
   - -4.0
   - 17.0
-  anchor_role: c_out_bypass
-  anchor_pad: '1'
-  anchor_cluster: Pi_Filter_p5v
+  anchor_role: CONN_PM5V
+  anchor_pad: '3'
+  anchor_cluster: Ldo_Adj_p2v5
   layer: F.Cu
   params:
     GND: GND
@@ -882,13 +878,11 @@ clone_placements:
     PWR_LED: /Power/+3V3_LED
     PWR_OUT: +3V3
 - name: Conn_PM5V
-  cluster: Conn_PM5V
+  cell: conn_pm5v
   xy:
-  - 8.0
-  - -69.0
-  anchor_point: Origin
-  rotation_deg: 270.0
-  layer: F.Cu
+  - 0.0
+  - 0.0
+  anchor_role: CONN_PM5V
 points:
   Origin:
     anchor_origin: grid

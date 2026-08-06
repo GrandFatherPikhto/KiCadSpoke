@@ -763,7 +763,27 @@ def test_new_placement_clears_nets_tables(main_window, tmp_path):
     assert dock.refs_table.to_dict() == {}
 
 
-def test_refresh_known_roles_feeds_nets_and_refs_key_choices(main_window, tmp_path):
+def test_selected_cell_scopes_nets_and_refs_key_choices_not_the_whole_board(main_window, tmp_path):
+    """Regression (found live 2026-08-06, Denis: "зачем в выпадашках ВСЕ
+    доступные на плате роли? Нас же интересуют только роли относящиеся к
+    Pi_Filter_p5v?") — nets:/refs: are only ever consulted for a role
+    that's actually one of the picked cell's own components: (see
+    resolve_roles_by_nets) — the Role key choices must be scoped to that
+    cell, not every role seen anywhere on the live board. _make_cell_and_
+    dock's "pi_filter" cell has exactly one component, role "C_IN" (see
+    its own docstring)."""
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+
+    nets_items = {dock.nets_table.key_edit.itemText(i) for i in range(dock.nets_table.key_edit.count())}
+    refs_items = {dock.refs_table.key_edit.itemText(i) for i in range(dock.refs_table.key_edit.count())}
+    assert nets_items == {"C_IN"}
+    assert refs_items == {"C_IN"}
+
+
+def test_refresh_known_roles_does_not_widen_nets_and_refs_key_choices(main_window, tmp_path):
+    """refresh_known_roles() (the live-board poll) must NOT overwrite the
+    cell-scoped Role choices set by set_selected_cell — otherwise the next
+    poll tick would silently widen them back to every board-wide role."""
     from types import SimpleNamespace
     dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
 
@@ -771,9 +791,7 @@ def test_refresh_known_roles_feeds_nets_and_refs_key_choices(main_window, tmp_pa
                               SimpleNamespace(role="LIGHT", cluster="")])
 
     nets_items = {dock.nets_table.key_edit.itemText(i) for i in range(dock.nets_table.key_edit.count())}
-    refs_items = {dock.refs_table.key_edit.itemText(i) for i in range(dock.refs_table.key_edit.count())}
-    assert nets_items == {"HEAVY", "LIGHT"}
-    assert refs_items == {"HEAVY", "LIGHT"}
+    assert nets_items == {"C_IN"}
 
 
 def test_refresh_known_nets_feeds_nets_and_net_overrides_value_choices(main_window, tmp_path):

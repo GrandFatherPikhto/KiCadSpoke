@@ -520,6 +520,7 @@ class PlacerDock(QWidget):
         self._selected_cell = name
         self.cell_label.setText(_("Cell: {name}").format(name=name))
         self._rebuild_param_rows()
+        self._rebuild_cell_role_choices()
 
     def set_cluster_name(self, name: str) -> None:
         """Called by RoleClusterTreeDock's cluster_picked signal when a
@@ -548,8 +549,6 @@ class PlacerDock(QWidget):
         set_combo_items(self.anchor_cluster_edit, clusters)
         set_combo_items(self.place_role_edit, roles)
         set_combo_items(self.place_cluster_edit, clusters)
-        self.nets_table.set_key_choices(roles)
-        self.refs_table.set_key_choices(roles)
 
     def refresh_known_nets(self, board) -> None:
         """Populates the Params comboboxes (placeholder -> literal net) with
@@ -587,6 +586,21 @@ class PlacerDock(QWidget):
             edit.setCurrentText(previous.get(name, ""))
             self._params_layout.addWidget(edit, row, 1)
             self._param_edits[name] = edit
+
+    def _rebuild_cell_role_choices(self) -> None:
+        """Nets/Refs' own Role key choices — scoped to the PICKED CELL's own
+        components: roles, not every role on the live board (found live
+        2026-08-06, Denis: "зачем в выпадашках ВСЕ доступные на плате
+        роли? Нас же интересуют только роли относящиеся к Pi_Filter_p5v?"
+        — right: nets:/refs: are only ever consulted for a role that's
+        actually one of cell.components (see resolve_roles_by_nets), a
+        board-wide role list was misleadingly broad. Same "scope to the
+        owning cell, not the whole board" fix as CellDock's own
+        anchor_role_combo (2026-08-06)."""
+        cell_data = yaml_io.load_data(self._cells_path).get("cells", {}).get(self._selected_cell, {})
+        roles = sorted({c.get("role") for c in cell_data.get("components", []) if c.get("role")})
+        self.nets_table.set_key_choices(roles)
+        self.refs_table.set_key_choices(roles)
 
     @staticmethod
     def _discover_placeholders(node: Any) -> set:
@@ -950,6 +964,7 @@ class PlacerDock(QWidget):
         self.layer_combo.setCurrentIndex(0)
         self.mirror_checkbox.setChecked(False)
         self._rebuild_param_rows()
+        self._rebuild_cell_role_choices()
         self.nets_table.load_dict({})
         self.net_overrides_table.load_dict({})
         self.refs_table.load_dict({})

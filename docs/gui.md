@@ -235,13 +235,16 @@ outside the tabs — they act on the whole placement, not one tab.
     instance.
   - **Nets** (added 2026-08-06) — role → literal net, takes priority over the cell's own
     `net_template:` for by-nets role resolution. Editable table (add/update by key, remove selected
-    row) — Role column autocompletes from the live board's `Role` field.
+    row) — Role column autocompletes from the PICKED CELL's own `components:` roles (not every role
+    on the live board — `nets:`/`refs:` are only ever consulted for a role that's actually one of the
+    cell's own components, see `resolve_roles_by_nets` in [docs/config.md](config.md); found live
+    2026-08-06 that a board-wide list was misleadingly broad, fixed same day).
   - **Net overrides** (added 2026-08-06) — resolved net → final override name, applied AFTER
     Params/net_template substitution (see `resolve_net` in [docs/config.md](config.md)). Both columns
     autocomplete from the live board's actual net names.
   - **Refs** (added 2026-08-06, closes the last GUI gap this dock's own docstring used to flag) —
     role → explicit ref, bypasses role search entirely — last resort, breaks on re-annotation. Role
-    column autocompletes from the live board's `Role` field.
+    column autocompletes from the picked cell's own `components:` roles, same reasoning as Nets above.
 - **Origin**:
   - *Absolute XY* — a literal board position.
   - *Anchor (ref/role)* — position relative to an existing component: Ref **or** Role (mutually

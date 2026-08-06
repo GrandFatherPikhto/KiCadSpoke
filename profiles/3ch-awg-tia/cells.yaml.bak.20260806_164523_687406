@@ -830,9 +830,9 @@ clone_placements:
   xy:
   - -4.0
   - 17.0
-  anchor_role: c_out_bypass
-  anchor_pad: '1'
-  anchor_cluster: Pi_Filter_p5v
+  anchor_role: CONN_PM5V
+  anchor_pad: '3'
+  anchor_cluster: Ldo_Adj_p2v5
   layer: F.Cu
   params:
     GND: GND
@@ -884,10 +884,9 @@ clone_placements:
 - name: Conn_PM5V
   cluster: Conn_PM5V
   xy:
-  - 8.0
-  - -69.0
+  - 4.0
+  - -110.0
   anchor_point: Origin
-  rotation_deg: 270.0
   layer: F.Cu
 points:
   Origin:
