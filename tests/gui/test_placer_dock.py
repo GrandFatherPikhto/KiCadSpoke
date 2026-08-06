@@ -53,6 +53,45 @@ def test_cell_click_discovers_placeholders(main_window, tmp_path):
     assert sorted(dock._param_edits.keys()) == ["PWR_IN", "PWR_OUT"]
 
 
+# ── Cell picker combo (2026-08-06, Denis: "в пласере давай сделаем имя
+# целла по выпадающему комбо-боксу... не удобно" — a second, in-place way
+# to pick a Cell besides clicking it in the Config tree) ────────────────
+
+def test_set_cells_file_populates_the_cell_combo(main_window, tmp_path):
+    dock, cells_file, _ = _make_cell_and_dock(main_window, tmp_path)
+    items = [dock.cell_combo.itemText(i) for i in range(dock.cell_combo.count())]
+    assert items == ["pi_filter"]
+
+
+def test_picking_from_the_cell_combo_selects_the_cell(main_window, tmp_path):
+    """Picking directly in the combo must do exactly what set_selected_cell
+    does when called from ConfigTreeDock — not just update currentText."""
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    dock.new_placement(dock._placer_path)
+    assert dock._selected_cell is None
+    assert dock._param_edits == {}
+
+    dock.cell_combo.setCurrentText("pi_filter")
+
+    assert dock._selected_cell == "pi_filter"
+    assert sorted(dock._param_edits.keys()) == ["PWR_IN", "PWR_OUT"]
+
+
+def test_cell_combo_is_a_closed_picker_not_a_free_text_field(main_window, tmp_path):
+    """Same lesson as CellDock's anchor_role_combo (2026-08-06 live freeze):
+    a combo whose values must match an existing cells: key stays a plain,
+    non-editable QComboBox, not configure_searchable()."""
+    dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
+    assert not dock.cell_combo.isEditable()
+
+
+def test_new_placement_clears_the_cell_combo_selection(main_window, tmp_path):
+    dock, _, placer_file = _make_cell_and_dock(main_window, tmp_path)
+    dock.new_placement(placer_file)
+    assert dock._selected_cell is None
+    assert dock.cell_combo.currentIndex() == -1
+
+
 def test_build_entry_dict_absolute_xy_round_trips_through_loader(main_window, tmp_path):
     dock, _, _ = _make_cell_and_dock(main_window, tmp_path)
     dock.cluster_edit.setCurrentText("Channel_2_PI_Filter")
@@ -255,7 +294,7 @@ def test_role_mode_hides_cell_widgets_and_shows_role_row(main_window, tmp_path):
         # RuleDock's own tests already use for the same reason).
         return w.isVisibleTo(w.parentWidget())
 
-    assert visible(dock.cell_label) and not visible(dock._role_only_row)
+    assert visible(dock._cell_row) and not visible(dock._role_only_row)
     assert visible(dock._params_container)
     assert dock._tabs.isTabVisible(dock._nets_tab_index)
     assert dock._tabs.isTabVisible(dock._net_overrides_tab_index)
@@ -263,7 +302,7 @@ def test_role_mode_hides_cell_widgets_and_shows_role_row(main_window, tmp_path):
 
     dock.cell_mode_combo.setCurrentIndex(1)
 
-    assert not visible(dock.cell_label) and visible(dock._role_only_row)
+    assert not visible(dock._cell_row) and visible(dock._role_only_row)
     assert not dock._tabs.isTabVisible(dock._nets_tab_index)
     assert not dock._tabs.isTabVisible(dock._net_overrides_tab_index)
     assert not dock._tabs.isTabVisible(dock._refs_tab_index)
@@ -356,7 +395,7 @@ def test_cluster_mode_hides_cell_and_role_widgets(main_window, tmp_path):
     dock.cell_mode_combo.setCurrentIndex(2)
 
     assert visible(dock._cluster_only_row)
-    assert not visible(dock.cell_label) and not visible(dock._role_only_row)
+    assert not visible(dock._cell_row) and not visible(dock._role_only_row)
     assert not dock._tabs.isTabVisible(dock._nets_tab_index)
     assert not dock._tabs.isTabVisible(dock._net_overrides_tab_index)
     assert not dock._tabs.isTabVisible(dock._refs_tab_index)

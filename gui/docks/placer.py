@@ -273,9 +273,25 @@ class PlacerDock(QWidget):
         source_form.addRow(_("Source:"), self.cell_mode_combo)
         source_page_layout.addLayout(source_form)
 
-        self.cell_label = QLabel(_("No cell picked — pick one in the Config tree"))
-        self.cell_label.setWordWrap(True)
-        source_page_layout.addWidget(self.cell_label)
+        self._cell_row = QWidget()
+        cell_form = QFormLayout(self._cell_row)
+        cell_form.setContentsMargins(0, 0, 0, 0)
+        self.cell_combo = QComboBox()
+        # Deliberately NOT configure_searchable() (2026-08-06, live freeze in
+        # CellDock's own anchor_role_combo taught this: an editable combo +
+        # QCompleter on a field whose value space is a CLOSED SET — must
+        # match an existing cells: key — is both a plausible freeze risk and
+        # semantically wrong; see CellDock's own anchor_role_combo for the
+        # same fix). Cell picking still also works from the Config tree's
+        # Cells category (set_selected_cell) — this combo is a second,
+        # faster way to do the exact same thing in place, requested live
+        # 2026-08-06 (Denis: "в пласере давай сделаем имя целла по
+        # выпадающему комбо-боксу... не удобно" ходить в дерево конфига
+        # за каждым пиком).
+        self.cell_combo.setPlaceholderText(_("pick a cell"))
+        self.cell_combo.currentTextChanged.connect(self.set_selected_cell)
+        cell_form.addRow(_("Cell:"), self.cell_combo)
+        source_page_layout.addWidget(self._cell_row)
 
         self._role_only_row = QWidget()
         role_only_form = QFormLayout(self._role_only_row)
@@ -483,7 +499,7 @@ class PlacerDock(QWidget):
         would leave an empty, confusingly-clickable tab behind instead of
         removing it from the tab bar entirely."""
         mode = self.cell_mode_combo.currentIndex()
-        self.cell_label.setVisible(mode == 0)
+        self._cell_row.setVisible(mode == 0)
         self._role_only_row.setVisible(mode == 1)
         self._cluster_only_row.setVisible(mode == 2)
         self._name_row.setVisible(mode != 2)
@@ -495,6 +511,11 @@ class PlacerDock(QWidget):
 
     def set_cells_file(self, path: Optional[Path]) -> None:
         self._cells_path = path
+        self._refresh_cell_choices()
+
+    def _refresh_cell_choices(self) -> None:
+        cells = yaml_io.load_data(self._cells_path).get("cells", {}) if self._cells_path else {}
+        set_combo_items(self.cell_combo, sorted(cells.keys()))
 
     def set_placer_file(self, path: Optional[Path]) -> None:
         self._placer_path = path
@@ -515,14 +536,27 @@ class PlacerDock(QWidget):
         set_combo_items(self.point_edit, names)
 
     def set_selected_cell(self, name: str) -> None:
-        """Called by ConfigTreeDock's Cells category (see
-        gui/docks/config_tree.py) when a Cell is clicked there — Cell
-        picking used to live inside this dock, but
-        the user expected it alongside the Components tree instead
-        (2026-08-01: "где выбирать cell? ...к дереву компонент надо
-        добавить табик со списком cell")."""
+        """Shared entry point for picking a Cell — called both by
+        ConfigTreeDock's Cells category (see gui/docks/config_tree.py) when
+        a Cell is clicked there (Cell picking used to live inside this dock,
+        but the user expected it alongside the Components tree instead,
+        2026-08-01: "где выбирать cell? ...к дереву компонент надо
+        добавить табик со списком cell") AND by cell_combo's own
+        currentTextChanged (2026-08-06: a second, in-place way to pick the
+        same thing — see cell_combo's own comment). blockSignals around the
+        combo update either way: called externally, it must reflect the new
+        text into the combo without re-entering this same method through
+        its own signal; called from the combo itself, the text already
+        matches, so this is a no-op — either way, no double rebuild."""
+        if not name:
+            return
         self._selected_cell = name
-        self.cell_label.setText(_("Cell: {name}").format(name=name))
+        self._refresh_cell_choices()
+        self.cell_combo.blockSignals(True)
+        if self.cell_combo.findText(name) < 0:
+            self.cell_combo.addItem(name)
+        self.cell_combo.setCurrentText(name)
+        self.cell_combo.blockSignals(False)
         self._rebuild_param_rows()
         self._rebuild_cell_role_choices()
 
@@ -947,7 +981,7 @@ class PlacerDock(QWidget):
         entry, same as every other way a placement gets saved."""
         self._placer_path = placer_path
         self._selected_cell = None
-        self.cell_label.setText(_("No cell picked — pick one in the Config tree"))
+        self.cell_combo.setCurrentIndex(-1)
         self.cell_mode_combo.setCurrentIndex(0)
         self.place_role_edit.setCurrentText("")
         self.place_cluster_edit.setCurrentText("")

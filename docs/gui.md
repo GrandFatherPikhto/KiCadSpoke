@@ -226,8 +226,13 @@ the tabs — they act on the whole placement, not one tab.
     (see next bullet) hides entirely in this mode (found live 2026-08-06, Denis: "Зачем нам два поля
     Existing Cluster и Cluster?" — a second, independently-typed name risked silently retagging the
     component to something else on Redraw, since Cluster tags are meant to already be unique).
-- **Cell** — picked in the Cells tab (see above); the current pick is shown here. Hidden in
-  Role/Cluster mode.
+- **Cell** — a closed-set dropdown (not `configure_searchable()` — same "an editable combo on a
+  field that must match an existing key is a freeze risk, and semantically wrong anyway" lesson as
+  CellDock's own anchor_role_combo) populated from the currently picked Cells file's `cells:` keys.
+  Also settable by clicking a Cell in the Config tree's Cells category (`set_selected_cell`) — both
+  paths go through the same method, so either one keeps the other in sync. Added 2026-08-06 (Denis,
+  live: "в пласере давай сделаем имя целла по выпадающему комбо-боксу... не удобно" — going to the
+  Config tree for every single pick was the friction). Hidden in Role/Cluster mode.
 - **Cluster** — the placement's name (also what gets clicked from the Components tree, see above).
   Hidden in Cluster *source* mode (see above) — the picked Existing Cluster value is reused as the
   name instead, nothing left to ask for here.

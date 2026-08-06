@@ -147,7 +147,7 @@ def test_cell_picked_fills_placer_selected_cell(real_main_window):
     real_main_window.config_tree_dock.cell_picked.emit("ldo_adj")
 
     assert real_main_window.placer_dock._selected_cell == "ldo_adj"
-    assert "ldo_adj" in real_main_window.placer_dock.cell_label.text()
+    assert real_main_window.placer_dock.cell_combo.currentText() == "ldo_adj"
     assert real_main_window._dock_hub.detail_dock.stack.currentWidget() is real_main_window.placer_dock
 
 
