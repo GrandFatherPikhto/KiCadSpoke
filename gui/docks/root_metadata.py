@@ -1,7 +1,7 @@
 # gui/docks/root_metadata.py
 """
 RootMetadataDock — edits the root-config-only scalar keys of the project's
-ONE root file: layer, schematic_dir/schematic_files, registry_path/
+ONE root file: layer, schematic_dir/schematic_files/root_sheet, registry_path/
 track_registry_path, log_file, operation_log_dir, place_components/
 skip_existing_components, via_keepout_clearance_mm/via_search_step_mm/
 via_search_max_radius_mm/via_search_n_directions — exactly the field set
@@ -9,6 +9,18 @@ config/models.py's Config dataclass carries OUTSIDE cells/points/
 thermal_via_arrays/rules/clone_placements (those are entity sections,
 already shown as tree leaves — see _common.py's non_includable_keys(), the
 same set this dock edits).
+
+root_sheet (added 2026-08-07, Denis: "рутовый шит надо перетащить хотя бы
+в настройки проекта") — used to live only in the GUI's fieldstool dock as a
+QSettings value, global rather than per-project, so switching projects
+silently kept the previous project's root sheet and fieldstool's Pending
+changes diff matched nothing (see config/models.py's Config.root_sheet
+docstring). Wired to FieldsToolDock.set_root_path via ConfigTreeDock's
+root_file_changed, same as rules_dock/placer_dock/etc.'s own set_root_path —
+the project's value takes over as soon as a root file with it set is
+opened; an empty/absent value leaves fieldstool's current root sheet (manual
+Pick, or the old global QSettings one) alone, so existing profiles that
+haven't adopted this field yet see no change in behavior.
 
 Requested 2026-08-03 alongside the GUI tree roadmap's contextual-panel
 direction ("Экстракт/Пласер/Рут становятся контекстными"). Originally
@@ -88,12 +100,16 @@ _DEFAULTS: Dict[str, object] = {
 }
 
 # Third element: "dir" -> browse button opens getExistingDirectory,
-# "file" -> Save-mode getSaveFileName (see module docstring for why).
-# Fourth element: which tab it lands in (2026-08-05 tabbing) — schematic_dir
-# sits with schematic_files on the "Schematics" tab, the other four (none of
-# which are schematic-specific) share the "Files" tab.
+# "file" -> Save-mode getSaveFileName (these are routinely created BY apply
+# on first run, so they may not exist yet — see module docstring), "sch" ->
+# Open-mode getOpenFileName filtered to *.kicad_sch (this one must already
+# exist, same reasoning as schematic_files' own Add... button below).
+# Fourth element: which tab it lands in (2026-08-05 tabbing) — schematic_dir/
+# root_sheet sit with schematic_files on the "Schematics" tab, the other
+# four (none of which are schematic-specific) share the "Files" tab.
 _TEXT_FIELDS = [
     ("schematic_dir", _("Schematic dir:"), "dir", "schematics"),
+    ("root_sheet", _("Root sheet:"), "sch", "schematics"),
     ("registry_path", _("Registry path:"), "file", "files"),
     ("track_registry_path", _("Track registry path:"), "file", "files"),
     ("log_file", _("Log file:"), "file", "files"),
@@ -170,6 +186,9 @@ class RootMetadataDock(QWidget):
             if kind == "dir":
                 browse_button.clicked.connect(
                     lambda _checked=False, e=edit, l=label: self._browse_dir(e, l))
+            elif kind == "sch":
+                browse_button.clicked.connect(
+                    lambda _checked=False, e=edit, l=label: self._browse_sch(e, l))
             else:
                 browse_button.clicked.connect(
                     lambda _checked=False, e=edit, l=label: self._browse_file(e, l))
@@ -260,6 +279,17 @@ class RootMetadataDock(QWidget):
             return
         start = (self._path.parent / edit.text()) if edit.text().strip() else self._path.parent
         chosen = QFileDialog.getExistingDirectory(self, label, str(start))
+        if not chosen:
+            return
+        edit.setText(self._relative_to_target(chosen))
+
+    def _browse_sch(self, edit: QLineEdit, label: str) -> None:
+        if self._path is None:
+            self._show_message(_("Open or create a project (root) file first."), _ERROR_STYLE)
+            return
+        start = (self._path.parent / edit.text()) if edit.text().strip() else self._path.parent
+        chosen, _filter = QFileDialog.getOpenFileName(
+            self, label, str(start), "KiCad Schematic (*.kicad_sch)")
         if not chosen:
             return
         edit.setText(self._relative_to_target(chosen))

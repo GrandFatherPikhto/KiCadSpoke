@@ -252,6 +252,10 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
     if operation_log_dir:
         operation_log_dir = resolve_config_relative_path(config_dir, operation_log_dir)
 
+    root_sheet = data.get('root_sheet')
+    if root_sheet:
+        root_sheet = resolve_config_relative_path(config_dir, root_sheet)
+
     ctx = RuntimeContext(sheet_names=sheet_names)
 
     cfg = Config(
@@ -269,6 +273,7 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
         via_search_n_directions=data.get('via_search_n_directions', 8),
         schematic_dir=schematic_dir,
         schematic_files=schematic_files,
+        root_sheet=root_sheet,
         registry_path=registry_path,
         track_registry_path=track_registry_path,
         log_file=log_file,

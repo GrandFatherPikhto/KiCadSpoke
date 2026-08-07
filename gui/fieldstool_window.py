@@ -225,6 +225,25 @@ class MainWindow(QMainWindow):
 
         self._rescan()
 
+    def set_project_root_sheet(self, path: Optional[Path]) -> None:
+        """Public — wired to FieldsToolDock.set_root_path, itself wired to
+        ConfigTreeDock's root_file_changed (see gui/dock_hub.py). path is the
+        current root config's root_sheet field, already resolved to an
+        absolute path, or None if that file has no root_sheet set (an old
+        profile that hasn't adopted the field yet, or no project open).
+
+        A set path always takes over (this is now the authoritative source —
+        found live 2026-08-07: root_sheet used to be a single global
+        QSettings value with no per-project scoping, so switching projects
+        silently kept the PREVIOUS project's root sheet and Pending changes
+        matched nothing against a schematic nobody told it had changed).
+        None is deliberately a no-op rather than clearing back to "no root
+        sheet picked", so a profile that hasn't set root_sheet yet doesn't
+        regress fieldstool's old manual-Pick-remembered-in-QSettings
+        behavior — add root_sheet to that profile to opt in."""
+        if path is not None and path != self._root_sheet:
+            self._set_root_sheet(path)
+
     def _rescan(self) -> None:
         """Explicit action, not auto-polled — the schematic only changes
         when someone saves in Eeschema, not every 2 seconds (same

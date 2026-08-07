@@ -30,13 +30,16 @@ bottom) and injects it here, so RoleClusterTreeDock's live-board writes and
 this window's own Stage share the same diff view (see gui/docks/pending.py
 and gui/fieldstool_window.py's module docstrings for the redesign).
 """
+from pathlib import Path
 from typing import List, Optional
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QDockWidget
 
 from kicadstamp.i18n import _
+from kicadstamp.utils.paths import resolve_config_relative_path
 
+from .. import yaml_io
 from ..fieldstool_window import MainWindow as FieldsToolMainWindow
 from .pending import PendingChangesDock
 
@@ -98,3 +101,15 @@ class FieldsToolDock(QDockWidget):
         """Mirror the shared connection's state into the embedded window's
         status label (Phase 5.1 — its own connect/refresh poll is stopped)."""
         self.window.set_connection_status(error)
+
+    def set_root_path(self, path: Optional[Path]) -> None:
+        """Wired to ConfigTreeDock's root_file_changed, same pattern as
+        rules_dock/placer_dock/etc.'s own set_root_path — reads root_sheet
+        straight out of the raw YAML (same read RootMetadataDock's own
+        _populate() uses) rather than going through the full config.loader
+        pipeline, since that would run whole-project validation just to read
+        one scalar. Resolved relative to the root file itself, same
+        convention as every other path field there."""
+        root_sheet = (yaml_io.load_data(path) or {}).get("root_sheet") if path else None
+        resolved = Path(resolve_config_relative_path(path.parent, root_sheet)) if root_sheet else None
+        self.window.set_project_root_sheet(resolved)

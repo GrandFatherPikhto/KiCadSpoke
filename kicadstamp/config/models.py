@@ -452,6 +452,17 @@ class Config:
     # schematic_files — extra files for sheets outside schematic_dir.
     schematic_dir: str | None = None
     schematic_files: list[str] = field(default_factory=list)
+    # GUI-only (fieldstool's schematic-vs-board Pending changes diff, see
+    # gui/schema_model.py's load_schematic_components) — the single root
+    # .kicad_sch to walk the WHOLE sheet hierarchy from, unrelated to
+    # schematic_dir/schematic_files above (those build a uuid->name lookup
+    # via a flat directory scan, not a hierarchy walk). Not read by the CLI
+    # (apply/extract have no use for it). Used to live purely in the GUI's
+    # own QSettings, keyed globally rather than per-project — found live
+    # 2026-08-07: switching projects silently kept the previous project's
+    # root sheet, so Pending changes matched nothing against a schematic it
+    # was never told changed. Path relative to this YAML, like schematic_dir.
+    root_sheet: str | None = None
     # Explicit override for registry file paths — by default they are derived
     # from the CONFIG file name itself (registry_path_for_config), which changes
     # when the config is renamed. Paths are relative to this YAML.

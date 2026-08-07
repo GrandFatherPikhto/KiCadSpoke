@@ -156,6 +156,12 @@ class DockHub:
         # — un-couples them from always following the same file_selected
         # click) need the whole include graph too, same reasoning as above.
         self.config_tree_dock.root_file_changed.connect(self.extract_dock.set_root_path)
+        # fieldstool's root_sheet (added 2026-08-07, see config/models.py's
+        # Config.root_sheet docstring) — same root_file_changed source, so
+        # opening/switching a project automatically re-points fieldstool's
+        # schematic-vs-board diff instead of silently keeping the previous
+        # project's manually-picked root sheet.
+        self.config_tree_dock.root_file_changed.connect(self.fieldstool_dock.set_root_path)
         # log_file: (Config.log_file, root-file top-level key) — 2026-08-06,
         # found live: Denis had it set in root.yaml already, assumed
         # (reasonably) it already covered GUI runs too, but the GUI's own
@@ -178,6 +184,7 @@ class DockHub:
         self.thermal_via_dock.set_root_path(self.config_tree_dock.root_path)
         self.cells_dock.set_root_path(self.config_tree_dock.root_path)
         self.extract_dock.set_root_path(self.config_tree_dock.root_path)
+        self.fieldstool_dock.set_root_path(self.config_tree_dock.root_path)
         self._on_root_file_changed_for_logging(self.config_tree_dock.root_path)
         # file_selected fires BEFORE the more specific cell_picked/
         # placement_picked/profile_picked signal on a leaf click (see
