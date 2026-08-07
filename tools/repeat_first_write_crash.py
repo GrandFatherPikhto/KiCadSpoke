@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!.venv/bin/python
 """
 repeat_first_write_crash.py — runs N attempts of "first transaction after a
 clean KiCad start" in a row and reports the crash percentage.
@@ -45,9 +45,15 @@ cycle start.
 
 Config (optional): by default reads crash_config.yaml from the repo root —
 shared fields (project, boards_dir, runs, startup_wait, settle_delay) at
-the top level, the Windows-only kicad_exe under a nested windows: key (read
-only if os.name == "nt"; Linux has no such key at all, launch is by Flatpak
-app id, no path needed). Any CLI flag overrides the corresponding config
+the top level, kicad_exe under a nested windows: key (read only if os.name
+== "nt", mandatory there — no app-id launch on Windows) or under a nested
+linux: key (read only if os.name != "nt", optional — a direct executable,
+e.g. a nightly AppImage/wrapper script not distributed via Flatpak at all;
+takes priority over flatpak_branch when both are set). flatpak_branch also
+lives under linux: (Linux only, ignored if kicad_exe is set) — selects the
+Flatpak branch, e.g. "beta" for org.kicad.KiCad//beta side by side with the
+stable org.kicad.KiCad install; omitted/unset launches plain
+org.kicad.KiCad (stable). Any CLI flag overrides the corresponding config
 field.
 
 Usage:
@@ -56,6 +62,8 @@ Usage:
   python tools/repeat_first_write_crash.py --project <...> --runs 10 --settle-delay 30   # test hypothesis H1
   python tools/repeat_first_write_crash.py --config other_crash_config.yaml
   python tools/repeat_first_write_crash.py --kicad-exe "<path to kicad.exe>"   # Windows, outside the config
+  python tools/repeat_first_write_crash.py --flatpak-branch beta # Linux, outside the config
+  python tools/repeat_first_write_crash.py --kicad-exe /usr/bin/kicad-nightly # Linux, non-Flatpak build
 """
 import argparse
 import os
@@ -103,12 +111,19 @@ def clean_state(boards_dir: Path):
     )
 
 
-def launch_kicad(project_path: str, kicad_exe: str = None):
-    """Linux: launched by Flatpak app id, no path needed. Windows: there is no
-    equivalent app-id launch, so the actual kicad.exe path is required
-    explicitly (kicad_exe in the config or --kicad-exe) — no silent guessing
-    across install locations/versions, same "explicit beats guessing"
-    convention as the rest of the project (e.g. --net-template-role)."""
+def launch_kicad(project_path: str, kicad_exe: str = None, flatpak_branch: str = None):
+    """Windows: there is no app-id launch, so the actual kicad.exe path is
+    required explicitly (kicad_exe in the config or --kicad-exe) — no silent
+    guessing across install locations/versions, same "explicit beats
+    guessing" convention as the rest of the project (e.g.
+    --net-template-role). Linux: by default launched by Flatpak app id, no
+    path needed — optionally a specific branch (flatpak_branch, e.g. "beta")
+    to pick between multiple Flatpak installs of org.kicad.KiCad side by
+    side (stable vs beta); unset launches plain org.kicad.KiCad (stable).
+    If kicad_exe is also given on Linux (e.g. a nightly AppImage/wrapper
+    script not distributed via Flatpak at all — flatpak_branch only ever
+    offers stable/beta, never nightly), it takes priority over
+    flatpak_branch and is launched directly, exactly like Windows."""
     if os.name == "nt":
         if not kicad_exe:
             sys.exit("[error] Windows requires kicad_exe (path to kicad.exe) in the "
@@ -121,9 +136,15 @@ def launch_kicad(project_path: str, kicad_exe: str = None):
             [kicad_exe, project_path],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-    else:
+    elif kicad_exe:
         subprocess.Popen(
-            ["flatpak", "run", FLATPAK_APP_ID, project_path],
+            [kicad_exe, project_path],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    else:
+        app_ref = f"{FLATPAK_APP_ID}//{flatpak_branch}" if flatpak_branch else FLATPAK_APP_ID
+        subprocess.Popen(
+            ["flatpak", "run", app_ref, project_path],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
 
@@ -208,8 +229,15 @@ def main():
     ap.add_argument("--settle-delay", type=float, default=None,
                      help="Пауза после готовности IPC перед транзакцией, тест гипотезы H1 (переопределяет config)")
     ap.add_argument("--kicad-exe", default=None,
-                     help="Путь к kicad.exe (переопределяет config; обязателен на Windows, "
-                          "на Linux игнорируется — там запуск по Flatpak app id)")
+                     help="Путь к исполняемому файлу KiCad (переопределяет config). "
+                          "На Windows обязателен — там нет запуска по app id. На Linux "
+                          "опционален: если задан — запускается напрямую (например, "
+                          "nightly-обёртка/AppImage, которых нет во Flatpak), в обход "
+                          "Flatpak/--flatpak-branch; не задан -> обычный flatpak run")
+    ap.add_argument("--flatpak-branch", default=None,
+                     help="Flatpak-ветка org.kicad.KiCad, например beta (переопределяет config; "
+                          "только Linux, на Windows игнорируется). Не задано -> обычный "
+                          "org.kicad.KiCad (stable)")
     args = ap.parse_args()
 
     config = load_config(args.config)
@@ -221,7 +249,11 @@ def main():
     boards_dir = args.boards_dir or config.get("boards_dir", "test_boards")
     startup_wait = args.startup_wait if args.startup_wait is not None else config.get("startup_wait", 30.0)
     settle_delay = args.settle_delay if args.settle_delay is not None else config.get("settle_delay", 0.0)
-    kicad_exe = args.kicad_exe or config.get("windows", {}).get("kicad_exe")
+    if os.name == "nt":
+        kicad_exe = args.kicad_exe or config.get("windows", {}).get("kicad_exe")
+    else:
+        kicad_exe = args.kicad_exe or config.get("linux", {}).get("kicad_exe")
+    flatpak_branch = args.flatpak_branch or config.get("linux", {}).get("flatpak_branch")
 
     results = []
     for i in range(1, runs + 1):
@@ -229,7 +261,7 @@ def main():
         kill_kicad()
         time.sleep(1.0)
         clean_state(Path(boards_dir))
-        launch_kicad(project, kicad_exe)
+        launch_kicad(project, kicad_exe, flatpak_branch)
 
         if not wait_for_ipc(startup_wait):
             print("  -> KiCad не поднялся за отведённое время, пропуск")
