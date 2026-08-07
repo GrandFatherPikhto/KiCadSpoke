@@ -52,8 +52,16 @@ def list_kicad_pids() -> list[int]:
                     pids.append(int(parts[1]))
         else:
             import psutil  # optional, see requirements.txt
+            # Excludes our own PID (found live 2026-08-07: launched directly
+            # as ./kicadstamp_gui.py, Linux's comm — what psutil's name()
+            # reads — is the truncated SCRIPT basename, "kicadstamp_gui." for
+            # a 15-char comm field, which contains "kicad" just as much as
+            # real KiCad's own process name does. Denis picked the one PID
+            # the "KiCad processes" dialog offered, force-closed it, and it
+            # was this app killing itself).
             pids = [p.pid for p in psutil.process_iter(["name"])
-                    if p.info["name"] and "kicad" in p.info["name"].lower()]
+                    if p.pid != os.getpid() and p.info["name"]
+                    and "kicad" in p.info["name"].lower()]
     except Exception as e:
         logger.debug("could not get kicad PIDs: %s", e)
     return sorted(pids)
@@ -94,8 +102,14 @@ def list_kicad_processes() -> list[KicadProcessInfo]:
                         title=None if title == "N/A" else title))
         else:
             import psutil  # optional, see requirements.txt
+            # Same self-match exclusion as list_kicad_pids() above — this is
+            # the function gui/kicad_processes_dialog.py's picker actually
+            # lists from, so it's the one that let Force-close target our
+            # own process live.
+            own_pid = os.getpid()
             for p in psutil.process_iter(["pid", "name"]):
-                if p.info["name"] and "kicad" in p.info["name"].lower():
+                if (p.info["pid"] != own_pid and p.info["name"]
+                        and "kicad" in p.info["name"].lower()):
                     processes.append(KicadProcessInfo(pid=p.info["pid"]))
     except Exception as e:
         logger.debug("could not get kicad process details: %s", e)
