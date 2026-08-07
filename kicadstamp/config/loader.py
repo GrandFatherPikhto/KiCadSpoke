@@ -25,6 +25,7 @@ from ..exceptions import ValidationError, format_fatal_error
 from ..i18n import _
 from ..runtime_context import RuntimeContext
 from ..sheet_names import build_sheet_name_map
+from ..utils.paths import resolve_config_relative_path
 from .entries import (
     _check_layer_value,
     _load_cell,
@@ -235,20 +236,21 @@ def load_config(path: str) -> tuple[Config, RuntimeContext]:
     schematic_files = data.get('schematic_files', []) or []
     sheet_names = build_sheet_name_map(path, schematic_dir, schematic_files)
 
+    config_dir = Path(path).parent
     registry_path = data.get('registry_path')
     track_registry_path = data.get('track_registry_path')
     if registry_path:
-        registry_path = str(Path(path).parent / registry_path)
+        registry_path = resolve_config_relative_path(config_dir, registry_path)
     if track_registry_path:
-        track_registry_path = str(Path(path).parent / track_registry_path)
+        track_registry_path = resolve_config_relative_path(config_dir, track_registry_path)
 
     log_file = data.get('log_file')
     if log_file:
-        log_file = str(Path(path).parent / log_file)
+        log_file = resolve_config_relative_path(config_dir, log_file)
 
     operation_log_dir = data.get('operation_log_dir')
     if operation_log_dir:
-        operation_log_dir = str(Path(path).parent / operation_log_dir)
+        operation_log_dir = resolve_config_relative_path(config_dir, operation_log_dir)
 
     ctx = RuntimeContext(sheet_names=sheet_names)
 

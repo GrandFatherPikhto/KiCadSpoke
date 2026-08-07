@@ -1,4 +1,0 @@
-registry_path: registries/dac_channels.json
-track_registry_path: registries/dac.tracks.registry.json
-log_file: ../logs/dac.log
-schematic_dir: ../../../test_boards/3CH-AWG-TIA

@@ -147,6 +147,16 @@ def real_main_window(qapp):
     yield window
     window._timer.stop()
     window._selection_timer.stop()
+    # PollWorkerHandle's QThread is meant to outlive one MainWindow — it's
+    # normally stopped via QApplication.aboutToQuit (see MainWindow.__init__),
+    # which only fires once for the whole app's lifetime. Tests build many
+    # MainWindows in the same QApplication session, so that never fires here;
+    # without an explicit stop(), the still-running QThread gets torn down by
+    # Qt's parent-child cascade whenever this window is garbage-collected —
+    # "QThread: Destroyed while thread is still running" is fatal (found
+    # live 2026-08-07 fixing this same class of bug, see
+    # handoff_2026_08_07_worker_thread_gil_deadlock.md).
+    window._poll_worker.stop()
     # Phase 4.3 — the embedded LogDock attaches its handler to the ROOT
     # logger; detach it so a session with several windows doesn't accumulate
     # handlers that keep every torn-down dock alive / keep logging forever.

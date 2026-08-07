@@ -90,6 +90,7 @@ chatter
 
 test-boards
 test_boards
+boards
 
 *.txt
 kicad-spoke.txt
