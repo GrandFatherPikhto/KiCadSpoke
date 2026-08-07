@@ -45,7 +45,7 @@ kicadstamp/diagnostics/
 ├── probe_path_minus_last.py       # sheet_path.path[:-1] grouping vs {uuid: Sheetname} [LIVE]
 ├── probe_pi_filter_ambiguity.py   # Role/Cluster/sheet-path/nets for refs (ambiguity) [LIVE]
 ├── probe_sheet_path_truncation.py # path[:-1]/path[1:] grouping vs local-net paths [LIVE]
-├── probe_uuid_stability.py        # fp.id.value survives re-annotation? [LIVE]
+├── probe_uuid_stability.py        # fp.id.value survives re-annotation? snapshot+compare [LIVE snapshot / FILES compare]
 ├── probe_uuid_to_sheet_name.py    # {UUID chain -> human path} from local nets [LIVE]
 ├── resolve_paths.py               # Human sheet paths from a .net file [LIVE]
 ├── role_resolver.py               # Raw proto dump of sheet_path [LIVE]
@@ -348,6 +348,44 @@ python -m kicadstamp.diagnostics.test_pad_mirror_convention C6 --pad 2
 
 **Dependencies:**
 `kicadstamp.kicad.adapter`, `kicadstamp.geometry.pad_projection` (helper).
+
+---
+
+### `probe_uuid_stability.py`
+
+**Purpose:**
+Checks whether a footprint's own UUID (`fp.id.value`) survives schematic re-annotation. `snapshot`
+captures every board footprint's `ref`/`id`/`footprint`/`sheet_path` to JSON; `compare` diffs two
+snapshots offline and reports whether the *set* of UUIDs changed between them — that is the actual
+instability signal. A refdes moving onto the same UUID is expected after re-annotation and is
+reported separately (with `-v`), not treated as a discrepancy. See the 2026-08-07 empirical result
+in `techdocs/handoff/handoff_2026_08_07_uuid_stability_probe.md`: footprint UUIDs stayed identical
+across two independent full-reset re-annotation scenarios on a 279-footprint board.
+
+**Usage:**
+```bash
+python -m kicadstamp.diagnostics.probe_uuid_stability snapshot uuid_before.json
+# ... re-annotate in Eeschema, then Update PCB from Schematic
+#     (Match Method = "Re-associate by UUID/timestamp") ...
+python -m kicadstamp.diagnostics.probe_uuid_stability snapshot uuid_after.json
+python -m kicadstamp.diagnostics.probe_uuid_stability compare uuid_before.json uuid_after.json -v
+```
+
+**Parameters:**
+- `snapshot <output>` – output JSON path (requires live KiCad).
+- `compare <before> <after>` – two previously captured snapshot JSON files (offline, no KiCad needed).
+- `-v`, `--verbose` (compare only) – also list refdes remaps for UUIDs that stayed the same.
+
+**Output:**
+- `snapshot`: a JSON file with capture metadata (timestamp, KiCad version, footprint count) plus a
+  `footprints` list (`ref`/`id`/`footprint`/`sheet_path` per entry).
+- `compare`: counts (before/after/common/added/removed/ref-changed), then a block listing any UUIDs
+  present in one snapshot but not the other (the real discrepancy), and, with `-v`, a table of
+  refdes remaps for UUIDs that matched in both. Exit code `1` if the UUID set changed, `0` if it
+  didn't.
+
+**Dependencies:**
+`kipy` (`snapshot` only); `compare` has no KiCad dependency at all, standard library `json`/`argparse` only.
 
 ---
 

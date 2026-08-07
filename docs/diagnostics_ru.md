@@ -41,7 +41,7 @@ kicadstamp/diagnostics/
 ├── probe_path_minus_last.py       # Группировка sheet_path.path[:-1] vs {uuid: Sheetname} [LIVE]
 ├── probe_pi_filter_ambiguity.py   # Role/Cluster/sheet-path/цепи для refdes (неоднозначность) [LIVE]
 ├── probe_sheet_path_truncation.py # Группировка path[:-1]/path[1:] vs пути локальных цепей [LIVE]
-├── probe_uuid_stability.py        # Переживает ли fp.id.value переаннотацию? [LIVE]
+├── probe_uuid_stability.py        # Переживает ли fp.id.value переаннотацию? snapshot+compare [LIVE snapshot / FILES compare]
 ├── probe_uuid_to_sheet_name.py    # {цепочка UUID -> человекочитаемый путь} из локальных цепей [LIVE]
 ├── resolve_paths.py               # Человекочитаемые пути листов из .net-файла [LIVE]
 ├── role_resolver.py               # Сырой proto-дамп sheet_path [LIVE]
@@ -330,6 +330,45 @@ python -m kicadstamp.diagnostics.test_pad_mirror_convention C6 --pad 2
 
 **Зависимости:**  
 `kicadstamp.kicad.adapter`, `kicadstamp.geometry.pad_projection` (вспомогательно).
+
+---
+
+### `probe_uuid_stability.py`
+
+**Назначение:**  
+Проверяет, переживает ли собственный UUID футпринта (`fp.id.value`) переаннотацию схемы.
+`snapshot` снимает `ref`/`id`/`footprint`/`sheet_path` каждого футпринта платы в JSON; `compare`
+сравнивает два снимка офлайн и определяет, изменился ли сам МНОЖЕСТВО UUID между ними — это и есть
+настоящий сигнал нестабильности. Переезд refdes на тот же UUID — ожидаемое поведение при
+переаннотации, показывается отдельно (с `-v`), не считается расхождением. Эмпирический результат
+от 2026-08-07 — в `techdocs/handoff/handoff_2026_08_07_uuid_stability_probe.md`: UUID футпринтов
+остались идентичны на двух независимых сценариях полного сброса обозначений на плате из 279
+футпринтов.
+
+**Использование:**
+```bash
+python -m kicadstamp.diagnostics.probe_uuid_stability snapshot uuid_before.json
+# ... переаннотация в Eeschema, затем Update PCB from Schematic
+#     (Match Method = "Re-associate by UUID/timestamp") ...
+python -m kicadstamp.diagnostics.probe_uuid_stability snapshot uuid_after.json
+python -m kicadstamp.diagnostics.probe_uuid_stability compare uuid_before.json uuid_after.json -v
+```
+
+**Параметры:**
+- `snapshot <output>` – путь к выходному JSON (требует живой KiCad).
+- `compare <before> <after>` – два ранее снятых JSON-снимка (офлайн, KiCad не нужен).
+- `-v`, `--verbose` (только для compare) – дополнительно показать переезды refdes для UUID, которые не изменились.
+
+**Вывод:**  
+- `snapshot`: JSON-файл с метаданными снятия (время, версия KiCad, число футпринтов) и списком
+  `footprints` (`ref`/`id`/`footprint`/`sheet_path` на каждую запись).
+- `compare`: счётчики (до/после/общих/появившихся/пропавших/со сменой refdes), затем блок с UUID,
+  присутствующими только в одном из снимков (настоящее расхождение), и, с `-v`, таблица переездов
+  refdes для UUID, совпавших в обоих снимках. Код возврата — `1`, если множество UUID изменилось,
+  `0` — если нет.
+
+**Зависимости:**  
+`kipy` (только для `snapshot`); `compare` вообще не зависит от KiCad, только стандартная библиотека `json`/`argparse`.
 
 ---
 
