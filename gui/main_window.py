@@ -40,21 +40,27 @@ mouse in KiCad shows up in the tree too.
 
 Both `_poll()` and `_poll_board_selection()` dispatch their actual IPC
 (connect()/refresh()/get_selected_items()) through gui/worker.py's
-start_long_op — the same background-worker mechanism Extract/Redraw already
-use — instead of calling it directly on the UI thread (2026-08-03 fix: a
-QTimer.timeout handler that blocks on a kipy call froze the whole window,
-including repaint and input, for up to the socket's full recv timeout — 20s,
-DEFAULT_TIMEOUT_MS — whenever KiCad disappeared mid-request; not a deadlock,
-just an honest ~20s hang per bad tick, but enough for the desktop to report
-"Application not responding"). kipy's connection is a plain pynng.Req0
-(request/reply) socket with no per-request timeout override (the timeout is
-fixed once, at socket-connect time — see kipy/client.py) and no locking, so
-only ONE request may be in flight at a time across the whole app —
-`long_op_active` (see connection.py) now mutually excludes a poll tick
-against a real long op AND against itself (a tick that finds the flag
-already True — real op or a still-running previous tick — just skips its
-turn silently; no queueing, at most one poll-related background thread is
-ever alive).
+PollWorkerHandle — a background worker thread, same idea as Extract/
+Redraw's start_long_op, instead of calling it directly on the UI thread
+(2026-08-03 fix: a QTimer.timeout handler that blocks on a kipy call froze
+the whole window, including repaint and input, for up to the socket's full
+recv timeout — 20s, DEFAULT_TIMEOUT_MS — whenever KiCad disappeared
+mid-request; not a deadlock, just an honest ~20s hang per bad tick, but
+enough for the desktop to report "Application not responding"). Unlike
+start_long_op (a fresh QThread + QObject per call — fine for Extract/
+Redraw, rare one-shot ops), PollWorkerHandle is ONE persistent QThread +
+QObject built once at startup and dispatched to via plain signal emits —
+recreating the worker on every ~400ms-2s tick turned out to occasionally
+deadlock (GIL vs. a Qt-internal connection mutex, see PollWorkerHandle's
+own docstring and handoff_2026_08_07_worker_thread_gil_deadlock.md).
+kipy's connection is a plain pynng.Req0 (request/reply) socket with no
+per-request timeout override (the timeout is fixed once, at socket-connect
+time — see kipy/client.py) and no locking, so only ONE request may be in
+flight at a time across the whole app — `long_op_active` (see
+connection.py) now mutually excludes a poll tick against a real long op
+AND against itself (a tick that finds the flag already True — real op or a
+still-running previous tick — just skips its turn silently; no queueing,
+at most one poll-related task is ever in flight).
 
 The fast tick deliberately does NOT call board.select() itself — the full
 snapshot is cached on BoardConnection (see connection.py) and rebuilt only
@@ -81,7 +87,7 @@ from .connection import BoardConnection
 from .dock_hub import DockHub
 from .kicad_processes_dialog import KicadProcessesDialog
 from .tray_icon import build_tray_icon
-from .worker import start_long_op
+from .worker import PollWorkerHandle
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +140,16 @@ class MainWindow(QMainWindow):
         # dock's lazy lookup — only possible now that _dock_hub is bound
         # (see DockHub.restore_tree_mode()).
         self._dock_hub.restore_tree_mode()
+
+        # One persistent worker thread for both poll ticks (see
+        # PollWorkerHandle's docstring for why this must NOT be a fresh
+        # QThread per tick like start_long_op — GIL/Qt-mutex deadlock found
+        # live 2026-08-07, handoff_2026_08_07_worker_thread_gil_deadlock.md).
+        # Stopped on app quit — QApplication.quit() (tray's _quit) bypasses
+        # closeEvent entirely, so aboutToQuit is the one hook both paths
+        # share.
+        self._poll_worker = PollWorkerHandle(self)
+        QApplication.instance().aboutToQuit.connect(self._poll_worker.stop)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
@@ -332,7 +348,7 @@ class MainWindow(QMainWindow):
         automatic timer tick) only tries to connect while disconnected — see
         module docstring for why an already-connected idle tick is a
         deliberate no-op. Collect/decide here on the UI thread; the actual
-        IPC (connect()/refresh()) runs on a worker thread via start_long_op
+        IPC (connect()/refresh()) runs on the persistent poll worker thread
         (see module docstring for why) — this method itself never blocks."""
         # A long op (Extract/Redraw) or another still-running poll tick holds
         # the shared socket; connecting/refreshing now would interleave a
@@ -342,8 +358,8 @@ class MainWindow(QMainWindow):
             return
         if self.connection.is_connected and not manual:
             return
-        self._active_poll = start_long_op(
-            self.connection, (), self._run_poll, self._finish_poll, self._on_poll_failed, manual)
+        self._poll_worker.submit(
+            self.connection, self._run_poll, (manual,), self._finish_poll, self._on_poll_failed)
 
     def _run_poll(self, manual: bool) -> dict:
         """Worker thread: connection IPC only — never touches a widget."""
@@ -385,8 +401,8 @@ class MainWindow(QMainWindow):
 
     def _poll_board_selection(self) -> None:
         """The fast timer's tick — see module docstring. Collect/decide here
-        on the UI thread; get_selected_items() runs on a worker thread via
-        start_long_op, same reasoning as _poll()."""
+        on the UI thread; get_selected_items() runs on the persistent poll
+        worker thread, same reasoning as _poll()."""
         # A long op (Extract/Redraw) or another still-running poll tick holds
         # the shared socket; get_selected_items() here would interleave into
         # its in-flight REQ.
@@ -394,8 +410,8 @@ class MainWindow(QMainWindow):
             return
         if not self.connection.is_connected:
             return
-        self._active_selection_poll = start_long_op(
-            self.connection, (), self._run_poll_selection, self._finish_poll_selection,
+        self._poll_worker.submit(
+            self.connection, self._run_poll_selection, (), self._finish_poll_selection,
             self._on_poll_selection_failed)
 
     def _run_poll_selection(self) -> dict:

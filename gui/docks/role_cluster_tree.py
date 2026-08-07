@@ -54,7 +54,7 @@ synchronous board write.
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from PyQt6.QtCore import QItemSelectionModel, Qt, pyqtSignal
 from PyQt6.QtGui import QStandardItem, QStandardItemModel
@@ -115,6 +115,13 @@ class RoleClusterTreeDock(QDockWidget):
         # tests that mutate main_window.connection.board, working).
         self._connection = connection if connection is not None else main_window.connection
         self._selected: List[Selected] = []
+        # ref -> leaf QStandardItem, rebuilt alongside the model on every
+        # _rebuild() — lets highlight_board_selection() jump straight to a
+        # matched ref instead of walking the whole tree on every selection
+        # tick (found live 2026-08-07: that walk, O(total rows) on every
+        # ~400ms board-selection tick, was part of a rare GIL/Qt-mutex
+        # deadlock window — see handoff_2026_08_07_worker_thread_gil_deadlock.md).
+        self._ref_to_item: Dict[str, QStandardItem] = {}
         # Distinguishes "first build with actual data" (auto-expand top
         # level so the tree isn't a single flat blob) from "user just
         # collapsed everything via the button" (both leave
@@ -226,7 +233,18 @@ class RoleClusterTreeDock(QDockWidget):
         (cheap) — and bails out early if the target refs already match
         what's currently selected, so an unchanged board selection doesn't
         cause any visible churn on every tick. Mode-agnostic: just matches
-        against whatever _REF_ROLE data is in the currently active model."""
+        against whatever _REF_ROLE data is in the currently active model.
+
+        Looks matched refs up in self._ref_to_item (O(1) per ref) instead of
+        walking the whole tree — found live 2026-08-07: on a 1139-footprint
+        board, the old recursive walk visited every single row on every
+        ~400ms tick regardless of how few refs actually matched, which
+        widened the window for a rare GIL/Qt-connection-mutex deadlock (see
+        handoff_2026_08_07_worker_thread_gil_deadlock.md) as well as being
+        needlessly expensive on its own. scrollTo() is called once, for the
+        last match, not once per match — each call fully overrides the
+        previous scroll position anyway, so calling it per-match only wasted
+        work without any visible difference."""
         model = self.tree.model()
         if model is None:
             return
@@ -238,20 +256,21 @@ class RoleClusterTreeDock(QDockWidget):
         if not refs:
             return
 
-        def walk(item: QStandardItem, ancestor_indexes):
+        last_index = None
+        for ref in refs:
+            item = self._ref_to_item.get(ref)
+            if item is None:
+                continue
             index = model.indexFromItem(item)
-            ref = item.data(_REF_ROLE)
-            if ref is not None and ref in refs:
-                selection_model.select(index, QItemSelectionModel.SelectionFlag.Select)
-                for ancestor in ancestor_indexes:
-                    self.tree.setExpanded(ancestor, True)
-                self.tree.scrollTo(index)
-            for row in range(item.rowCount()):
-                walk(item.child(row), ancestor_indexes + [index])
+            selection_model.select(index, QItemSelectionModel.SelectionFlag.Select)
+            parent = index.parent()
+            while parent.isValid():
+                self.tree.setExpanded(parent, True)
+                parent = parent.parent()
+            last_index = index
 
-        root = model.invisibleRootItem()
-        for row in range(root.rowCount()):
-            walk(root.child(row), [])
+        if last_index is not None:
+            self.tree.scrollTo(last_index)
 
     def tree_collapse_all(self) -> None:
         self.tree.collapseAll()
@@ -312,6 +331,7 @@ class RoleClusterTreeDock(QDockWidget):
         change), and restore them after."""
         expanded_paths, selected_refs = self._capture_view_state()
         visible = self._filtered(self._current_rows())
+        self._ref_to_item = {}
         model = QStandardItemModel()
         if self.group_by.currentIndex() == 0:  # Role
             self._build_flat(model, visible, key=lambda r: r.role)
@@ -436,7 +456,9 @@ class RoleClusterTreeDock(QDockWidget):
             group_item.setData(None, _REF_ROLE)
             group_item.setData(name, _GROUP_VALUE_ROLE)
             for r in sorted(members, key=lambda r: r.ref):
-                group_item.appendRow(self._leaf_item(r))
+                leaf = self._leaf_item(r)
+                self._ref_to_item[r.ref] = leaf
+                group_item.appendRow(leaf)
             root.appendRow(group_item)
 
     def _build_hierarchical(self, model: QStandardItemModel, items: List[_Row],
@@ -457,7 +479,9 @@ class RoleClusterTreeDock(QDockWidget):
                 node.setData("/".join(path), _GROUP_VALUE_ROLE)
                 parent.appendRow(node)
                 nodes[path] = node
-            nodes[segments].appendRow(self._leaf_item(r))
+            leaf = self._leaf_item(r)
+            self._ref_to_item[r.ref] = leaf
+            nodes[segments].appendRow(leaf)
 
     def _on_clicked(self, index) -> None:
         item = self.tree.model().itemFromIndex(index)

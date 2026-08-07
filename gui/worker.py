@@ -178,3 +178,116 @@ def start_long_op(connection, widgets, fn, on_success, on_error, *args):
     controller.thread_stopped.connect(lambda: _ACTIVE_CONTROLLERS.discard(controller))
     controller.start(fn, *args)
     return controller
+
+
+class PollTask:
+    """One unit of work for PollWorkerHandle.submit() — plain data, no Qt
+    machinery, so building one never touches a signal/connection."""
+    __slots__ = ("tag", "fn", "args")
+
+    def __init__(self, tag: object, fn: Callable[..., Any], args: tuple):
+        self.tag = tag
+        self.fn = fn
+        self.args = args
+
+
+class PollResult:
+    """Outcome of a PollTask, carried back by PollWorker.resultReady."""
+    __slots__ = ("tag", "value", "error")
+
+    def __init__(self, tag: object, value: Any, error: Optional[str]):
+        self.tag = tag
+        self.value = value
+        self.error = error
+
+
+class PollWorker(QObject):
+    """Lives on PollWorkerHandle's persistent QThread. Unlike _LongOpWorker
+    (built fresh per op, fine for rare Extract/Redraw calls), exactly one
+    PollWorker is created for the whole app lifetime — see PollWorkerHandle
+    for why."""
+
+    resultReady = pyqtSignal(object)  # PollResult
+
+    @pyqtSlot(object)
+    def run_task(self, task: PollTask) -> None:
+        try:
+            value = task.fn(*task.args)
+        except Exception as e:
+            logger.exception("Poll worker task failed")
+            self.resultReady.emit(PollResult(task.tag, None, str(e)))
+            return
+        self.resultReady.emit(PollResult(task.tag, value, None))
+
+
+class PollWorkerHandle(QObject):
+    """One QThread + PollWorker pair, created once (by MainWindow, at
+    startup) and kept alive for the whole app lifetime — unlike
+    start_long_op's LongOpController, which deliberately builds a fresh
+    QThread + _LongOpWorker for every single call.
+
+    Why (found live 2026-08-07, see
+    handoff_2026_08_07_worker_thread_gil_deadlock.md): MainWindow's poll
+    ticks (_poll/_poll_board_selection) used to go through start_long_op
+    too, meaning a new QThread + QObject pair was built and torn down every
+    ~400ms-2s. Destroying a Python-subclassed QObject requires the GIL
+    (PyQt6/sip checks whether disconnectNotify is overridden in Python on
+    every teardown, even when it isn't) while that same teardown holds a
+    Qt-internal connection-list mutex — if the UI thread is, at that exact
+    moment, itself deep inside an unrelated Qt signal emission that needs
+    the same mutex (e.g. a QTreeView relayout), both sides deadlock: the UI
+    thread holds the GIL and wants the mutex, the dying worker thread holds
+    the mutex and wants the GIL. Reproduced live once; not reliably
+    reproducible on demand.
+
+    The fix here is architectural, not a patch on the symptom: build the
+    QThread + PollWorker ONCE and never destroy either until the whole app
+    quits (see stop()). Every tick after that is just a plain signal emit
+    (taskRequested -> the worker's already-connected run_task slot) — an
+    emit never calls connectNotify/disconnectNotify, so it never touches
+    the GIL-vs-mutex hazard above. dispatch is a persistent, ONE-TIME
+    signal connection (in __init__), never reconnected/disconnected per
+    call, for the same reason.
+    """
+
+    taskRequested = pyqtSignal(object)  # PollTask, auto-queued (worker thread)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._thread = QThread(self)
+        self._worker = PollWorker()
+        self._worker.moveToThread(self._thread)
+        self.taskRequested.connect(self._worker.run_task)
+        self._worker.resultReady.connect(self._on_result)
+        self._thread.start()
+        # tag -> (on_success, on_error, connection); only ever touched on
+        # the UI thread (submit() and _on_result() both run there).
+        self._pending: Dict[object, tuple] = {}
+
+    def submit(self, connection: Any, fn: Callable[..., Any], args: tuple,
+               on_success: Callable[[Any], None], on_error: Callable[[str], None]) -> None:
+        """Dispatches fn(*args) onto the persistent worker thread. Mirrors
+        start_long_op's connection.long_op_active bookkeeping (set here,
+        before the task is even queued, cleared in _on_result — same
+        "before the worker starts, after it's done" bracket)."""
+        if connection is not None:
+            connection.long_op_active = True
+        tag = object()
+        self._pending[tag] = (on_success, on_error, connection)
+        self.taskRequested.emit(PollTask(tag, fn, args))
+
+    def _on_result(self, result: PollResult) -> None:
+        on_success, on_error, connection = self._pending.pop(result.tag)
+        if connection is not None:
+            connection.long_op_active = False
+        if result.error is not None:
+            on_error(result.error)
+        else:
+            on_success(result.value)
+
+    def stop(self) -> None:
+        """Call once, at app shutdown (MainWindow's aboutToQuit handler) —
+        the one point where actually tearing down this QThread is safe
+        (nothing else will submit() again afterwards)."""
+        self._thread.quit()
+        self._thread.wait()

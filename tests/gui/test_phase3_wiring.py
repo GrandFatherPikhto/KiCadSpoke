@@ -84,6 +84,7 @@ def test_config_tree_restores_last_root_after_restart(qapp, tmp_path):
     finally:
         window._timer.stop()
         window._selection_timer.stop()
+        window._poll_worker.stop()
 
 
 def test_root_metadata_dock_picks_up_a_root_restored_before_wiring_existed(qapp, tmp_path):
@@ -110,6 +111,7 @@ def test_root_metadata_dock_picks_up_a_root_restored_before_wiring_existed(qapp,
     finally:
         window._timer.stop()
         window._selection_timer.stop()
+        window._poll_worker.stop()
 
 
 def test_tree_cluster_picked_fills_placer_cluster_field(real_main_window):
@@ -261,6 +263,7 @@ def test_rules_dock_picks_up_a_root_restored_before_wiring_existed(qapp, tmp_pat
     finally:
         window._timer.stop()
         window._selection_timer.stop()
+        window._poll_worker.stop()
 
 
 def test_rule_picked_fills_rules_form_and_switches_tab(real_main_window, tmp_path):
