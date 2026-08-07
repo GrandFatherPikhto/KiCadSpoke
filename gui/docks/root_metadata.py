@@ -104,12 +104,13 @@ _DEFAULTS: Dict[str, object] = {
 # on first run, so they may not exist yet — see module docstring), "sch" ->
 # Open-mode getOpenFileName filtered to *.kicad_sch (this one must already
 # exist, same reasoning as schematic_files' own Add... button below).
-# Fourth element: which tab it lands in (2026-08-05 tabbing) — schematic_dir/
-# root_sheet sit with schematic_files on the "Schematics" tab, the other
-# four (none of which are schematic-specific) share the "Files" tab.
+# Fourth element: where it lands — "common" -> the general-settings form
+# above the tabs (root_sheet, 2026-08-07, Denis: "перенеси на Project" —
+# it identifies the project as a whole, same standing as Layer, not
+# specific to any one tab), "schematics"/"files" -> that tab.
 _TEXT_FIELDS = [
+    ("root_sheet", _("Root sheet:"), "sch", "common"),
     ("schematic_dir", _("Schematic dir:"), "dir", "schematics"),
-    ("root_sheet", _("Root sheet:"), "sch", "schematics"),
     ("registry_path", _("Registry path:"), "file", "files"),
     ("track_registry_path", _("Track registry path:"), "file", "files"),
     ("log_file", _("Log file:"), "file", "files"),
@@ -193,7 +194,8 @@ class RootMetadataDock(QWidget):
                 browse_button.clicked.connect(
                     lambda _checked=False, e=edit, l=label: self._browse_file(e, l))
             row.addWidget(browse_button)
-            target_form = schematics_form if group == "schematics" else files_form
+            target_form = (common_form if group == "common" else
+                           schematics_form if group == "schematics" else files_form)
             target_form.addRow(label, row)
             self._text_edits[key] = edit
 
