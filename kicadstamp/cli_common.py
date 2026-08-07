@@ -15,7 +15,7 @@ never ``sys.exit()`` — it should raise ``PlacerError``/``ValidationError``/
 exit code and the message.
 """
 import logging
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 
 import yaml
 
@@ -23,6 +23,7 @@ from kipy.errors import ApiError, ApiStatusCode
 
 from .exceptions import PlacerError
 from .i18n import _
+from .utils.paths import resolve_config_relative_path
 
 
 def api_error_message(e: ApiError) -> str:
@@ -97,9 +98,7 @@ def peek_log_file(config_path: str) -> str | None:
         raw = data.get("log_file") if isinstance(data, dict) else None
         if not raw:
             return None
-        if Path(raw).is_absolute() or PureWindowsPath(raw).is_absolute():
-            return str(Path(raw))
-        return str(Path(config_path).parent / raw)
+        return resolve_config_relative_path(Path(config_path).parent, raw)
     except Exception as e:
         logging.warning(_("Could not read log_file from config {path}: {e}")
                         .format(path=config_path, e=e))
