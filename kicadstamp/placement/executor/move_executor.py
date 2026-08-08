@@ -31,6 +31,7 @@ class MoveExecutor:
             fp = fp_by_ref.get(cmd.ref)
             if fp is not None:
                 original_states[cmd.ref] = {
+                    'uuid': str(fp.id.value),
                     'x': fp.position.x,
                     'y': fp.position.y,
                     'angle_deg': fp.orientation.degrees,
@@ -76,6 +77,7 @@ class MoveExecutor:
         move_log = [
             {
                 'ref': cmd.ref,
+                'uuid': original_states.get(cmd.ref, {}).get('uuid'),
                 'original_position': {
                     'x': original_states.get(cmd.ref, {}).get('x', 0),
                     'y': original_states.get(cmd.ref, {}).get('y', 0),

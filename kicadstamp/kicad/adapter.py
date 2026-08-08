@@ -115,6 +115,17 @@ class KiCadBoardAdapter(IBoardAdapter):
         logger.debug(_("Footprint {ref} not found").format(ref=ref))
         return None
 
+    def get_footprint_by_id(self, uuid_str: str) -> FootprintInstance | None:
+        """Refdes-independent lookup, for identity that must survive
+        re-annotation (undo.py's move log — see move_executor.py's uuid
+        capture)."""
+        for fp in self.get_footprints():
+            if str(fp.id.value) == uuid_str:
+                logger.debug(_("Found footprint by uuid {uuid}").format(uuid=uuid_str))
+                return fp
+        logger.debug(_("Footprint with uuid {uuid} not found").format(uuid=uuid_str))
+        return None
+
     def get_footprints(self) -> list[FootprintInstance]:
         """
         Cached per board generation (cleared by refresh_board()). Anchor/role

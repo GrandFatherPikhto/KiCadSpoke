@@ -23,7 +23,13 @@ def undo_last_operation(json_path: Path) -> bool:
     # 1. Restore moved components
     for item in data.get('moves', []):
         ref = item['ref']
-        fp = adapter.get_footprint(ref)
+        uuid_str = item.get('uuid')
+        # UUID first (survives re-annotation between apply and undo — see
+        # move_executor.py's uuid capture); ref is only a fallback for logs
+        # written before the uuid field existed.
+        fp = adapter.get_footprint_by_id(uuid_str) if uuid_str else None
+        if fp is None:
+            fp = adapter.get_footprint(ref)
         if fp is None:
             logger.warning(_("Component {ref} not found, skipping").format(ref=ref))
             continue
@@ -39,8 +45,9 @@ def undo_last_operation(json_path: Path) -> bool:
         if fp.layer != orig_layer:
             logger.debug(_("Restoring {ref} to layer {layer} (flip)").format(ref=ref, layer=orig_layer_str))
             adapter.flip_selected([fp])
-            # After flip, re‑read the footprint
-            fp = adapter.get_footprint(ref)
+            # After flip, re‑read the footprint (by uuid — its refdes may
+            # have changed since we found it)
+            fp = adapter.get_footprint_by_id(uuid_str) if uuid_str else adapter.get_footprint(ref)
             if fp is None:
                 continue
 
