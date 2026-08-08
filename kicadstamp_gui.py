@@ -32,6 +32,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
 from kicadstamp import __version__
@@ -57,6 +58,15 @@ def main():
     setup_logging(verbose=args.verbose)
 
     app = QApplication(sys.argv)
+
+    # Default icon for every window this app creates (taskbar/alt-tab/window
+    # manager decorations) — a real asset, unlike gui/tray_icon.py's
+    # programmatic "K" glyph (that one's deliberately not a binary asset,
+    # see its own docstring; the window icon has no such constraint). Missing
+    # file is not fatal — Qt just falls back to no icon.
+    icon_path = Path(__file__).parent / "images" / "kicadstamp.png"
+    if icon_path.is_file():
+        app.setWindowIcon(QIcon(str(icon_path)))
 
     guard = SingleInstanceGuard(_SINGLE_INSTANCE_NAME)
     if not guard.try_acquire():
