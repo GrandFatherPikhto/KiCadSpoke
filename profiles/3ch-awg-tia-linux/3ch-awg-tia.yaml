@@ -1,9 +1,0 @@
-registry_path: registry
-track_registry_path: tracks
-log_file: logs/3ch-awg-tia.log
-operation_log_dir: logs/operation
-include:
-- components.yaml
-schematic_dir: ../../boards/3CH-AWG-TIA
-schematic_files:
-- ../../boards/3CH-AWG-TIA/3CH-AWG-TIA.kicad_sch
