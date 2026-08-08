@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  kicadstamp\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-01 16:04+0300\n"
+"POT-Creation-Date: 2026-08-08 14:54+0300\n"
 "PO-Revision-Date: 2026-07-27 12:00+0000\n"
 "Last-Translator: \n"
 "Language: en\n"
@@ -12,88 +12,62 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.10.3\n"
 
-#: fieldstool_gui.py:33
-msgid "fieldstool GUI"
+#: kicadstamp_cli.py:83
+msgid "KiCad Decap Placer – capacitor placement (manual strategy)"
 msgstr ""
 
-#: fieldstool_gui.py:34
+#: kicadstamp_cli.py:84
+msgid "Example: kicadstamp_cli.py config.yaml --dry-run"
+msgstr ""
+
+#: kicadstamp_cli.py:88
+msgid "Subcommand"
+msgstr ""
+
+#: kicadstamp_cli.py:90
+msgid "Apply placement"
+msgstr ""
+
+#: kicadstamp_cli.py:91
+msgid "YAML configuration file"
+msgstr ""
+
+#: kicadstamp_cli.py:92
+msgid "Only print the plan, do not apply"
+msgstr ""
+
 #: kicadstamp/diagnostics/diagnose_first_write_crash.py:276
 #: kicadstamp/diagnostics/diagnostic_charset.py:72
 #: kicadstamp/diagnostics/get_pad_bbox.py:28
 #: kicadstamp/diagnostics/test_create_one_via.py:56
 #: kicadstamp/diagnostics/test_flip_one_cap.py:58
 #: kicadstamp/diagnostics/test_move_one_cap.py:55
-#: kicadstamp/diagnostics/test_pad_mirror_convention.py:84 kicadstamp_cli.py:85
-#: kicadstamp_cli.py:137 kicadstamp_gui.py:44
+#: kicadstamp/diagnostics/test_pad_mirror_convention.py:84 kicadstamp_cli.py:93
+#: kicadstamp_cli.py:148 kicadstamp_gui.py:53
 msgid "IPC timeout in ms"
 msgstr ""
 
-#: fieldstool_gui.py:35 kicadstamp/diagnostics/get_pad_bbox.py:29
-#: kicadstamp_cli.py:87 kicadstamp_cli.py:111 kicadstamp_cli.py:127
-#: kicadstamp_cli.py:138 kicadstamp_gui.py:45
-msgid "Verbose output"
-msgstr ""
-
-#: kicadstamp_cli.py:48
-msgid "logs directory not found."
-msgstr ""
-
-#: kicadstamp_cli.py:53
-msgid "No operation files to undo."
-msgstr ""
-
-#: kicadstamp_cli.py:57
-#, python-brace-format
-msgid "Undoing operation from {file}"
-msgstr ""
-
-#: kicadstamp_cli.py:60
-msgid "✅ Operation successfully undone."
-msgstr ""
-
-#: kicadstamp_cli.py:62
-msgid "❌ Failed to undo operation."
-msgstr ""
-
-#: kicadstamp_cli.py:75
-msgid "KiCad Decap Placer – capacitor placement (manual strategy)"
-msgstr ""
-
-#: kicadstamp_cli.py:76
-msgid "Example: kicadstamp_cli.py config.yaml --dry-run"
-msgstr ""
-
-#: kicadstamp_cli.py:80
-msgid "Subcommand"
-msgstr ""
-
-#: kicadstamp_cli.py:82
-msgid "Apply placement"
-msgstr ""
-
-#: kicadstamp_cli.py:83
-msgid "YAML configuration file"
-msgstr ""
-
-#: kicadstamp_cli.py:84
-msgid "Only print the plan, do not apply"
-msgstr ""
-
-#: kicadstamp_cli.py:86
+#: kicadstamp_cli.py:94
 msgid "Batch size for commits"
 msgstr ""
 
-#: kicadstamp_cli.py:88 kicadstamp_cli.py:112 kicadstamp_cli.py:139
+#: kicadstamp/diagnostics/get_pad_bbox.py:29 kicadstamp_cli.py:95
+#: kicadstamp_cli.py:119 kicadstamp_cli.py:138 kicadstamp_cli.py:149
+#: kicadstamp_gui.py:54
+msgid "Verbose output"
+msgstr ""
+
+#: kicadstamp_cli.py:96 kicadstamp_cli.py:120 kicadstamp_cli.py:150
 msgid "File to save logs"
 msgstr ""
 
-#: kicadstamp_cli.py:89
+#: kicadstamp_cli.py:97
 msgid "Disable collision checking"
 msgstr ""
 
-#: kicadstamp_cli.py:91
+#: kicadstamp_cli.py:99
 msgid ""
 "Ignore the current PCB editor selection for the whole run — role-based "
 "ClonePlacements (role: without nets:/params:) and ambiguity narrowing "
@@ -102,90 +76,96 @@ msgid ""
 "With this flag every such lookup behaves as if nothing were selected."
 msgstr ""
 
-#: kicadstamp_cli.py:97
+#: kicadstamp_cli.py:105
 msgid "Extra clearance for collision check in mm"
 msgstr ""
 
-#: kicadstamp_cli.py:99
+#: kicadstamp_cli.py:107
 msgid ""
-"Process only rules/clone_placements/thermal_via_array with this identity "
-"(rule name if set, else its net; clone_placement/thermal_via_array name)."
-" Repeatable and/or comma-separated (--only a,b --only c). Everything else"
-" is ignored in this run."
+"Process only rules/clone_placements/thermal_via_arrays with this identity"
+" (rule name if set, else its net; clone_placement/thermal_via_arrays "
+"entry name). Repeatable and/or comma-separated (--only a,b --only c). "
+"Everything else is ignored in this run."
 msgstr ""
 
-#: kicadstamp_cli.py:104
+#: kicadstamp_cli.py:112
 msgid ""
-"Process only spokes/clone_placements/thermal_via_array whose Cluster "
-"(anchor_cluster / spoke cluster) matches this path or prefix (segment-"
-"wise, e.g. 'Channel_0' also matches 'Channel_0/DAC_OA'). Repeatable "
-"and/or comma-separated. Combines with --only via AND (run apply twice for"
-" OR)."
-msgstr ""
-
-#: kicadstamp_cli.py:110
-msgid "Undo last operation"
-msgstr ""
-
-#: kicadstamp_cli.py:116
-msgid "Snapshot a channel to YAML (file‑based cloner, no IPC)"
+"Process only spokes/clone_placements/thermal_via_arrays entries whose "
+"Cluster (anchor_cluster / spoke cluster) matches this path or prefix "
+"(segment-wise, e.g. 'Channel_0' also matches 'Channel_0/DAC_OA'). "
+"Repeatable and/or comma-separated. Combines with --only via AND (run "
+"apply twice for OR)."
 msgstr ""
 
 #: kicadstamp_cli.py:118
+msgid "Undo last operation"
+msgstr ""
+
+#: kicadstamp_cli.py:122
+msgid ""
+"Directory with operation_*.json undo logs (default: logs/ next to the "
+"current working directory)"
+msgstr ""
+
+#: kicadstamp_cli.py:127
+msgid "Snapshot a channel to YAML (file‑based cloner, no IPC)"
+msgstr ""
+
+#: kicadstamp_cli.py:129
 msgid "Path to .net file"
 msgstr ""
 
-#: kicadstamp_cli.py:119
+#: kicadstamp_cli.py:130
 msgid "Path to .kicad_pcb file"
 msgstr ""
 
-#: kicadstamp_cli.py:120
+#: kicadstamp_cli.py:131
 msgid "Channel name, e.g. Channel_0"
 msgstr ""
 
-#: kicadstamp_cli.py:121
+#: kicadstamp_cli.py:132
 msgid "YAML snapshot file"
 msgstr ""
 
-#: kicadstamp_cli.py:123
+#: kicadstamp_cli.py:134
 msgid "YAML file with named profiles for clone-extract"
 msgstr ""
 
-#: kicadstamp_cli.py:125
+#: kicadstamp_cli.py:136
 msgid ""
 "Take net/pcb/channel/output from profile NAME in --profiles file (cannot "
 "combine with explicit flags)"
 msgstr ""
 
-#: kicadstamp_cli.py:129
+#: kicadstamp_cli.py:140
 msgid "Extract spoke cell from current selection"
 msgstr ""
 
-#: kicadstamp_cli.py:130
+#: kicadstamp_cli.py:141
 msgid "Cell name (key in cells:)"
 msgstr ""
 
-#: kicadstamp_cli.py:131
+#: kicadstamp_cli.py:142
 msgid "Output YAML/JSON file"
 msgstr ""
 
-#: kicadstamp_cli.py:133
+#: kicadstamp_cli.py:144
 msgid "YAML file with named profiles for extract"
 msgstr ""
 
-#: kicadstamp_cli.py:135
+#: kicadstamp_cli.py:146
 msgid ""
 "Take name/output/param/net-template/origin-by-* from profile NAME in "
 "--profiles file (cannot combine with explicit flags)"
 msgstr ""
 
-#: kicadstamp_cli.py:141
+#: kicadstamp_cli.py:152
 msgid ""
 "Parameter for --net-template verification (e.g. channel=1); can be "
 "repeated; not written to the cell, only round-trip check"
 msgstr ""
 
-#: kicadstamp_cli.py:144
+#: kicadstamp_cli.py:155
 #, python-brace-format
 msgid ""
 "Mapping real net -> pattern with {placeholder} (e.g. "
@@ -193,7 +173,7 @@ msgid ""
 "roles and parametrizes via.net at extraction"
 msgstr ""
 
-#: kicadstamp_cli.py:148
+#: kicadstamp_cli.py:159
 msgid ""
 "For components with multiple nets from --net-template on pads "
 "(ferrite/inductor/fuse between two rails) – explicitly tells which net is"
@@ -203,855 +183,1896 @@ msgid ""
 "registered in --net-template/params."
 msgstr ""
 
-#: kicadstamp_cli.py:156
+#: kicadstamp_cli.py:166
+msgid ""
+"Write this via/track net as null instead of its literal name (e.g. "
+"'+3V3') — at apply time a ManualSpoke-placed cell's via/track with net: "
+"null inherits the enclosing Rule's own net (spoke_layout.py's 'via.net or"
+" rule_net'), so this makes the cell reusable across Rules on different "
+"nets. Can be repeated. Fatal if the same net is also in --param/--net-"
+"template."
+msgstr ""
+
+#: kicadstamp_cli.py:174
 msgid ""
 "Template origin — position of via on this net (instead of bbox); fatal if"
 " no such via in selection or more than one"
 msgstr ""
 
-#: kicadstamp_cli.py:159
+#: kicadstamp_cli.py:177
 msgid ""
 "Template origin — position of component with this role (instead of bbox);"
 " fatal if role not found in selection"
 msgstr ""
 
-#: kicadstamp_cli.py:162
+#: kicadstamp_cli.py:180
 msgid ""
 "Refine --origin-by-component-role: origin is the position of the specific"
 " pad of that component, not its centre. Fatal without --origin-by-"
 "component-role."
 msgstr ""
 
-#: kicadstamp_cli.py:189
-msgid "[error] --profile cannot be combined with --net/--pcb/--channel/--output"
-msgstr ""
-
-#: kicadstamp/cli_extract.py:99 kicadstamp_cli.py:192
-msgid "[error] --profile given without --profiles (profiles file)"
-msgstr ""
-
-#: kicadstamp/cli_extract.py:103 kicadstamp_cli.py:197
-#, python-brace-format
-msgid "[error] profile {profile!r} missing required field {field!r}"
-msgstr ""
-
-#: kicadstamp_cli.py:202
-msgid "[error] need --net/--pcb/--channel/--output (or --profiles/--profile)"
-msgstr ""
-
-#: kicadstamp_cli.py:207
-#, python-brace-format
-msgid "[{channel}] footprints: {fp}, segments: {seg}, vias: {vias} -> {output}"
-msgstr ""
-
-#: kicadstamp_cli.py:216
-#, python-brace-format
-msgid "Error: {e}"
-msgstr ""
-
-#: kicadstamp_cli.py:221
+#: kicadstamp_cli.py:188
 msgid ""
-"KiCad is busy and cannot respond right now. Usually this means an "
-"unfinished tool is running in the GUI (dimensioning, interactive routing,"
-" move tool, etc.) — finish it (Esc or right-click -> Cancel) and run the "
-"command again. The board was not modified."
+"Note: the first argument was taken as a config path for 'apply' (bare-"
+"config shorthand). If you meant a subcommand, spell it exactly: apply, "
+"undo, extract, clone-extract."
 msgstr ""
 
-#: kicadstamp_cli.py:227
-#, python-brace-format
-msgid "KiCad returned API error: {e}"
-msgstr ""
-
-#: kicadstamp_cli.py:230
-msgid "Unexpected error"
-msgstr ""
-
-#: kicadstamp_gui.py:42
+#: kicadstamp_gui.py:49
 msgid "KiCadStamp GUI"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:61 gui/docks/fieldstool_dock.py:33
+#: gui/docks/fieldstool_dock.py:54 gui/fieldstool_window.py:100
 msgid "fieldstool"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:80
+#: gui/fieldstool_window.py:145
 msgid "No root sheet picked"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:83
+#: gui/fieldstool_window.py:148
 msgid "Pick root sheet..."
 msgstr ""
 
-#: fieldstool/gui/main_window.py:86
+#: gui/fieldstool_window.py:151
 msgid "Rescan"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:92 gui/main_window.py:81
+#: gui/fieldstool_window.py:157 gui/fieldstool_window.py:467
+#: gui/main_window.py:107
 msgid "Not connected"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:94 gui/main_window.py:86
-msgid "Always on top"
-msgstr ""
-
-#: fieldstool/gui/main_window.py:101 fieldstool/gui/main_window.py:222
-#: gui/docks/extract.py:143 gui/docks/extract.py:554
+#: gui/docks/extract.py:182 gui/docks/extract.py:735
+#: gui/fieldstool_window.py:163 gui/fieldstool_window.py:356
 msgid "Nothing selected"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:107 gui/docks/extract.py:175
-#: gui/docks/placer.py:175
+#: gui/docks/cell_editor.py:169 gui/docks/cell_editor.py:213
+#: gui/docks/cell_editor.py:375 gui/docks/extract.py:251
+#: gui/docks/placer.py:301 gui/docks/placer.py:402 gui/docks/points.py:156
+#: gui/docks/rules.py:176 gui/docks/thermal_via.py:119
+#: gui/fieldstool_window.py:186
 msgid "Role:"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:110 gui/docks/placer.py:138
+#: gui/docks/placer.py:323 gui/docks/rules.py:206 gui/fieldstool_window.py:190
 msgid "Cluster:"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:112
+#: gui/fieldstool_window.py:192
 msgid "Stage"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:156
+#: gui/fieldstool_window.py:223
 msgid "Pick the project's root .kicad_sch"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:184
+#: gui/fieldstool_window.py:263
 msgid "Rescan failed"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:221
+#: gui/fieldstool_window.py:355
 #, python-brace-format
 msgid "{count} selected: {refs}"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:257
+#: gui/fieldstool_window.py:424
+msgid "Not yet applied to schematic: {refs}"
+msgstr ""
+
+#: gui/fieldstool_window.py:461
 msgid "Nothing to stage"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:258
+#: gui/fieldstool_window.py:462
 msgid "Set Role and/or Cluster first."
 msgstr ""
 
-#: fieldstool/gui/main_window.py:280 gui/main_window.py:307
-#: gui/main_window.py:332
+#: gui/fieldstool_window.py:467
+msgid "Connect to KiCad first."
+msgstr ""
+
+#: gui/fieldstool_window.py:514
+msgid "Set Role/Cluster on {count} component(s)"
+msgstr ""
+
+#: gui/fieldstool_window.py:522 gui/fieldstool_window.py:541
+msgid "Could not set fields"
+msgstr ""
+
+#: gui/fieldstool_window.py:533
+msgid "Some fields were skipped"
+msgstr ""
+
+#: gui/fieldstool_window.py:534
+msgid ""
+"These targets have no such field on their footprint yet — nothing was "
+"written for them (use Ensure fields... below, or add the field by hand, "
+"then Update PCB from Schematic):\n"
+"{refs}"
+msgstr ""
+
+#: gui/fieldstool_window.py:553 gui/main_window.py:376 gui/main_window.py:441
 #, python-brace-format
 msgid "Not connected: {error}"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:281
-msgid "Connected (staging only — this tool never writes over IPC)"
+#: gui/fieldstool_window.py:554
+msgid "Connected"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:301
-msgid "No root sheet"
-msgstr ""
-
-#: fieldstool/gui/main_window.py:301
-msgid "Pick a root sheet first."
-msgstr ""
-
-#: fieldstool/gui/main_window.py:307
-msgid "Close KiCad first"
-msgstr ""
-
-#: fieldstool/gui/main_window.py:308
-msgid ""
-"KiCad appears to be running. Save your work and close KiCad, then click "
-"Apply again — this tool never closes KiCad for you (see "
-"fieldstool/__init__.py for why)."
-msgstr ""
-
-#: fieldstool/gui/main_window.py:318
-msgid "Cannot apply"
-msgstr ""
-
-#: fieldstool/gui/main_window.py:322
-msgid "Nothing to apply"
-msgstr ""
-
-#: fieldstool/gui/main_window.py:323
-msgid "Every pending value already matches the schematic."
-msgstr ""
-
-#: fieldstool/gui/main_window.py:329
+#: gui/fieldstool_window.py:587
 msgid "Confirm apply"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:330
-#, python-brace-format
-msgid ""
-"About to write {count} change(s):\n"
-"\n"
-"{summary}"
+#: gui/fieldstool_window.py:589
+msgid "About to write {count} change(s):"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:337
+#: gui/fieldstool_window.py:608 gui/fieldstool_window.py:697
+msgid "No root sheet"
+msgstr ""
+
+#: gui/fieldstool_window.py:608 gui/fieldstool_window.py:697
+msgid "Pick a root sheet first."
+msgstr ""
+
+#: gui/fieldstool_window.py:622 gui/fieldstool_window.py:704
+msgid "Close KiCad first"
+msgstr ""
+
+#: gui/fieldstool_window.py:623
+msgid ""
+"KiCad appears to be running. Save your work and close KiCad, then click "
+"Apply again — this tool never closes KiCad for you (see "
+"docs/fieldstool.md for why)."
+msgstr ""
+
+#: gui/fieldstool_window.py:638 gui/fieldstool_window.py:660
+msgid "Nothing to apply"
+msgstr ""
+
+#: gui/fieldstool_window.py:639
+msgid ""
+"{count} ref(s) are refdes/symbol mismatches: the schematic and the board "
+"disagree on what that refdes is (different symbol UUIDs). Re-annotate the"
+" schematic / Update PCB from Schematic to re-sync, then Apply again."
+msgstr ""
+
+#: gui/fieldstool_window.py:646
+msgid "Skipped mismatches"
+msgstr ""
+
+#: gui/fieldstool_window.py:647
+msgid ""
+"{count} ref(s) skipped: the schematic and the board disagree on what that"
+" refdes is (different symbol UUIDs). Only verified matches are applied."
+msgstr ""
+
+#: gui/fieldstool_window.py:656
+msgid "Cannot apply"
+msgstr ""
+
+#: gui/fieldstool_window.py:661
+msgid "Every pending value already matches the schematic."
+msgstr ""
+
+#: gui/fieldstool_window.py:669 gui/fieldstool_window.py:729
 msgid "Some files failed"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:338
+#: gui/fieldstool_window.py:670 gui/fieldstool_window.py:730
 #, python-brace-format
 msgid "Restored from .bak: {failed}"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:340
+#: gui/fieldstool_window.py:673
 msgid "Applied"
 msgstr ""
 
-#: fieldstool/gui/main_window.py:341
-#, python-brace-format
-msgid "{count} file(s) written."
+#: gui/fieldstool_window.py:674
+msgid ""
+"{count} file(s) written. Reopen KiCad to see the updated schematic — a "
+"running KiCad process does not hot-reload an externally-modified file."
 msgstr ""
 
-#: fieldstool/gui/pending.py:102
-msgid "Pending changes"
+#: gui/fieldstool_window.py:705
+msgid ""
+"KiCad appears to be running. Save your work and close KiCad, then click "
+"Ensure fields again — this tool never closes KiCad for you (see "
+"docs/fieldstool.md for why)."
 msgstr ""
 
-#: fieldstool/gui/pending.py:112
-msgid "Ref"
+#: gui/fieldstool_window.py:714
+msgid "Cannot ensure fields"
 msgstr ""
 
-#: fieldstool/gui/pending.py:112
-msgid "Field"
+#: gui/fieldstool_window.py:719
+msgid "Nothing to add"
 msgstr ""
 
-#: fieldstool/gui/pending.py:112
-msgid "New value"
+#: gui/fieldstool_window.py:720
+msgid "Every component already has {role!r} and {cluster!r}."
 msgstr ""
 
-#: fieldstool/gui/pending.py:118
-msgid "Remove selected"
+#: gui/fieldstool_window.py:733
+msgid "Fields added"
 msgstr ""
 
-#: fieldstool/gui/pending.py:121
-msgid "Clear all"
+#: gui/fieldstool_window.py:734
+msgid ""
+"{count} file(s) written. Reopen KiCad and run Update PCB from Schematic "
+"(F8) to sync the new fields down to the board."
 msgstr ""
 
-#: fieldstool/gui/pending.py:124
-msgid "Apply..."
+#: gui/kicad_processes_dialog.py:31
+msgid "KiCad processes"
 msgstr ""
 
-#: gui/main_window.py:75 gui/main_window.py:243
+#: gui/kicad_processes_dialog.py:36
+msgid ""
+"Select a KiCad process to force-close. This never happens automatically —"
+" only what you pick and confirm here, e.g. a crashed/\"Not Responding\" "
+"session that's still blocking a fresh KiCad's connection."
+msgstr ""
+
+#: gui/kicad_processes_dialog.py:48 gui/main_window.py:394
+msgid "Refresh"
+msgstr ""
+
+#: gui/kicad_processes_dialog.py:51
+msgid "Force-close selected"
+msgstr ""
+
+#: gui/kicad_processes_dialog.py:54
+msgid "Close"
+msgstr ""
+
+#: gui/kicad_processes_dialog.py:65
+msgid "No KiCad process found."
+msgstr ""
+
+#: gui/kicad_processes_dialog.py:75
+msgid "PID {pid}"
+msgstr ""
+
+#: gui/kicad_processes_dialog.py:85
+msgid "Pick a process from the list first."
+msgstr ""
+
+#: gui/kicad_processes_dialog.py:89
+msgid "Force-close KiCad"
+msgstr ""
+
+#: gui/kicad_processes_dialog.py:90
+msgid ""
+"Force-close KiCad process {pid}? Any unsaved changes in that process are "
+"lost — this cannot be undone."
+msgstr ""
+
+#: gui/kicad_processes_dialog.py:97
+msgid "Could not close PID {pid}: {error}"
+msgstr ""
+
+#: gui/main_window.py:101 gui/main_window.py:278
 msgid "KiCadStamp"
 msgstr ""
 
-#: gui/main_window.py:82 gui/main_window.py:316 gui/main_window.py:333
+#: gui/main_window.py:108 gui/main_window.py:394 gui/main_window.py:442
 msgid "Reconnect"
 msgstr ""
 
-#: gui/main_window.py:90
+#: gui/main_window.py:112
+msgid "Always on top"
+msgstr ""
+
+#: gui/main_window.py:116
 msgid "Tray icon"
 msgstr ""
 
-#: gui/main_window.py:94 gui/main_window.py:246
+#: gui/main_window.py:120 gui/main_window.py:281
 msgid "Open fieldstool"
 msgstr ""
 
-#: gui/main_window.py:241
+#: gui/main_window.py:128
+msgid "KiCad processes..."
+msgstr ""
+
+#: gui/main_window.py:276
 msgid "Tray icon requested but no system tray is available here."
 msgstr ""
 
-#: gui/main_window.py:245
+#: gui/main_window.py:280
 msgid "Show/Hide"
 msgstr ""
 
-#: gui/main_window.py:248
+#: gui/main_window.py:283
 msgid "Quit"
 msgstr ""
 
-#: gui/main_window.py:311
+#: gui/main_window.py:385
 #, python-brace-format
 msgid "Connected — {count} components"
 msgstr ""
 
-#: gui/main_window.py:316
-msgid "Refresh"
+#: gui/docks/_common.py:117
+msgid " (see Log for details)"
 msgstr ""
 
-#: gui/docks/cell_list.py:25
-msgid "Cells"
+#: gui/docks/cell_editor.py:80
+msgid "(inherit cell layer)"
 msgstr ""
 
-#: gui/docks/extract.py:128
-msgid "Extract"
+#: gui/docks/cell_editor.py:122 gui/docks/cell_editor.py:420
+#: gui/docks/points.py:117 gui/docks/points.py:222 gui/docks/rules.py:130
+#: gui/docks/rules.py:291 gui/docks/thermal_via.py:94
+#: gui/docks/thermal_via.py:198
+msgid "No file picked (pick one in the Config tree)"
 msgstr ""
 
-#: gui/docks/extract.py:154
-msgid "cell name (key under cells:)"
+#: gui/docks/cell_editor.py:128
+msgid "name (referenced by cell: elsewhere)"
 msgstr ""
 
-#: gui/docks/extract.py:155
-msgid "Cell name:"
+#: gui/docks/cell_editor.py:129 gui/docks/cell_editor.py:355
+#: gui/docks/points.py:124 gui/docks/rules.py:148 gui/docks/thermal_via.py:101
+msgid "Name:"
 msgstr ""
 
-#: gui/docks/extract.py:158 gui/docks/extract.py:307
-msgid "No target file picked (pick one in Files)"
+#: gui/docks/cell_editor.py:131 gui/docks/cell_editor.py:224
+#: gui/docks/cell_editor.py:322 gui/docks/cell_editor.py:394
+#: gui/docks/placer.py:438 gui/docks/root_metadata.py:159
+msgid "Layer:"
 msgstr ""
 
-#: gui/docks/extract.py:165
-msgid "Bounding box (default)"
+#: gui/docks/cell_editor.py:136 gui/docks/role_cluster_tree.py:450
+#: gui/docks/role_cluster_tree.py:470
+#: kicadstamp/diagnostics/get_selected_component.py:75
+msgid "(none)"
 msgstr ""
 
-#: gui/docks/extract.py:165
-msgid "Component role"
+#: gui/docks/cell_editor.py:136
+msgid "XY"
 msgstr ""
 
-#: gui/docks/extract.py:165
-msgid "Via net"
+#: gui/docks/cell_editor.py:136 gui/docks/cell_editor.py:357
+#: gui/docks/placer.py:351 gui/docks/placer.py:368
+#: gui/docks/role_cluster_tree.py:154
+msgid "Role"
 msgstr ""
 
-#: gui/docks/extract.py:167 gui/docks/placer.py:151
-msgid "Origin:"
+#: gui/docks/cell_editor.py:138
+msgid "Anchor:"
 msgstr ""
 
-#: gui/docks/extract.py:178 gui/docks/placer.py:177
+#: gui/docks/cell_editor.py:145 gui/docks/placer.py:385 gui/docks/points.py:139
+msgid "X mm"
+msgstr ""
+
+#: gui/docks/cell_editor.py:147 gui/docks/placer.py:387 gui/docks/points.py:141
+msgid "Y mm"
+msgstr ""
+
+#: gui/docks/cell_editor.py:148 gui/docks/cell_editor.py:383
+#: gui/docks/placer.py:388 gui/docks/points.py:142
+msgid "X:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:150 gui/docks/cell_editor.py:385
+#: gui/docks/placer.py:390 gui/docks/points.py:144
+msgid "Y:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:171 gui/docks/extract.py:254
+#: gui/docks/placer.py:404 gui/docks/points.py:161
 msgid "pad (optional)"
 msgstr ""
 
-#: gui/docks/extract.py:179 gui/docks/placer.py:178
+#: gui/docks/cell_editor.py:172 gui/docks/extract.py:255
+#: gui/docks/placer.py:405 gui/docks/points.py:162 gui/docks/rules.py:200
+#: gui/docks/thermal_via.py:136
 msgid "Pad:"
 msgstr ""
 
-#: gui/docks/extract.py:189
+#: gui/docks/cell_editor.py:183 gui/docks/placer.py:449 gui/docks/points.py:204
+#: gui/docks/root_metadata.py:234 gui/docks/rules.py:273
+#: gui/docks/thermal_via.py:180
+msgid "Save"
+msgstr ""
+
+#: gui/docks/cell_editor.py:215 gui/docks/cell_editor.py:259
+msgid "offset along mm (0)"
+msgstr ""
+
+#: gui/docks/cell_editor.py:216 gui/docks/cell_editor.py:260
+msgid "Offset along:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:218 gui/docks/cell_editor.py:262
+msgid "offset across mm (0)"
+msgstr ""
+
+#: gui/docks/cell_editor.py:219 gui/docks/cell_editor.py:263
+msgid "Offset across:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:221
+msgid "angle deg (0)"
+msgstr ""
+
+#: gui/docks/cell_editor.py:222
+msgid "Angle:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:226
+msgid "optional — TemplatePlacer role matching"
+msgstr ""
+
+#: gui/docks/cell_editor.py:227
+msgid "Net template:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:231 gui/docks/cell_editor.py:276
+#: gui/docks/cell_editor.py:326 gui/docks/cell_editor.py:400
+msgid "Add"
+msgstr ""
+
+#: gui/docks/cell_editor.py:234 gui/docks/cell_editor.py:279
+#: gui/docks/cell_editor.py:329 gui/docks/cell_editor.py:403
+#: gui/docks/rules.py:258
+msgid "Update selected"
+msgstr ""
+
+#: gui/docks/cell_editor.py:237 gui/docks/cell_editor.py:282
+#: gui/docks/cell_editor.py:332 gui/docks/cell_editor.py:406
+#: gui/docks/placer.py:179 gui/docks/rules.py:261
+msgid "Remove selected"
+msgstr ""
+
+#: gui/docks/cell_editor.py:242 gui/docks/role_cluster_tree.py:111
+msgid "Components"
+msgstr ""
+
+#: gui/docks/cell_editor.py:265 gui/docks/cell_editor.py:319
+msgid "optional — blank means the rule's own net"
+msgstr ""
+
+#: gui/docks/cell_editor.py:266 gui/docks/cell_editor.py:320
+#: gui/docks/extract.py:265 gui/docks/rules.py:145 gui/docks/thermal_via.py:140
 msgid "Net:"
 msgstr ""
 
+#: gui/docks/cell_editor.py:268
+msgid "drill mm (0.3)"
+msgstr ""
+
+#: gui/docks/cell_editor.py:269
+msgid "Drill:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:271
+msgid "diameter mm (0.6)"
+msgstr ""
+
+#: gui/docks/cell_editor.py:272
+msgid "Diameter:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:287
+msgid "Vias"
+msgstr ""
+
+#: gui/docks/cell_editor.py:305
+msgid "Start along:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:308
+msgid "Start across:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:311
+msgid "End along:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:314
+msgid "End across:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:316
+msgid "width mm (0.25)"
+msgstr ""
+
+#: gui/docks/cell_editor.py:317
+msgid "Width:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:337
+msgid "Tracks"
+msgstr ""
+
+#: gui/docks/cell_editor.py:354
+msgid "name (registry key, must be unique in this cell)"
+msgstr ""
+
+#: gui/docks/cell_editor.py:357 gui/docks/placer.py:270
+msgid "Cell"
+msgstr ""
+
+#: gui/docks/cell_editor.py:359
+msgid "Content:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:367 gui/docks/placer.py:293 gui/docks/rules.py:203
+msgid "Cell:"
+msgstr ""
+
+#: gui/docks/cell_editor.py:392 gui/docks/placer.py:435 gui/docks/rules.py:223
+msgid "Rotation (deg):"
+msgstr ""
+
+#: gui/docks/cell_editor.py:396 gui/docks/placer.py:440
+msgid "Mirror"
+msgstr ""
+
+#: gui/docks/cell_editor.py:412
+msgid "Nested cells"
+msgstr ""
+
+#: gui/docks/cell_editor.py:468 gui/docks/placer.py:679 gui/docks/points.py:272
+#: gui/docks/points.py:287 gui/docks/rules.py:342 gui/docks/thermal_via.py:246
+#, python-brace-format
+msgid "{label}: {text!r} is not a number."
+msgstr ""
+
+#: gui/docks/cell_editor.py:540 gui/docks/rules.py:358 gui/docks/rules.py:359
+msgid "yes"
+msgstr ""
+
+#: gui/docks/cell_editor.py:573
+msgid "Role is required."
+msgstr ""
+
+#: gui/docks/cell_editor.py:575 gui/docks/cell_editor.py:665
+msgid "Offset along"
+msgstr ""
+
+#: gui/docks/cell_editor.py:578 gui/docks/cell_editor.py:668
+msgid "Offset across"
+msgstr ""
+
+#: gui/docks/cell_editor.py:581
+msgid "Angle"
+msgstr ""
+
+#: gui/docks/cell_editor.py:618
+msgid "Component added — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:622 gui/docks/cell_editor.py:634
+msgid "Pick a component row first."
+msgstr ""
+
+#: gui/docks/cell_editor.py:630
+msgid "Component updated — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:640
+msgid "Component removed — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:671 gui/docks/thermal_via.py:316
+msgid "Drill"
+msgstr ""
+
+#: gui/docks/cell_editor.py:674 gui/docks/thermal_via.py:320
+msgid "Diameter"
+msgstr ""
+
+#: gui/docks/cell_editor.py:704
+msgid "Via added — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:708 gui/docks/cell_editor.py:720
+msgid "Pick a via row first."
+msgstr ""
+
+#: gui/docks/cell_editor.py:716
+msgid "Via updated — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:726
+msgid "Via removed — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:755
+msgid "Start along"
+msgstr ""
+
+#: gui/docks/cell_editor.py:758
+msgid "Start across"
+msgstr ""
+
+#: gui/docks/cell_editor.py:761
+msgid "End along"
+msgstr ""
+
+#: gui/docks/cell_editor.py:764
+msgid "End across"
+msgstr ""
+
+#: gui/docks/cell_editor.py:767
+msgid "Width"
+msgstr ""
+
+#: gui/docks/cell_editor.py:802
+msgid "Track added — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:806 gui/docks/cell_editor.py:818
+msgid "Pick a track row first."
+msgstr ""
+
+#: gui/docks/cell_editor.py:814
+msgid "Track updated — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:824
+msgid "Track removed — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:865
+msgid "Nested cell: name is required."
+msgstr ""
+
+#: gui/docks/cell_editor.py:871 gui/docks/placer.py:714
+msgid "Pick a Cell first."
+msgstr ""
+
+#: gui/docks/cell_editor.py:877 gui/docks/placer.py:709
+msgid "Pick a Role first."
+msgstr ""
+
+#: gui/docks/cell_editor.py:881 gui/docks/points.py:304
+msgid "X"
+msgstr ""
+
+#: gui/docks/cell_editor.py:884 gui/docks/points.py:307
+msgid "Y"
+msgstr ""
+
+#: gui/docks/cell_editor.py:889 gui/docks/placer.py:758 gui/docks/rules.py:413
+msgid "Rotation"
+msgstr ""
+
+#: gui/docks/cell_editor.py:921
+msgid "Nested cell added — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:925 gui/docks/cell_editor.py:937
+msgid "Pick a nested-cell row first."
+msgstr ""
+
+#: gui/docks/cell_editor.py:933
+msgid "Nested cell updated — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:943
+msgid "Nested cell removed — remember to Save the cell."
+msgstr ""
+
+#: gui/docks/cell_editor.py:950 gui/docks/points.py:298
+#: gui/docks/thermal_via.py:262
+msgid "Name is required."
+msgstr ""
+
+#: gui/docks/cell_editor.py:963
+msgid "Anchor X"
+msgstr ""
+
+#: gui/docks/cell_editor.py:966
+msgid "Anchor Y"
+msgstr ""
+
+#: gui/docks/cell_editor.py:970
+msgid "Anchor XY requires both X and Y."
+msgstr ""
+
+#: gui/docks/cell_editor.py:976
+msgid "Anchor: pick a Role first."
+msgstr ""
+
+#: gui/docks/cell_editor.py:998 gui/docks/points.py:384 gui/docks/points.py:454
+#: gui/docks/rules.py:553 gui/docks/rules.py:648 gui/docks/thermal_via.py:350
+#: gui/docks/thermal_via.py:419
+msgid "Pick a file in the Config tree first."
+msgstr ""
+
+#: gui/docks/cell_editor.py:1004 gui/docks/placer.py:963
+#: gui/docks/points.py:466 gui/docks/root_metadata.py:388
+#: gui/docks/rules.py:660 gui/docks/thermal_via.py:430
+#: kicadstamp/extract_writer.py:62
+#, python-brace-format
+msgid "Write failed: {error}"
+msgstr ""
+
+#: gui/docks/cell_editor.py:1008 gui/docks/placer.py:967
+#: gui/docks/points.py:470 gui/docks/rules.py:664 gui/docks/thermal_via.py:434
+#: kicadstamp/extract_writer.py:64
+#, python-brace-format
+msgid "{action} {name!r} in {path}"
+msgstr ""
+
+#: gui/docks/cell_editor.py:1009 gui/docks/placer.py:968
+#: gui/docks/points.py:471 gui/docks/rules.py:665 gui/docks/thermal_via.py:435
+#: kicadstamp/extract_writer.py:65
+msgid "Overwrote"
+msgstr ""
+
+#: gui/docks/cell_editor.py:1009 gui/docks/placer.py:968
+#: gui/docks/points.py:471 gui/docks/rules.py:665 gui/docks/thermal_via.py:435
+#: kicadstamp/extract_writer.py:65
+msgid "Wrote"
+msgstr ""
+
+#: gui/docks/config_tree.py:122 gui/docks/detail_panel.py:85
+#: gui/docks/detail_panel.py:120
+msgid "Rules"
+msgstr ""
+
+#: gui/docks/config_tree.py:123
+msgid "Clone placements"
+msgstr ""
+
+#: gui/docks/config_tree.py:124
+msgid "Thermal via arrays"
+msgstr ""
+
+#: gui/docks/config_tree.py:125 gui/docks/detail_panel.py:86
+#: gui/docks/detail_panel.py:121
+msgid "Cells"
+msgstr ""
+
+#: gui/docks/config_tree.py:126 gui/docks/detail_panel.py:84
+#: gui/docks/detail_panel.py:119
+msgid "Points"
+msgstr ""
+
+#: gui/docks/config_tree.py:127
+msgid "Extract profiles"
+msgstr ""
+
+#: gui/docks/config_tree.py:128
+msgid "Clone profiles"
+msgstr ""
+
+#: gui/docks/config_tree.py:203
+msgid "Config"
+msgstr ""
+
+#: gui/docks/config_tree.py:212
+msgid "Open Root file..."
+msgstr ""
+
+#: gui/docks/config_tree.py:215
+msgid "New Root file..."
+msgstr ""
+
+#: gui/docks/config_tree.py:219
+msgid "Recent..."
+msgstr ""
+
+#: gui/docks/config_tree.py:224 gui/docks/config_tree.py:313
+msgid "No root file open"
+msgstr ""
+
+#: gui/docks/config_tree.py:250
+msgid "Open Root file"
+msgstr ""
+
+#: gui/docks/config_tree.py:263
+msgid "New Root file"
+msgstr ""
+
+#: gui/docks/config_tree.py:459
+msgid "Edit cell..."
+msgstr ""
+
+#: gui/docks/config_tree.py:461
+msgid "Rename..."
+msgstr ""
+
+#: gui/docks/config_tree.py:463
+msgid "Delete..."
+msgstr ""
+
+#: gui/docks/config_tree.py:469
+msgid "Export selected..."
+msgstr ""
+
+#: gui/docks/config_tree.py:469
+msgid "Export..."
+msgstr ""
+
+#: gui/docks/config_tree.py:474
+msgid "Add cell..."
+msgstr ""
+
+#: gui/docks/config_tree.py:476
+msgid "Add thermal via pad..."
+msgstr ""
+
+#: gui/docks/config_tree.py:478
+msgid "Add placer..."
+msgstr ""
+
+#: gui/docks/config_tree.py:480
+msgid "Add point..."
+msgstr ""
+
+#: gui/docks/config_tree.py:482
+msgid "Add rule..."
+msgstr ""
+
+#: gui/docks/config_tree.py:484
+msgid "Add included file..."
+msgstr ""
+
+#: gui/docks/config_tree.py:488
+msgid "Remove this file"
+msgstr ""
+
+#: gui/docks/config_tree.py:501
+msgid "Rename"
+msgstr ""
+
+#: gui/docks/config_tree.py:501
+msgid "New name for {old!r}:"
+msgstr ""
+
+#: gui/docks/config_tree.py:508
+msgid "Rename failed"
+msgstr ""
+
+#: gui/docks/config_tree.py:512
+msgid "Renamed {old!r} to {new!r} — {count} file(s) updated: {files}"
+msgstr ""
+
+#: gui/docks/config_tree.py:516
+msgid ""
+"If any CLI command uses --only/--profile {old!r}, update that separately "
+"— this only rewrites YAML files, it can't see command-line usage."
+msgstr ""
+
+#: gui/docks/config_tree.py:519
+msgid "Renamed"
+msgstr ""
+
+#: gui/docks/config_tree.py:541
+msgid "{file}: {entries}"
+msgstr ""
+
+#: gui/docks/config_tree.py:544 gui/docks/config_tree.py:554
+msgid "Delete {name!r}"
+msgstr ""
+
+#: gui/docks/config_tree.py:545
+msgid ""
+"{name!r} is still referenced by:\n"
+"{refs}\n"
+"\n"
+"Also delete these referencing entries? Cancel leaves everything untouched."
+msgstr ""
+
+#: gui/docks/config_tree.py:555
+msgid "Delete {name!r} from {section}: in {file}?"
+msgstr ""
+
+#: gui/docks/config_tree.py:563
+msgid "Deleted {name!r}. Backed up: {backups}."
+msgstr ""
+
+#: gui/docks/config_tree.py:566
+msgid "Also removed references from: {files}."
+msgstr ""
+
+#: gui/docks/config_tree.py:568
+msgid "Deleted"
+msgstr ""
+
+#: gui/docks/config_tree.py:596
+msgid "Export to..."
+msgstr ""
+
+#: gui/docks/config_tree.py:607
+msgid "Export"
+msgstr ""
+
+#: gui/docks/config_tree.py:608
+msgid ""
+"{name} already has content — merge the exported entries into it, or "
+"overwrite the whole file?"
+msgstr ""
+
+#: gui/docks/config_tree.py:610
+msgid "Merge"
+msgstr ""
+
+#: gui/docks/config_tree.py:611
+msgid "Overwrite"
+msgstr ""
+
+#: gui/docks/config_tree.py:622
+msgid "Export failed"
+msgstr ""
+
+#: gui/docks/config_tree.py:625
+msgid "Exported"
+msgstr ""
+
+#: gui/docks/config_tree.py:626
+msgid "Exported {count} entr{suffix} to {name}"
+msgstr ""
+
+#: gui/docks/config_tree.py:627
+msgid "y"
+msgstr ""
+
+#: gui/docks/config_tree.py:627
+msgid "ies"
+msgstr ""
+
+#: gui/docks/config_tree.py:637
+msgid "Add included file"
+msgstr ""
+
+#: gui/docks/config_tree.py:647
+msgid "Cannot include"
+msgstr ""
+
+#: gui/docks/config_tree.py:648
+msgid ""
+"{name} has root-config-only key(s) {keys} that include: can't merge — "
+"move them out, or point Root at this file directly instead."
+msgstr ""
+
+#: gui/docks/config_tree.py:659
+msgid "Remove file"
+msgstr ""
+
+#: gui/docks/config_tree.py:660
+msgid ""
+"Remove {name!r} from {parent!r}'s include:? The file itself is not "
+"deleted — this can be undone later by adding it again."
+msgstr ""
+
+#: gui/docks/detail_panel.py:67
+msgid "Detail"
+msgstr ""
+
+#: gui/docks/detail_panel.py:74 gui/docks/detail_panel.py:115
+msgid "Extract"
+msgstr ""
+
+#: gui/docks/detail_panel.py:75 gui/docks/detail_panel.py:116
+msgid "Placer"
+msgstr ""
+
+#: gui/docks/detail_panel.py:82 gui/docks/detail_panel.py:117
+msgid "Project"
+msgstr ""
+
+#: gui/docks/detail_panel.py:83 gui/docks/detail_panel.py:118
+msgid "Thermal via"
+msgstr ""
+
+#: gui/docks/detail_panel.py:149
+msgid "Detail — {label}: {name}"
+msgstr ""
+
+#: gui/docks/detail_panel.py:150
+msgid "Detail — {label}"
+msgstr ""
+
+#: gui/docks/extract.py:193
+msgid "cell name (key under cells:)"
+msgstr ""
+
 #: gui/docks/extract.py:194
+msgid "Cell name:"
+msgstr ""
+
+#: gui/docks/extract.py:217
+msgid "Cell file:"
+msgstr ""
+
+#: gui/docks/extract.py:219 gui/docks/extract.py:364
+msgid "pick a file (or browse it in the Config tree)"
+msgstr ""
+
+#: gui/docks/extract.py:241
+msgid "Bounding box (default)"
+msgstr ""
+
+#: gui/docks/extract.py:241
+msgid "Component role"
+msgstr ""
+
+#: gui/docks/extract.py:241
+msgid "Via net"
+msgstr ""
+
+#: gui/docks/extract.py:243 gui/docks/placer.py:378 gui/docks/points.py:132
+#: gui/docks/rules.py:165 gui/docks/thermal_via.py:108
+msgid "Origin:"
+msgstr ""
+
+#: gui/docks/extract.py:270 gui/docks/placer.py:443 gui/docks/rules.py:193
+msgid "Origin"
+msgstr ""
+
+#: gui/docks/extract.py:274
 msgid "Net aliases (blank = keep literal):"
 msgstr ""
 
-#: gui/docks/extract.py:207
+#: gui/docks/extract.py:287 gui/docks/placer.py:351 gui/docks/rules.py:157
+msgid "Net"
+msgstr ""
+
+#: gui/docks/extract.py:287
+msgid "Alias"
+msgstr ""
+
+#: gui/docks/extract.py:287 gui/docks/extract.py:784
+msgid "Rule net (null)"
+msgstr ""
+
+#: gui/docks/extract.py:298
+msgid "Net aliases"
+msgstr ""
+
+#: gui/docks/extract.py:303
 msgid ""
 "Net template role (bridging component — pick which aliased net is the "
 "template):"
 msgstr ""
 
-#: gui/docks/extract.py:214
-msgid "Existing (click to reuse a name):"
+#: gui/docks/extract.py:308
+msgid "Net template role"
 msgstr ""
 
-#: gui/docks/extract.py:217 gui/docks/file_picker.py:61
+#: gui/docks/extract.py:318
 msgid "Cells:"
 msgstr ""
 
-#: gui/docks/extract.py:225
+#: gui/docks/extract.py:325
 msgid "Profiles:"
 msgstr ""
 
-#: gui/docks/extract.py:233
+#: gui/docks/extract.py:330
+msgid "Existing"
+msgstr ""
+
+#: gui/docks/extract.py:332
 msgid "Also save as extract_profile"
 msgstr ""
 
-#: gui/docks/extract.py:238
+#: gui/docks/extract.py:337
 msgid "profile key (defaults to cell name)"
 msgstr ""
 
-#: gui/docks/extract.py:239
+#: gui/docks/extract.py:349
+msgid ""
+"Key this extraction is saved under in extract_profiles: (only used if "
+"'Also save as extract_profile' is checked) — separate from Cell name, the"
+" two can differ. Saves a replayable recipe (net aliases, origin, ...) you"
+" can reuse later via 'kicadstamp_cli.py extract --profile <key>' or by "
+"clicking it in Existing -> Profiles, instead of retyping the alias "
+"mapping by hand. Defaults to the Cell name if left blank."
+msgstr ""
+
+#: gui/docks/extract.py:356
 msgid "Profile key:"
 msgstr ""
 
-#: gui/docks/extract.py:242 gui/docks/extract.py:320
-msgid "No profile file picked (pick one in Files)"
+#: gui/docks/extract.py:362
+msgid "Profile file:"
 msgstr ""
 
-#: gui/docks/extract.py:246 gui/docks/extract.py:332
-msgid "No placer file picked (pick one in Files, optional)"
+#: gui/docks/extract.py:369 gui/docks/extract.py:504
+msgid "No placer file picked (pick one in the Config tree, optional)"
 msgstr ""
 
-#: gui/docks/extract.py:250
+#: gui/docks/extract.py:373
 msgid "Extract to file"
 msgstr ""
 
-#: gui/docks/extract.py:306
-#, python-brace-format
-msgid "Target: {path}"
-msgstr ""
-
-#: gui/docks/extract.py:319
-#, python-brace-format
-msgid "Profile file: {path}"
-msgstr ""
-
-#: gui/docks/extract.py:331
+#: gui/docks/extract.py:503
 #, python-brace-format
 msgid "Placer file: {path}"
 msgstr ""
 
-#: gui/docks/extract.py:560
+#: gui/docks/extract.py:741
 #, python-brace-format
 msgid "{fp} component(s), {other} via/track(s) selected"
 msgstr ""
 
-#: gui/docks/extract.py:563
+#: gui/docks/extract.py:744
 #, python-brace-format
 msgid "{fp} component(s) selected"
 msgstr ""
 
-#: gui/docks/extract.py:570
+#: gui/docks/extract.py:751
 #, python-brace-format
 msgid "Selection spans multiple Clusters: {clusters}"
 msgstr ""
 
-#: gui/docks/extract.py:595
+#: gui/docks/extract.py:778
 msgid "alias, e.g. PWR_IN"
 msgstr ""
 
-#: gui/docks/extract.py:626
+#: gui/docks/extract.py:786
+msgid ""
+"Write this via/track net as null instead of a literal — at apply time a "
+"ManualSpoke-placed cell inherits the enclosing Rule's own net for it, so "
+"the cell can be reused across Rules on different nets."
+msgstr ""
+
+#: gui/docks/extract.py:834
 msgid "Cell name is required."
 msgstr ""
 
-#: gui/docks/extract.py:633
+#: gui/docks/extract.py:841
 msgid "'Also save as extract_profile' is checked, but no profile file is picked."
 msgstr ""
 
-#: gui/docks/extract.py:639
+#: gui/docks/extract.py:847 gui/docks/points.py:389
+#: gui/docks/role_cluster_tree.py:557 gui/docks/role_cluster_tree.py:569
 msgid "Not connected."
 msgstr ""
 
-#: gui/docks/extract.py:649
+#: gui/docks/extract.py:859
 #, python-brace-format
 msgid ""
 "Alias {alias!r} used for both {a!r} and {b!r} — each alias needs a "
 "distinct net."
 msgstr ""
 
-#: gui/docks/extract.py:660
+#: gui/docks/extract.py:870
 msgid "Origin: pick a component role."
 msgstr ""
 
-#: gui/docks/extract.py:669
+#: gui/docks/extract.py:879
 msgid "Origin: pick a via net."
 msgstr ""
 
-#: gui/docks/extract.py:678
+#: gui/docks/extract.py:888
 #, python-brace-format
 msgid ""
 "Net template role: role {role!r} bridges 2+ aliased nets — pick which one"
 " is the template."
 msgstr ""
 
-#: gui/docks/extract.py:696 gui/docks/placer.py:568
-#, python-brace-format
-msgid "Write failed: {error}"
-msgstr ""
-
-#: gui/docks/extract.py:699 gui/docks/placer.py:572
-#, python-brace-format
-msgid "{action} {name!r} in {path}"
-msgstr ""
-
-#: gui/docks/extract.py:700 gui/docks/placer.py:573
-msgid "Overwrote"
-msgstr ""
-
-#: gui/docks/extract.py:700 gui/docks/placer.py:573
-msgid "Wrote"
-msgstr ""
-
-#: gui/docks/extract.py:721
-#, python-brace-format
-msgid "Cell written, but profile write failed: {error}"
-msgstr ""
-
-#: gui/docks/extract.py:723
-#, python-brace-format
-msgid "{action} profile {key!r} in {path}"
-msgstr ""
-
-#: gui/docks/extract.py:724
-msgid "overwrote"
-msgstr ""
-
-#: gui/docks/extract.py:724
-msgid "wrote"
-msgstr ""
-
-#: gui/docks/extract.py:732
-#, python-brace-format
-msgid "added {rel!r} to cell_files: in {path}"
-msgstr ""
-
-#: gui/docks/extract.py:738
-#, python-brace-format
-msgid ""
-"skipped adding to include: — {path} has root-config-only key(s) {keys} "
-"that include: can't merge (move them to the Placer file itself, or point "
-"Placer at this same file)"
-msgstr ""
-
-#: gui/docks/extract.py:745
-#, python-brace-format
-msgid "added {rel!r} to include: in {path}"
-msgstr ""
-
-#: gui/docks/extract.py:748
-#, python-brace-format
-msgid "placer file wiring failed: {error}"
-msgstr ""
-
-#: gui/docks/extract.py:751
+#: gui/docks/extract.py:943
 #, python-brace-format
 msgid "{count} field(s) could not be determined automatically: {details}"
 msgstr ""
 
-#: gui/docks/extract.py:833
-#, python-brace-format
-msgid "{section}: in {path} is not a list — refusing to touch it"
+#: gui/docks/extract.py:959
+msgid "Extract failed: {error}"
 msgstr ""
 
-#: gui/docks/file_picker.py:57
-msgid "Files"
-msgstr ""
-
-#: gui/docks/file_picker.py:61
-msgid "Extractor:"
-msgstr ""
-
-#: gui/docks/file_picker.py:61
-msgid "Placer:"
-msgstr ""
-
-#: gui/docks/file_picker.py:79
-msgid "Change root..."
-msgstr ""
-
-#: gui/docks/file_picker.py:95
-msgid "No file selected"
-msgstr ""
-
-#: gui/docks/file_picker.py:106
-msgid "Use selected"
-msgstr ""
-
-#: gui/docks/file_picker.py:140
-msgid "Pick config root directory"
-msgstr ""
-
-#: gui/docks/file_picker.py:153 gui/docks/file_picker.py:215
-#, python-brace-format
-msgid "Selected: {path}"
-msgstr ""
-
-#: gui/docks/file_picker.py:178
-msgid ""
-"Cells shares a file with Extractor/Placer — every top-level key in a "
-"Cells file is read as a cell name, so extract_profiles:/cell_files: "
-"entries in the same file would corrupt it. Give Cells its own file."
-msgstr ""
-
-#: gui/docks/file_picker.py:185
-msgid "not set"
-msgstr ""
-
-#: gui/docks/log_panel.py:65
+#: gui/docks/log_panel.py:84
 msgid "Log"
 msgstr ""
 
-#: gui/docks/log_panel.py:73
+#: gui/docks/log_panel.py:92
 msgid "Verbose"
 msgstr ""
 
-#: gui/docks/log_panel.py:77
+#: gui/docks/log_panel.py:96
 msgid "Clear"
 msgstr ""
 
-#: gui/docks/log_panel.py:89
+#: gui/docks/log_panel.py:108
 msgid "Find..."
 msgstr ""
 
-#: gui/docks/log_panel.py:92
+#: gui/docks/log_panel.py:111
 msgid "Prev"
 msgstr ""
 
-#: gui/docks/log_panel.py:95
+#: gui/docks/log_panel.py:114
 msgid "Next"
 msgstr ""
 
-#: gui/docks/placer.py:116
-msgid "Placer"
+#: gui/docks/pending.py:190
+msgid "Pending changes"
 msgstr ""
 
-#: gui/docks/placer.py:131
-msgid "No cell picked — pick one in the Cells tab"
+#: gui/docks/pending.py:201 gui/docks/placer.py:368
+msgid "Ref"
 msgstr ""
 
-#: gui/docks/placer.py:137
+#: gui/docks/pending.py:201
+msgid "Field"
+msgstr ""
+
+#: gui/docks/pending.py:201
+msgid "Schematic (current)"
+msgstr ""
+
+#: gui/docks/pending.py:201
+msgid "Board (new)"
+msgstr ""
+
+#: gui/docks/pending.py:207
+msgid "Apply..."
+msgstr ""
+
+#: gui/docks/pending.py:216
+msgid "Ensure fields..."
+msgstr ""
+
+#: gui/docks/placer.py:176
+msgid "Add / update"
+msgstr ""
+
+#: gui/docks/placer.py:270
+msgid "Role (single component, no cell)"
+msgstr ""
+
+#: gui/docks/placer.py:271
+msgid "Cluster (existing tag, single component)"
+msgstr ""
+
+#: gui/docks/placer.py:273
+msgid "Source:"
+msgstr ""
+
+#: gui/docks/placer.py:291
+msgid "pick a cell"
+msgstr ""
+
+#: gui/docks/placer.py:314
+msgid "Existing Cluster:"
+msgstr ""
+
+#: gui/docks/placer.py:322
 msgid "Cluster / clone_placement name"
 msgstr ""
 
-#: gui/docks/placer.py:141
+#: gui/docks/placer.py:326
+msgid "Source"
+msgstr ""
+
+#: gui/docks/placer.py:344
 msgid "Params (placeholder -> literal net, for by-nets role resolution):"
 msgstr ""
 
-#: gui/docks/placer.py:149
+#: gui/docks/placer.py:350
+msgid "Nets (role -> literal net, priority over the cell's own net_template):"
+msgstr ""
+
+#: gui/docks/placer.py:351 gui/docks/placer.py:368
+msgid "ROLE"
+msgstr ""
+
+#: gui/docks/placer.py:351 kicadstamp/diagnostics/test_create_one_via.py:52
+msgid "net name"
+msgstr ""
+
+#: gui/docks/placer.py:353
+msgid "Nets"
+msgstr ""
+
+#: gui/docks/placer.py:358
+msgid "Net overrides (resolved net -> final override):"
+msgstr ""
+
+#: gui/docks/placer.py:360
+msgid "Resolved net"
+msgstr ""
+
+#: gui/docks/placer.py:360
+msgid "Override"
+msgstr ""
+
+#: gui/docks/placer.py:360
+msgid "resolved net name"
+msgstr ""
+
+#: gui/docks/placer.py:360
+msgid "override net name"
+msgstr ""
+
+#: gui/docks/placer.py:362
+msgid "Net overrides"
+msgstr ""
+
+#: gui/docks/placer.py:367
+msgid "Refs (role -> explicit ref, bypasses search entirely — last resort):"
+msgstr ""
+
+#: gui/docks/placer.py:368
+msgid "e.g. C12"
+msgstr ""
+
+#: gui/docks/placer.py:370
+msgid "Refs"
+msgstr ""
+
+#: gui/docks/placer.py:376 gui/docks/points.py:130
 msgid "Absolute XY"
 msgstr ""
 
-#: gui/docks/placer.py:149
+#: gui/docks/placer.py:376 gui/docks/points.py:130 gui/docks/rules.py:163
+#: gui/docks/thermal_via.py:106
 msgid "Anchor (ref/role)"
 msgstr ""
 
-#: gui/docks/placer.py:149
+#: gui/docks/placer.py:376 gui/docks/points.py:130 gui/docks/rules.py:163
+#: gui/docks/thermal_via.py:106
 msgid "Point"
 msgstr ""
 
-#: gui/docks/placer.py:158
-msgid "X mm"
-msgstr ""
-
-#: gui/docks/placer.py:160
-msgid "Y mm"
-msgstr ""
-
-#: gui/docks/placer.py:161
-msgid "X:"
-msgstr ""
-
-#: gui/docks/placer.py:163
-msgid "Y:"
-msgstr ""
-
-#: gui/docks/placer.py:171
+#: gui/docks/placer.py:398 gui/docks/points.py:152 gui/docks/rules.py:172
+#: gui/docks/thermal_via.py:115
 msgid "e.g. U3 (refdes — mostly avoided in this project)"
 msgstr ""
 
-#: gui/docks/placer.py:172
+#: gui/docks/placer.py:399 gui/docks/points.py:153 gui/docks/rules.py:173
+#: gui/docks/thermal_via.py:116
 msgid "Ref:"
 msgstr ""
 
-#: gui/docks/placer.py:181
+#: gui/docks/placer.py:408 gui/docks/points.py:165 gui/docks/rules.py:182
+#: gui/docks/thermal_via.py:122
 msgid "Anchor cluster:"
 msgstr ""
 
-#: gui/docks/placer.py:188
+#: gui/docks/placer.py:416 gui/docks/points.py:173 gui/docks/rules.py:190
+#: gui/docks/thermal_via.py:130
 msgid "Point:"
 msgstr ""
 
-#: gui/docks/placer.py:195
+#: gui/docks/placer.py:423 gui/docks/points.py:191 gui/docks/rules.py:211
 msgid "shift X mm (0)"
 msgstr ""
 
-#: gui/docks/placer.py:197
+#: gui/docks/placer.py:425 gui/docks/points.py:193 gui/docks/rules.py:213
 msgid "shift Y mm (0)"
 msgstr ""
 
-#: gui/docks/placer.py:198
+#: gui/docks/placer.py:426 gui/docks/points.py:194 gui/docks/rules.py:214
 msgid "Shift X:"
 msgstr ""
 
-#: gui/docks/placer.py:200
+#: gui/docks/placer.py:428 gui/docks/points.py:196 gui/docks/rules.py:216
 msgid "Shift Y:"
 msgstr ""
 
-#: gui/docks/placer.py:207
-msgid "Rotation (deg):"
-msgstr ""
-
-#: gui/docks/placer.py:209
+#: gui/docks/placer.py:437
 msgid "(cell default)"
 msgstr ""
 
-#: gui/docks/placer.py:210
-msgid "Layer:"
-msgstr ""
-
-#: gui/docks/placer.py:212
-msgid "Mirror"
-msgstr ""
-
-#: gui/docks/placer.py:216
+#: gui/docks/placer.py:446 gui/docks/thermal_via.py:177
 msgid "Redraw"
 msgstr ""
 
-#: gui/docks/placer.py:219
-msgid "Save"
-msgstr ""
-
-#: gui/docks/placer.py:247
-#, python-brace-format
-msgid "Cell: {name}"
-msgstr ""
-
-#: gui/docks/placer.py:323
+#: gui/docks/placer.py:622
 #, python-brace-format
 msgid "literal net for {{{name}}}"
 msgstr ""
 
-#: gui/docks/placer.py:381
-#, python-brace-format
-msgid "{label}: {text!r} is not a number."
+#: gui/docks/placer.py:698
+msgid "Pick an existing Cluster first."
 msgstr ""
 
-#: gui/docks/placer.py:387
+#: gui/docks/placer.py:704
 msgid "Cluster name is required."
 msgstr ""
 
-#: gui/docks/placer.py:390
-msgid "Pick a Cell first."
-msgstr ""
-
-#: gui/docks/placer.py:403
+#: gui/docks/placer.py:726 gui/docks/points.py:344 gui/docks/rules.py:403
 msgid "Shift X"
 msgstr ""
 
-#: gui/docks/placer.py:404
+#: gui/docks/placer.py:727 gui/docks/points.py:347 gui/docks/rules.py:408
 msgid "Shift Y"
 msgstr ""
 
-#: gui/docks/placer.py:414
+#: gui/docks/placer.py:737 gui/docks/points.py:315 gui/docks/rules.py:495
+#: gui/docks/thermal_via.py:277
 msgid "Anchor: set Ref or Role."
 msgstr ""
 
-#: gui/docks/placer.py:417
+#: gui/docks/placer.py:740 gui/docks/points.py:318 gui/docks/rules.py:498
+#: gui/docks/thermal_via.py:280
 msgid "Anchor: Ref and Role are mutually exclusive — set one."
 msgstr ""
 
-#: gui/docks/placer.py:431
+#: gui/docks/placer.py:754 gui/docks/points.py:337 gui/docks/rules.py:514
+#: gui/docks/thermal_via.py:292
 msgid "Point: name is required."
 msgstr ""
 
-#: gui/docks/placer.py:435
-msgid "Rotation"
-msgstr ""
-
-#: gui/docks/placer.py:465 gui/docks/placer.py:557
+#: gui/docks/placer.py:815 gui/docks/placer.py:952
 msgid "Pick a Placer file in Files first."
 msgstr ""
 
-#: gui/docks/placer.py:468
+#: gui/docks/placer.py:821
 msgid "Pick a Cells file in Files first."
 msgstr ""
 
-#: gui/docks/placer.py:483
+#: gui/docks/placer.py:836
 #, python-brace-format
 msgid "Failed to load Placer file: {error}"
 msgstr ""
 
-#: gui/docks/placer.py:488
-#, python-brace-format
+#: gui/docks/placer.py:841
 msgid ""
-"Cell {cell!r} isn't reachable from the Placer file's cell_files: — "
-"extract/save it and make sure cell_files: is wired (see Extract)."
+"Cell {cell!r} isn't reachable from the Placer file's include: — "
+"extract/save it and make sure include: is wired (see Extract)."
 msgstr ""
 
-#: gui/docks/placer.py:503 gui/docks/placer.py:507
+#: gui/docks/placer.py:869 gui/docks/placer.py:872 gui/docks/placer.py:900
+#: gui/docks/rules.py:602 gui/docks/rules.py:605 gui/docks/rules.py:621
+#: gui/docks/thermal_via.py:383 gui/docks/thermal_via.py:386
+#: gui/docks/thermal_via.py:401
 #, python-brace-format
 msgid "Placement failed: {error}"
 msgstr ""
 
-#: gui/docks/placer.py:514
+#: gui/docks/placer.py:878
 #, python-brace-format
 msgid "Placed, but tagging Cluster failed: {error}"
 msgstr ""
 
-#: gui/docks/placer.py:518
+#: gui/docks/placer.py:891
 #, python-brace-format
 msgid "Placed {name!r} ({count} component(s) tagged Cluster={name!r})."
 msgstr ""
 
-#: gui/docks/placer.py:547
+#: gui/docks/placer.py:938
 #, python-brace-format
 msgid "Placer: tag Cluster={name}"
 msgstr ""
 
-#: gui/docks/placer.py:637
-#, python-brace-format
-msgid "clone_placements: in {path} is not a list — refusing to touch it"
+#: gui/docks/points.py:123
+msgid "name (referenced by anchor_point elsewhere)"
 msgstr ""
 
-#: gui/docks/placer_list.py:27
-msgid "Placements"
+#: gui/docks/points.py:130
+msgid "Board origin"
 msgstr ""
 
-#: gui/docks/role_cluster_tree.py:75
-msgid "Components"
+#: gui/docks/points.py:158 gui/docks/rules.py:178
+msgid "sheet name (narrows an ambiguous Role, optional)"
 msgstr ""
 
-#: gui/docks/role_cluster_tree.py:105
-msgid "Role"
+#: gui/docks/points.py:159 gui/docks/rules.py:179
+msgid "Sheet:"
 msgstr ""
 
-#: gui/docks/role_cluster_tree.py:105
+#: gui/docks/points.py:181
+msgid "Drill/place (drill/position files, optional for Gerbers)"
+msgstr ""
+
+#: gui/docks/points.py:183
+msgid "Grid (visual only — Place > Set Grid Origin)"
+msgstr ""
+
+#: gui/docks/points.py:184
+msgid "Kind:"
+msgstr ""
+
+#: gui/docks/points.py:201
+msgid "Resolve"
+msgstr ""
+
+#: gui/docks/points.py:282
+msgid "{label} is required."
+msgstr ""
+
+#: gui/docks/points.py:410 gui/docks/points.py:435
+msgid "Resolve failed: {error}"
+msgstr ""
+
+#: gui/docks/points.py:423
+msgid " (no footprint to highlight)"
+msgstr ""
+
+#: gui/docks/points.py:425
+msgid "X={x:.3f}mm Y={y:.3f}mm{suffix}"
+msgstr ""
+
+#: gui/docks/rename.py:134 gui/docks/rename.py:165
+msgid "{name!r} not found in {section}: of {path}"
+msgstr ""
+
+#: gui/docks/rename.py:137 gui/docks/rename.py:173
+msgid "{name!r} already exists in {section}: of {path}"
+msgstr ""
+
+#: gui/docks/rename.py:228
+msgid "{name!r} already exists in {section}: somewhere in this include: graph"
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:154
 msgid "Cluster"
 msgstr ""
 
-#: gui/docks/role_cluster_tree.py:109
+#: gui/docks/role_cluster_tree.py:158
 msgid "Collapse all"
 msgstr ""
 
-#: gui/docks/role_cluster_tree.py:117
+#: gui/docks/role_cluster_tree.py:164
+msgid "Delete selected"
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:167 gui/docks/role_cluster_tree.py:575
+msgid "Clear all"
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:175
 msgid "Not yet applied"
 msgstr ""
 
-#: gui/docks/role_cluster_tree.py:123
+#: gui/docks/role_cluster_tree.py:181
 msgid "Filter (ref/role/cluster)..."
 msgstr ""
 
-#: gui/docks/role_cluster_tree.py:127
+#: gui/docks/role_cluster_tree.py:185
 msgid "regex"
 msgstr ""
 
-#: gui/docks/role_cluster_tree.py:342
+#: gui/docks/role_cluster_tree.py:443
 msgid "This refdes' units disagree on Role/Cluster — edit carefully."
 msgstr ""
 
-#: gui/docks/role_cluster_tree.py:349 gui/docks/role_cluster_tree.py:367
-#: kicadstamp/diagnostics/get_selected_component.py:75
-msgid "(none)"
+#: gui/docks/role_cluster_tree.py:561
+msgid "Nothing selected."
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:76
+#: gui/docks/role_cluster_tree.py:564
+msgid "Cleared Role/Cluster on {count} component(s)."
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:572
+msgid "Nothing to clear."
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:576
+msgid ""
+"Clear Role and Cluster on ALL {count} component(s) currently on the "
+"board? This is a single commit — undo-able in KiCad with Ctrl+Z."
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:582
+msgid "Cleared Role/Cluster on all {count} component(s)."
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:629
+msgid "Clear Role/Cluster on {count} component(s)"
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:645
+msgid " and {more} more"
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:646
+msgid "Skipped {count} without Role/Cluster field: {refs}"
+msgstr ""
+
+#: gui/docks/role_cluster_tree.py:653
+msgid "Clear failed: {error}"
+msgstr ""
+
+#: gui/docks/root_metadata.py:112
+msgid "Root sheet:"
+msgstr ""
+
+#: gui/docks/root_metadata.py:113
+msgid "Schematic dir:"
+msgstr ""
+
+#: gui/docks/root_metadata.py:114
+msgid "Registry path:"
+msgstr ""
+
+#: gui/docks/root_metadata.py:115
+msgid "Track registry path:"
+msgstr ""
+
+#: gui/docks/root_metadata.py:116
+msgid "Log file:"
+msgstr ""
+
+#: gui/docks/root_metadata.py:117
+msgid "Operation log dir:"
+msgstr ""
+
+#: gui/docks/root_metadata.py:120
+msgid "Place components"
+msgstr ""
+
+#: gui/docks/root_metadata.py:121
+msgid "Skip existing components"
+msgstr ""
+
+#: gui/docks/root_metadata.py:124
+msgid "Via keepout clearance (mm):"
+msgstr ""
+
+#: gui/docks/root_metadata.py:125
+msgid "Via search step (mm):"
+msgstr ""
+
+#: gui/docks/root_metadata.py:126
+msgid "Via search max radius (mm):"
+msgstr ""
+
+#: gui/docks/root_metadata.py:129
+msgid "Via search directions:"
+msgstr ""
+
+#: gui/docks/root_metadata.py:149 gui/docks/root_metadata.py:251
+msgid "No project file open"
+msgstr ""
+
+#: gui/docks/root_metadata.py:182
+msgid "(relative to this YAML)"
+msgstr ""
+
+#: gui/docks/root_metadata.py:209
+msgid "Add..."
+msgstr ""
+
+#: gui/docks/root_metadata.py:211
+msgid "Remove"
+msgstr ""
+
+#: gui/docks/root_metadata.py:216
+msgid "Schematic files:"
+msgstr ""
+
+#: gui/docks/root_metadata.py:230
+msgid "Files"
+msgstr ""
+
+#: gui/docks/root_metadata.py:231
+msgid "Schematics"
+msgstr ""
+
+#: gui/docks/root_metadata.py:232
+msgid "Via"
+msgstr ""
+
+#: gui/docks/root_metadata.py:280 gui/docks/root_metadata.py:290
+#: gui/docks/root_metadata.py:301 gui/docks/root_metadata.py:313
+#: gui/docks/root_metadata.py:335
+msgid "Open or create a project (root) file first."
+msgstr ""
+
+#: gui/docks/root_metadata.py:316
+msgid "Add schematic file"
+msgstr ""
+
+#: gui/docks/root_metadata.py:364
+msgid "{label} {text!r} is not a number."
+msgstr ""
+
+#: gui/docks/root_metadata.py:375
+msgid "{label} {text!r} is not an integer."
+msgstr ""
+
+#: gui/docks/root_metadata.py:382
+msgid "Nothing to save — every field is still at its default."
+msgstr ""
+
+#: gui/docks/root_metadata.py:393
+msgid "Saved root metadata to {path}"
+msgstr ""
+
+#: gui/docks/rules.py:147
+msgid "optional — defaults to net for --only"
+msgstr ""
+
+#: gui/docks/rules.py:151 gui/docks/rules.py:227 gui/docks/thermal_via.py:170
+msgid "Retired"
+msgstr ""
+
+#: gui/docks/rules.py:152 gui/docks/rules.py:228 gui/docks/thermal_via.py:171
+msgid "Skip"
+msgstr ""
+
+#: gui/docks/rules.py:199
+msgid "pad number on the rule's own anchor"
+msgstr ""
+
+#: gui/docks/rules.py:233
+msgid "Spoke"
+msgstr ""
+
+#: gui/docks/rules.py:235
+msgid "Spokes:"
+msgstr ""
+
+#: gui/docks/rules.py:246
+msgid "Move up"
+msgstr ""
+
+#: gui/docks/rules.py:249
+msgid "Move down"
+msgstr ""
+
+#: gui/docks/rules.py:255
+msgid "Add spoke"
+msgstr ""
+
+#: gui/docks/rules.py:267
+msgid "Redraw rule"
+msgstr ""
+
+#: gui/docks/rules.py:270
+msgid "Redraw selected spoke"
+msgstr ""
+
+#: gui/docks/rules.py:395 gui/docks/thermal_via.py:266
+msgid "Pad is required."
+msgstr ""
+
+#: gui/docks/rules.py:399
+msgid "Cell is required."
+msgstr ""
+
+#: gui/docks/rules.py:440
+msgid "Spoke added — remember to Save the rule."
+msgstr ""
+
+#: gui/docks/rules.py:444 gui/docks/rules.py:456 gui/docks/rules.py:466
+#: gui/docks/rules.py:536 gui/docks/rules.py:633
+msgid "Pick a spoke row first."
+msgstr ""
+
+#: gui/docks/rules.py:452
+msgid "Spoke updated — remember to Save the rule."
+msgstr ""
+
+#: gui/docks/rules.py:462
+msgid "Spoke removed — remember to Save the rule."
+msgstr ""
+
+#: gui/docks/rules.py:482
+msgid "Net is required."
+msgstr ""
+
+#: gui/docks/rules.py:583 gui/docks/thermal_via.py:365
+msgid "Failed to load file: {error}"
+msgstr ""
+
+#: gui/docks/rules.py:612 gui/docks/thermal_via.py:393
+msgid "Placed {name!r}."
+msgstr ""
+
+#: gui/docks/thermal_via.py:100
+msgid "name (used by --only, must be unique)"
+msgstr ""
+
+#: gui/docks/thermal_via.py:135
+msgid "pad number on the anchor footprint"
+msgstr ""
+
+#: gui/docks/thermal_via.py:148
+msgid "Rows:"
+msgstr ""
+
+#: gui/docks/thermal_via.py:150
+msgid "Cols:"
+msgstr ""
+
+#: gui/docks/thermal_via.py:157
+msgid "Margin (mm):"
+msgstr ""
+
+#: gui/docks/thermal_via.py:160
+msgid "Pattern:"
+msgstr ""
+
+#: gui/docks/thermal_via.py:163
+msgid "Drill (mm):"
+msgstr ""
+
+#: gui/docks/thermal_via.py:166
+msgid "Diameter (mm):"
+msgstr ""
+
+#: gui/docks/thermal_via.py:256
+msgid "{label}: {text!r} is not an integer."
+msgstr ""
+
+#: gui/docks/thermal_via.py:300
+msgid "Rows"
+msgstr ""
+
+#: gui/docks/thermal_via.py:304
+msgid "Cols"
+msgstr ""
+
+#: gui/docks/thermal_via.py:309
+msgid "Margin"
+msgstr ""
+
+#: kicadstamp/apply_pipeline.py:81
 #, python-brace-format
 msgid "Rule {name!r} (net {net!r}): retired=true, skipped entirely"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:93
+#: kicadstamp/apply_pipeline.py:101
 #, python-brace-format
 msgid ""
 "ClonePlacement {name!r}: skip=true, skipped this run (existing via/tracks"
 " stay protected)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:99
+#: kicadstamp/apply_pipeline.py:107
 #, python-brace-format
 msgid ""
 "Rule {name!r}: skip=true, skipped this run (existing via/tracks stay "
 "protected)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:105
+#: kicadstamp/apply_pipeline.py:113
 #, python-brace-format
 msgid "Rule {name!r}: spoke on pad {pad} skip=true, skipped this run"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:110
+#: kicadstamp/apply_pipeline.py:118
 #, python-brace-format
 msgid ""
 "Rule {name!r}: no non-skipped spokes left, skipped this run (existing "
 "via/tracks stay protected)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:115
-#, python-brace-format
+#: kicadstamp/apply_pipeline.py:124
 msgid ""
-"thermal_via_array {name!r}: skip=true, skipped this run (existing vias "
+"thermal_via_arrays {name!r}: skip=true, skipped this run (existing vias "
 "stay protected)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:149
+#: kicadstamp/apply_pipeline.py:163
 #, python-brace-format
 msgid " (maybe you meant {suggestion!r}?)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:151
-#, python-brace-format
+#: kicadstamp/apply_pipeline.py:165
 msgid ""
 "  {name!r} — not found among rules, clone_placements, or "
-"thermal_via_array{hint}"
+"thermal_via_arrays{hint}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:154
+#: kicadstamp/apply_pipeline.py:168
 #, python-brace-format
 msgid ""
 "[error] --only: names not found:\n"
@@ -1059,112 +2080,101 @@ msgid ""
 "Available: {all}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:161
-#, python-brace-format
+#: kicadstamp/apply_pipeline.py:171
 msgid ""
 "--only {requested}: rules={rules}, clone_placements={clones}, "
-"thermal_via_array={thermal} (everything else is ignored in this run)"
+"thermal_via_arrays={thermal} (everything else is ignored in this run)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:166 kicadstamp/apply_pipeline.py:203
-msgid "yes"
-msgstr ""
-
-#: kicadstamp/apply_pipeline.py:166 kicadstamp/apply_pipeline.py:203
-msgid "no"
-msgstr ""
-
-#: kicadstamp/apply_pipeline.py:187
+#: kicadstamp/apply_pipeline.py:203
 #, python-brace-format
 msgid "Rule {name!r}: no spokes match --cluster {paths}, rule dropped"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:191
-#, python-brace-format
+#: kicadstamp/apply_pipeline.py:207
 msgid ""
 "[error] --cluster {paths}: matched nothing among rules' spokes, "
-"clone_placements, or thermal_via_array"
+"clone_placements, or thermal_via_arrays"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:198
-#, python-brace-format
+#: kicadstamp/apply_pipeline.py:210
 msgid ""
 "--cluster {paths}: rules={rules} (spokes narrowed), "
-"clone_placements={clones}, thermal_via_array={thermal}"
+"clone_placements={clones}, thermal_via_arrays={thermal}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:266
+#: kicadstamp/apply_pipeline.py:287
 #, python-brace-format
 msgid "Loading config: {config}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:277 kicadstamp/cli_extract.py:84
+#: kicadstamp/apply_pipeline.py:304
 #, python-brace-format
 msgid "Connecting to KiCad (timeout {timeout} ms)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:281
+#: kicadstamp/apply_pipeline.py:308
 msgid "--no-selection: current PCB editor selection will be ignored for this run"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:288
+#: kicadstamp/apply_pipeline.py:315
 msgid ""
 "Resolving item execution order (dependency chain — see "
 "dependency_order.py)..."
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:291
+#: kicadstamp/apply_pipeline.py:317
 #, python-brace-format
 msgid "Execution order: {order}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:305
+#: kicadstamp/apply_pipeline.py:339
 #, python-brace-format
 msgid "Order: {order}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:306
+#: kicadstamp/apply_pipeline.py:340
 msgid "Moves:"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:308
+#: kicadstamp/apply_pipeline.py:342
 #, python-brace-format
 msgid "  {ref}: ({x:.3f}, {y:.3f}) mm, angle={angle:.1f}°"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:311
+#: kicadstamp/apply_pipeline.py:345
 msgid "Vias:"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:313
+#: kicadstamp/apply_pipeline.py:347
 #, python-brace-format
 msgid "  via for {owner}: ({x:.3f}, {y:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:316
+#: kicadstamp/apply_pipeline.py:350
 msgid "Tracks:"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:318
+#: kicadstamp/apply_pipeline.py:352
 #, python-brace-format
 msgid ""
 "  track for {owner}: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
 "net={net}, width={w} mm"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:322
+#: kicadstamp/apply_pipeline.py:356
 msgid ""
 "(thermal via keepout is computed based on CURRENT component positions, "
 "not the target ones — may slightly differ from the real run)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:324
+#: kicadstamp/apply_pipeline.py:358
 msgid ""
 "(track collisions with other copper/components are NOT checked by this "
 "tool — rely on KiCad DRC after placement)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:326
+#: kicadstamp/apply_pipeline.py:360
 msgid ""
 "(items later in the dependency chain above are ALSO planned from the "
 "CURRENT board, not the post-move board of their prerequisite — a real "
@@ -1172,154 +2182,272 @@ msgid ""
 "chained result)"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:350
+#: kicadstamp/apply_pipeline.py:386
 #, python-brace-format
 msgid ""
 "{label}: anchor {ref!r} failed to move earlier in this run — this item's "
 "placement is based on its OLD position"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:354
+#: kicadstamp/apply_pipeline.py:390
 #, python-brace-format
 msgid "  {label}: {count} moves"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:363
+#: kicadstamp/apply_pipeline.py:399
 #, python-brace-format
 msgid "Failed to move: {refs}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:366
+#: kicadstamp/apply_pipeline.py:402
 msgid "Reloading board data before planning vias..."
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:372
+#: kicadstamp/apply_pipeline.py:408
 #, python-brace-format
 msgid ""
 "Planned vias: {total}, actually to create (registry filtered already "
 "correctly placed): {to_create}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:375
+#: kicadstamp/apply_pipeline.py:411
 msgid "Applying vias..."
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:378
+#: kicadstamp/apply_pipeline.py:414
 #, python-brace-format
 msgid "Failed to create vias near: {refs}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:385
+#: kicadstamp/apply_pipeline.py:421
 #, python-brace-format
 msgid ""
 "Planned tracks: {total}, actually to create (registry filtered already "
 "correctly placed): {to_create}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:388
+#: kicadstamp/apply_pipeline.py:424
 msgid "Applying tracks..."
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:391
+#: kicadstamp/apply_pipeline.py:427
 #, python-brace-format
 msgid "Failed to create tracks near: {refs}"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:395
+#: kicadstamp/apply_pipeline.py:431
 msgid "✅ All operations completed successfully"
 msgstr ""
 
-#: kicadstamp/apply_pipeline.py:397
+#: kicadstamp/apply_pipeline.py:433
 msgid "⚠️ Some operations failed – check the log."
 msgstr ""
 
-#: kicadstamp/cli_extract.py:61
+#: kicadstamp/cli.py:43
+msgid ""
+"[error] --profile cannot be combined with --name/--output/--param/--net-"
+"template/--net-template-role/--rule-net/--origin-by-*: either all from "
+"profile or all as explicit flags, not mixed."
+msgstr ""
+
+#: kicadstamp/cli.py:49 kicadstamp/cli.py:126
+msgid "[error] --profile given without --profiles (profiles file)"
+msgstr ""
+
+#: kicadstamp/cli.py:53 kicadstamp/cli.py:131
+#, python-brace-format
+msgid "[error] profile {profile!r} missing required field {field!r}"
+msgstr ""
+
+#: kicadstamp/cli.py:67
+#, python-brace-format
+msgid "Profile {profile!r} from {profiles}: name={name}, output={output}"
+msgstr ""
+
+#: kicadstamp/cli.py:74
+msgid "Cell name (key under cells:): "
+msgstr ""
+
+#: kicadstamp/cli.py:78
+msgid "[error] need --name and --output (or --profiles/--profile instead)"
+msgstr ""
+
+#: kicadstamp/cli.py:82
+#, python-brace-format
+msgid "--param {item!r} — need format KEY=VALUE"
+msgstr ""
+
+#: kicadstamp/cli.py:89
+#, python-brace-format
+msgid "--net-template {item!r} — need format LITERAL=PATTERN"
+msgstr ""
+
+#: kicadstamp/cli.py:96
+#, python-brace-format
+msgid "--net-template-role {item!r} — need format ROLE=LITERAL"
+msgstr ""
+
+#: kicadstamp/cli.py:122
+msgid "[error] --profile cannot be combined with --net/--pcb/--channel/--output"
+msgstr ""
+
+#: kicadstamp/cli.py:136
+msgid "[error] need --net/--pcb/--channel/--output (or --profiles/--profile)"
+msgstr ""
+
+#: kicadstamp/cli.py:142
+#, python-brace-format
+msgid "[{channel}] footprints: {fp}, segments: {seg}, vias: {vias} -> {output}"
+msgstr ""
+
+#: kicadstamp/cli.py:165
+msgid "logs directory not found."
+msgstr ""
+
+#: kicadstamp/cli.py:169
+msgid "No operation files to undo."
+msgstr ""
+
+#: kicadstamp/cli.py:172
+#, python-brace-format
+msgid "Undoing operation from {file}"
+msgstr ""
+
+#: kicadstamp/cli.py:175
+msgid "✅ Operation successfully undone."
+msgstr ""
+
+#: kicadstamp/cli.py:177
+msgid "❌ Failed to undo operation."
+msgstr ""
+
+#: kicadstamp/cli_common.py:37
+msgid ""
+"KiCad is busy and cannot respond right now. Usually this means an "
+"unfinished tool is running in the GUI (dimensioning, interactive routing,"
+" move tool, etc.) — finish it (Esc or right-click -> Cancel) and run the "
+"command again. The board was not modified."
+msgstr ""
+
+#: kicadstamp/cli_common.py:43
+#, python-brace-format
+msgid "KiCad returned API error: {e}"
+msgstr ""
+
+#: kicadstamp/cli_common.py:69
+#, python-brace-format
+msgid "Error: {e}"
+msgstr ""
+
+#: kicadstamp/cli_common.py:75
+msgid "Unexpected error"
+msgstr ""
+
+#: kicadstamp/cli_common.py:103
+msgid "Could not read log_file from config {path}: {e}"
+msgstr ""
+
+#: kicadstamp/cli_extract.py:69
 #, python-brace-format
 msgid "[error] profiles file {path!r} not found"
 msgstr ""
 
-#: kicadstamp/cli_extract.py:68
+#: kicadstamp/cli_extract.py:76
 #, python-brace-format
 msgid ""
 "[error] profile {name!r} not found in {top_key!r} of file {path!r}. "
 "Available: {avail}"
 msgstr ""
 
-#: kicadstamp/cli_extract.py:76
+#: kicadstamp/cli_extract.py:85
 #, python-brace-format
 msgid "unknown fields in {top_key} {name!r} of {path!r}"
 msgstr ""
 
-#: kicadstamp/cli_extract.py:93
-msgid ""
-"[error] --profile cannot be combined with --name/--output/--param/--net-"
-"template/--net-template-role/--origin-by-*: either all from profile or "
-"all as explicit flags, not mixed."
-msgstr ""
-
-#: kicadstamp/cli_extract.py:116
-#, python-brace-format
-msgid "Profile {profile!r} from {profiles}: name={name}, output={output}"
-msgstr ""
-
-#: kicadstamp/cli_extract.py:123
-msgid "Cell name (key under cells:): "
-msgstr ""
-
-#: kicadstamp/cli_extract.py:127
-msgid "[error] need --name and --output (or --profiles/--profile instead)"
-msgstr ""
-
-#: kicadstamp/cli_extract.py:131
-#, python-brace-format
-msgid "--param {item!r} — need format KEY=VALUE"
-msgstr ""
-
-#: kicadstamp/cli_extract.py:139
-#, python-brace-format
-msgid "--net-template {item!r} — need format LITERAL=PATTERN"
-msgstr ""
-
-#: kicadstamp/cli_extract.py:147
-#, python-brace-format
-msgid "--net-template-role {item!r} — need format ROLE=LITERAL"
-msgstr ""
-
-#: kicadstamp/cli_extract.py:156
+#: kicadstamp/cli_extract.py:112
 msgid ""
 "[error] --origin-by-component-pad without --origin-by-component-role — "
 "you can only refine a pad for a role that you first specify"
 msgstr ""
 
-#: kicadstamp/cli_extract.py:176
+#: kicadstamp/cli_extract.py:134
 #, python-brace-format
 msgid "Template {name!r} already exists in {output} — will be overwritten"
 msgstr ""
 
-#: kicadstamp/cli_extract.py:191
+#: kicadstamp/cli_extract.py:149
 #, python-brace-format
 msgid "✅ Template {name!r} written to {output}"
 msgstr ""
 
-#: kicadstamp/exceptions.py:39
+#: kicadstamp/config_writer.py:54
+msgid "{path} is not valid {kind}: {error}"
+msgstr ""
+
+#: kicadstamp/config_writer.py:108 kicadstamp/config_writer.py:143
+#, python-brace-format
+msgid "{section}: in {path} is not a list — refusing to touch it"
+msgstr ""
+
+#: kicadstamp/config_writer.py:184
+msgid "include: in {path} is not a list — refusing to touch it"
+msgstr ""
+
+#: kicadstamp/exceptions.py:50
 #, python-brace-format
 msgid "  FATAL ERROR: {title}"
 msgstr ""
 
-#: kicadstamp/exceptions.py:45
+#: kicadstamp/exceptions.py:56
 msgid "Placement stopped, board not modified. Fix the config and run again."
 msgstr ""
 
-#: kicadstamp/exceptions.py:72 kicadstamp/validation.py:379
+#: kicadstamp/exceptions.py:83 kicadstamp/validation.py:397
 #, python-brace-format
 msgid " — did you mean {suggestion!r}?"
 msgstr ""
 
-#: kicadstamp/exceptions.py:76
+#: kicadstamp/exceptions.py:87
 #, python-brace-format
 msgid ""
 "unrecognised keys are silently ignored – common source of quiet "
 "bugs{extra}: {problems}"
+msgstr ""
+
+#: kicadstamp/extract_writer.py:88
+#, python-brace-format
+msgid "Cell written, but profile write failed: {error}"
+msgstr ""
+
+#: kicadstamp/extract_writer.py:89
+#, python-brace-format
+msgid "{action} profile {key!r} in {path}"
+msgstr ""
+
+#: kicadstamp/extract_writer.py:90
+msgid "overwrote"
+msgstr ""
+
+#: kicadstamp/extract_writer.py:90
+msgid "wrote"
+msgstr ""
+
+#: kicadstamp/extract_writer.py:98 kicadstamp/extract_writer.py:111
+#, python-brace-format
+msgid "added {rel!r} to include: in {path}"
+msgstr ""
+
+#: kicadstamp/extract_writer.py:104
+#, python-brace-format
+msgid ""
+"skipped adding to include: — {path} has root-config-only key(s) {keys} "
+"that include: can't merge (move them to the Placer file itself, or point "
+"Placer at this same file)"
+msgstr ""
+
+#: kicadstamp/extract_writer.py:114
+#, python-brace-format
+msgid "placer file wiring failed: {error}"
 msgstr ""
 
 #: kicadstamp/net_resolution.py:39
@@ -1429,179 +2557,125 @@ msgid ""
 "dictionary"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:120
-msgid "both ends"
+#: kicadstamp/template_extraction.py:147
+msgid "net(s) {nets} are in both --rule-net and --param/--net-template"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:121
-msgid "start"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:121
-msgid "end"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:122
-#, python-brace-format
+#: kicadstamp/template_extraction.py:149
 msgid ""
-"  track ({sx:.3f},{sy:.3f}) -> ({ex:.3f},{ey:.3f}) mm, net={net}: "
-"{missing} does not match anything else in the selection — probably "
-"extends beyond the intended area, skipped"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:158
-#, python-brace-format
-msgid "--origin-by-via-net {net!r} not found in selection"
+"a net can't be both \"always the enclosing Rule's own net\" and \"always "
+"resolved from this param\" — pick one per net"
 msgstr ""
 
 #: kicadstamp/template_extraction.py:159
-#, python-brace-format
-msgid "among {count} selected vias, none is on net {net!r}"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:165
-#, python-brace-format
-msgid "--origin-by-via-net {net!r} is ambiguous"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:166
-#, python-brace-format
-msgid ""
-"selection contains {count} vias on this net: {pos} — refine the selection"
-" (keep only one such via) or use --origin-by-component-role instead"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:181
-#, python-brace-format
-msgid "--origin-by-component-pad {pad!r} not found"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:182
-#, python-brace-format
-msgid ""
-"component with role {role!r} ({ref}) has no pad {pad!r} — pad numbers are"
-" strings as in KiCad"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:189
-#, python-brace-format
-msgid "--origin-by-component-role {role!r} not found in selection"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:190
-#, python-brace-format
-msgid "among {count} selected components, none has role {role!r}"
-msgstr ""
-
-#: kicadstamp/template_extraction.py:276
 #, python-brace-format
 msgid ""
 "{count} selected objects — not footprint, via, or track, ignored (cell "
 "only supports these)"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:282
+#: kicadstamp/template_extraction.py:165
 #, python-brace-format
 msgid ""
 "Tracks in selection: {total}, taken into cell: {kept} (the rest extend "
 "beyond the selection, see warning above)"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:288
+#: kicadstamp/template_extraction.py:171
 msgid "nothing to extract"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:289
+#: kicadstamp/template_extraction.py:172
 msgid ""
 "Nothing is selected (or selected objects are not footprints/vias/tracks) "
 "— select the desired board area in KiCad before running"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:299
+#: kicadstamp/template_extraction.py:182
 #, python-brace-format
 msgid ""
 "{ref}: no {field!r} field — every selected component must have a Role for"
 " template extraction"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:304
+#: kicadstamp/template_extraction.py:187
 #, python-brace-format
 msgid ""
 "role {role!r} appears twice in selection: {ref1!r} and {ref2!r} — roles "
 "must be unique"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:311
+#: kicadstamp/template_extraction.py:194
 msgid "problems in current selection"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:315
+#: kicadstamp/template_extraction.py:198
 #, python-brace-format
 msgid "via on net {net!r}"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:316
+#: kicadstamp/template_extraction.py:199
 #, python-brace-format
 msgid "component with role {role!r}"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:317
+#: kicadstamp/template_extraction.py:200
 msgid "bbox of selection (lower‑left corner)"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:319
+#: kicadstamp/template_extraction.py:202
 #, python-brace-format
 msgid "Origin ({desc}): ({x:.3f}, {y:.3f}) mm"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:331
+#: kicadstamp/template_extraction.py:213
 #, python-brace-format
 msgid ""
 "Mixed selection: {back} on B.Cu, {front} on F.Cu; cell layer = {layer}, "
 "deviating components will have explicit layer"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:334
+#: kicadstamp/template_extraction.py:216
 #, python-brace-format
 msgid "Cell layer: {layer}"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:356
+#: kicadstamp/template_extraction.py:238
 #, python-brace-format
 msgid ""
 "--net-template-role for role {role!r} asks for net {literal!r}, but it is"
 " not on any pad of {ref}"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:359
+#: kicadstamp/template_extraction.py:241
 #, python-brace-format
 msgid ""
 "actual nets on pads: {nets} — check typo in --net-template-role or in the"
 " role itself"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:364
+#: kicadstamp/template_extraction.py:246
 #, python-brace-format
 msgid ""
 "--net-template-role for role {role!r} asks for net {literal!r}, which is "
 "not in net_template_map"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:366
+#: kicadstamp/template_extraction.py:248
 #, python-brace-format
 msgid ""
 "add {literal!r} to --net-template/net_template (or to params if it equals"
 " a parameter value) — otherwise there is no pattern to build"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:378
+#: kicadstamp/template_extraction.py:260
 #, python-brace-format
 msgid ""
 "could not determine automatically — {count} matching nets on pads "
 "({nets}) — fill in manually or use --net-template-role {role}=<net>"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:381
+#: kicadstamp/template_extraction.py:263
 #, python-brace-format
 msgid ""
 "  {ref} (role {role}): {count} nets from --net-template on pads ({nets}) "
@@ -1609,71 +2683,135 @@ msgid ""
 "--net-template-role {role}=<net> in advance"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:389
+#: kicadstamp/template_extraction.py:271
 #, python-brace-format
 msgid ""
 "  {ref} (role {role}): along={along}, across={across}, "
 "angle={angle}{layer}{net}"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:392 kicadstamp/template_extraction.py:435
+#: kicadstamp/template_extraction.py:274 kicadstamp/template_extraction.py:321
 #, python-brace-format
 msgid ", layer={layer}"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:393
+#: kicadstamp/template_extraction.py:275
 #, python-brace-format
 msgid ", net_template={nt}"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:409
+#: kicadstamp/template_extraction.py:293
 #, python-brace-format
 msgid "  via: along={along}, across={across}, net={net}"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:432
+#: kicadstamp/template_extraction.py:318
 #, python-brace-format
 msgid "  track: ({sx},{sy}) -> ({ex},{ey}), net={net}{layer}"
 msgstr ""
 
-#: kicadstamp/template_extraction.py:437
+#: kicadstamp/template_extraction.py:323
 #, python-brace-format
 msgid ""
 "Extracted cell {name!r}: {comp} components, {vias} spoke‑level vias, "
 "{tracks} tracks"
 msgstr ""
 
-#: kicadstamp/undo.py:28
+#: kicadstamp/template_selection.py:102
+msgid "both ends"
+msgstr ""
+
+#: kicadstamp/template_selection.py:103
+msgid "start"
+msgstr ""
+
+#: kicadstamp/template_selection.py:103
+msgid "end"
+msgstr ""
+
+#: kicadstamp/template_selection.py:104
+#, python-brace-format
+msgid ""
+"  track ({sx:.3f},{sy:.3f}) -> ({ex:.3f},{ey:.3f}) mm, net={net}: "
+"{missing} does not match anything else in the selection — probably "
+"extends beyond the intended area, skipped"
+msgstr ""
+
+#: kicadstamp/template_selection.py:140
+#, python-brace-format
+msgid "--origin-by-via-net {net!r} not found in selection"
+msgstr ""
+
+#: kicadstamp/template_selection.py:141
+#, python-brace-format
+msgid "among {count} selected vias, none is on net {net!r}"
+msgstr ""
+
+#: kicadstamp/template_selection.py:147
+#, python-brace-format
+msgid "--origin-by-via-net {net!r} is ambiguous"
+msgstr ""
+
+#: kicadstamp/template_selection.py:148
+#, python-brace-format
+msgid ""
+"selection contains {count} vias on this net: {pos} — refine the selection"
+" (keep only one such via) or use --origin-by-component-role instead"
+msgstr ""
+
+#: kicadstamp/template_selection.py:163
+#, python-brace-format
+msgid "--origin-by-component-pad {pad!r} not found"
+msgstr ""
+
+#: kicadstamp/template_selection.py:164
+#, python-brace-format
+msgid ""
+"component with role {role!r} ({ref}) has no pad {pad!r} — pad numbers are"
+" strings as in KiCad"
+msgstr ""
+
+#: kicadstamp/template_selection.py:171
+#, python-brace-format
+msgid "--origin-by-component-role {role!r} not found in selection"
+msgstr ""
+
+#: kicadstamp/template_selection.py:172
+#, python-brace-format
+msgid "among {count} selected components, none has role {role!r}"
+msgstr ""
+
+#: kicadstamp/undo.py:34
 #, python-brace-format
 msgid "Component {ref} not found, skipping"
 msgstr ""
 
-#: kicadstamp/undo.py:40
+#: kicadstamp/undo.py:46
 #, python-brace-format
 msgid "Restoring {ref} to layer {layer} (flip)"
 msgstr ""
 
-#: kicadstamp/undo.py:54
+#: kicadstamp/undo.py:61
 #, python-brace-format
 msgid "Restored {ref} to position ({x:.3f}, {y:.3f}) mm, angle {angle:.1f}°"
 msgstr ""
 
-#: kicadstamp/undo.py:62
+#: kicadstamp/undo.py:69
 #, python-brace-format
 msgid "Deleted via with UUID {uuid}"
 msgstr ""
 
-#: kicadstamp/undo.py:69
+#: kicadstamp/undo.py:76
 #, python-brace-format
 msgid "Deleted track with UUID {uuid}"
 msgstr ""
 
-#: kicadstamp/undo.py:74
+#: kicadstamp/undo.py:81
 #, python-brace-format
 msgid "File {name} deleted."
 msgstr ""
 
-#: kicadstamp/undo.py:76
+#: kicadstamp/undo.py:83
 #, python-brace-format
 msgid "Failed to delete file {name}: {e}"
 msgstr ""
@@ -1683,7 +2821,7 @@ msgstr ""
 msgid "rule (net {net!r}): anchor {anchor!r} not found on board"
 msgstr ""
 
-#: kicadstamp/config/loader.py:787 kicadstamp/placement/dependency_order.py:185
+#: kicadstamp/config/loader.py:226 kicadstamp/placement/dependency_order.py:202
 #: kicadstamp/placement/services/manual_position_calculator.py:32
 #: kicadstamp/placement/services/manual_position_calculator.py:106
 #: kicadstamp/validation.py:56
@@ -1763,17 +2901,25 @@ msgstr ""
 msgid "Cell definition cycle checks passed"
 msgstr ""
 
-#: kicadstamp/validation.py:285
+#: kicadstamp/validation.py:290
 #, python-brace-format
 msgid "name {name!r} appears twice in clone_placements — names must be unique"
 msgstr ""
 
-#: kicadstamp/validation.py:289
+#: kicadstamp/validation.py:294
 #, python-brace-format
 msgid "role:{role}"
 msgstr ""
 
-#: kicadstamp/validation.py:296
+#: kicadstamp/validation.py:301
+msgid ""
+"{this!r} and {other!r} both point to the same anchor with the same offset"
+" (cell/role={content!r}, anchor_point={point!r}, origin=({ox}, {oy}) mm) "
+"— the registry would confuse their vias/tracks; likely a copy‑paste typo "
+"(if this is intentional, give them different xy)"
+msgstr ""
+
+#: kicadstamp/validation.py:314
 #, python-brace-format
 msgid ""
 "{this!r} and {other!r} both point to the same anchor with the same offset"
@@ -1782,7 +2928,7 @@ msgid ""
 "likely a copy‑paste typo (if this is intentional, give them different xy)"
 msgstr ""
 
-#: kicadstamp/validation.py:311
+#: kicadstamp/validation.py:329
 #, python-brace-format
 msgid ""
 "{this!r} and {other!r} both point to the same anchor with the same offset"
@@ -1792,83 +2938,83 @@ msgid ""
 "(if this is intentional, give them different xy)"
 msgstr ""
 
-#: kicadstamp/validation.py:324
+#: kicadstamp/validation.py:342
 msgid "clone_placements with ambiguous identity"
 msgstr ""
 
-#: kicadstamp/validation.py:327
+#: kicadstamp/validation.py:345
 msgid "Duplicate clone anchor checks passed"
 msgstr ""
 
-#: kicadstamp/validation.py:342
+#: kicadstamp/validation.py:360
 msgid "anchor_sheet is used but sheet name dictionary is empty"
 msgstr ""
 
-#: kicadstamp/validation.py:343
+#: kicadstamp/validation.py:361
 #, python-brace-format
 msgid "clone_placements with anchor_sheet: {users}"
 msgstr ""
 
-#: kicadstamp/validation.py:344
+#: kicadstamp/validation.py:362
 msgid ""
 "you need schematic_dir (or schematic_files) at the root of the config — "
 "path to the folder with *.kicad_sch files, relative to this YAML"
 msgstr ""
 
-#: kicadstamp/validation.py:347
+#: kicadstamp/validation.py:365
 msgid "anchor_sheet/sheet_names check passed"
 msgstr ""
 
-#: kicadstamp/validation.py:381
+#: kicadstamp/validation.py:399
 #, python-brace-format
 msgid ""
 "{name!r}, {where}: via.net {net_name!r} resolves to {resolved!r}, but "
 "that net does not exist on the board{suggestion}"
 msgstr ""
 
-#: kicadstamp/validation.py:394
+#: kicadstamp/validation.py:412
 msgid "spoke‑level via"
 msgstr ""
 
-#: kicadstamp/validation.py:397
+#: kicadstamp/validation.py:415
 #, python-brace-format
 msgid "via of role {role!r}"
 msgstr ""
 
-#: kicadstamp/validation.py:401
+#: kicadstamp/validation.py:419
 msgid "resolved via net references a non‑existent board net"
 msgstr ""
 
-#: kicadstamp/validation.py:404
+#: kicadstamp/validation.py:422
 msgid "clone via.net checks against real board nets passed"
 msgstr ""
 
-#: kicadstamp/validation.py:417
+#: kicadstamp/validation.py:435
 msgid "multiple clone_placements in 'by selection' mode in one run"
 msgstr ""
 
-#: kicadstamp/validation.py:418
+#: kicadstamp/validation.py:436
 #, python-brace-format
 msgid ""
 "found {count}: {names} — KiCad has only one selection at a time, so "
 "processing all at once is impossible"
 msgstr ""
 
-#: kicadstamp/validation.py:421
+#: kicadstamp/validation.py:439
 msgid ""
 "solution: either set retired: true on all but one, or run apply "
 "separately for each using --only NAME"
 msgstr ""
 
-#: kicadstamp/validation.py:424
+#: kicadstamp/validation.py:442
 msgid "Single selection‑based clone check passed"
 msgstr ""
 
-#: kicadstamp/validation.py:430
+#: kicadstamp/validation.py:448
 msgid "Running pre‑validation checks..."
 msgstr ""
 
-#: kicadstamp/validation.py:439
+#: kicadstamp/validation.py:457
 msgid "All pre‑validation checks passed"
 msgstr ""
 
@@ -1931,183 +3077,85 @@ msgid ""
 " {fseg} segs, {fvia} vias"
 msgstr ""
 
-#: kicadstamp/config/includes.py:50
-#, python-brace-format
-msgid "include: invalid entry {entry!r} in {source!r}"
-msgstr ""
-
-#: kicadstamp/config/includes.py:51
-msgid ""
-"each entry must be either a file path string, or a mapping {{path: <str>,"
-" enabled: <bool>}}"
-msgstr ""
-
-#: kicadstamp/config/includes.py:60
-#, python-brace-format
-msgid "{file!r}: top level must be a YAML mapping, got {type}"
-msgstr ""
-
-#: kicadstamp/config/includes.py:62
-msgid ""
-"check for a stray/misplaced list (e.g. list items left without a wrapping"
-" 'clone_placements:'/'rules:' key)"
-msgstr ""
-
-#: kicadstamp/config/includes.py:70
-#, python-brace-format
-msgid "{file!r}: {section!r} must be a list, got {type}"
-msgstr ""
-
-#: kicadstamp/config/includes.py:72
-#, python-brace-format
-msgid ""
-"{section!r} entries are a YAML list ('- name: ...'); {dict_sections} are "
-"mappings — check for a mixed-up section key"
-msgstr ""
-
-#: kicadstamp/config/includes.py:80
-#, python-brace-format
-msgid "{file!r}: {section!r} must be a mapping, got {type}"
-msgstr ""
-
-#: kicadstamp/config/includes.py:82
-#, python-brace-format
-msgid ""
-"{section!r} entries are a YAML mapping ('key: {{...}}'); {list_sections} "
-"are lists — check for a mixed-up section key"
-msgstr ""
-
-#: kicadstamp/config/includes.py:100
-#, python-brace-format
-msgid ""
-"include: {file!r} has top-level key(s) not supported inside an included "
-"file: {keys}"
-msgstr ""
-
-#: kicadstamp/config/includes.py:102
-#, python-brace-format
-msgid ""
-"include: only merges {list_sections} (lists) and {dict_sections} "
-"(mappings) from an included file — anything else (e.g. layer:, "
-"thermal_via_array:, schematic_dir:, registry_path:) has no defined way to"
-" merge across multiple included files and was previously silently "
-"dropped. Move {keys} to the root config file instead"
-msgstr ""
-
-#: kicadstamp/config/includes.py:124
-#, python-brace-format
-msgid "include: {file!r} disabled, skipped (not opened)"
-msgstr ""
-
-#: kicadstamp/config/includes.py:130
-#, python-brace-format
-msgid "include: file {file!r} not found"
-msgstr ""
-
-#: kicadstamp/config/includes.py:131
-#, python-brace-format
-msgid ""
-"expected at {path} (relative to {source!r}, not the current working "
-"directory)"
-msgstr ""
-
-#: kicadstamp/config/includes.py:136
-#, python-brace-format
-msgid ""
-"include: {file!r} is included more than once (directly or indirectly), "
-"from {source!r}"
-msgstr ""
-
-#: kicadstamp/config/includes.py:138
-msgid ""
-"either a cycle, or the same file included from two different branches — "
-"both are unsupported, split the shared content out instead"
-msgstr ""
-
-#: kicadstamp/config/includes.py:154
-#, python-brace-format
-msgid "include: duplicate {section} key {key!r}"
-msgstr ""
-
-#: kicadstamp/config/includes.py:155
-#, python-brace-format
-msgid "defined in {a!r} and again via include {b!r}"
-msgstr ""
-
-#: kicadstamp/config/includes.py:160
-#, python-brace-format
-msgid "include: merged {file!r} into {source!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:32
+#: kicadstamp/config/entries.py:31
 #, python-brace-format
 msgid "via.net must be a string, not {type}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:33
+#: kicadstamp/config/entries.py:32
 #, python-brace-format
 msgid "got: {net!r} (offset_along_mm={along}, offset_across_mm={across})"
 msgstr ""
 
-#: kicadstamp/config/loader.py:35
+#: kicadstamp/config/entries.py:34
 msgid ""
 "looks like broken YAML – e.g. net_overrides accidentally nested under "
 "this via's net instead of being a top-level field of clone_placement "
 "(net_overrides is a sibling of cell/params, not under via)"
 msgstr ""
 
-#: kicadstamp/config/loader.py:52
+#: kicadstamp/config/entries.py:51
 #, python-brace-format
 msgid "track.net must be a string, not {type}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:53
+#: kicadstamp/config/entries.py:52
 #, python-brace-format
 msgid "got: {net!r} (start_along_mm={along}, start_across_mm={across})"
 msgstr ""
 
-#: kicadstamp/config/loader.py:55
+#: kicadstamp/config/entries.py:54
 msgid ""
 "looks like broken YAML – e.g. placeholder like {{NET}} without quotes: "
 "YAML reads it as flow-mapping, not a string; use quotes: net: '{{NET}}'"
 msgstr ""
 
-#: kicadstamp/config/loader.py:59
+#: kicadstamp/config/entries.py:58
 msgid "on track"
 msgstr ""
 
-#: kicadstamp/config/loader.py:74
+#: kicadstamp/config/entries.py:73
 #, python-brace-format
 msgid "invalid layer={value!r} {where}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:75
+#: kicadstamp/config/entries.py:74
 msgid "layer must be absolute: 'F.Cu' or 'B.Cu'"
 msgstr ""
 
-#: kicadstamp/config/loader.py:82
+#: kicadstamp/config/entries.py:86
+msgid "component slot without a role"
+msgstr ""
+
+#: kicadstamp/config/entries.py:87
+msgid ""
+"every component slot needs role: <ROLE> – roles MUST be unique within a "
+"cell"
+msgstr ""
+
+#: kicadstamp/config/entries.py:92
 #, python-brace-format
 msgid "deprecated field 'side' in slot {role!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:83
+#: kicadstamp/config/entries.py:93
 msgid ""
 "relative 'side' is deprecated (see discussion v116): layer is now "
 "absolute – write layer: F.Cu or layer: B.Cu, or remove the field to "
 "inherit the cell layer"
 msgstr ""
 
-#: kicadstamp/config/loader.py:88
+#: kicadstamp/config/entries.py:98
 #, python-brace-format
 msgid "on slot {role!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:107
+#: kicadstamp/config/entries.py:117
 #, python-brace-format
 msgid "role appears twice in cell {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:108
+#: kicadstamp/config/entries.py:118
 #, python-brace-format
 msgid ""
 "role {role!r} appears {count} times in components of this cell – roles "
@@ -2115,28 +3163,28 @@ msgid ""
 "placement registry)"
 msgstr ""
 
-#: kicadstamp/config/loader.py:116
+#: kicadstamp/config/entries.py:126
 #, python-brace-format
 msgid "deprecated field 'reference_side' in cell {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:117
+#: kicadstamp/config/entries.py:127
 msgid ""
 "renamed (see discussion v116): use layer: F.Cu or layer: B.Cu – absolute "
 "cell layer, as extracted"
 msgstr ""
 
-#: kicadstamp/config/loader.py:121
+#: kicadstamp/config/entries.py:131
 #, python-brace-format
 msgid "in cell {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:128
+#: kicadstamp/config/entries.py:138
 #, python-brace-format
 msgid "name appears twice among clone_placements of cell {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:129
+#: kicadstamp/config/entries.py:139
 #, python-brace-format
 msgid ""
 "name {dup!r} appears {count} times — nested clone_placement names must be"
@@ -2144,478 +3192,647 @@ msgid ""
 "content)"
 msgstr ""
 
-#: kicadstamp/config/loader.py:158
+#: kicadstamp/config/entries.py:155
+msgid "anchor_xy together with anchor_role in cell {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:156
+msgid ""
+"these are mutually exclusive ways to mark the cell's own local (0,0) — "
+"pick one"
+msgstr ""
+
+#: kicadstamp/config/entries.py:161
+msgid "anchor_xy must be a 2-element [x, y] list in cell {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:162 kicadstamp/config/entries.py:240
+#: kicadstamp/config/entries.py:343 kicadstamp/config/entries.py:599
+#, python-brace-format
+msgid "got: {xy!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:167
+msgid "anchor_pad without anchor_role in cell {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:168
+msgid "anchor_pad only narrows anchor_role — it is not an anchor by itself"
+msgstr ""
+
+#: kicadstamp/config/entries.py:172
+msgid "anchor_role {role!r} is not a component of cell {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:174
+msgid "anchor_role must name one of this cell's own components: {roles}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:205
 #, python-brace-format
 msgid "nested clone_placement without name in cell {cell!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:159
+#: kicadstamp/config/entries.py:206
 msgid ""
 "every nested clone_placement must have a name — used to build the "
 "registry key for its content, write name: <string>"
 msgstr ""
 
-#: kicadstamp/config/loader.py:164
+#: kicadstamp/config/entries.py:211
 #, python-brace-format
 msgid "unknown fields in nested clone_placement {name!r} of cell {cell!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:166
+#: kicadstamp/config/entries.py:213
 msgid ""
 " (cell placements are closed-boundary — no "
 "anchor_ref/anchor_role/anchor_sheet/anchor_cluster/anchor_pad/by_selection/ignore_selection"
 " here, only xy: relative to the parent cell's own (0,0))"
 msgstr ""
 
-#: kicadstamp/config/loader.py:174
+#: kicadstamp/config/entries.py:221
 #, python-brace-format
 msgid ""
 "cell and role together in nested clone_placement {name!r} of cell "
 "{cell_name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:176
+#: kicadstamp/config/entries.py:223
 msgid ""
 "these are mutually exclusive ways to define the content: either a "
 "reference to another cell (cell), or a single-component placement by role"
 " (role), not both"
 msgstr ""
 
-#: kicadstamp/config/loader.py:181
+#: kicadstamp/config/entries.py:228
 #, python-brace-format
 msgid ""
 "neither cell nor role set in nested clone_placement {name!r} of cell "
 "{cell_name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:183
+#: kicadstamp/config/entries.py:230
 msgid ""
 "need either cell: <name from cells:>, or role: <ROLE> for a single-"
 "component placement without a separate cell"
 msgstr ""
 
-#: kicadstamp/config/loader.py:191
+#: kicadstamp/config/entries.py:238
 #, python-brace-format
 msgid ""
 "xy must be a 2-element [x, y] list in nested clone_placement {name!r} of "
 "cell {cell_name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:193 kicadstamp/config/loader.py:284
-#: kicadstamp/config/loader.py:476
-#, python-brace-format
-msgid "got: {xy!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:200
+#: kicadstamp/config/entries.py:247
 #, python-brace-format
 msgid "in nested clone_placement {name!r} of cell {cell_name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:226
+#: kicadstamp/config/entries.py:274
 #, python-brace-format
 msgid "unknown fields in point {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:244
-#: kicadstamp/placement/services/point_resolver.py:117
+#: kicadstamp/config/entries.py:287
+msgid "invalid anchor_origin {value!r} in point {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:288
+msgid ""
+"must be 'grid' (Place > Set Grid Origin, visual only) or 'drill' (Place >"
+" Drill/Place Origin — the auxiliary axis drill/position files use, and "
+"Gerbers optionally via their own plot option)"
+msgstr ""
+
+#: kicadstamp/config/entries.py:302
+#: kicadstamp/placement/services/point_resolver.py:120
 #, python-brace-format
 msgid "point {name!r} has no anchor"
 msgstr ""
 
-#: kicadstamp/config/loader.py:245
+#: kicadstamp/config/entries.py:303
 msgid ""
 "set exactly one of: anchor_ref/anchor_role (+ optional "
 "anchor_sheet/anchor_cluster/anchor_pad), anchor_point (chain to another "
-"point), or xy (literal absolute coordinate)"
+"point), xy (literal absolute coordinate), or anchor_origin (the board's "
+"own live grid/drill-place origin)"
 msgstr ""
 
-#: kicadstamp/config/loader.py:251
+#: kicadstamp/config/entries.py:310
 #, python-brace-format
 msgid "point {name!r} has more than one anchor base"
 msgstr ""
 
-#: kicadstamp/config/loader.py:252
+#: kicadstamp/config/entries.py:311
 msgid ""
-"anchor_ref/anchor_role, anchor_point, and xy are mutually exclusive — "
-"pick exactly one way to define this point's base position"
+"anchor_ref/anchor_role, anchor_point, xy, and anchor_origin are mutually "
+"exclusive — pick exactly one way to define this point's base position"
 msgstr ""
 
-#: kicadstamp/config/loader.py:257
+#: kicadstamp/config/entries.py:316
 #, python-brace-format
 msgid "anchor_ref and anchor_role together in point {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:258 kicadstamp/config/loader.py:676
+#: kicadstamp/config/entries.py:317 kicadstamp/config/entries.py:439
 msgid ""
 "mutually exclusive: either by refdes (anchor_ref) or by Role field "
 "(anchor_role), not both"
 msgstr ""
 
-#: kicadstamp/config/loader.py:263
+#: kicadstamp/config/entries.py:322
 #, python-brace-format
 msgid "anchor_sheet without anchor_role in point {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:264 kicadstamp/config/loader.py:682
+#: kicadstamp/config/entries.py:323 kicadstamp/config/entries.py:445
 msgid ""
 "anchor_sheet only narrows ambiguity of anchor_role, it is not an anchor "
 "itself"
 msgstr ""
 
-#: kicadstamp/config/loader.py:268
+#: kicadstamp/config/entries.py:327
 #, python-brace-format
 msgid "anchor_pad without anchor_ref/anchor_role in point {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:269
+#: kicadstamp/config/entries.py:328
 #, python-brace-format
 msgid "anchor_pad={pad!r} is set but no anchor specified"
 msgstr ""
 
-#: kicadstamp/config/loader.py:276
+#: kicadstamp/config/entries.py:335
 #, python-brace-format
 msgid "shift on a literal xy point {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:277
+#: kicadstamp/config/entries.py:336
 msgid ""
 "xy is already an absolute coordinate — edit it directly instead of "
 "combining it with shift_x_mm/shift_y_mm"
 msgstr ""
 
-#: kicadstamp/config/loader.py:283
+#: kicadstamp/config/entries.py:342
 #, python-brace-format
 msgid "xy must be a 2-element [x, y] list in point {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:338
+#: kicadstamp/config/entries.py:400
 #, python-brace-format
 msgid "unknown fields in spoke (pad {pad!r}) of rule (net {net!r})"
 msgstr ""
 
-#: kicadstamp/config/loader.py:379
-msgid "clone_placement without name"
-msgstr ""
-
-#: kicadstamp/config/loader.py:380
-msgid ""
-"every clone_placement must have a name – used in --only "
-"(kicadstamp_cli.py) for isolated runs; write name: <string>. Previously "
-"missing name would silently substitute '?' – that was a bug"
-msgstr ""
-
-#: kicadstamp/config/loader.py:385
+#: kicadstamp/config/entries.py:429
 #, python-brace-format
-msgid "unknown fields in clone_placement {name!r}"
+msgid "unknown fields in rule (net {net!r})"
 msgstr ""
 
-#: kicadstamp/config/loader.py:386
-msgid " (e.g. 'pad' won't work; use 'anchor_pad')"
-msgstr ""
-
-#: kicadstamp/config/loader.py:399
+#: kicadstamp/config/entries.py:438
 #, python-brace-format
-msgid "cell and role together in clone_placement {name!r}"
+msgid "anchor_ref and anchor_role together in rule (net {net!r})"
 msgstr ""
 
-#: kicadstamp/config/loader.py:400
-msgid ""
-"these are mutually exclusive ways to define the content: either a ready-"
-"made cell (cell), or a single-component placement by role (role), not "
-"both"
-msgstr ""
-
-#: kicadstamp/config/loader.py:406
+#: kicadstamp/config/entries.py:444
 #, python-brace-format
-msgid "neither cell nor role set in clone_placement {name!r}"
+msgid "anchor_sheet without anchor_role in rule (net {net!r})"
 msgstr ""
 
-#: kicadstamp/config/loader.py:407
-msgid ""
-"need either cell: <name from cells:>, or role: <ROLE> for a single-"
-"component placement without a separate cell file"
-msgstr ""
-
-#: kicadstamp/config/loader.py:413
+#: kicadstamp/config/entries.py:449
 #, python-brace-format
-msgid "anchor_ref and anchor_role together in clone_placement {name!r}"
+msgid "anchor_point together with anchor_ref/anchor_role in rule (net {net!r})"
 msgstr ""
 
-#: kicadstamp/config/loader.py:414
-msgid ""
-"these are mutually exclusive ways to define the anchor – either by refdes"
-" (anchor_ref) or by Role field (anchor_role), not both"
-msgstr ""
-
-#: kicadstamp/config/loader.py:420
-#, python-brace-format
-msgid "anchor_sheet without anchor_role in clone_placement {name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:421
-#, python-brace-format
-msgid ""
-"anchor_sheet={sheet!r} is set but anchor_role is missing – anchor_sheet "
-"only narrows ambiguity of anchor_role, it is not an anchor itself"
-msgstr ""
-
-#: kicadstamp/config/loader.py:428
-#, python-brace-format
-msgid ""
-"anchor_point together with anchor_ref/anchor_role in clone_placement "
-"{name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:430 kicadstamp/config/loader.py:561
-#: kicadstamp/config/loader.py:688
+#: kicadstamp/config/entries.py:451 kicadstamp/config/entries.py:553
+#: kicadstamp/config/entries.py:671
 #, python-brace-format
 msgid ""
 "anchor_point={point!r} names a points: entry that already carries its own"
 " anchor — mutually exclusive with anchor_ref/anchor_role"
 msgstr ""
 
-#: kicadstamp/config/loader.py:435
-#, python-brace-format
-msgid "anchor_point together with anchor_pad in clone_placement {name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:436
-msgid ""
-"anchor_point already resolves to a full position — anchor_pad has no "
-"meaning on top of it; set anchor_pad on the points: entry itself instead"
-msgstr ""
-
-#: kicadstamp/config/loader.py:442
-#, python-brace-format
-msgid "anchor_pad without anchor_ref/anchor_role in clone_placement {name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:443
-#, python-brace-format
-msgid ""
-"anchor_pad={pad!r} is set but no anchor specified – use anchor_ref: IC1 "
-"or anchor_role: SOME_ROLE"
-msgstr ""
-
-#: kicadstamp/config/loader.py:451
-#, python-brace-format
-msgid "no anchor and no absolute coordinates in clone_placement {name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:452
-msgid ""
-"either set xy: [x, y] (absolute point on board), or "
-"anchor_ref/anchor_role (+ optionally anchor_pad), or anchor_point, for "
-"anchor‑based placement"
-msgstr ""
-
-#: kicadstamp/config/loader.py:459
-#, python-brace-format
-msgid "deprecated field 'side' in clone_placement {name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:460
-msgid ""
-"side is now set by an explicit pair: layer: F.Cu|B.Cu (where we place – "
-"fact) + mirror: true (how we place – operation, only meaningful when the "
-"layer changes relative to the cell)"
-msgstr ""
-
-#: kicadstamp/config/loader.py:466
-#, python-brace-format
-msgid "deprecated fields 'origin_x_mm'/'origin_y_mm' in clone_placement {name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:467
-#, python-brace-format
-msgid "renamed to xy: [x, y] — write xy: [{x}, {y}] instead"
-msgstr ""
-
-#: kicadstamp/config/loader.py:475
-#, python-brace-format
-msgid "xy must be a 2-element [x, y] list in clone_placement {name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:486
-#, python-brace-format
-msgid "by_selection: true with non-empty nets in clone_placement {name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:487
-msgid ""
-"nets is an explicit role->net mapping for 'by nets' mode; in selection "
-"mode roles are resolved by mouse selection, not by nets – nets is "
-"meaningless here. Either remove nets, or remove by_selection: true"
-msgstr ""
-
-#: kicadstamp/config/loader.py:493
-#, python-brace-format
-msgid "in clone_placement {name!r}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:521
-#, python-brace-format
-msgid "Loading configuration from {path}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:528
-msgid "deprecated field 'target_ref' at root of config"
-msgstr ""
-
-#: kicadstamp/config/loader.py:529
-msgid ""
-"global target_ref has been removed (see discussion v117): each spoke rule"
-" now has its own anchor – write anchor_ref: <ref> inside the rule in "
-"rules; thermal_via_array has its own anchor_ref field"
-msgstr ""
-
-#: kicadstamp/config/loader.py:535
-msgid "deprecated field 'side' at root of config"
-msgstr ""
-
-#: kicadstamp/config/loader.py:536
-msgid ""
-"use layer: F.Cu or layer: B.Cu instead (layer for ManualSpoke rules; back"
-" -> B.Cu)"
-msgstr ""
-
-#: kicadstamp/config/loader.py:540
-msgid "at root of config"
-msgstr ""
-
-#: kicadstamp/config/loader.py:545
-msgid "deprecated field 'target_ref' in thermal_via_array"
-msgstr ""
-
-#: kicadstamp/config/loader.py:546
-msgid "renamed for consistency: use anchor_ref"
-msgstr ""
-
-#: kicadstamp/config/loader.py:550
-msgid "thermal_via_array without name"
-msgstr ""
-
-#: kicadstamp/config/loader.py:551
-msgid ""
-"thermal_via_array must have a name – used in --only (kicadstamp_cli.py) "
-"for isolated runs; write name: <any understandable string>, e.g. name: "
-"fpga_thermal"
-msgstr ""
-
-#: kicadstamp/config/loader.py:556
-msgid "unknown fields in thermal_via_array"
-msgstr ""
-
-#: kicadstamp/config/loader.py:560
-msgid "anchor_point together with anchor_ref/anchor_role in thermal_via_array"
-msgstr ""
-
-#: kicadstamp/config/loader.py:601
-msgid "deprecated fields 'templates_file'/'template_files'"
-msgstr ""
-
-#: kicadstamp/config/loader.py:602
-msgid ""
-"renamed to cells_file: <path> / cell_files: [...] — the class became Cell"
-" (was SpokeTemplate), these were the one place the file-list keys were "
-"left behind"
-msgstr ""
-
-#: kicadstamp/config/loader.py:611
-#, python-brace-format
-msgid "cell_files must be a list, got {type}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:612
-msgid ""
-"cell_files: is a YAML list of paths ('- templates/a.yaml'); for a single "
-"file use cells_file: <path> instead"
-msgstr ""
-
-#: kicadstamp/config/loader.py:629
-#, python-brace-format
-msgid "templates file {file!r} not found"
-msgstr ""
-
-#: kicadstamp/config/loader.py:630
-#, python-brace-format
-msgid ""
-"expected at {path} (relative to the config file itself, not the current "
-"working directory)"
-msgstr ""
-
-#: kicadstamp/config/loader.py:641
-#, python-brace-format
-msgid "duplicate cell {name!r} across cells_file/cell_files"
-msgstr ""
-
-#: kicadstamp/config/loader.py:642
-msgid ""
-"defined in more than one external cells file (cells_file and/or an entry "
-"of cell_files) — external files are meant to be independent, a repeated "
-"name is far more likely a mistake than an intentional override; inline "
-"cells: in the config itself CAN still override an external one, that is "
-"unaffected"
-msgstr ""
-
-#: kicadstamp/config/loader.py:654
-#, python-brace-format
-msgid "Cells from {files}: {count_ext}, plus inline: {count_inline}"
-msgstr ""
-
-#: kicadstamp/config/loader.py:666
-#, python-brace-format
-msgid "unknown fields in rule (net {net!r})"
-msgstr ""
-
-#: kicadstamp/config/loader.py:675
-#, python-brace-format
-msgid "anchor_ref and anchor_role together in rule (net {net!r})"
-msgstr ""
-
-#: kicadstamp/config/loader.py:681
-#, python-brace-format
-msgid "anchor_sheet without anchor_role in rule (net {net!r})"
-msgstr ""
-
-#: kicadstamp/config/loader.py:686
-#, python-brace-format
-msgid "anchor_point together with anchor_ref/anchor_role in rule (net {net!r})"
-msgstr ""
-
-#: kicadstamp/config/loader.py:693
+#: kicadstamp/config/entries.py:456
 #, python-brace-format
 msgid "rule (net {net!r}) without anchor_ref/anchor_role/anchor_point"
 msgstr ""
 
-#: kicadstamp/config/loader.py:694
+#: kicadstamp/config/entries.py:457
 msgid ""
 "a spoke rule must have an anchor – anchor_ref: <ref> (component whose "
 "pads are listed in spokes), anchor_role: <ROLE> (survives re‑annotation),"
 " or anchor_point: <name from points:>"
 msgstr ""
 
-#: kicadstamp/config/loader.py:718
+#: kicadstamp/config/entries.py:491
+msgid "clone_placement without name"
+msgstr ""
+
+#: kicadstamp/config/entries.py:492
+msgid ""
+"every clone_placement must have a name – used in --only "
+"(kicadstamp_cli.py) for isolated runs; write name: <string>. Previously "
+"missing name would silently substitute '?' – that was a bug"
+msgstr ""
+
+#: kicadstamp/config/entries.py:497
+#, python-brace-format
+msgid "unknown fields in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:498
+msgid " (e.g. 'pad' won't work; use 'anchor_pad')"
+msgstr ""
+
+#: kicadstamp/config/entries.py:513
+msgid "more than one of cell/role/cluster set in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:514
+msgid ""
+"these are mutually exclusive ways to define the content: a ready-made "
+"cell (cell), a single-component placement by Role field (role), or a "
+"single-component placement by an existing Cluster field (cluster) — pick "
+"exactly one"
+msgstr ""
+
+#: kicadstamp/config/entries.py:521
+msgid "neither cell, role, nor cluster set in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:522
+msgid ""
+"need cell: <name from cells:> (ready-made cell), role: <ROLE> (single "
+"component found by its Role field), or cluster: <CLUSTER> (single "
+"component found by an already-assigned Cluster field)"
+msgstr ""
+
+#: kicadstamp/config/entries.py:528
+msgid "cluster together with nets/params/by_selection in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:529
+msgid ""
+"cluster: finds its single target by an exact, already-unique Cluster "
+"field match — nets/params/by_selection (selection-vs-nets role "
+"resolution) have no meaning here, remove them"
+msgstr ""
+
+#: kicadstamp/config/entries.py:536
+#, python-brace-format
+msgid "anchor_ref and anchor_role together in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:537
+msgid ""
+"these are mutually exclusive ways to define the anchor – either by refdes"
+" (anchor_ref) or by Role field (anchor_role), not both"
+msgstr ""
+
+#: kicadstamp/config/entries.py:543
+#, python-brace-format
+msgid "anchor_sheet without anchor_role in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:544
+#, python-brace-format
+msgid ""
+"anchor_sheet={sheet!r} is set but anchor_role is missing – anchor_sheet "
+"only narrows ambiguity of anchor_role, it is not an anchor itself"
+msgstr ""
+
+#: kicadstamp/config/entries.py:551
+#, python-brace-format
+msgid ""
+"anchor_point together with anchor_ref/anchor_role in clone_placement "
+"{name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:558
+#, python-brace-format
+msgid "anchor_point together with anchor_pad in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:559
+msgid ""
+"anchor_point already resolves to a full position — anchor_pad has no "
+"meaning on top of it; set anchor_pad on the points: entry itself instead"
+msgstr ""
+
+#: kicadstamp/config/entries.py:565
+#, python-brace-format
+msgid "anchor_pad without anchor_ref/anchor_role in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:566
+#, python-brace-format
+msgid ""
+"anchor_pad={pad!r} is set but no anchor specified – use anchor_ref: IC1 "
+"or anchor_role: SOME_ROLE"
+msgstr ""
+
+#: kicadstamp/config/entries.py:574
+#, python-brace-format
+msgid "no anchor and no absolute coordinates in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:575
+msgid ""
+"either set xy: [x, y] (absolute point on board), or "
+"anchor_ref/anchor_role (+ optionally anchor_pad), or anchor_point, for "
+"anchor‑based placement"
+msgstr ""
+
+#: kicadstamp/config/entries.py:582
+#, python-brace-format
+msgid "deprecated field 'side' in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:583
+msgid ""
+"side is now set by an explicit pair: layer: F.Cu|B.Cu (where we place – "
+"fact) + mirror: true (how we place – operation, only meaningful when the "
+"layer changes relative to the cell)"
+msgstr ""
+
+#: kicadstamp/config/entries.py:589
+#, python-brace-format
+msgid "deprecated fields 'origin_x_mm'/'origin_y_mm' in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:590
+#, python-brace-format
+msgid "renamed to xy: [x, y] — write xy: [{x}, {y}] instead"
+msgstr ""
+
+#: kicadstamp/config/entries.py:598
+#, python-brace-format
+msgid "xy must be a 2-element [x, y] list in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:609
+#, python-brace-format
+msgid "by_selection: true with non-empty nets in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:610
+msgid ""
+"nets is an explicit role->net mapping for 'by nets' mode; in selection "
+"mode roles are resolved by mouse selection, not by nets – nets is "
+"meaningless here. Either remove nets, or remove by_selection: true"
+msgstr ""
+
+#: kicadstamp/config/entries.py:616
+#, python-brace-format
+msgid "in clone_placement {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:653
+msgid "deprecated field 'target_ref' in thermal_via_arrays"
+msgstr ""
+
+#: kicadstamp/config/entries.py:654
+msgid "renamed for consistency: use anchor_ref"
+msgstr ""
+
+#: kicadstamp/config/entries.py:658
+msgid "thermal_via_arrays entry without name"
+msgstr ""
+
+#: kicadstamp/config/entries.py:659
+msgid ""
+"every thermal_via_arrays entry must have a name – used in --only "
+"(kicadstamp_cli.py) for isolated runs, and to tell entries apart; write "
+"name: <any understandable string>, e.g. name: fpga_thermal"
+msgstr ""
+
+#: kicadstamp/config/entries.py:664
+msgid "unknown fields in thermal_via_arrays entry {name!r}"
+msgstr ""
+
+#: kicadstamp/config/entries.py:669
+msgid ""
+"anchor_point together with anchor_ref/anchor_role in thermal_via_arrays "
+"entry {name!r}"
+msgstr ""
+
+#: kicadstamp/config/includes.py:54
+#, python-brace-format
+msgid "include: invalid entry {entry!r} in {source!r}"
+msgstr ""
+
+#: kicadstamp/config/includes.py:55
+msgid ""
+"each entry must be either a file path string, or a mapping {{path: <str>,"
+" enabled: <bool>}}"
+msgstr ""
+
+#: kicadstamp/config/includes.py:65 kicadstamp/config/includes.py:227
+#, python-brace-format
+msgid "{file!r}: top level must be a YAML mapping, got {type}"
+msgstr ""
+
+#: kicadstamp/config/includes.py:67 kicadstamp/config/includes.py:229
+msgid ""
+"check for a stray/misplaced list (e.g. list items left without a wrapping"
+" 'clone_placements:'/'rules:' key)"
+msgstr ""
+
+#: kicadstamp/config/includes.py:75
+#, python-brace-format
+msgid "{file!r}: {section!r} must be a list, got {type}"
+msgstr ""
+
+#: kicadstamp/config/includes.py:77
+#, python-brace-format
+msgid ""
+"{section!r} entries are a YAML list ('- name: ...'); {dict_sections} are "
+"mappings — check for a mixed-up section key"
+msgstr ""
+
+#: kicadstamp/config/includes.py:85
+#, python-brace-format
+msgid "{file!r}: {section!r} must be a mapping, got {type}"
+msgstr ""
+
+#: kicadstamp/config/includes.py:87
+#, python-brace-format
+msgid ""
+"{section!r} entries are a YAML mapping ('key: {{...}}'); {list_sections} "
+"are lists — check for a mixed-up section key"
+msgstr ""
+
+#: kicadstamp/config/includes.py:110
+#, python-brace-format
+msgid ""
+"include: {file!r} has top-level key(s) not supported inside an included "
+"file: {keys}"
+msgstr ""
+
+#: kicadstamp/config/includes.py:112
+msgid ""
+"include: only merges {list_sections} (lists) and {dict_sections} "
+"(mappings) from an included file — anything else (e.g. layer:, "
+"schematic_dir:, registry_path:) has no defined way to merge across "
+"multiple included files and was previously silently dropped. Move {keys} "
+"to the root config file instead"
+msgstr ""
+
+#: kicadstamp/config/includes.py:134
+#, python-brace-format
+msgid "include: {file!r} disabled, skipped (not opened)"
+msgstr ""
+
+#: kicadstamp/config/includes.py:140 kicadstamp/config/includes.py:249
+#, python-brace-format
+msgid "include: file {file!r} not found"
+msgstr ""
+
+#: kicadstamp/config/includes.py:141 kicadstamp/config/includes.py:250
+#, python-brace-format
+msgid ""
+"expected at {path} (relative to {source!r}, not the current working "
+"directory)"
+msgstr ""
+
+#: kicadstamp/config/includes.py:155 kicadstamp/config/includes.py:255
+msgid ""
+"include: cycle detected — {file!r} is included from {source!r}, but is "
+"already being resolved higher up the same include chain"
+msgstr ""
+
+#: kicadstamp/config/includes.py:158 kicadstamp/config/includes.py:258
+msgid ""
+"the include: chain loops back on itself — remove one of the include: "
+"entries that closes the loop"
+msgstr ""
+
+#: kicadstamp/config/includes.py:162
+msgid ""
+"include: {file!r} already resolved elsewhere in the tree (diamond) — "
+"reusing, not re-merging"
+msgstr ""
+
+#: kicadstamp/config/includes.py:178
+#, python-brace-format
+msgid "include: duplicate {section} key {key!r}"
+msgstr ""
+
+#: kicadstamp/config/includes.py:179
+#, python-brace-format
+msgid "defined in {a!r} and again via include {b!r}"
+msgstr ""
+
+#: kicadstamp/config/includes.py:184
+#, python-brace-format
+msgid "include: merged {file!r} into {source!r}"
+msgstr ""
+
+#: kicadstamp/config/loader.py:52
+#, python-brace-format
+msgid "Loading configuration from {path}"
+msgstr ""
+
+#: kicadstamp/config/loader.py:59
+msgid "deprecated field 'target_ref' at root of config"
+msgstr ""
+
+#: kicadstamp/config/loader.py:60
+msgid ""
+"global target_ref has been removed (see discussion v117): each spoke rule"
+" now has its own anchor – write anchor_ref: <ref> inside the rule in "
+"rules; each thermal_via_arrays entry has its own anchor_ref field"
+msgstr ""
+
+#: kicadstamp/config/loader.py:66
+msgid "deprecated field 'side' at root of config"
+msgstr ""
+
+#: kicadstamp/config/loader.py:67
+msgid ""
+"use layer: F.Cu or layer: B.Cu instead (layer for ManualSpoke rules; back"
+" -> B.Cu)"
+msgstr ""
+
+#: kicadstamp/config/loader.py:71
+msgid "at root of config"
+msgstr ""
+
+#: kicadstamp/config/loader.py:75
+msgid "deprecated field 'thermal_via_array' at root of config"
+msgstr ""
+
+#: kicadstamp/config/loader.py:76
+msgid ""
+"generalized to a list 2026-08-02 (a second IC needing thermal vias — "
+"AD9707 — showed up): rename to 'thermal_via_arrays:' and wrap the single "
+"block in a YAML list ('- name: ...'), e.g.\n"
+"thermal_via_arrays:\n"
+"  - name: {name}\n"
+"    ..."
+msgstr ""
+
+#: kicadstamp/config/loader.py:101
+msgid "duplicate name(s) in thermal_via_arrays: {names}"
+msgstr ""
+
+#: kicadstamp/config/loader.py:102
+msgid ""
+"every thermal_via_arrays entry needs a unique name: — --only cannot tell "
+"same-named entries apart otherwise"
+msgstr ""
+
+#: kicadstamp/config/loader.py:115
+msgid "deprecated fields 'templates_file'/'template_files'"
+msgstr ""
+
+#: kicadstamp/config/loader.py:116
+msgid ""
+"renamed to cells_file:/cell_files: (the class became Cell, was "
+"SpokeTemplate), and those were themselves folded into include: on "
+"2026-08-02 — see the 'cells_file'/'cell_files' error below for the "
+"current way to do this"
+msgstr ""
+
+#: kicadstamp/config/loader.py:124
+msgid "deprecated field(s) 'cells_file'/'cell_files' at root of config"
+msgstr ""
+
+#: kicadstamp/config/loader.py:125
+msgid ""
+"folded into include: 2026-08-02 (one mechanism for splitting ANY section "
+"across files — "
+"rules:/clone_placements:/thermal_via_arrays:/cells:/points:/extract_profiles:/clone_profiles:"
+" — instead of cells having its own separate, differently-shaped "
+"mechanism): list the external file(s) under include: instead, and add a "
+"'cells:' key wrapping what used to be that file's whole content, e.g.\n"
+"include:\n"
+"  - templates/a.yaml\n"
+"  - templates/b.yaml\n"
+"(each of those files needs 'cells:' at its own top level now, same shape "
+"as an inline cells: block here)"
+msgstr ""
+
+#: kicadstamp/config/loader.py:157
 #, python-brace-format
 msgid ""
 "{count} rules resolve to the same --only identity {name!r} (anchors: "
 "{anchors})"
 msgstr ""
 
-#: kicadstamp/config/loader.py:721
+#: kicadstamp/config/loader.py:160
 #, python-brace-format
 msgid ""
 "give at least one of them an explicit name: to disambiguate (e.g. name: "
 "{name}_a) – --only cannot tell them apart otherwise"
 msgstr ""
 
-#: kicadstamp/config/loader.py:737
+#: kicadstamp/config/loader.py:176
 #, python-brace-format
 msgid "mirror without layer change in clone_placement {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:738
+#: kicadstamp/config/loader.py:177
 #, python-brace-format
 msgid ""
 "cell {cell!r} is on {cell_layer}, placement layer is {place_layer} – "
@@ -2623,12 +3840,12 @@ msgid ""
 "to {opposite}, or remove mirror"
 msgstr ""
 
-#: kicadstamp/config/loader.py:746
+#: kicadstamp/config/loader.py:185
 #, python-brace-format
 msgid "layer changed without mirror in clone_placement {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:747
+#: kicadstamp/config/loader.py:186
 #, python-brace-format
 msgid ""
 "cell {cell!r} is on {cell_layer}, placement layer is {place_layer} – "
@@ -2636,27 +3853,28 @@ msgid ""
 "or remove the layer override"
 msgstr ""
 
-#: kicadstamp/config/loader.py:765
+#: kicadstamp/config/loader.py:204
 #, python-brace-format
 msgid " (did you mean {suggestion!r}?)"
 msgstr ""
 
-#: kicadstamp/config/loader.py:768
+#: kicadstamp/config/loader.py:207
 #, python-brace-format
 msgid "{owner}: anchor_point {name!r} not found in points:{hint}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:770
+#: kicadstamp/config/loader.py:209
+#: kicadstamp/placement/services/point_resolver.py:157
 #, python-brace-format
 msgid "known points: {names}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:774
+#: kicadstamp/config/loader.py:213
 #, python-brace-format
 msgid "{owner}: anchor_point {name!r} has no footprint to anchor on"
 msgstr ""
 
-#: kicadstamp/config/loader.py:776
+#: kicadstamp/config/loader.py:215
 #, python-brace-format
 msgid ""
 "point {name!r} has a shift, is xy-literal, or chains to one that does — "
@@ -2665,7 +3883,7 @@ msgid ""
 "or give it shift_x_mm=0/shift_y_mm=0 and no xy"
 msgstr ""
 
-#: kicadstamp/config/loader.py:784 kicadstamp/placement/dependency_order.py:176
+#: kicadstamp/config/loader.py:223 kicadstamp/placement/dependency_order.py:193
 #: kicadstamp/placement/services/point_resolver.py:67
 #: kicadstamp/placement/services/point_resolver.py:96
 #: kicadstamp/placement/services/point_resolver.py:100
@@ -2674,17 +3892,17 @@ msgstr ""
 msgid "point {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:790 kicadstamp/placement/dependency_order.py:200
+#: kicadstamp/config/loader.py:229 kicadstamp/placement/dependency_order.py:217
 #, python-brace-format
 msgid "clone_placement {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:792
-#: kicadstamp/placement/services/via_planner.py:86
-msgid "thermal_via_array"
+#: kicadstamp/config/loader.py:232
+#: kicadstamp/placement/services/via_planner.py:70
+msgid "thermal_via_arrays entry {name!r}"
 msgstr ""
 
-#: kicadstamp/config/loader.py:831
+#: kicadstamp/config/loader.py:283
 #, python-brace-format
 msgid ""
 "Config loaded: layer={layer}, cells={cells}, points={points}, "
@@ -3029,36 +4247,36 @@ msgstr ""
 msgid "No planned components or vias!"
 msgstr ""
 
-#: kicadstamp/diagnostics/diagnostic_keepout.py:60
-msgid "Thermal vias retired — keepout diagnostics skipped"
+#: kicadstamp/diagnostics/diagnostic_keepout.py:62
+msgid "No active thermal_via_arrays entry — keepout diagnostics skipped"
 msgstr ""
 
-#: kicadstamp/diagnostics/diagnostic_keepout.py:65
+#: kicadstamp/diagnostics/diagnostic_keepout.py:67
 #, python-brace-format
 msgid "Built {count} keepout rectangles"
 msgstr ""
 
-#: kicadstamp/diagnostics/diagnostic_keepout.py:70
+#: kicadstamp/diagnostics/diagnostic_keepout.py:72
 #, python-brace-format
 msgid "  [{i}] X: {xmin:.3f}..{xmax:.3f} mm, Y: {ymin:.3f}..{ymax:.3f} mm"
 msgstr ""
 
-#: kicadstamp/diagnostics/diagnostic_keepout.py:84
-#: kicadstamp/diagnostics/diagnostic_keepout.py:98
+#: kicadstamp/diagnostics/diagnostic_keepout.py:86
+#: kicadstamp/diagnostics/diagnostic_keepout.py:100
 msgid "INSIDE"
 msgstr ""
 
-#: kicadstamp/diagnostics/diagnostic_keepout.py:84
-#: kicadstamp/diagnostics/diagnostic_keepout.py:98
+#: kicadstamp/diagnostics/diagnostic_keepout.py:86
+#: kicadstamp/diagnostics/diagnostic_keepout.py:100
 msgid "CLEAR"
 msgstr ""
 
-#: kicadstamp/diagnostics/diagnostic_keepout.py:85
+#: kicadstamp/diagnostics/diagnostic_keepout.py:87
 #, python-brace-format
 msgid "  {ref:6} pos=({x:7.3f}, {y:7.3f}) mm  -> {status}"
 msgstr ""
 
-#: kicadstamp/diagnostics/diagnostic_keepout.py:99
+#: kicadstamp/diagnostics/diagnostic_keepout.py:101
 #, python-brace-format
 msgid "  via for {owner:6} ({x:7.3f}, {y:7.3f}) mm  -> {status}"
 msgstr ""
@@ -3221,10 +4439,6 @@ msgstr ""
 
 #: kicadstamp/diagnostics/test_create_one_via.py:51
 msgid "offset of the via from the capacitor centre, in mm"
-msgstr ""
-
-#: kicadstamp/diagnostics/test_create_one_via.py:52
-msgid "net name"
 msgstr ""
 
 #: kicadstamp/diagnostics/test_create_one_via.py:53
@@ -3695,72 +4909,84 @@ msgstr ""
 msgid "margin_mm={margin_mm} is too large for a pad {width}x{height} mm"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:22
+#: kicadstamp/kicad/adapter.py:23
 #, python-brace-format
 msgid "Initialising KiCadBoardAdapter with timeout {timeout} ms"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:23
+#: kicadstamp/kicad/adapter.py:24
 msgid "Creating kipy.KiCad instance..."
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:25
+#: kicadstamp/kicad/adapter.py:26
 msgid "kipy.KiCad instance created"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:66
+#: kicadstamp/kicad/adapter.py:75
 msgid "Refreshing board from KiCad"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:69
+#: kicadstamp/kicad/adapter.py:78
 msgid "Failed to obtain board from KiCad"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:71
+#: kicadstamp/kicad/adapter.py:80
 msgid "Board obtained"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:77
+#: kicadstamp/kicad/adapter.py:107
+msgid "Closing previous kipy connection failed (ignored)"
+msgstr ""
+
+#: kicadstamp/kicad/adapter.py:113
 #, python-brace-format
 msgid "Found footprint {ref}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:79
+#: kicadstamp/kicad/adapter.py:115
 #, python-brace-format
 msgid "Footprint {ref} not found"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:101
+#: kicadstamp/kicad/adapter.py:124
+msgid "Found footprint by uuid {uuid}"
+msgstr ""
+
+#: kicadstamp/kicad/adapter.py:126
+msgid "Footprint with uuid {uuid} not found"
+msgstr ""
+
+#: kicadstamp/kicad/adapter.py:148
 #, python-brace-format
 msgid "Retrieved {count} footprints"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:106
+#: kicadstamp/kicad/adapter.py:153
 #, python-brace-format
 msgid "Retrieved {count} vias"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:111
+#: kicadstamp/kicad/adapter.py:158
 #, python-brace-format
 msgid "Retrieved {count} tracks"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:143
+#: kicadstamp/kicad/adapter.py:191
 #, python-brace-format
 msgid "Selected items (including groups expanded): {count}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:157
+#: kicadstamp/kicad/adapter.py:206
 #, python-brace-format
 msgid "Setting GUI selection to {count} items"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:208
+#: kicadstamp/kicad/adapter.py:266
 #, python-brace-format
 msgid "cannot set field {field!r}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:209
+#: kicadstamp/kicad/adapter.py:267
 #, python-brace-format
 msgid ""
 "{ref} has no field {field!r} on its footprint — add the field once in the"
@@ -3768,55 +4994,55 @@ msgid ""
 "scratch"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:258
+#: kicadstamp/kicad/adapter.py:334
 #, python-brace-format
 msgid "Found zone {name}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:260
+#: kicadstamp/kicad/adapter.py:336
 #, python-brace-format
 msgid "Zone {name} not found"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:266
+#: kicadstamp/kicad/adapter.py:342
 #, python-brace-format
 msgid "Found net {name}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:268
+#: kicadstamp/kicad/adapter.py:344
 #, python-brace-format
 msgid "Net {name} not found"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:273
+#: kicadstamp/kicad/adapter.py:349
 #, python-brace-format
 msgid "Retrieved {count} nets"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:294
+#: kicadstamp/kicad/adapter.py:380
 msgid "Beginning transaction"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:298
+#: kicadstamp/kicad/adapter.py:384
 #, python-brace-format
 msgid "Committing transaction: {desc}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:300
+#: kicadstamp/kicad/adapter.py:386
 #, python-brace-format
 msgid "Transaction committed: {desc}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:303
+#: kicadstamp/kicad/adapter.py:389
 msgid "Rolling back transaction"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:323
+#: kicadstamp/kicad/adapter.py:409
 #, python-brace-format
 msgid "Checking open schematics failed: {e}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:327
+#: kicadstamp/kicad/adapter.py:413
 msgid ""
 "Schematic editor is open: if there have been no interactive edits in this"
 " KiCad session, the first API write may crash KiCad (issue #24966). "
@@ -3824,14 +5050,14 @@ msgid ""
 " window during the run."
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:348
+#: kicadstamp/kicad/adapter.py:434
 #, python-brace-format
 msgid ""
 "{op}: KiCad not ready to respond (busy/modal dialog?), retrying in "
 "{wait:.1f}s [{attempt}/{retries}]"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:359
+#: kicadstamp/kicad/adapter.py:445
 #, python-brace-format
 msgid ""
 "{op}: connection to KiCad broke during write — KiCad probably crashed "
@@ -3840,56 +5066,56 @@ msgid ""
 " error: {e}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:369
+#: kicadstamp/kicad/adapter.py:455
 #, python-brace-format
 msgid "Updating {count} items"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:374
+#: kicadstamp/kicad/adapter.py:460
 #, python-brace-format
 msgid "Creating {count} items"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:377
+#: kicadstamp/kicad/adapter.py:463
 #, python-brace-format
 msgid "Created {count} items"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:382
+#: kicadstamp/kicad/adapter.py:468
 #, python-brace-format
 msgid "Flipping {count} footprints via GUI action"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:396 tests/test_i18n.py:82 tests/test_i18n.py:91
+#: kicadstamp/kicad/adapter.py:482 tests/test_i18n.py:82 tests/test_i18n.py:91
 msgid "Flip performed"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:412
+#: kicadstamp/kicad/adapter.py:498
 #, python-brace-format
 msgid "Attempt {attempt}/{total} for {desc}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:424
+#: kicadstamp/kicad/adapter.py:510
 #, python-brace-format
 msgid "Failed to roll back transaction {desc}: {e}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:426
+#: kicadstamp/kicad/adapter.py:512
 #, python-brace-format
 msgid "Error in transaction {desc} (attempt {attempt}): {type}: {e}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:437
+#: kicadstamp/kicad/adapter.py:523
 #, python-brace-format
 msgid "Creating via at ({x:.3f}, {y:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:449
+#: kicadstamp/kicad/adapter.py:535
 #, python-brace-format
 msgid "Creating track ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadstamp/kicad/adapter.py:475
+#: kicadstamp/kicad/adapter.py:561
 #, python-brace-format
 msgid "Failed to delete object {uuid}: {type}: {e}"
 msgstr ""
@@ -3899,22 +5125,22 @@ msgstr ""
 msgid "  {ref}: bounding box unavailable, using fallback radius {radius}mm"
 msgstr ""
 
-#: kicadstamp/placement/dependency_order.py:133
-#: kicadstamp/placement/services/clone_position_calculator.py:157
+#: kicadstamp/placement/dependency_order.py:141
+#: kicadstamp/placement/services/clone_position_calculator.py:178
 #, python-brace-format
 msgid "{name}: cell {cell!r} not found in cells, skipping"
 msgstr ""
 
-#: kicadstamp/placement/dependency_order.py:241
+#: kicadstamp/placement/dependency_order.py:258
 msgid "dependency cycle among rules/clone_placements"
 msgstr ""
 
-#: kicadstamp/placement/dependency_order.py:242
+#: kicadstamp/placement/dependency_order.py:259
 #, python-brace-format
 msgid "{count} item(s) form a cycle through their anchors: {items}"
 msgstr ""
 
-#: kicadstamp/placement/dependency_order.py:244
+#: kicadstamp/placement/dependency_order.py:261
 msgid ""
 "break the cycle: at least one of these must anchor on something outside "
 "this set (a fixed, pre-existing component, or an absolute coordinate)"
@@ -3953,46 +5179,46 @@ msgstr ""
 msgid "  flipped {count} items (batch {batch})"
 msgstr ""
 
-#: kicadstamp/placement/executor/move_executor.py:44
+#: kicadstamp/placement/executor/move_executor.py:45
 #, python-brace-format
 msgid "Detected {count} potential collisions:"
 msgstr ""
 
-#: kicadstamp/placement/executor/move_executor.py:46
+#: kicadstamp/placement/executor/move_executor.py:47
 #, python-brace-format
 msgid "  {ref1} and {ref2} overlap (distance {dist:.2f} mm)"
 msgstr ""
 
-#: kicadstamp/placement/executor/move_executor.py:49
+#: kicadstamp/placement/executor/move_executor.py:50
 msgid "Collision check: no conflicts detected"
 msgstr ""
 
-#: kicadstamp/placement/executor/move_executor.py:54
+#: kicadstamp/placement/executor/move_executor.py:55
 #, python-brace-format
 msgid "Moving in {count} batches"
 msgstr ""
 
-#: kicadstamp/placement/executor/move_executor.py:61
+#: kicadstamp/placement/executor/move_executor.py:62
 #, python-brace-format
 msgid "  {ref} not found, skipping"
 msgstr ""
 
-#: kicadstamp/placement/executor/move_executor.py:68
+#: kicadstamp/placement/executor/move_executor.py:69
 #, python-brace-format
 msgid "  updated {count} footprints"
 msgstr ""
 
-#: kicadstamp/placement/executor/move_executor.py:69
+#: kicadstamp/placement/executor/move_executor.py:70
 #, python-brace-format
 msgid "Move batch {idx}/{total}"
 msgstr ""
 
-#: kicadstamp/placement/executor/move_executor.py:72
+#: kicadstamp/placement/executor/move_executor.py:73
 #, python-brace-format
 msgid "  move batch {idx} failed"
 msgstr ""
 
-#: kicadstamp/placement/executor/move_executor.py:74
+#: kicadstamp/placement/executor/move_executor.py:75
 #, python-brace-format
 msgid "  move batch {idx} completed ({count} items)"
 msgstr ""
@@ -4067,27 +5293,27 @@ msgstr ""
 msgid "  via batch {idx} completed ({count} items)"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:124
+#: kicadstamp/placement/services/clone_position_calculator.py:139
 #, python-brace-format
 msgid "  [{name}] anchor: point {point!r}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:135
+#: kicadstamp/placement/services/clone_position_calculator.py:150
 #, python-brace-format
 msgid "  [{name}] anchor: centre of {ref} ({x:.3f}, {y:.3f}) mm"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:140
+#: kicadstamp/placement/services/clone_position_calculator.py:155
 #, python-brace-format
 msgid "  [{name}] anchor: pad {ref}.{pad} ({x:.3f}, {y:.3f}) mm"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:203
+#: kicadstamp/placement/services/clone_position_calculator.py:233
 #, python-brace-format
 msgid "mirror of a composite cell {cell!r} is not supported yet"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:204
+#: kicadstamp/placement/services/clone_position_calculator.py:234
 #, python-brace-format
 msgid ""
 "cell {cell!r} has its own nested clone_placements — mirroring a composite"
@@ -4095,107 +5321,90 @@ msgid ""
 "remove mirror: true on whatever placement resolves to this cell"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:233
+#: kicadstamp/placement/services/clone_position_calculator.py:268
 #, python-brace-format
 msgid "  [{name}] cell {tpl!r} on {layer}{mirror_suffix}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:235
+#: kicadstamp/placement/services/clone_position_calculator.py:270
 msgid " -> mirrored as a whole"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:235
+#: kicadstamp/placement/services/clone_position_calculator.py:270
 msgid " -> as written"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:247
+#: kicadstamp/placement/services/clone_position_calculator.py:282
 #, python-brace-format
 msgid "  [{name}] spoke‑level via: ({x:.3f}, {y:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:258
+#: kicadstamp/placement/services/clone_position_calculator.py:293
 #, python-brace-format
 msgid ""
 "  [{name}] track: ({sx:.3f}, {sy:.3f}) -> ({ex:.3f}, {ey:.3f}) mm, "
 "net={net}, layer={layer}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_position_calculator.py:277
+#: kicadstamp/placement/services/clone_position_calculator.py:312
 #, python-brace-format
 msgid ""
 "  [{name}] {ref} (role {role}): position ({x:.3f}, {y:.3f}) mm, angle "
 "{angle:.1f}°"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:108
-#, python-brace-format
-msgid " (closest to anchor {name!r}: {ref} at {d:.2f} mm, second — {d2:.2f} mm)"
+#: kicadstamp/placement/services/clone_role_resolver.py:67
+msgid "{name}: no component tagged {field}={cluster!r}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:112
-#, python-brace-format
+#: kicadstamp/placement/services/clone_role_resolver.py:69
 msgid ""
-"[{name}] role {role!r}: {count} candidates narrowed to 1 by physical "
-"proximity to anchor ({ref}, {d:.2f} mm, second closest — {d2:.2f} mm, "
-"sufficient gap)"
+"tag the target component's {field} field first (RoleClusterTreeDock or "
+"fieldstool), or check for a typo"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:119
-#, python-brace-format
+#: kicadstamp/placement/services/clone_role_resolver.py:75
 msgid ""
-"[{name}] role {role!r}: cannot narrow by proximity — {d:.2f} mm vs "
-"{d2:.2f} mm, insufficient gap"
+"{name}: {count} components tagged {field}={cluster!r}, expected exactly "
+"one"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:151
-#, python-brace-format
-msgid ""
-"[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by"
-" anchor_sheet {sheet!r}"
+#: kicadstamp/placement/services/clone_role_resolver.py:77
+msgid "{field} is meant to be unique per instance — fix the tagging: {refs}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:162
-#, python-brace-format
-msgid ""
-"[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by"
-" anchor_cluster {cluster!r}"
+#: kicadstamp/placement/services/clone_role_resolver.py:82
+msgid "[{name}] cluster {cluster!r} -> {ref}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:170
-#, python-brace-format
-msgid ""
-"[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by"
-" current selection"
-msgstr ""
-
-#: kicadstamp/placement/services/clone_role_resolver.py:208
+#: kicadstamp/placement/services/clone_role_resolver.py:136
 #, python-brace-format
 msgid "{ref}: no {field!r} field"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:211
+#: kicadstamp/placement/services/clone_role_resolver.py:139
 #, python-brace-format
 msgid "{ref}: role {role!r} is not in the cell (cell roles: {roles})"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:216
+#: kicadstamp/placement/services/clone_role_resolver.py:144
 #, python-brace-format
 msgid "role {role!r} appears twice in selection: {ref1!r} and {ref2!r}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:232
+#: kicadstamp/placement/services/clone_role_resolver.py:160
 #, python-brace-format
 msgid "role {role!r} is in cell but not found anywhere on board"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:238
+#: kicadstamp/placement/services/clone_role_resolver.py:166
 #, python-brace-format
 msgid ""
 "[{name}] role {role!r} -> {ref} (unique on whole board, no selection "
 "needed)"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:249
+#: kicadstamp/placement/services/clone_role_resolver.py:177
 #, python-brace-format
 msgid ""
 "role {role!r} is in cell, not found in selection, and ambiguous on board "
@@ -4203,46 +5412,46 @@ msgid ""
 "desired instance on the board before running"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:256
+#: kicadstamp/placement/services/clone_role_resolver.py:184
 #, python-brace-format
 msgid "selection does not match cell composition ({name!r})"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:260
+#: kicadstamp/placement/services/clone_role_resolver.py:188
 #, python-brace-format
 msgid "[{name}] mapped by selection: {count} roles"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:326
+#: kicadstamp/placement/services/clone_role_resolver.py:254
 #, python-brace-format
 msgid "refs: role {role!r} does not exist in cell {cell!r}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:331
+#: kicadstamp/placement/services/clone_role_resolver.py:259
 #, python-brace-format
 msgid "refs: component {ref!r} (role {role!r}) not found on board"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:335
+#: kicadstamp/placement/services/clone_role_resolver.py:263
 #, python-brace-format
 msgid "[{name}] role {role!r} -> {ref} (explicit refs)"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:349
+#: kicadstamp/placement/services/clone_role_resolver.py:277
 #, python-brace-format
 msgid ""
 "role {role!r}: no net for mapping (neither in nets of {name!r}, nor in "
 "cell net_template) — in 'by nets' mode, a net is required for every role"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:366
+#: kicadstamp/placement/services/clone_role_resolver.py:294
 #, python-brace-format
 msgid ""
 "role {role!r}: NO component with this role on the board at all (check the"
 " Role field in the schematic, and that Update PCB from Schematic was run)"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:373
+#: kicadstamp/placement/services/clone_role_resolver.py:301
 #, python-brace-format
 msgid ""
 "role {role!r}: component(s) {refs} with this role exist on the board, but"
@@ -4250,28 +5459,28 @@ msgid ""
 "params/net name or the schematic connection)"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:396
+#: kicadstamp/placement/services/clone_role_resolver.py:324
 #, python-brace-format
 msgid "anchor_sheet {sheet!r}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:397
+#: kicadstamp/placement/services/clone_role_resolver.py:325
 #, python-brace-format
 msgid "anchor_cluster {cluster!r}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:399
+#: kicadstamp/placement/services/clone_role_resolver.py:327
 #, python-brace-format
 msgid " (already narrowed by {narrowed_by}, but not enough)"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:401
+#: kicadstamp/placement/services/clone_role_resolver.py:329
 msgid ""
 " (neither anchor_sheet nor Cluster set — if these components are "
 "physically different instances, one of them would narrow to one)"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:404
+#: kicadstamp/placement/services/clone_role_resolver.py:332
 #, python-brace-format
 msgid ""
 "role {role!r}: ambiguity — {count} components on net "
@@ -4282,33 +5491,33 @@ msgid ""
 "{{ {role}: {first_ref} }}"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:415
+#: kicadstamp/placement/services/clone_role_resolver.py:343
 #, python-brace-format
 msgid "net‑based mapping failed ({name!r})"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:419
+#: kicadstamp/placement/services/clone_role_resolver.py:347
 #, python-brace-format
 msgid "[{name}] mapped by nets: {count} roles"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:471
+#: kicadstamp/placement/services/clone_role_resolver.py:385
 #, python-brace-format
 msgid "{label}: anchor_role {role!r} not found on any component on the board"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:473
+#: kicadstamp/placement/services/clone_role_resolver.py:387
 msgid ""
 "check that the Role field is set in the schematic and propagated to the "
 "PCB (Update PCB from Schematic)"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:492
+#: kicadstamp/placement/services/clone_role_resolver.py:406
 #, python-brace-format
 msgid "{label}: anchor_role {role!r} is ambiguous"
 msgstr ""
 
-#: kicadstamp/placement/services/clone_role_resolver.py:493
+#: kicadstamp/placement/services/clone_role_resolver.py:407
 #, python-brace-format
 msgid ""
 "candidates: {count} — {refs}. Solutions: refine anchor_sheet and/or "
@@ -4345,20 +5554,20 @@ msgid ""
 "this net."
 msgstr ""
 
-#: kicadstamp/placement/services/component_resolver.py:85
+#: kicadstamp/placement/services/component_resolver.py:86
 #, python-brace-format
 msgid "{label}: {ref} has no pad {pad!r}"
 msgstr ""
 
-#: kicadstamp/placement/services/component_resolver.py:87
+#: kicadstamp/placement/services/component_resolver.py:88
 msgid "check anchor_pad — pad numbers are strings as in KiCad ('1', '17', 'A3')"
 msgstr ""
 
-#: kicadstamp/placement/services/component_resolver.py:111
+#: kicadstamp/placement/services/component_resolver.py:112
 msgid "no such ref on the board (typo? component not yet in PCB?)"
 msgstr ""
 
-#: kicadstamp/placement/services/component_resolver.py:113
+#: kicadstamp/placement/services/component_resolver.py:114
 #, python-brace-format
 msgid "{label}: anchor {anchor!r} not found on board"
 msgstr ""
@@ -4408,10 +5617,22 @@ msgstr ""
 msgid "    via {ref}: ({x:.3f}, {y:.3f}) mm, net={net}"
 msgstr ""
 
-#: kicadstamp/placement/services/point_resolver.py:118
+#: kicadstamp/placement/services/point_resolver.py:121
 msgid ""
-"set anchor_ref/anchor_role, anchor_point, or xy — should have been caught"
-" at load time (config/loader.py)"
+"set anchor_ref/anchor_role, anchor_point, xy, or anchor_origin — should "
+"have been caught at load time (config/loader.py)"
+msgstr ""
+
+#: kicadstamp/placement/services/point_resolver.py:156
+msgid "anchor_point {name!r} not found"
+msgstr ""
+
+#: kicadstamp/placement/services/point_resolver.py:161
+msgid "anchor_point cycle at {name!r}"
+msgstr ""
+
+#: kicadstamp/placement/services/point_resolver.py:162
+msgid "a point cannot (transitively) chain to itself via anchor_point"
 msgstr ""
 
 #: kicadstamp/placement/services/position_tracker.py:65
@@ -4424,67 +5645,110 @@ msgstr ""
 msgid "Skipped {count} components already at target position"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:79
+#: kicadstamp/placement/services/role_narrowing.py:69
 #, python-brace-format
 msgid ""
-"thermal_via_array: anchor_point {point!r} has no footprint — this should "
-"have been caught at load time (config/loader.py)"
+"[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by"
+" anchor_sheet {sheet!r}"
+msgstr ""
+
+#: kicadstamp/placement/services/role_narrowing.py:80
+#, python-brace-format
+msgid ""
+"[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by"
+" anchor_cluster {cluster!r}"
+msgstr ""
+
+#: kicadstamp/placement/services/role_narrowing.py:88
+#, python-brace-format
+msgid ""
+"[{label}] role {role_str!r}: {count} candidates narrowed to {narrowed} by"
+" current selection"
+msgstr ""
+
+#: kicadstamp/placement/services/role_narrowing.py:145
+#, python-brace-format
+msgid " (closest to anchor {name!r}: {ref} at {d:.2f} mm, second — {d2:.2f} mm)"
+msgstr ""
+
+#: kicadstamp/placement/services/role_narrowing.py:149
+#, python-brace-format
+msgid ""
+"[{name}] role {role!r}: {count} candidates narrowed to 1 by physical "
+"proximity to anchor ({ref}, {d:.2f} mm, second closest — {d2:.2f} mm, "
+"sufficient gap)"
+msgstr ""
+
+#: kicadstamp/placement/services/role_narrowing.py:156
+#, python-brace-format
+msgid ""
+"[{name}] role {role!r}: cannot narrow by proximity — {d:.2f} mm vs "
+"{d2:.2f} mm, insufficient gap"
+msgstr ""
+
+#: kicadstamp/placement/services/via_planner.py:80
+msgid ""
+"{label}: anchor_point {point!r} has no footprint — this should have been "
+"caught at load time (config/loader.py)"
 msgstr ""
 
 #: kicadstamp/placement/services/via_planner.py:99
-msgid "thermal_via_array: neither anchor_ref nor anchor_role set"
+msgid "{label}: neither anchor_ref nor anchor_role set"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:123
+#: kicadstamp/placement/services/via_planner.py:126
 #, python-brace-format
 msgid "  via for {owner}: already exists, skipped"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:128
+#: kicadstamp/placement/services/via_planner.py:131
 #, python-brace-format
 msgid "Skipped {count} spoke/component vias already present on the board"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:138
-#, python-brace-format
-msgid "Keepout for thermal vias: {count} rectangles"
+#: kicadstamp/placement/services/via_planner.py:136
+msgid "No thermal_via_arrays entries — thermal planning skipped"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:142
-msgid "Thermal vias disabled or no anchor set — keepout/thermal planning skipped"
+#: kicadstamp/placement/services/via_planner.py:140
+msgid "thermal_via_arrays entry {name!r}: retired, skipped"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:144
+#: kicadstamp/placement/services/via_planner.py:149
 #, python-brace-format
 msgid "plan_vias completed: {count} vias"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:194
+#: kicadstamp/placement/services/via_planner.py:196
 #, python-brace-format
 msgid "Planning thermal vias for {ref}, pad {pad}"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:199
+#: kicadstamp/placement/services/via_planner.py:201
 #, python-brace-format
 msgid "Thermal pad: {ref} has no pad {pad}"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:212
+#: kicadstamp/placement/services/via_planner.py:214
 #, python-brace-format
 msgid "Thermal pad: {error}"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:240
+#: kicadstamp/placement/services/via_planner.py:218
+msgid "Keepout for {name!r}: {count} rectangles"
+msgstr ""
+
+#: kicadstamp/placement/services/via_planner.py:244
 #, python-brace-format
 msgid "Thermal via: no free spot found for ({x:.3f}, {y:.3f}) mm, point skipped"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:247
+#: kicadstamp/placement/services/via_planner.py:261
 #, python-brace-format
 msgid "Skipped {count} thermal vias already present on the board"
 msgstr ""
 
-#: kicadstamp/placement/services/via_planner.py:248
+#: kicadstamp/placement/services/via_planner.py:262
 #, python-brace-format
 msgid "Planned {count} thermal vias on {pad}"
 msgstr ""
@@ -5053,5 +6317,329 @@ msgstr ""
 #~ msgstr ""
 
 #~ msgid "Thermal pad: component {ref} not found"
+#~ msgstr ""
+
+#~ msgid "fieldstool GUI"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Process only rules/clone_placements/thermal_via_array "
+#~ "with this identity (rule name if "
+#~ "set, else its net; "
+#~ "clone_placement/thermal_via_array name). Repeatable "
+#~ "and/or comma-separated (--only a,b "
+#~ "--only c). Everything else is ignored"
+#~ " in this run."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Process only spokes/clone_placements/thermal_via_array "
+#~ "whose Cluster (anchor_cluster / spoke "
+#~ "cluster) matches this path or prefix "
+#~ "(segment-wise, e.g. 'Channel_0' also "
+#~ "matches 'Channel_0/DAC_OA'). Repeatable and/or "
+#~ "comma-separated. Combines with --only "
+#~ "via AND (run apply twice for OR)."
+#~ msgstr ""
+
+#~ msgid "Connected (staging only — this tool never writes over IPC)"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "KiCad appears to be running. Save "
+#~ "your work and close KiCad, then "
+#~ "click Apply again — this tool "
+#~ "never closes KiCad for you (see "
+#~ "fieldstool/__init__.py for why)."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "About to write {count} change(s):\n"
+#~ "\n"
+#~ "{summary}"
+#~ msgstr ""
+
+#~ msgid "{count} file(s) written."
+#~ msgstr ""
+
+#~ msgid "New value"
+#~ msgstr ""
+
+#~ msgid "No target file picked (pick one in Files)"
+#~ msgstr ""
+
+#~ msgid "Existing (click to reuse a name):"
+#~ msgstr ""
+
+#~ msgid "No profile file picked (pick one in Files)"
+#~ msgstr ""
+
+#~ msgid "No placer file picked (pick one in Files, optional)"
+#~ msgstr ""
+
+#~ msgid "Target: {path}"
+#~ msgstr ""
+
+#~ msgid "Profile file: {path}"
+#~ msgstr ""
+
+#~ msgid "added {rel!r} to cell_files: in {path}"
+#~ msgstr ""
+
+#~ msgid "Extractor:"
+#~ msgstr ""
+
+#~ msgid "Placer:"
+#~ msgstr ""
+
+#~ msgid "Change root..."
+#~ msgstr ""
+
+#~ msgid "No file selected"
+#~ msgstr ""
+
+#~ msgid "Use selected"
+#~ msgstr ""
+
+#~ msgid "Pick config root directory"
+#~ msgstr ""
+
+#~ msgid "Selected: {path}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Cells shares a file with "
+#~ "Extractor/Placer — every top-level key"
+#~ " in a Cells file is read as "
+#~ "a cell name, so extract_profiles:/cell_files:"
+#~ " entries in the same file would "
+#~ "corrupt it. Give Cells its own "
+#~ "file."
+#~ msgstr ""
+
+#~ msgid "not set"
+#~ msgstr ""
+
+#~ msgid "No cell picked — pick one in the Cells tab"
+#~ msgstr ""
+
+#~ msgid "Cell: {name}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Cell {cell!r} isn't reachable from the"
+#~ " Placer file's cell_files: — extract/save"
+#~ " it and make sure cell_files: is "
+#~ "wired (see Extract)."
+#~ msgstr ""
+
+#~ msgid "clone_placements: in {path} is not a list — refusing to touch it"
+#~ msgstr ""
+
+#~ msgid "Placements"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "thermal_via_array {name!r}: skip=true, skipped "
+#~ "this run (existing vias stay protected)"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "  {name!r} — not found among "
+#~ "rules, clone_placements, or thermal_via_array{hint}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "--only {requested}: rules={rules}, "
+#~ "clone_placements={clones}, thermal_via_array={thermal} "
+#~ "(everything else is ignored in this "
+#~ "run)"
+#~ msgstr ""
+
+#~ msgid "no"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "[error] --cluster {paths}: matched nothing "
+#~ "among rules' spokes, clone_placements, or "
+#~ "thermal_via_array"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "--cluster {paths}: rules={rules} (spokes "
+#~ "narrowed), clone_placements={clones}, "
+#~ "thermal_via_array={thermal}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "[error] --profile cannot be combined "
+#~ "with --name/--output/--param/--net-template/--net-"
+#~ "template-role/--origin-by-*: either all "
+#~ "from profile or all as explicit "
+#~ "flags, not mixed."
+#~ msgstr ""
+
+#~ msgid ""
+#~ "include: only merges {list_sections} (lists)"
+#~ " and {dict_sections} (mappings) from an "
+#~ "included file — anything else (e.g. "
+#~ "layer:, thermal_via_array:, schematic_dir:, "
+#~ "registry_path:) has no defined way to"
+#~ " merge across multiple included files "
+#~ "and was previously silently dropped. "
+#~ "Move {keys} to the root config "
+#~ "file instead"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "include: {file!r} is included more than"
+#~ " once (directly or indirectly), from "
+#~ "{source!r}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "either a cycle, or the same file"
+#~ " included from two different branches "
+#~ "— both are unsupported, split the "
+#~ "shared content out instead"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "set exactly one of: anchor_ref/anchor_role "
+#~ "(+ optional anchor_sheet/anchor_cluster/anchor_pad), "
+#~ "anchor_point (chain to another point), "
+#~ "or xy (literal absolute coordinate)"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "anchor_ref/anchor_role, anchor_point, and xy "
+#~ "are mutually exclusive — pick exactly"
+#~ " one way to define this point's "
+#~ "base position"
+#~ msgstr ""
+
+#~ msgid "cell and role together in clone_placement {name!r}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "these are mutually exclusive ways to "
+#~ "define the content: either a ready-"
+#~ "made cell (cell), or a single-"
+#~ "component placement by role (role), not"
+#~ " both"
+#~ msgstr ""
+
+#~ msgid "neither cell nor role set in clone_placement {name!r}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "need either cell: <name from cells:>,"
+#~ " or role: <ROLE> for a single-"
+#~ "component placement without a separate "
+#~ "cell file"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "global target_ref has been removed (see"
+#~ " discussion v117): each spoke rule "
+#~ "now has its own anchor – write "
+#~ "anchor_ref: <ref> inside the rule in "
+#~ "rules; thermal_via_array has its own "
+#~ "anchor_ref field"
+#~ msgstr ""
+
+#~ msgid "deprecated field 'target_ref' in thermal_via_array"
+#~ msgstr ""
+
+#~ msgid "thermal_via_array without name"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "thermal_via_array must have a name – "
+#~ "used in --only (kicadstamp_cli.py) for "
+#~ "isolated runs; write name: <any "
+#~ "understandable string>, e.g. name: "
+#~ "fpga_thermal"
+#~ msgstr ""
+
+#~ msgid "unknown fields in thermal_via_array"
+#~ msgstr ""
+
+#~ msgid "anchor_point together with anchor_ref/anchor_role in thermal_via_array"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "renamed to cells_file: <path> / "
+#~ "cell_files: [...] — the class became "
+#~ "Cell (was SpokeTemplate), these were the"
+#~ " one place the file-list keys "
+#~ "were left behind"
+#~ msgstr ""
+
+#~ msgid "cell_files must be a list, got {type}"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "cell_files: is a YAML list of "
+#~ "paths ('- templates/a.yaml'); for a "
+#~ "single file use cells_file: <path> "
+#~ "instead"
+#~ msgstr ""
+
+#~ msgid "templates file {file!r} not found"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "expected at {path} (relative to the "
+#~ "config file itself, not the current "
+#~ "working directory)"
+#~ msgstr ""
+
+#~ msgid "duplicate cell {name!r} across cells_file/cell_files"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "defined in more than one external "
+#~ "cells file (cells_file and/or an entry"
+#~ " of cell_files) — external files are"
+#~ " meant to be independent, a repeated"
+#~ " name is far more likely a "
+#~ "mistake than an intentional override; "
+#~ "inline cells: in the config itself "
+#~ "CAN still override an external one, "
+#~ "that is unaffected"
+#~ msgstr ""
+
+#~ msgid "Cells from {files}: {count_ext}, plus inline: {count_inline}"
+#~ msgstr ""
+
+#~ msgid "thermal_via_array"
+#~ msgstr ""
+
+#~ msgid "Thermal vias retired — keepout diagnostics skipped"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "set anchor_ref/anchor_role, anchor_point, or "
+#~ "xy — should have been caught at"
+#~ " load time (config/loader.py)"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "thermal_via_array: anchor_point {point!r} has "
+#~ "no footprint — this should have "
+#~ "been caught at load time "
+#~ "(config/loader.py)"
+#~ msgstr ""
+
+#~ msgid "thermal_via_array: neither anchor_ref nor anchor_role set"
+#~ msgstr ""
+
+#~ msgid "Keepout for thermal vias: {count} rectangles"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Thermal vias disabled or no anchor "
+#~ "set — keepout/thermal planning skipped"
 #~ msgstr ""
 
