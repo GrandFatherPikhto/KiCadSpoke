@@ -38,9 +38,52 @@ class PendingEdit:
     field: str
     old_value: str  # currently in the schematic
     new_value: str  # currently on the live board
+    # True when the SAME refdes means DIFFERENT symbols on the two sides
+    # (board fp.sheet_path.path[-1] != schematic symbol_uuids). Such an edit
+    # is shown in the Pending changes table but NEVER written by Apply —
+    # edits_to_fields_cfg() drops it. Refdes-string matching alone cannot
+    # see this; it would silently write the board value into the WRONG
+    # schematic symbol (see recon in
+    # techdocs/handoff/deepseek/handoff_2026_08_08_symbol_uuid_recon.md).
+    mismatched: bool = False
 
 
-def compute_pending_edits(components, snapshot) -> List[PendingEdit]:
+def _board_symbol_uuid(s) -> str | None:
+    """The board footprint's symbol uuid = fp.sheet_path.path[-1] — the same
+    uuid the schematic's (symbol ...) block carries as its top-level
+    (uuid ...). None when unavailable (fp absent in tests, empty path, IPC
+    error) — the caller then skips the identity check instead of guessing."""
+    try:
+        fp = s.fp
+        if fp is None:
+            return None
+        path = fp.sheet_path.path
+        if not path:
+            return None
+        last = path[-1]
+        return str(last.value) if hasattr(last, "value") else str(last)
+    except Exception:
+        return None
+
+
+def _board_full_path(s) -> tuple | None:
+    """The footprint's full sheet_path.path as a tuple of uuid strings — the
+    same shape load_schematic_instances() keys its index with. None when
+    unavailable (fp absent in tests, empty path, IPC error) — the path_index
+    then simply can't match this footprint."""
+    try:
+        fp = s.fp
+        if fp is None:
+            return None
+        path = fp.sheet_path.path
+        if not path:
+            return None
+        return tuple(str(u.value) if hasattr(u, "value") else str(u) for u in path)
+    except Exception:
+        return None
+
+
+def compute_pending_edits(components, snapshot, path_index=None) -> List[PendingEdit]:
     """components: List[gui.schema_model.SchematicComponent] (from
     load_schematic_components(), i.e. the schematic's last Rescan).
     snapshot: List[kicadstamp.explore.Selected] (BoardConnection.snapshot,
@@ -53,12 +96,55 @@ def compute_pending_edits(components, snapshot) -> List[PendingEdit]:
     like everywhere else that reads .role/.cluster; if that differs from
     the board, Apply's own plan_set_edits_for_root() will simply unify all
     of that ref's blocks to the board's value, which is a reasonable
-    resolution, not a bug."""
+    resolution, not a bug.
+
+    path_index (Optional[Dict[full_path_tuple, SchematicInstance]], from
+    gui.schema_model.load_schematic_instances): when given, a board footprint
+    whose FULL sheet_path.path matches an index key diffs against THAT
+    schematic instance — its refdes/role/cluster — even when the two sides
+    disagree on the refdes (re-annotation desync). This is the per-instance
+    resolution from the 2026-08-08 recon. Footprints the index doesn't know
+    fall back to the refdes join below. When path_index is None/empty the
+    behavior is exactly the refdes join (callers that don't pass it are
+    unchanged).
+
+    Identity check (2026-08-08): in the refdes-join fallback, before comparing
+    values verify the refdes means the SAME symbol on both sides. If the board
+    footprint's symbol uuid (fp.sheet_path.path[-1]) is available AND the
+    schematic component carries known symbol_uuids, but the board's uuid is not
+    among them, the two sides disagree about what this refdes IS (re-annotation
+    / revision desync). Emit a single mismatched PendingEdit for the ref instead
+    of a Role/Cluster diff — visible in the table, excluded from Apply. When
+    either side lacks uuid info the check is skipped (no false positives)."""
     by_ref = {c.ref: c for c in components}
     edits: List[PendingEdit] = []
-    for s in snapshot:
+    handled: set[int] = set()
+    if path_index:
+        for i, s in enumerate(snapshot):
+            p = _board_full_path(s)
+            inst = path_index.get(p) if p is not None else None
+            if inst is None:
+                continue
+            handled.add(i)
+            if (s.role or "") != (inst.role or ""):
+                edits.append(PendingEdit(inst.ref, "Role", inst.role or "", s.role or ""))
+            if (s.cluster or "") != (inst.cluster or ""):
+                edits.append(PendingEdit(inst.ref, "Cluster", inst.cluster or "", s.cluster or ""))
+    for i, s in enumerate(snapshot):
+        if i in handled:
+            continue
         c = by_ref.get(s.ref)
         if c is None:
+            continue
+        board_uuid = _board_symbol_uuid(s)
+        if board_uuid and c.symbol_uuids and board_uuid not in c.symbol_uuids:
+            edits.append(PendingEdit(
+                s.ref,
+                "Refdes/symbol mismatch",
+                "schematic: " + ",".join(c.symbol_uuids),
+                "board: " + board_uuid,
+                mismatched=True,
+            ))
             continue
         if (s.role or "") != (c.role or ""):
             edits.append(PendingEdit(s.ref, "Role", c.role or "", s.role or ""))
@@ -69,14 +155,19 @@ def compute_pending_edits(components, snapshot) -> List[PendingEdit]:
 
 def edits_to_fields_cfg(edits: List[PendingEdit]) -> Dict[str, Dict[str, str]]:
     """refdes -> {field: value} — the shape
-    kicadstamp.schematic_set_fields.plan_set_edits_for_root() consumes."""
+    kicadstamp.schematic_set_fields.plan_set_edits_for_root() consumes.
+    Identity-mismatch edits (PendingEdit.mismatched) are dropped — applying
+    them would write the board value into the WRONG schematic symbol."""
     cfg: Dict[str, Dict[str, str]] = {}
     for e in edits:
+        if e.mismatched:
+            continue
         cfg.setdefault(e.ref, {})[e.field] = e.new_value
     return cfg
 
 
 try:
+    from PyQt6.QtGui import QColor
     from PyQt6.QtWidgets import (QAbstractItemView, QDockWidget, QHBoxLayout,
                                  QPushButton, QTableWidget, QTableWidgetItem,
                                  QVBoxLayout, QWidget)
@@ -134,8 +225,19 @@ class PendingChangesDock(QDockWidget):
     def set_edits(self, edits: List[PendingEdit]) -> None:
         self.table.setRowCount(len(edits))
         for row, e in enumerate(edits):
-            self.table.setItem(row, 0, QTableWidgetItem(e.ref))
-            self.table.setItem(row, 1, QTableWidgetItem(e.field))
-            self.table.setItem(row, 2, QTableWidgetItem(e.old_value))
-            self.table.setItem(row, 3, QTableWidgetItem(e.new_value))
+            if e.mismatched:
+                # The same refdes means different symbols on the two sides —
+                # visually distinct and never auto-applied (edits_to_fields_cfg
+                # drops these). The row shows the two symbol UUIDs so the user
+                # can see WHY the ref is not applied.
+                row_values = [e.ref, e.field, e.old_value, e.new_value]
+                for col in range(4):
+                    item = QTableWidgetItem(row_values[col])
+                    item.setBackground(QColor("#ffdddd"))
+                    self.table.setItem(row, col, item)
+            else:
+                self.table.setItem(row, 0, QTableWidgetItem(e.ref))
+                self.table.setItem(row, 1, QTableWidgetItem(e.field))
+                self.table.setItem(row, 2, QTableWidgetItem(e.old_value))
+                self.table.setItem(row, 3, QTableWidgetItem(e.new_value))
         self.apply_button.setEnabled(bool(edits))

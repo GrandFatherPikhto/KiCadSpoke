@@ -13,7 +13,12 @@ from typing import Iterable, Optional
 
 
 def symbol_block(refs: Iterable[str], role: Optional[str] = None,
-                  cluster: Optional[str] = None, x: float = 100.0, y: float = 50.0) -> str:
+                  cluster: Optional[str] = None, x: float = 100.0, y: float = 50.0,
+                  symbol_uuid: Optional[str] = None,
+                  instance_paths: Optional[list] = None) -> str:
+    """instance_paths: optional list of (refdes, path_string) pairs overriding
+    the default '/dummy/<ref>' paths — lets tests model real multi-element
+    instance chains (root/sheet-instance/symbol-uuid)."""
     fields = ""
     if role is not None:
         fields += (f'\t\t(property "Role" "{role}"\n'
@@ -25,15 +30,18 @@ def symbol_block(refs: Iterable[str], role: Optional[str] = None,
                    f'\t\t\t(at {x} {y} 0)\n\t\t\t(hide yes)\n\t\t\t(show_name no)\n'
                    f'\t\t\t(do_not_autoplace no)\n'
                    f'\t\t\t(effects\n\t\t\t\t(font\n\t\t\t\t\t(size 1.27 1.27)\n\t\t\t\t)\n\t\t\t)\n\t\t)\n')
+    path_pairs = instance_paths or [(ref, f"/dummy/{ref}") for ref in refs]
     instances = "".join(
-        f'\t\t\t\t(path "/dummy/{ref}"\n\t\t\t\t\t(reference "{ref}")\n\t\t\t\t\t(unit 1)\n\t\t\t\t)\n'
-        for ref in refs
+        f'\t\t\t\t(path "{p}"\n\t\t\t\t\t(reference "{r}")\n\t\t\t\t\t(unit 1)\n\t\t\t\t)\n'
+        for r, p in path_pairs
     )
+    uuid_line = f'\t\t(uuid "{symbol_uuid}")\n' if symbol_uuid else ''
     return (
         '\t(symbol\n'
         f'\t\t(lib_id "Device:R")\n'
         f'\t\t(at {x} {y} 0)\n'
         '\t\t(unit 1)\n'
+        f'{uuid_line}'
         f'{fields}'
         '\t\t(pin "1"\n\t\t\t(uuid "00000000-0000-0000-0000-000000000001")\n\t\t)\n'
         '\t\t(instances\n'

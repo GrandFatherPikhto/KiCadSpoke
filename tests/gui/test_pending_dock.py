@@ -1,17 +1,40 @@
 # tests/gui/test_pending_dock.py
 from gui.docks.pending import (PendingChangesDock, PendingEdit,
                                 compute_pending_edits, edits_to_fields_cfg)
-from gui.schema_model import SchematicComponent
+from gui.schema_model import SchematicComponent, SchematicInstance
 from kicadstamp.explore import Selected
 
 
-def _component(ref, role, cluster, divergent=False):
+class _FakeUuid:
+    def __init__(self, value):
+        self.value = value
+
+
+class _FakePath:
+    def __init__(self, uuids):
+        self.path = [_FakeUuid(u) for u in uuids]
+
+
+class _FakeFp:
+    """Minimal stand-in for a kipy FootprintInstance: exposes
+    fp.sheet_path.path (a list of uuids) so compute_pending_edits' identity
+    and full-path checks can read a board symbol uuid / full chain without a
+    live KiCad."""
+    def __init__(self, uuids):
+        self.sheet_path = _FakePath(uuids)
+
+
+def _component(ref, role, cluster, divergent=False, symbol_uuids=()):
     return SchematicComponent(ref=ref, role=role, cluster=cluster, file="x.kicad_sch",
-                              block_start=0, divergent=divergent)
+                              block_start=0, divergent=divergent, symbol_uuids=symbol_uuids)
 
 
-def _selected(ref, role, cluster):
-    return Selected(ref=ref, role=role, cluster=cluster, sheet=[], nets={}, fp=None)
+def _selected(ref, role, cluster, last=None, path=None):
+    """last: single symbol uuid (identity check); path: full chain (full-path
+    join). path wins; last=None and path=None -> no fp at all."""
+    uuids = path if path is not None else ([last] if last else None)
+    fp = _FakeFp(uuids) if uuids is not None else None
+    return Selected(ref=ref, role=role, cluster=cluster, sheet=[], nets={}, fp=fp)
 
 
 # ── compute_pending_edits — no Qt dependency, testable without a QApplication ──
@@ -151,3 +174,99 @@ def test_ensure_fields_button_click_calls_callback(qapp, main_window):
     dock.ensure_fields_button.click()
 
     assert calls == [True]
+
+
+# ── refdes/symbol identity mismatch (2026-08-08) ────────────────────────────
+
+def test_symbol_mismatch_flagged_and_never_applied():
+    """Same refdes, DIFFERENT symbol on the two sides (board uuid != schematic
+    uuid): surfaced as a mismatched edit, excluded from Apply's config."""
+    components = [_component("R1", "ROLE_A", "CL_A", symbol_uuids=("uuid-sch",))]
+    snapshot = [_selected("R1", "ROLE_B", "CL_B", last="uuid-board")]
+
+    edits = compute_pending_edits(components, snapshot)
+
+    assert len(edits) == 1
+    assert edits[0].ref == "R1"
+    assert edits[0].mismatched is True
+    assert edits_to_fields_cfg(edits) == {}
+
+
+def test_symbol_match_edits_normally():
+    components = [_component("R1", "ROLE_A", "CL_A", symbol_uuids=("uuid-1",))]
+    snapshot = [_selected("R1", "ROLE_B", "CL_A", last="uuid-1")]
+
+    edits = compute_pending_edits(components, snapshot)
+
+    assert edits == [PendingEdit("R1", "Role", "ROLE_A", "ROLE_B")]
+
+
+def test_mismatch_check_skipped_when_schematic_has_no_uuids():
+    """No false positives: a schematic component without uuid info cannot be
+    verified, so it diffs normally."""
+    components = [_component("R1", "ROLE_A", "CL_A")]  # symbol_uuids=()
+    snapshot = [_selected("R1", "ROLE_B", "CL_A", last="uuid-board")]
+
+    edits = compute_pending_edits(components, snapshot)
+
+    assert edits == [PendingEdit("R1", "Role", "ROLE_A", "ROLE_B")]
+
+
+def test_mismatch_check_skipped_when_board_has_no_fp():
+    """fp=None (tests / unavailable handle) means no identity check — the
+    refdes join still works as before."""
+    components = [_component("R1", "ROLE_A", "CL_A", symbol_uuids=("uuid-sch",))]
+    snapshot = [_selected("R1", "ROLE_B", "CL_A", last=None)]
+
+    edits = compute_pending_edits(components, snapshot)
+
+    assert edits == [PendingEdit("R1", "Role", "ROLE_A", "ROLE_B")]
+
+
+def test_mismatch_and_real_edits_mixed_in_cfg():
+    edits = [PendingEdit("R1", "Role", "A", "NEW_A"),
+             PendingEdit("R2", "Role", "C", "NEW_C", mismatched=True)]
+
+    cfg = edits_to_fields_cfg(edits)
+
+    assert cfg == {"R1": {"Role": "NEW_A"}}
+
+
+# ── full-path (per-instance) join via path_index (2026-08-08) ────────────────
+
+def test_path_index_matches_board_to_schematic_instance_by_full_path():
+    """Re-annotated board: the board refdes (C610) differs from the schematic's
+    (C110) for the same physical instance, but the FULL path matches — the diff
+    must compare against the schematic instance and emit ITS refdes (the one
+    Apply can write), not the stale board refdes."""
+    comps = [_component("C110", "ROLE_A", "CL_A", symbol_uuids=("uuid-1",))]
+    path_index = {("inst-A", "uuid-1"):
+                  SchematicInstance("C110", "ROLE_A", "CL_A", "x.kicad_sch", 0)}
+    snapshot = [_selected("C610", "ROLE_B", "CL_A", path=("inst-A", "uuid-1"))]
+
+    edits = compute_pending_edits(comps, snapshot, path_index)
+
+    assert edits == [PendingEdit("C110", "Role", "ROLE_A", "ROLE_B")]
+
+
+def test_path_index_unmatched_falls_back_to_refdes_join():
+    """A footprint the index doesn't know falls back to the refdes join (with
+    its symbol-uuid guard), so nothing regresses when paths don't line up."""
+    comps = [_component("R1", "ROLE_A", "CL_A", symbol_uuids=("uuid-1",))]
+    path_index = {("other",): SchematicInstance("R9", "ROLE_A", "CL_A", "x.kicad_sch", 0)}
+    snapshot = [_selected("R1", "ROLE_B", "CL_A", path=("inst-A", "uuid-1"))]
+
+    edits = compute_pending_edits(comps, snapshot, path_index)
+
+    assert edits == [PendingEdit("R1", "Role", "ROLE_A", "ROLE_B")]
+
+
+def test_path_index_cluster_diff_also_emitted():
+    comps = [_component("C110", "ROLE_A", "CL_A")]
+    path_index = {("inst-A", "uuid-1"):
+                  SchematicInstance("C110", "ROLE_A", "CL_A", "x.kicad_sch", 0)}
+    snapshot = [_selected("C610", "ROLE_A", "CL_B", path=("inst-A", "uuid-1"))]
+
+    edits = compute_pending_edits(comps, snapshot, path_index)
+
+    assert edits == [PendingEdit("C110", "Cluster", "CL_A", "CL_B")]

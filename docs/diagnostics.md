@@ -47,6 +47,7 @@ kicadstamp/diagnostics/
 ├── probe_sheet_path_truncation.py # path[:-1]/path[1:] grouping vs local-net paths [LIVE]
 ├── probe_uuid_stability.py        # fp.id.value survives re-annotation? snapshot+compare [LIVE snapshot / FILES compare]
 ├── probe_uuid_to_sheet_name.py    # {UUID chain -> human path} from local nets [LIVE]
+├── recon_symbol_uuid_bridge.py    # Symbol-uuid bridge: schematic vs board sheet_path (recon) [FILES / LIVE optional]
 ├── resolve_paths.py               # Human sheet paths from a .net file [LIVE]
 ├── role_resolver.py               # Raw proto dump of sheet_path [LIVE]
 ├── test_ierarchy.py               # Footprints vs schematic sheet map [LIVE]
@@ -386,6 +387,51 @@ python -m kicadstamp.diagnostics.probe_uuid_stability compare uuid_before.json u
 
 **Dependencies:**
 `kipy` (`snapshot` only); `compare` has no KiCad dependency at all, standard library `json`/`argparse` only.
+
+---
+
+### `recon_symbol_uuid_bridge.py`
+
+**Purpose:**
+Reconnaissance for the "Pending Changes matches schematic-vs-board purely by refdes"
+problem ([`compute_pending_edits()`](../gui/docks/pending.py) joins the two sides by the
+refdes STRING). It checks whether a UUID join key uniquely identifies a physical symbol
+instance on BOTH sides: is `fp.sheet_path.path[-1]` unique per footprint, is the FULL
+`sheet_path.path` unique per instance, and does the board's last path element equal the
+`(symbol ...)` block's top-level `(uuid ...)` in `.kicad_sch`?
+
+Empirical result (2026-08-08, `3CH-AWG-TIA`, live board): `path[-1]` is the **master-symbol
+uuid** shared by all clones of a multi-instance sheet (66 values shared by 2+ refdes), so it
+is NOT unique per footprint; the **full** `sheet_path.path` IS unique per footprint
+(364/364); the board `path[-1]` equals the schematic top-level symbol uuid (279/279 on the
+saved `.kicad_pcb`, 358/364 live). The exact 1:1 join key is
+`board path == (schematic (instances ...) path minus root uuid) + block top uuid`. The full
+experiment, with numbers and design conclusion, is in
+`techdocs/handoff/deepseek/handoff_2026_08_08_symbol_uuid_recon.md`.
+
+**Usage:**
+```bash
+python -m kicadstamp.diagnostics.recon_symbol_uuid_bridge boards/3CH-AWG-TIA
+```
+
+**Parameters:**
+- positional `project_dir` – project directory holding the `*.kicad_sch` files and the
+  `<name>.kicad_pcb` board file (default `boards/3CH-AWG-TIA`).
+
+**Output:**
+- schematic stats: blocks with top-level `(uuid ...)`, `(instances ...)` path structure
+  (path lengths, whether the path-last is a sheet or a symbol uuid);
+- board stats: full-path uniqueness per footprint, path-last sharing across refdes;
+- uuid bridge: how many board `path[-1]` are schematic symbol uuids;
+- full-path join rate of board footprints against the schematic key map;
+- refdes desync count (board refdes vs schematic refdes for the same symbol uuid — a
+  non-zero number proves the refdes-string join silently mismatches components);
+- per-instance resolution demo for multi-instance symbols.
+
+**Dependencies:**
+`kicadstamp.schematic_blocks.find_balanced_span` (span/regex parsing of `.kicad_sch` and
+`.kicad_pcb`, no sexpdata round-trip); optional `kipy` for the live-board cross-check
+(the saved `.kicad_pcb` already carries the authoritative `(path ...)`).
 
 ---
 

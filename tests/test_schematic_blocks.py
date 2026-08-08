@@ -90,3 +90,42 @@ def test_unescape_sexp_string_is_inverse_of_escape():
 def test_unescape_sexp_string_roundtrip():
     for raw in ['plain', 'with "quote"', 'with \\backslash\\', 'both \\" \\\\', 'unicode é']:
         assert unescape_sexp_string(escape_sexp_string(raw)) == raw
+
+
+def test_iter_symbol_blocks_extracts_top_level_uuid():
+    text = sch_file(symbol_block(["R1"], role="R_A", symbol_uuid="AAA-111-BBB"))
+    block = iter_symbol_blocks("f.kicad_sch", text)[0]
+    assert block.uuid == "AAA-111-BBB"
+
+
+def test_iter_symbol_blocks_uuid_is_not_a_pin_uuid():
+    """The block's top-level (uuid ...) is the symbol's own id; the (pin ...)
+    uuid must NOT be mistaken for it (pins carry their own (uuid ...))."""
+    text = sch_file(symbol_block(["R1"], symbol_uuid="SYMBOL-UUID"))
+    block = iter_symbol_blocks("f.kicad_sch", text)[0]
+    assert block.uuid == "SYMBOL-UUID"
+
+
+def test_iter_symbol_blocks_no_uuid_is_none():
+    text = sch_file(symbol_block(["R1"]))
+    block = iter_symbol_blocks("f.kicad_sch", text)[0]
+    assert block.uuid is None
+
+
+def test_iter_symbol_blocks_parses_instance_paths():
+    text = sch_file(symbol_block(
+        ["R1"], role="R_A", symbol_uuid="SYM-UUID",
+        instance_paths=[("R1", "/root-uuid/inst-A/SYM-UUID")]))
+    block = iter_symbol_blocks("f.kicad_sch", text)[0]
+    assert block.instances == ((("root-uuid", "inst-A", "SYM-UUID"), "R1"),)
+
+
+def test_iter_symbol_blocks_multiple_instance_paths():
+    text = sch_file(symbol_block(
+        ["C140", "C161"], role="R_A", symbol_uuid="SYM-1",
+        instance_paths=[("C140", "/root/inst-A/SYM-1"),
+                        ("C161", "/root/inst-B/SYM-1")]))
+    block = iter_symbol_blocks("f.kicad_sch", text)[0]
+    assert set(block.refs) == {"C140", "C161"}
+    assert block.instances == ((("root", "inst-A", "SYM-1"), "C140"),
+                               (("root", "inst-B", "SYM-1"), "C161"))

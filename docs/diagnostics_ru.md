@@ -43,6 +43,7 @@ kicadstamp/diagnostics/
 ├── probe_sheet_path_truncation.py # Группировка path[:-1]/path[1:] vs пути локальных цепей [LIVE]
 ├── probe_uuid_stability.py        # Переживает ли fp.id.value переаннотацию? snapshot+compare [LIVE snapshot / FILES compare]
 ├── probe_uuid_to_sheet_name.py    # {цепочка UUID -> человекочитаемый путь} из локальных цепей [LIVE]
+├── recon_symbol_uuid_bridge.py    # UUID-мост символа: схема vs sheet_path платы (разведка) [FILES / LIVE опционально]
 ├── resolve_paths.py               # Человекочитаемые пути листов из .net-файла [LIVE]
 ├── role_resolver.py               # Сырой proto-дамп sheet_path [LIVE]
 ├── test_ierarchy.py               # Футпринты vs карта листов схемы [LIVE]
@@ -367,8 +368,52 @@ python -m kicadstamp.diagnostics.probe_uuid_stability compare uuid_before.json u
   refdes для UUID, совпавших в обоих снимках. Код возврата — `1`, если множество UUID изменилось,
   `0` — если нет.
 
-**Зависимости:**  
+**Зависимости:**
 `kipy` (только для `snapshot`); `compare` вообще не зависит от KiCad, только стандартная библиотека `json`/`argparse`.
+
+---
+
+### `recon_symbol_uuid_bridge.py`
+
+**Назначение:**
+Разведка для проблемы «Pending Changes сверяет схему и плату чисто по refdes»
+([`compute_pending_edits()`](../gui/docks/pending.py) join'ит две стороны по СТРОКЕ refdes).
+Проверяет, существует ли UUID-ключ, однозначно идентифицирующий физический экземпляр символа
+на **обеих** сторонах: уникален ли `fp.sheet_path.path[-1]` на футпринт, уникален ли **полный**
+`sheet_path.path` на экземпляр, и совпадает ли последний элемент пути платы с top-level
+`(uuid ...)` блока `(symbol ...)` в `.kicad_sch`.
+
+Эмпирический результат (2026-08-08, `3CH-AWG-TIA`, живая плата): `path[-1]` — это UUID
+**мастер-символа**, общий для всех клонов мультиинстанс-листа (66 значений на 2+ refdes), то
+есть **не** уникален на футпринт; **полный** `sheet_path.path` уникален на футпринт (364/364);
+платный `path[-1]` совпадает с top-level UUID символа схемы (279/279 на сохранённом
+`.kicad_pcb`, 358/364 на живой плате). Точный ключ 1:1 — `board path == (schematic
+(instances ...) path минус root uuid) + top uuid блока`. Полное описание эксперимента с
+числами и дизайн-выводом — в `techdocs/handoff/deepseek/handoff_2026_08_08_symbol_uuid_recon.md`.
+
+**Использование:**
+```bash
+python -m kicadstamp.diagnostics.recon_symbol_uuid_bridge boards/3CH-AWG-TIA
+```
+
+**Параметры:**
+- позиционный `project_dir` – директория проекта с `*.kicad_sch` и файлом платы
+  `<name>.kicad_pcb` (по умолчанию `boards/3CH-AWG-TIA`).
+
+**Вывод:**
+- статистика схемы: блоки с top-level `(uuid ...)`, структура путей `(instances ...)`
+  (длины путей, является ли последний элемент UUID листа или символа);
+- статистика платы: уникальность полного пути на футпринт, разделяемость `path[-1]` по refdes;
+- UUID-мост: сколько платных `path[-1]` являются UUID символов схемы;
+- доля полнопутевого join'а платы против карты ключей схемы;
+- счётчик рассинхрона refdes (refdes платы против refdes схемы для одного UUID символа —
+  ненулевое значение доказывает, что join по строке refdes молча сопоставляет не те компоненты);
+- демонстрация per-instance резолюции для мультиинстанс-символов.
+
+**Зависимости:**
+`kicadstamp.schematic_blocks.find_balanced_span` (span/regex-парсинг `.kicad_sch` и
+`.kicad_pcb`, без round-trip через sexpdata); опционально `kipy` для сверки с живой платой
+(сохранённый `.kicad_pcb` уже несёт авторитетный `(path ...)`).
 
 ---
 

@@ -71,7 +71,8 @@ from kicadstamp.schematic_set_fields import (plan_ensure_fields_for_root,
 
 from .docks._common import configure_searchable
 from .docks.pending import PendingChangesDock, PendingEdit, compute_pending_edits, edits_to_fields_cfg
-from .schema_model import SchematicComponent, load_schematic_components
+from .schema_model import (SchematicComponent, SchematicInstance,
+                           load_schematic_components, load_schematic_instances)
 from .settings import Settings
 from .worker import start_long_op
 
@@ -106,6 +107,11 @@ class MainWindow(QMainWindow):
         self._root_sheet: Optional[Path] = None
         self._current_targets: List[str] = []
         self._components: List[SchematicComponent] = []
+        # full-path index (load_schematic_instances): board sheet_path.path ->
+        # schematic instance. Built on Rescan alongside self._components and fed
+        # to compute_pending_edits so the diff can resolve re-annotated boards
+        # per-instance instead of trusting the refdes string (2026-08-08).
+        self._path_index: Dict[tuple, SchematicInstance] = {}
         # Last live-board snapshot pushed by the main GUI's ~2s poll (see
         # set_live_snapshot below) — together with self._components, this is
         # the whole input to the schematic-vs-board diff (gui.docks.pending.
@@ -257,6 +263,12 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, _("Rescan failed"), str(e))
             return
         self._components = components
+        try:
+            self._path_index = load_schematic_instances(str(self._root_sheet))
+        except (OSError, ValueError):
+            # Same failure mode as above; the diff then falls back to the
+            # refdes join + symbol-uuid guard, which is still safe.
+            self._path_index = {}
         roles = {c.role for c in components if c.role}
         clusters = {c.cluster for c in components if c.cluster}
         # Union in whatever's currently on the live board too — a value set
@@ -285,7 +297,8 @@ class MainWindow(QMainWindow):
         it needs telling on every trigger this fires from (a fresh poll
         tick/Stage write changes which refs are pending, not just Rescan/
         Apply), not just the two call sites that used to fire it directly."""
-        self._pending_edits = compute_pending_edits(self._components, self._live_snapshot)
+        self._pending_edits = compute_pending_edits(
+            self._components, self._live_snapshot, self._path_index)
         self.pending_dock.set_edits(self._pending_edits)
         # Refreshes the pending indicator for whatever is CURRENTLY selected
         # on every trigger (a fresh poll tick right after Stage, not just a
@@ -611,6 +624,29 @@ class MainWindow(QMainWindow):
                   "Apply again — this tool never closes KiCad for you (see "
                   "docs/fieldstool.md for why)."))
             return
+
+        # 2026-08-08: refdes/symbol identity mismatches (the same refdes means
+        # DIFFERENT symbols on the two sides — different symbol UUIDs) are
+        # shown in the Pending changes table but never applied: writing the
+        # board value into the wrong schematic symbol is exactly the silent
+        # corruption this guard exists to prevent. If everything pending is a
+        # mismatch there is nothing safe to do at all.
+        mismatched = [e for e in self._pending_edits if e.mismatched]
+        applicable = [e for e in self._pending_edits if not e.mismatched]
+        if mismatched and not applicable:
+            QMessageBox.warning(
+                self, _("Nothing to apply"),
+                _("{count} ref(s) are refdes/symbol mismatches: the schematic and the "
+                  "board disagree on what that refdes is (different symbol UUIDs). "
+                  "Re-annotate the schematic / Update PCB from Schematic to re-sync, "
+                  "then Apply again.").format(count=len(mismatched)))
+            return
+        if mismatched:
+            QMessageBox.warning(
+                self, _("Skipped mismatches"),
+                _("{count} ref(s) skipped: the schematic and the board disagree on what "
+                  "that refdes is (different symbol UUIDs). Only verified matches are "
+                  "applied.").format(count=len(mismatched)))
 
         fields_cfg = edits_to_fields_cfg(self._pending_edits)
         try:

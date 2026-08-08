@@ -45,17 +45,26 @@ def find_balanced_span(text: str, open_idx: int) -> int:
 
 
 class SymbolBlock:
-    __slots__ = ("file", "start", "end", "refs")
+    __slots__ = ("file", "start", "end", "refs", "uuid", "instances")
 
-    def __init__(self, file, start, end, refs):
+    def __init__(self, file, start, end, refs, uuid=None, instances=()):
         self.file = file
         self.start = start
         self.end = end
         self.refs = refs  # set of refdes from (instances ...)
+        self.uuid = uuid  # top-level (uuid ...) of the block — the symbol's own id
+        self.instances = instances  # tuple[(path_uuids_tuple, refdes)] — one per
+                                    # (instances ...) (path ...), the per-instance chain
 
     @property
     def id(self):
         return (self.file, self.start)
+
+
+def _path_uuids(path_str: str) -> tuple:
+    """'/uuid1/uuid2/uuid3' -> ('uuid1', 'uuid2', 'uuid3'); the leading '/'
+    produces no empty element."""
+    return tuple(p for p in path_str.split("/") if p)
 
 
 def iter_symbol_blocks(path: str, text: str) -> list[SymbolBlock]:
@@ -63,21 +72,43 @@ def iter_symbol_blocks(path: str, text: str) -> list[SymbolBlock]:
     Verified against real files, no exceptions found: a lib_symbols
     definition is always `(symbol "Lib:Name" ...)` (a name immediately
     after "symbol"), a placed instance has a newline immediately after
-    "symbol" instead, no name there at all."""
+    "symbol" instead, no name there at all.
+
+    Also extracts:
+    - the block's TOP-LEVEL (uuid ...) — the symbol's own identity, the same
+      uuid that appears as fp.sheet_path.path[-1] on the board (see
+      kicadstamp/diagnostics/recon_symbol_uuid_bridge.py). It is the FIRST
+      (uuid ...) before any (pin ...) — every (pin ...) has its own
+      (uuid ...), which must not be mistaken for the symbol's. None if the
+      block has no such uuid (older/foreign files), never "".
+    - the per-instance (path ...) chains from (instances ...) as (uuid_tuple,
+      refdes) — the raw schematic-side instance paths (they start with the
+      root uuid and end in a SHEET uuid, unlike the board's sheet_path.path;
+      the board-facing key is built in gui/schema_model.load_schematic_instances).
+    """
     blocks = []
     for m in re.finditer(r'\(symbol\r?\n', text):
         start = m.start()
         end = find_balanced_span(text, start)
         span_text = text[start:end]
+        pre = span_text.split("(pin ", 1)[0]
+        um = re.search(r'\(uuid "((?:[^"\\]|\\.)*)"', pre)
+        symbol_uuid = um.group(1) if um else None
         instances_m = re.search(r'\(instances\r?\n', span_text)
         refs = set()
+        instances = []
         if instances_m:
             inst_start = instances_m.start()
             inst_end = find_balanced_span(span_text, inst_start)
-            for ref_m in re.finditer(r'\(reference "((?:[^"\\]|\\.)*)"',
-                                      span_text[inst_start:inst_end]):
+            inst_text = span_text[inst_start:inst_end]
+            for ref_m in re.finditer(r'\(reference "((?:[^"\\]|\\.)*)"', inst_text):
                 refs.add(ref_m.group(1))
-        blocks.append(SymbolBlock(path, start, end, refs))
+            for pm in re.finditer(r'\(path "([^"]+)"\s*\n((?:[^()]|\([^()]*\))*?)\n\s*\)',
+                                  inst_text, re.DOTALL):
+                refm = re.search(r'\(reference "((?:[^"\\]|\\.)*)"', pm.group(2))
+                if refm:
+                    instances.append((_path_uuids(pm.group(1)), refm.group(1)))
+        blocks.append(SymbolBlock(path, start, end, refs, symbol_uuid, tuple(instances)))
     return blocks
 
 
