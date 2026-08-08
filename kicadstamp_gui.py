@@ -68,6 +68,14 @@ def main():
     if icon_path.is_file():
         app.setWindowIcon(QIcon(str(icon_path)))
 
+    # On GNOME/Wayland, setWindowIcon() alone is not enough — the Shell
+    # (taskbar/Activities overview/alt-tab) resolves the icon through the
+    # app's Wayland app_id matched against an installed .desktop file's
+    # basename, not the runtime QIcon. This must equal the .desktop file's
+    # name without the extension (see packaging/kicadstamp.desktop) — on
+    # X11 it also sets WM_CLASS the same way.
+    app.setDesktopFileName("kicadstamp")
+
     guard = SingleInstanceGuard(_SINGLE_INSTANCE_NAME)
     if not guard.try_acquire():
         # Another instance is already running — it's been pinged to raise

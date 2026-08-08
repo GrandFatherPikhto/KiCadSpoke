@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=KiCadStamp
+Comment=Board browsing/tagging GUI over KiCad IPC
+Exec=/home/yevstigneyevda/Projects/Python/KiCadStamp/.venv/bin/python /home/yevstigneyevda/Projects/Python/KiCadStamp/kicadstamp_gui.py
+Icon=/home/yevstigneyevda/Projects/Python/KiCadStamp/images/kicadstamp.png
+Terminal=false
+Categories=Development;Electronics;
+StartupWMClass=kicadstamp
