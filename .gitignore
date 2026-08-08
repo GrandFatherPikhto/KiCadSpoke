@@ -88,9 +88,10 @@ issues
 techdocs
 chatter
 
-test-boards
-test_boards
-boards
+test-boards/
+test_boards/
+boards/**
+profiles/**
 
 *.txt
 kicad-spoke.txt

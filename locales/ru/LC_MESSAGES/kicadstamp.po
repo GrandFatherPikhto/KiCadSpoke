@@ -5390,7 +5390,7 @@ msgid ""
 "{wait:.1f}s [{attempt}/{retries}]"
 msgstr ""
 "{op}: KiCad не готов ответить (занят/модальный диалог?), повтор через "
-"{wait:.1f"
+"{wait:.1f}s [{attempt}/{retries}]"
 
 #: kicadstamp/kicad/adapter.py:445
 #, python-brace-format
